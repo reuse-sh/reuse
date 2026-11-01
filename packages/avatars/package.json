@@ -1,14 +1,30 @@
 {
   "name": "@reuse-sh/avatars",
-  "version": "0.1.0",
-  "private": true,
+  "version": "0.0.1",
+  "description": "Avatars with image and initials fallbacks, transparent badge cutouts, and overlapping groups.",
+  "keywords": [
+    "reuse",
+    "avatar",
+    "badge",
+    "initials",
+    "avatar-group"
+  ],
+  "homepage": "https://reuse.sh/avatars",
+  "bugs": "https://github.com/reuse-sh/reuse/issues",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/reuse-sh/reuse.git",
+    "directory": "packages/avatars"
+  },
   "license": "MIT",
+  "author": "nK <https://nkdev.info>",
   "type": "module",
   "sideEffects": [
     "**/*.css"
   ],
   "files": [
     "dist",
+    "README.md",
     "LICENSE"
   ],
   "exports": {
@@ -38,5 +54,8 @@
   "devDependencies": {
     "react": "19.3.0",
     "@types/react": "19.3.0"
+  },
+  "publishConfig": {
+    "access": "public"
   }
 }

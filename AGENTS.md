@@ -12,6 +12,6 @@ Read DESIGN.md before visible UI work and docs/catalogue.md before expanding the
 - The catalogue is the shared inventory. Keep generated human and agent documentation consistent by reading it from packages/catalog.
 - Test behavior and observable output. Cover failure, teardown, repeated input, reduced motion, keyboard access, and narrow layouts where relevant.
 - Use synthetic examples. Do not copy customer data, credentials, environment files, or product-specific services into this repository.
-- Original code is MIT. Keep packages private until npm publication is explicitly authorized.
+- Original code is MIT. Packages publish to npm through Changesets. Every user-visible package change adds a changeset with pnpm changeset.
 - Run pnpm lint, pnpm type-check, pnpm test, and pnpm build after relevant changes. Verify visible changes in a running browser.
 - The local site uses port 4300. Reuse its server when it already belongs to this checkout.
