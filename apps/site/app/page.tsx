@@ -1,10 +1,11 @@
 import "./styles/home.css";
 import { collectionPrinciples } from "@reuse-sh/catalog";
 import Link from "next/link";
-import { CopyPromptButton } from "../components/home/copy-prompt-button";
+import { PromptButton } from "../components/copy-control";
 import { PhotoStrip } from "../components/home/photo-strip";
 import { SmallDemos } from "../components/home/small-demos";
 import { Icon, type IconName } from "../components/icons";
+import { agentPrompt } from "../lib/prompt";
 
 const icons: IconName[] = [
   "code",
@@ -33,7 +34,7 @@ export default function HomePage() {
           else.
         </p>
         <div className="h-actions">
-          <CopyPromptButton />
+          <PromptButton prompt={agentPrompt} />
           <Link className="c-btn-quiet" href="/lightbox">
             Start with Lightbox
           </Link>

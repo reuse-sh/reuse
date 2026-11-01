@@ -135,6 +135,13 @@ export function SiteHeader() {
           >
             Agent guides
           </Link>
+          <Link
+            data-re-row
+            href="/tools"
+            aria-current={pathname === "/tools" ? "page" : undefined}
+          >
+            Tools
+          </Link>
           <a
             data-re-row
             className="c-nav-icon"

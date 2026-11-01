@@ -3,12 +3,12 @@ import {
   docPages,
   installCommand,
   type Library,
+  libraryPrompt,
   type Row,
 } from "@reuse-sh/catalog";
 import Link from "next/link";
 import type { ReactNode } from "react";
-import { libraryGuide } from "../../lib/guides";
-import { CopyControl } from "../copy-control";
+import { CopyControl, PromptButton } from "../copy-control";
 import { Icon } from "../icons";
 import { CodeBlock } from "../shell/code-block";
 import { DocIcon, type DocIconName } from "./doc-icon";
@@ -54,14 +54,10 @@ export function Pager({ library, path }: { library: Library; path: string }) {
 export function OverviewActions({ library }: { library: Library }) {
   return (
     <div className="d-actions">
-      <Link className="c-btn" href={docHref(library, "getting-started")}>
+      <PromptButton prompt={libraryPrompt(library)} />
+      <Link className="c-btn-quiet" href={docHref(library, "getting-started")}>
         Get started
       </Link>
-      <CopyControl
-        value={libraryGuide(library)}
-        label="Copy agent guide"
-        text
-      />
     </div>
   );
 }
@@ -134,6 +130,17 @@ export function CodePair({ js, react }: { js: string; react: string }) {
   );
 }
 
+/** Code in one language with no tabs, such as the HTML of a CSS-only example. */
+export function SingleCode({
+  code,
+  lang,
+}: {
+  code: string;
+  lang: "css" | "html";
+}) {
+  return <CodeBlock tabs={{ code, lang }} />;
+}
+
 export function ExampleCode({ js, react }: { js: string; react: string }) {
   return (
     <section className="d-ex-code" aria-label="Code">
@@ -167,25 +174,17 @@ export function ApiTable({ rows }: { rows: readonly Row[] }) {
   );
 }
 
-export function AgentCard({ library }: { library: Library }) {
+/** A compact card at the end of a page with the prompt that builds it. */
+export function AgentPrompt({ prompt }: { prompt: string }) {
   return (
-    <div className="c-card d-cta">
+    <section className="c-card d-agent" aria-label="Prompt for your agent">
       <div className="c-card-in">
-        <h2 className="d-cta-title">
-          Hand {library.name} to your coding agent
-        </h2>
-        <p className="d-cta-text">
-          The guide lists the markup {library.name} expects, its options, and
-          the checks to run once it is in. Paste this prompt into your agent.
-        </p>
-        <pre className="d-prompt">{library.agentPrompt}</pre>
-        <div className="d-cta-actions">
-          <CopyControl value={library.agentPrompt} label="Copy prompt" text />
-          <a className="c-link" href={`/${library.slug}/guide.md`}>
-            reuse.sh/{library.slug}/guide.md
-          </a>
+        <div className="d-agent-bar">
+          <p>Hand this page to your coding agent.</p>
+          <CopyControl value={prompt} label="Copy" text />
         </div>
+        <pre className="d-prompt">{prompt}</pre>
       </div>
-    </div>
+    </section>
   );
 }

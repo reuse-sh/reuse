@@ -35,6 +35,15 @@ These are the rules the code keeps. An adaptation on any framework keeps them to
 - **Own the gesture, not the action.** Your code owns the request, the loading state, success and failure.
 - **Keep the native button.** It enhances a button you already have and restores its markup on destroy.
 
+### Copy button
+
+- **Keep one timer.** Each result clears the pending reset before it starts a new one, and a slow earlier copy never overwrites a newer result.
+- **Swap the icon in place.** The copy, check and error icons share one grid cell, so the state changes without moving the label or resizing the button.
+- **Announce the result.** A polite live region beside the button says Copied or Copy failed, so screen reader users hear what happened.
+- **Fall back when refused.** When the Clipboard API is missing or refused, it copies through a hidden selection, then restores the selection and focus it found.
+- **Name an icon-only button.** A button with no text and no label gets the accessible name Copy.
+- **Restore the button.** Destroy clears the timer, removes the icon and the status, and puts back the original class, label and data-state.
+
 <!-- principles:end -->
 
 ## Install

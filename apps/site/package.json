@@ -18,6 +18,7 @@
     "@reuse-sh/carousel": "workspace:*",
     "@reuse-sh/catalog": "workspace:*",
     "@reuse-sh/core": "workspace:*",
+    "@reuse-sh/gradients": "workspace:*",
     "@reuse-sh/interactions": "workspace:*",
     "@reuse-sh/lightbox": "workspace:*",
     "@reuse-sh/loaders": "workspace:*",

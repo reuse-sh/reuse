@@ -78,37 +78,38 @@ export function Strip({ photos }) {
     react:
       'import { ThinkingDots } from "@reuse-sh/loaders/react";\nimport "@reuse-sh/loaders/styles.css";\n\n<ThinkingDots size={24} label="Preparing your answer" />',
   },
-  shadows: {
-    native: `import "@reuse-sh/shadows/styles.css";
-import { createFadeEdge } from "@reuse-sh/shadows";
+  "easing-gradients": {
+    native: `import { easingGradient } from "@reuse-sh/gradients";
 
-// <div class="re-card re-shadow-ring-md">
-//   <div class="strip">Your content</div>
-// </div>
+// A scrim that eases from nothing to 72% black, for text over an image.
+scrim.style.backgroundImage = easingGradient({
+  to: "rgb(0 0 0 / 0.72)",
+  direction: "to bottom",
+});`,
+    react: `import { easingGradient } from "@reuse-sh/gradients";
 
-// Fade the sides of the scroller inside the card, so the ring stays.
-const strip = document.querySelector(".strip");
-const fade = createFadeEdge(strip, { size: 64, curve: "smooth", mode: "scroll" });
+const scrim = easingGradient({ to: "rgb(0 0 0 / 0.72)", direction: "to bottom" });
 
-// Later, when the strip leaves the page
-fade.destroy();`,
-    react: `import "@reuse-sh/shadows/styles.css";
-import { createFadeEdge } from "@reuse-sh/shadows";
-import { useEffect, useRef } from "react";
+export function Caption({ children }) {
+  return <figcaption style={{ backgroundImage: scrim }}>{children}</figcaption>;
+}`,
+  },
+  "copy-button": {
+    native: `import { createCopyButton } from "@reuse-sh/interactions";
+import "@reuse-sh/interactions/styles.css";
 
-export function Strip({ children }) {
-  const ref = useRef(null);
-  useEffect(() => {
-    const fade = createFadeEdge(ref.current, { mode: "fixed" });
-    return () => fade.destroy();
-  }, []);
-  return (
-    <div className="re-card re-shadow-ring-md">
-      <div ref={ref} className="strip">
-        {children}
-      </div>
-    </div>
-  );
+// <button class="copy" aria-label="Copy command"></button>
+const copy = createCopyButton(document.querySelector(".copy"), {
+  text: "npm install @reuse-sh/interactions",
+});
+
+// Later, when the button leaves the page
+copy.destroy();`,
+    react: `import { CopyButton } from "@reuse-sh/interactions/react";
+import "@reuse-sh/interactions/styles.css";
+
+export function ShareLink({ url }) {
+  return <CopyButton text={url}>Copy link</CopyButton>;
 }`,
   },
   "floating-tooltip": {
@@ -171,9 +172,22 @@ export function Menu({ current }) {
       'import { Avatar, AvatarGroup } from "@reuse-sh/avatars/react";\nimport "@reuse-sh/avatars/styles.css";\n\n<AvatarGroup overlap={12}>\n  <Avatar name="Alex Rivers" badge={{ type: "dot", label: "Online" }} />\n  <Avatar name="Sam Field" badge={{\n    type: "count", count: 128, label: "128 messages",\n  }} />\n</AvatarGroup>',
   },
 };
+/** The stylesheet and HTML of the CSS-only libraries, in place of code. */
+export const cssSnippets: Record<string, { css: string; html: string }> = {
+  shadows: {
+    css: `@import "@reuse-sh/shadows/styles.css";`,
+    html: `<div class="re-card re-shadow-ring-md">
+  Your content
+</div>
+
+<button class="re-shadow-xs">Order a proof</button>`,
+  },
+};
+
 const fence = String.fromCharCode(96).repeat(3);
 export function libraryGuide(library: Library) {
   const example = snippets[library.slug];
+  const css = cssSnippets[library.slug];
   return `${[
     `# ${library.name}`,
     library.description,
@@ -187,10 +201,19 @@ export function libraryGuide(library: Library) {
     ...library.notes.map((value) => `- ${value}`),
     "## API",
     ...library.api.map(([name, text]) => `- \`${name}\`: ${text}`),
-    "## Browser JavaScript",
-    `${fence}js\n${example.native}\n${fence}`,
-    "## React",
-    `${fence}tsx\n${example.react}\n${fence}`,
+    ...(css
+      ? [
+          "## Stylesheet",
+          `${fence}css\n${css.css}\n${fence}`,
+          "## HTML",
+          `${fence}html\n${css.html}\n${fence}`,
+        ]
+      : [
+          "## Browser JavaScript",
+          `${fence}js\n${example.native}\n${fence}`,
+          "## React",
+          `${fence}tsx\n${example.react}\n${fence}`,
+        ]),
     "## Agent workflow",
     "1. Inspect the project and read the installed package's types and stylesheet.",
     "2. Reuse the native controller. Use the React adapter only in a React surface.",

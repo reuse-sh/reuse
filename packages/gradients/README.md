@@ -3,6 +3,18 @@
 Eased CSS gradients that sample an easing curve instead of fading in a straight line, so a fade to transparent ends without a visible edge. It also ships a fade edge that masks the sides of a horizontal scroller.
 
 <!-- principles:start -->
+
+## Principles
+
+These are the rules the code keeps. An adaptation on any framework keeps them too.
+
+- **Ease the stops.** The gradient samples an easing curve into a dozen stops instead of one straight ramp, so a fade has no hard edge where it starts or ends.
+- **Mix in oklab.** Each stop is a color-mix() in oklab, so a fade to transparent keeps its hue instead of passing through gray.
+- **Take any CSS color.** The colors are written into the gradient as CSS, so names, oklch() and var() values all work and the browser resolves them.
+- **Grow the fade with the scroll.** In scroll mode each edge of a scroller fades in by the distance left to scroll, so the start stays sharp until you move, and the mask follows right-to-left layouts.
+- **Refuse broken input.** An unknown easing, a bezier outside 0 to 1 or fewer than two stops throws a RangeError instead of writing a gradient the browser drops.
+- **Restore what it touched.** The fade edge's destroy disconnects its observers and puts the scroller's original style attribute back exactly.
+
 <!-- principles:end -->
 
 ## Install
@@ -43,7 +55,7 @@ fade.destroy();
 
 ## Documentation
 
-- Examples and API: https://reuse.sh/gradients
+- Examples and API: https://reuse.sh/easing-gradients
 
 ## License
 

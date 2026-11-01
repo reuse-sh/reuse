@@ -1,6 +1,8 @@
+import BlendIcon from "@hugeicons/core-free-icons/BlendIcon";
 import BookOpen01Icon from "@hugeicons/core-free-icons/BookOpen01Icon";
 import Cancel01Icon from "@hugeicons/core-free-icons/Cancel01Icon";
 import CarouselHorizontal02Icon from "@hugeicons/core-free-icons/CarouselHorizontal02Icon";
+import ClipboardCopyIcon from "@hugeicons/core-free-icons/ClipboardCopyIcon";
 import CodeIcon from "@hugeicons/core-free-icons/CodeIcon";
 import Copy01Icon from "@hugeicons/core-free-icons/Copy01Icon";
 import Cursor01Icon from "@hugeicons/core-free-icons/Cursor01Icon";
@@ -37,6 +39,8 @@ export const iconData = {
   "moving-highlight": CursorInWindowIcon,
   "hold-to-confirm": Tick02Icon,
   avatars: UserGroupIcon,
+  "easing-gradients": BlendIcon,
+  "copy-button": ClipboardCopyIcon,
   book: BookOpen01Icon,
   code: CodeIcon,
   copy: Copy01Icon,

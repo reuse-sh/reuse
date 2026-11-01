@@ -15,16 +15,6 @@
 .c-display + .h-prose {
   margin-top: 28px;
 }
-.h-copy-in {
-  display: grid;
-  justify-items: center;
-}
-.h-copy-in > span {
-  grid-area: 1 / 1;
-}
-.h-copy-size {
-  visibility: hidden;
-}
 .h-actions {
   display: flex;
   flex-wrap: wrap;
@@ -358,6 +348,47 @@
 .h-guide:focus-visible {
   outline-offset: -2px;
 }
+.h-trust-h {
+  margin-top: 56px;
+}
+.h-trust {
+  display: grid;
+  margin: 10px -12px 0;
+  --re-highlight-background: var(--hover);
+  --re-highlight-radius: 10px;
+}
+.h-trust-row {
+  display: grid;
+  grid-template-columns: 168px minmax(0, 1fr) auto;
+  align-items: baseline;
+  gap: 4px 20px;
+  padding: 12px;
+  border-radius: 10px;
+}
+.h-trust-name {
+  font-weight: 540;
+}
+.h-trust-reason {
+  color: var(--prose);
+  font-size: 14.5px;
+  line-height: 23px;
+  text-wrap: pretty;
+}
+.h-trust-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  color: var(--mute);
+  font-size: 13px;
+  white-space: nowrap;
+  transition: color 150ms ease;
+}
+.h-trust-row:hover .h-trust-link {
+  color: var(--ink);
+}
+.h-trust-row:focus-visible {
+  outline-offset: -2px;
+}
 .h-index-note {
   margin-top: 16px;
   color: var(--prose);
@@ -391,6 +422,13 @@
   }
   .h-guide code {
     grid-column: 2;
+  }
+  .h-trust-row {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+  .h-trust-reason {
+    grid-column: 1 / -1;
+    grid-row: 2;
   }
 }
 @media (prefers-reduced-motion: reduce) {

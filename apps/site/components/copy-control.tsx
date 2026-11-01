@@ -1,8 +1,6 @@
 "use client";
 
-import { copyText } from "@reuse-sh/core/clipboard";
-import { useEffect, useRef, useState } from "react";
-import { Icon } from "./icons";
+import { CopyButton } from "@reuse-sh/interactions/react";
 
 export function CopyControl({
   value,
@@ -15,49 +13,33 @@ export function CopyControl({
   text?: boolean;
   className?: string;
 }) {
-  const [state, setState] = useState<"idle" | "pending" | "copied" | "error">(
-    "idle",
-  );
-  const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
-  const mounted = useRef(true);
-  useEffect(() => {
-    mounted.current = true;
-    return () => {
-      mounted.current = false;
-      clearTimeout(timer.current);
-    };
-  }, []);
   return (
-    <button
-      type="button"
+    <CopyButton
+      text={value}
       className={["c-copy", text ? "" : "c-copy-icon", className]
         .filter(Boolean)
         .join(" ")}
-      data-copy-state={state}
-      data-copied={state === "copied" ? "" : undefined}
-      aria-label={text ? undefined : state === "copied" ? "Copied" : label}
-      disabled={state === "pending"}
-      onClick={async () => {
-        clearTimeout(timer.current);
-        setState("pending");
-        const success = await copyText(value);
-        if (!mounted.current) return;
-        setState(success ? "copied" : "error");
-        timer.current = setTimeout(() => setState("idle"), 1600);
-      }}
+      aria-label={text ? undefined : label}
     >
-      <span className="c-copy-icons" aria-hidden="true">
-        <Icon name="copy" size={15} />
-        <Icon name="check" size={15} />
-      </span>
-      {text ? <span>{label}</span> : null}
-      <span className="sr-only" role="status">
-        {state === "copied"
-          ? "Copied"
-          : state === "error"
-            ? "Copy failed. Try again."
-            : ""}
-      </span>
-    </button>
+      {text ? label : null}
+    </CopyButton>
+  );
+}
+
+/** The primary button that copies a prompt for a coding agent. */
+export function PromptButton({
+  prompt,
+  className,
+}: {
+  prompt: string;
+  className?: string;
+}) {
+  return (
+    <CopyButton
+      text={prompt}
+      className={["c-btn c-prompt-btn", className].filter(Boolean).join(" ")}
+    >
+      Copy prompt for your agent
+    </CopyButton>
   );
 }

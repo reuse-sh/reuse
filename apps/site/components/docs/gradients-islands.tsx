@@ -3,12 +3,13 @@
 import { createCarousel } from "@reuse-sh/carousel";
 import {
   createFadeEdge,
+  easingGradient,
   FADE_CURVES,
   FADE_MODES,
   type FadeCurve,
   type FadeEdge,
   type FadeMode,
-} from "@reuse-sh/shadows";
+} from "@reuse-sh/gradients";
 import { useEffect, useRef, useState } from "react";
 import { photos } from "../../lib/photos";
 import { createSegmentHighlights } from "../segment-highlight";
@@ -127,6 +128,53 @@ export function FadeEdgeStrip() {
           </figure>
         ))}
       </section>
+    </div>
+  );
+}
+
+const SCRIM_CURVES = ["eased", "linear"] as const;
+type ScrimCurve = (typeof SCRIM_CURVES)[number];
+
+const scrims: Record<ScrimCurve, string> = {
+  eased: easingGradient({ to: "rgb(0 0 0 / 0.72)", direction: "to bottom" }),
+  linear: easingGradient({
+    to: "rgb(0 0 0 / 0.72)",
+    direction: "to bottom",
+    easing: "linear",
+  }),
+};
+
+export function ImageCaption() {
+  const [curve, setCurve] = useState<ScrimCurve>("eased");
+  const photo = photos[4];
+  return (
+    <div className="x-fade">
+      <div className="x-fade-bar">
+        <Choice
+          name="x-scrim-curve"
+          legend="Scrim curve"
+          values={SCRIM_CURVES}
+          selected={curve}
+          onSelect={setCurve}
+        />
+      </div>
+      <figure className="x-caption">
+        {/* biome-ignore lint/performance/noImgElement: a static SVG texture under a caption. */}
+        <img
+          className="x-caption-img"
+          src={photo.src}
+          alt={photo.alt}
+          width={photo.width}
+          height={photo.height}
+        />
+        <figcaption
+          className="x-caption-text"
+          style={{ backgroundImage: scrims[curve] }}
+        >
+          <b>{photo.caption}</b>
+          <span>Marble print on cotton paper, 50 × 70 cm, edition of 30</span>
+        </figcaption>
+      </figure>
     </div>
   );
 }

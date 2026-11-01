@@ -1,58 +1,84 @@
 import type { Library } from "@reuse-sh/catalog";
 import { shadowLevels } from "@reuse-sh/shadows";
 import { CardPatterns } from "../demos/shadows";
-import { basicCode } from "./basic-code";
-import {
-  C,
-  CodePair,
-  ExampleCode,
-  Install,
-  Keys,
-  Section,
-  Text,
-} from "./parts";
-import { FadeEdgeStrip } from "./shadows-islands";
+import { C, Install, Section, SingleCode, Text } from "./parts";
+
+const importCss = `@import "@reuse-sh/shadows/styles.css";`;
+
+const linkHtml = `<link rel="stylesheet" href="/node_modules/@reuse-sh/shadows/dist/styles.css" />`;
+
+const startHtml = `<div class="re-card re-shadow-ring-md">
+  Your content
+</div>
+
+<button class="re-shadow-xs">Order a proof</button>`;
+
+const cardsHtml = `<div class="re-card re-card-code re-shadow-ring-sm">
+  <pre><code>npm install @reuse-sh/shadows</code></pre>
+  <button aria-label="Copy command">…</button>
+</div>
+
+<div class="re-card-frame">
+  <div class="re-card re-card-action re-shadow-ring-xs">
+    <div>
+      <h3>Order a test print</h3>
+      <p>A 20 × 15 cm proof of Coral sky on the same cotton paper.</p>
+    </div>
+    <button>Order a proof</button>
+  </div>
+</div>`;
+
+const scaleHtml = `<button class="re-shadow-xs">A control</button>
+<article class="re-shadow-ring-sm">A card</article>
+<div class="re-shadow-ring-lg" role="menu">A menu</div>
+<dialog class="re-shadow-ring-2xl">A dialog</dialog>`;
+
+function HtmlExample({ code }: { code: string }) {
+  return (
+    <section className="d-ex-code" aria-label="HTML">
+      <SingleCode code={code} lang="html" />
+    </section>
+  );
+}
 
 export function ShadowsStart({ library }: { library: Library }) {
-  const [classJs, classReact] = basicCode.scale;
-  const [fadeJs, fadeReact] = basicCode.fadeEdge;
   return (
     <>
       <Section title="Install">
         <Install library={library} />
       </Section>
+      <Section title="Import the stylesheet">
+        <Text>
+          Import it once from your main stylesheet. A bundler also takes{" "}
+          <C>import "@reuse-sh/shadows/styles.css"</C> in your entry file.
+        </Text>
+        <SingleCode code={importCss} lang="css" />
+        <Text>Without a build step, link the file from the page.</Text>
+        <SingleCode code={linkHtml} lang="html" />
+      </Section>
       <Section title="Add a shadow">
         <Text>
-          Import the stylesheet once and put a level on any element. The ring
-          variant replaces a border, so drop the one you had.
+          Put a level on any element. The ring variant replaces a border, so
+          drop the one you had.
         </Text>
-        <CodePair js={classJs} react={classReact} />
-      </Section>
-      <Section title="Fade a scrolling edge">
-        <Text>
-          <C>createFadeEdge</C> masks the sides of a horizontal scroller.
-          Destroy it with the scroller, and it puts the old inline style back.
-        </Text>
-        <CodePair js={fadeJs} react={fadeReact} />
+        <SingleCode code={startHtml} lang="html" />
       </Section>
     </>
   );
 }
 
 export function ShadowsCards() {
-  const [js, react] = basicCode.cards;
   return (
     <>
       <div className="x-cards">
         <CardPatterns />
       </div>
-      <ExampleCode js={js} react={react} />
+      <HtmlExample code={cardsHtml} />
     </>
   );
 }
 
 export function ShadowsScale() {
-  const [js, react] = basicCode.scale;
   return (
     <>
       {[
@@ -73,39 +99,7 @@ export function ShadowsScale() {
           </ul>
         </div>
       ))}
-      <ExampleCode js={js} react={react} />
-    </>
-  );
-}
-
-export function ShadowsFadeEdge() {
-  const [js, react] = basicCode.fadeEdge;
-  return (
-    <>
-      <FadeEdgeStrip />
-      <Keys>
-        Scroll the strip with a trackpad or <kbd>Shift</kbd> and the wheel, or
-        focus it and press <kbd>←</kbd>
-        <kbd>→</kbd>.
-      </Keys>
-      <Section title="Scroll and fixed">
-        <Text>
-          In <C>scroll</C> mode each fade grows with the distance left to
-          scroll, so it fades in as you leave the start and fades out as you
-          reach the end. In <C>fixed</C> mode a side is either fully faded or
-          not faded at all.
-        </Text>
-      </Section>
-      <Section title="Smooth and linear">
-        <Text>
-          <C>smooth</C> eases the mask in and out, so the edge has no visible
-          start. <C>linear</C> is a straight ramp, a little harder at its inner
-          end.
-        </Text>
-      </Section>
-      <Section title="In code">
-        <CodePair js={js} react={react} />
-      </Section>
+      <HtmlExample code={scaleHtml} />
     </>
   );
 }

@@ -1,4 +1,5 @@
 import { createAvatar, createAvatarGroup } from "@reuse-sh/avatars";
+import { easingGradient } from "@reuse-sh/gradients";
 import { createThinkingDots } from "@reuse-sh/loaders";
 import { type MenuSlug, menuLibrary } from "../../lib/menu";
 import { photos } from "../../lib/photos";
@@ -150,6 +151,45 @@ function stage(slug: MenuSlug, cleanups: (() => void)[]) {
       const dots = createThinkingDots(canvas, { size: 48 });
       cleanups.push(() => dots.destroy());
       return el("div", "pk pk-load", canvas);
+    }
+    case "easing-gradients":
+      return el(
+        "div",
+        "pk pk-gr",
+        ...(["linear", "ease-in-out-sine"] as const).map((easing) => {
+          const bar = el("span");
+          bar.style.backgroundImage = easingGradient({
+            to: "#111",
+            easing,
+            direction: "to right",
+          });
+          return bar;
+        }),
+      );
+    case "copy-button": {
+      const icons = el(
+        "span",
+        "pk-copy-icons",
+        iconNode("copy", 14),
+        iconNode("check", 14),
+      );
+      const button = el("span", "pk-copy-btn", icons);
+      if (!matchMedia("(prefers-reduced-motion: reduce)").matches) {
+        const step = setInterval(() => {
+          if (button.isConnected) button.toggleAttribute("data-copied");
+        }, 1400);
+        cleanups.push(() => clearInterval(step));
+      }
+      return el(
+        "div",
+        "pk pk-copy",
+        el(
+          "span",
+          "pk-copy-code",
+          el("code", "", "reuse.sh/copy-button"),
+          button,
+        ),
+      );
     }
     case "shadows":
       return el(

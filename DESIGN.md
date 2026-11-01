@@ -12,7 +12,7 @@ Tokens are fixed on :root in apps/site/app/globals.css. There are no runtime set
 - Hover: --hover is black at 3%. Every quiet hover and moving highlight uses it.
 - Shape: --r 1.35 multiplies base radii, so a 16px card corner becomes about 22px. Code blocks use 12px times --r.
 - Layout: --col 840px content column with a 16px gutter (80px from 1100px), --sec 120px between sections (88px at 760px and below).
-- Depth: shadow tokens built from the @reuse-sh/shadows levels with its 0.5px ring: --shadow-ring alone, --shadow-control (xs) for buttons, pills and keys, --shadow-raised (sm) for cards, code blocks and small floating surfaces, --shadow-panel (md) for example app windows, --shadow-pop (lg) for menus, popovers and dialogs.
+- Depth: shadow tokens built from the @reuse-sh/shadows levels with its 0.5px ring: --shadow-ring alone, --shadow-control (xs) for buttons, pills and keys, --shadow-control-soft for the hold-to-confirm button, which draws its edge with an inset ring, --shadow-raised (sm) for cards, code blocks and small floating surfaces, --shadow-panel (md) for example app windows, --shadow-pop (lg) for menus, popovers and dialogs.
 - Motion: --ease cubic-bezier(0.23, 1, 0.32, 1).
 
 ## Type
@@ -25,15 +25,15 @@ Cards are a double ring: a 4px outer frame of white at 55% with --shadow-ring, a
 
 ## Header and Libraries menu
 
-The header is sticky, 56px, with a translucent page-colored background and a 1px line once the page scrolls. Left: the "reuse" wordmark, a slash, and the library switcher. On a library page the switcher shows that library's icon and name, elsewhere it reads "Libraries". Right: Agent guides and a GitHub icon with a tooltip. A moving highlight follows the pointer across both groups.
+The header is sticky, 56px, with a translucent page-colored background and a 1px line once the page scrolls. Left: the "reuse" wordmark, a slash, and the library switcher. On a library page the switcher shows that library's icon and name, elsewhere it reads "Libraries". Right: Agent guides, Tools and a GitHub icon with a tooltip. A moving highlight follows the pointer across both groups.
 
 The switcher opens a three-column menu grouped as Media, Interface, and Motion and style. Each row has an icon, the name and one short line. The current library's row holds the highlight at rest. Pointer users see a live preview card at the cursor. Keyboard and touch users get the same menu without it. ArrowDown opens the menu, arrows move between rows and columns, Home and End jump, Escape closes and returns focus, and an outside press or navigation closes it. At 600px and below the menu is one scrolling column inside the viewport.
 
-The footer is the wordmark with Agent guides, GitHub and License.
+The footer is the wordmark with Agent guides, Tools, GitHub and License.
 
 ## Tabs, code and highlight
 
-Tabs are a segmented control with two moving highlights on one root. The selected highlight marks the active tab and moves only when another tab is chosen by click or arrow keys. A lighter hover fill follows the pointer separately. Code blocks use the Pills look of the same control: a 5.5% gray pill for the active language and a 3% hover fill, with JavaScript and React tabs. The chosen language is remembered in localStorage under re-code-tab and every code block opens on it. The copy button appears on hover and focus and crossfades to a check.
+Tabs are a segmented control with two moving highlights on one root. The selected highlight marks the active tab and moves only when another tab is chosen by click or arrow keys. A lighter hover fill follows the pointer separately. Code blocks use the Pills look of the same control: a 5.5% gray pill for the active language and a 3% hover fill, with JavaScript and React tabs. CSS-only libraries show single CSS and HTML blocks with no tabs. The chosen language is remembered in localStorage under re-code-tab and every code block opens on it. The copy button is the @reuse-sh/interactions copy button. In code blocks it appears on hover and focus and its icon morphs to a check.
 
 ## Motion
 

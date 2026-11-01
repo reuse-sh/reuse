@@ -4,6 +4,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
   return [
     "",
     "/for-agents",
+    "/tools",
     ...libraries.flatMap((library) =>
       docPages(library).map((page) => docHref(library, page.path)),
     ),

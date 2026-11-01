@@ -193,49 +193,8 @@ export function Saving() {
   return <ThinkingDots size={32} config={shuffle} label="Saving" />;
 }`,
   ],
-  cards: [
-    `import "@reuse-sh/shadows/styles.css";
-
-// <div class="re-card-frame">
-//   <div class="re-card re-card-action re-shadow-ring-xs">…</div>
-// </div>
-const frame = document.createElement("div");
-frame.className = "re-card-frame";
-const card = frame.appendChild(document.createElement("div"));
-card.className = "re-card re-card-action re-shadow-ring-xs";`,
-    `import "@reuse-sh/shadows/styles.css";
-
-export function ActionCard({ title, text, action }) {
-  return (
-    <div className="re-card-frame">
-      <div className="re-card re-card-action re-shadow-ring-xs">
-        <div>
-          <h3>{title}</h3>
-          <p>{text}</p>
-        </div>
-        {action}
-      </div>
-    </div>
-  );
-}`,
-  ],
-  scale: [
-    `import "@reuse-sh/shadows/styles.css";
-import { shadowLevels } from "@reuse-sh/shadows";
-
-// shadowLevels is ["xs", "sm", "md", "lg", "xl", "2xl"]
-const level = shadowLevels[3];
-popover.classList.add(\`re-shadow-ring-\${level}\`);
-button.classList.add("re-shadow-xs");`,
-    `import "@reuse-sh/shadows/styles.css";
-
-export function Panel({ level = "md", ring = true, children }) {
-  const name = ring ? \`re-shadow-ring-\${level}\` : \`re-shadow-\${level}\`;
-  return <div className={\`panel \${name}\`}>{children}</div>;
-}`,
-  ],
   fadeEdge: [
-    `import { createFadeEdge } from "@reuse-sh/shadows";
+    `import { createFadeEdge } from "@reuse-sh/gradients";
 
 const strip = document.querySelector(".prints");
 const fade = createFadeEdge(strip, { size: 64, curve: "smooth", mode: "scroll" });
@@ -243,7 +202,7 @@ const fade = createFadeEdge(strip, { size: 64, curve: "smooth", mode: "scroll" }
 // Change it later, or remove it with the strip.
 fade.update({ mode: "fixed" });
 fade.destroy();`,
-    `import { createFadeEdge } from "@reuse-sh/shadows";
+    `import { createFadeEdge } from "@reuse-sh/gradients";
 import { useEffect, useRef } from "react";
 
 export function Prints({ prints, mode = "scroll" }) {
@@ -253,6 +212,55 @@ export function Prints({ prints, mode = "scroll" }) {
     return () => fade.destroy();
   }, [mode]);
   return <div ref={ref} className="prints">{prints.map(renderPrint)}</div>;
+}`,
+  ],
+  imageCaption: [
+    `import { easingGradient } from "@reuse-sh/gradients";
+
+// <figure class="print">
+//   <img src="/prints/blue-hour.jpg" alt="…" />
+//   <figcaption>Blue hour</figcaption>
+// </figure>
+const caption = document.querySelector(".print figcaption");
+caption.style.backgroundImage = easingGradient({
+  to: "rgb(0 0 0 / 0.72)",
+  direction: "to bottom",
+});`,
+    `import { easingGradient } from "@reuse-sh/gradients";
+
+const scrim = easingGradient({ to: "rgb(0 0 0 / 0.72)", direction: "to bottom" });
+
+export function Print({ src, alt, title }) {
+  return (
+    <figure className="print">
+      <img src={src} alt={alt} />
+      <figcaption style={{ backgroundImage: scrim }}>{title}</figcaption>
+    </figure>
+  );
+}`,
+  ],
+  curves: [
+    `import { easingGradient, easingStops } from "@reuse-sh/gradients";
+
+const fade = easingGradient({
+  from: "var(--surface)",
+  to: "transparent",
+  easing: [0.23, 1, 0.32, 1],
+  stops: 16,
+});
+
+// Or take the samples and write the gradient yourself.
+const stops = easingStops("ease-out", 8);`,
+    `import { easingGradient } from "@reuse-sh/gradients";
+
+const fade = easingGradient({
+  from: "var(--surface)",
+  to: "transparent",
+  easing: [0.23, 1, 0.32, 1],
+});
+
+export function Fade() {
+  return <div className="fade" style={{ backgroundImage: fade }} />;
 }`,
   ],
   menu: [
@@ -390,6 +398,53 @@ export function DangerRow({ workspace }) {
       <HoldToConfirmButton holdMs={2000} onConfirm={() => scheduleDeletion(workspace.id)}>
         Hold to delete
       </HoldToConfirmButton>
+    </div>
+  );
+}`,
+  ],
+  codeBlock: [
+    `import { createCopyButton } from "@reuse-sh/interactions";
+import "@reuse-sh/interactions/styles.css";
+
+// <div class="code">
+//   <pre><code>npm install @reuse-sh/interactions</code></pre>
+//   <button class="copy" aria-label="Copy command"></button>
+// </div>
+const block = document.querySelector(".code");
+const copy = createCopyButton(block.querySelector(".copy"), {
+  getText: () => block.querySelector("code").textContent,
+});`,
+    `import { CopyButton } from "@reuse-sh/interactions/react";
+import "@reuse-sh/interactions/styles.css";
+
+export function Command({ command }) {
+  return (
+    <div className="code">
+      <pre><code>{command}</code></pre>
+      <CopyButton text={command} className="copy" aria-label="Copy command" />
+    </div>
+  );
+}`,
+  ],
+  shareLink: [
+    `import { createCopyButton } from "@reuse-sh/interactions";
+import "@reuse-sh/interactions/styles.css";
+
+// <input class="link" value="https://prints.example/coral-sky" readonly />
+// <button class="copy-link">Copy link</button>
+const input = document.querySelector(".link");
+const copy = createCopyButton(document.querySelector(".copy-link"), {
+  getText: () => input.value,
+  onError: () => input.select(),
+});`,
+    `import { CopyButton } from "@reuse-sh/interactions/react";
+import "@reuse-sh/interactions/styles.css";
+
+export function ShareLink({ url }) {
+  return (
+    <div className="share">
+      <input value={url} readOnly aria-label="Link to the print" />
+      <CopyButton text={url}>Copy link</CopyButton>
     </div>
   );
 }`,
