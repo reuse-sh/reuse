@@ -85,6 +85,7 @@ export function createCopyButton(
   const originalState = button.getAttribute("data-state");
   const originalLabel = button.getAttribute("aria-label");
   const hadClass = button.classList.contains("re-copy-button");
+  const hadClassAttribute = button.hasAttribute("class");
   const icon = document.createElement("span");
   icon.className = "re-copy-button-icon";
   icon.setAttribute("aria-hidden", "true");
@@ -132,7 +133,7 @@ export function createCopyButton(
     try {
       options.onCopy?.(text);
     } catch (error) {
-      console.error(error);
+      view.reportError(error);
     }
   };
 
@@ -149,6 +150,8 @@ export function createCopyButton(
       icon.remove();
       status.remove();
       if (!hadClass) button.classList.remove("re-copy-button");
+      if (!hadClassAttribute && !button.classList.length)
+        button.removeAttribute("class");
       if (originalState === null) button.removeAttribute("data-state");
       else button.setAttribute("data-state", originalState);
       if (!named && button.getAttribute("aria-label") === "Copy")

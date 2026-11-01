@@ -558,7 +558,8 @@ describe("copy button", () => {
   });
 
   it("stays copied when onCopy throws", async () => {
-    const logged = vi.spyOn(console, "error").mockImplementation(() => {});
+    const reported = vi.fn();
+    vi.stubGlobal("reportError", reported);
     const errors: unknown[] = [];
     const { button, status } = setup({
       text: "value",
@@ -573,8 +574,8 @@ describe("copy button", () => {
     expect(button.dataset.state).toBe("copied");
     expect(status()).toBe("Copied");
     expect(errors).toEqual([]);
-    expect((logged.mock.calls[0][0] as Error).message).toBe("analytics down");
-    logged.mockRestore();
+    expect((reported.mock.calls[0][0] as Error).message).toBe("analytics down");
+    vi.unstubAllGlobals();
   });
 
   it("selects the fallback text inside an open modal dialog", async () => {
@@ -598,6 +599,41 @@ describe("copy button", () => {
     expect(parent).toBe(dialog);
     expect(button.dataset.state).toBe("copied");
     dialog.remove();
+  });
+
+  it("reports an error when the fallback textarea cannot take focus", async () => {
+    Reflect.deleteProperty(navigator, "clipboard");
+    const execCommand = vi.fn(() => true);
+    Object.defineProperty(document, "execCommand", {
+      value: execCommand,
+      configurable: true,
+    });
+    const focus = vi
+      .spyOn(HTMLTextAreaElement.prototype, "focus")
+      .mockImplementation(() => {});
+    const { button } = setup({ text: "value" });
+    button.click();
+    await flush();
+    expect(execCommand).not.toHaveBeenCalled();
+    expect(button.dataset.state).toBe("error");
+    focus.mockRestore();
+  });
+
+  it("keeps class and label changes made after setup when destroyed", () => {
+    const { button, controller } = setup({ text: "value" });
+    button.className = "code-copy theme-dark re-copy-button";
+    button.setAttribute("aria-label", "Copy snippet");
+    controller.destroy();
+    expect(button.className).toBe("code-copy theme-dark");
+    expect(button.getAttribute("aria-label")).toBe("Copy snippet");
+  });
+
+  it("removes the label it added to an icon-only button on destroy", () => {
+    const button = document.createElement("button");
+    document.body.append(button);
+    const controller = createCopyButton(button, { text: "x" });
+    controller.destroy();
+    expect(button.outerHTML).toBe("<button></button>");
   });
 
   it("names an icon-only button", () => {

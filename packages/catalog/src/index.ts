@@ -1066,7 +1066,7 @@ export const libraries: Library[] = [
       ],
       [
         "Restore the button",
-        "Destroy clears the timer, removes the icon and the status, and puts back the original class, label and data-state.",
+        "Destroy clears the timer, removes the icon, the status and the class and label it added, and puts back data-state.",
       ],
     ],
     api: [

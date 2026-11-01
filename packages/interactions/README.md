@@ -42,7 +42,7 @@ These are the rules the code keeps. An adaptation on any framework keeps them to
 - **Announce the result.** A polite live region beside the button says Copied or Copy failed, so screen reader users hear what happened.
 - **Fall back when refused.** When the Clipboard API is missing or refused, it copies through a hidden selection, then restores the selection and focus it found.
 - **Name an icon-only button.** A button with no text and no label gets the accessible name Copy.
-- **Restore the button.** Destroy clears the timer, removes the icon and the status, and puts back the original class, label and data-state.
+- **Restore the button.** Destroy clears the timer, removes the icon, the status and the class and label it added, and puts back data-state.
 
 <!-- principles:end -->
 
