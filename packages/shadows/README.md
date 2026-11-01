@@ -1,6 +1,6 @@
 # @reuse-sh/shadows
 
-A CSS shadow scale with six levels, from a small control to a floating surface. Each level has two soft layers and an optional hairline ring.
+A CSS shadow scale with six levels, from a small control to a floating surface. Each level has two soft layers and an optional hairline ring. It also ships a fade edge for horizontal scrollers.
 
 ## Install
 
@@ -20,6 +20,19 @@ import "@reuse-sh/shadows/styles.css";
 <div class="reuse-card reuse-shadow-ring-md">
   Your content
 </div>
+```
+
+## Fade edge
+
+`createFadeEdge` masks the edges of a horizontal scroller with an eased gradient. In the default `scroll` mode an edge fades in as you scroll away from it.
+
+```js
+import { createFadeEdge } from "@reuse-sh/shadows";
+
+const fade = createFadeEdge(strip, { size: 64, curve: "smooth", mode: "scroll" });
+
+// Later
+fade.destroy();
 ```
 
 ## Documentation

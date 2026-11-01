@@ -1,0 +1,402 @@
+/* Home page and Agent guides page. Shared classes come from shell.css. */
+
+/* Opening */
+.h-open {
+  padding-top: 128px;
+}
+.h-prose {
+  max-width: 580px;
+  margin-top: 18px;
+  font-size: 16px;
+  line-height: 27px;
+  color: var(--prose);
+  text-wrap: pretty;
+}
+.c-display + .h-prose {
+  margin-top: 28px;
+}
+.h-copy-in {
+  display: grid;
+  justify-items: center;
+}
+.h-copy-in > span {
+  grid-area: 1 / 1;
+}
+.h-copy-size {
+  visibility: hidden;
+}
+.h-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-top: 36px;
+}
+
+/* Demo cards */
+.h-cards {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin-top: 28px;
+}
+.h-card-demo {
+  flex: 1;
+  display: grid;
+  place-items: center;
+  min-height: 184px;
+  padding: 24px 20px 12px;
+}
+.h-card-cap {
+  padding: 0 20px 18px;
+  font-size: 14px;
+  line-height: 20px;
+}
+.h-card-cap b,
+.h-card-cap span {
+  display: block;
+}
+.h-card-cap span {
+  color: var(--prose);
+  text-wrap: pretty;
+}
+.h-tools,
+.h-menu {
+  border-radius: 13px;
+  background: var(--surface);
+  box-shadow:
+    0 0 0 1px rgb(0 0 0 / 7%),
+    0 2px 6px -2px rgb(0 0 0 / 8%);
+  --reuse-highlight-background: var(--hover);
+  --reuse-highlight-radius: 8px;
+}
+.h-tools {
+  display: flex;
+  gap: 2px;
+  padding: 4px;
+}
+.h-tools button {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: #555;
+  transition:
+    color 150ms ease,
+    transform 160ms var(--ease);
+}
+.h-tools button:hover {
+  color: var(--ink);
+}
+.h-tools button:active {
+  transform: scale(0.94);
+}
+.h-menu {
+  display: grid;
+  gap: 1px;
+  width: min(100%, 232px);
+  padding: 5px;
+}
+.h-menu button {
+  display: grid;
+  grid-template-columns: 16px 1fr auto;
+  align-items: center;
+  gap: 10px;
+  height: 32px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  font-size: 13.5px;
+  text-align: left;
+}
+.h-menu svg {
+  color: #666;
+}
+.h-menu kbd {
+  min-width: 0;
+  height: auto;
+  padding: 0;
+  background: none;
+  box-shadow: none;
+  color: var(--mute);
+  font-size: 12px;
+  font-weight: 400;
+}
+.h-tools button:focus-visible,
+.h-menu button:focus-visible {
+  outline-offset: -2px;
+}
+.h-load {
+  display: grid;
+  justify-items: center;
+  gap: 8px;
+  color: var(--ink);
+}
+.h-load > span:last-child {
+  font-size: 13px;
+  color: var(--mute);
+}
+
+/* Carousel: starts at the column and runs off the right edge */
+.h-strip {
+  margin-top: 28px;
+  container-type: inline-size;
+}
+.h-strip-vp {
+  --h-off: max(var(--gutter), (100cqi - var(--col)) / 2);
+  --reuse-carousel-slide-width: min(288px, 72vw);
+  --reuse-carousel-gap: 12px;
+  padding-inline: var(--h-off);
+  scroll-padding-inline: var(--h-off);
+}
+.h-slide button {
+  display: block;
+  width: 100%;
+  aspect-ratio: 4 / 5;
+  padding: 0;
+  border: 0;
+  overflow: hidden;
+  border-radius: calc(10px * var(--r));
+  background: #ececec;
+  cursor: zoom-in;
+}
+.h-slide button:focus-visible {
+  outline-offset: -2px;
+}
+.h-slide img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  user-select: none;
+  -webkit-user-select: none;
+}
+.h-slide figcaption {
+  margin-top: 10px;
+  font-size: 14px;
+  line-height: 20px;
+}
+.h-strip-ctrl {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-top: 16px;
+}
+.h-dots {
+  position: relative;
+  display: flex;
+  align-items: center;
+  height: 24px;
+  margin-left: -3px;
+}
+.h-dots button {
+  position: relative;
+  width: 10px;
+  height: 24px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+}
+.h-dots button::before,
+.h-dots::after {
+  content: "";
+  position: absolute;
+  top: calc(50% - 2px);
+  left: 3px;
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+}
+.h-dots button::before {
+  background: rgb(0 0 0 / 18%);
+}
+.h-dots::after {
+  background: var(--ink);
+  pointer-events: none;
+  transform: translateX(calc(var(--h-dot, 0) * 10px));
+  transition: transform 300ms cubic-bezier(0.32, 0.72, 0, 1);
+}
+.h-arrows {
+  display: flex;
+  gap: 2px;
+  margin-left: auto;
+  margin-right: -6px;
+}
+.h-arrows button {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--ink);
+  transition:
+    background-color 150ms ease,
+    transform 160ms var(--ease),
+    opacity 150ms ease;
+}
+.h-arrows button:hover {
+  background: var(--hover);
+}
+.h-arrows button:active {
+  transform: scale(0.94);
+}
+.h-arrows button:disabled {
+  opacity: 0.3;
+  cursor: default;
+  background: transparent;
+}
+
+/* Features */
+.h-feats {
+  margin-top: 40px;
+}
+
+/* Agent guides page */
+.h-page {
+  padding-top: 56px;
+}
+.h-lead {
+  max-width: 600px;
+  margin-top: 10px;
+  font-size: 17px;
+  line-height: 27px;
+  color: var(--prose);
+  text-wrap: pretty;
+}
+.h-steps {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  margin-top: 40px;
+}
+.h-steps .c-card-in {
+  padding: 18px 20px 20px;
+}
+.h-step-n {
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  margin-bottom: 14px;
+  border-radius: 50%;
+  background: var(--surface);
+  box-shadow:
+    0 0 0 1px rgb(0 0 0 / 9%),
+    0 1px 2px rgb(0 0 0 / 5%);
+  font-size: 12.5px;
+  font-weight: 560;
+  font-variant-numeric: tabular-nums;
+}
+.h-steps p {
+  color: var(--prose);
+  font-size: 14.5px;
+  line-height: 23px;
+  text-wrap: pretty;
+}
+.h-steps b {
+  display: block;
+}
+.h-prompt {
+  margin-top: 12px;
+}
+.h-prompt pre {
+  margin: 0;
+  padding: 18px 20px 4px;
+  font-family: var(--mono);
+  font-size: 13px;
+  line-height: 1.65;
+  color: var(--ink-2);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.h-prompt-bar {
+  display: flex;
+  justify-content: flex-end;
+  padding: 10px 12px 12px;
+}
+.h-guides-h {
+  margin-top: 64px;
+}
+.h-guides {
+  display: grid;
+  margin: 14px -12px 0;
+  --reuse-highlight-background: var(--hover);
+  --reuse-highlight-radius: 10px;
+}
+.h-guide {
+  display: grid;
+  grid-template-columns: 18px 168px minmax(0, 1fr);
+  align-items: center;
+  gap: 14px;
+  min-height: 44px;
+  padding: 10px 12px;
+  border-radius: 10px;
+}
+.h-guide svg {
+  color: #707070;
+  transition: color 150ms ease;
+}
+.h-guide:hover svg {
+  color: var(--ink);
+}
+.h-guide-name {
+  font-weight: 540;
+}
+.h-guide code {
+  overflow: hidden;
+  font-family: var(--mono);
+  font-size: 12.75px;
+  color: var(--prose);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.h-guide:focus-visible {
+  outline-offset: -2px;
+}
+.h-index-note {
+  margin-top: 16px;
+  color: var(--prose);
+}
+
+@media (max-width: 760px) {
+  .h-steps {
+    grid-template-columns: 1fr;
+  }
+}
+@media (max-width: 600px) {
+  .h-open {
+    padding-top: 64px;
+  }
+  .h-cards {
+    grid-template-columns: 1fr;
+  }
+  .h-card-demo {
+    min-height: 156px;
+  }
+  .h-page {
+    padding-top: 28px;
+  }
+  .h-lead {
+    font-size: 16px;
+    line-height: 25px;
+  }
+  .h-guide {
+    grid-template-columns: 18px minmax(0, 1fr);
+    row-gap: 0;
+  }
+  .h-guide code {
+    grid-column: 2;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .h-dots::after {
+    transition-duration: 0ms;
+  }
+}

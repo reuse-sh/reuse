@@ -1,6 +1,7 @@
 "use client";
 
 import { Avatar, AvatarGroup } from "@reuse-sh/avatars/react";
+import { photos } from "../../lib/photos";
 import { Icon } from "../icons";
 
 export function AvatarsDemo() {
@@ -9,8 +10,8 @@ export function AvatarsDemo() {
       <div className="avatar-examples">
         <div>
           <Avatar
-            name="Field notes"
-            src="/_next/image?url=%2Fimages%2Flake.webp&w=128&q=75"
+            name="Mara Lind"
+            src={photos[0].src}
             size={64}
             badge={{ type: "dot", label: "Available" }}
           />
@@ -44,7 +45,7 @@ export function AvatarsDemo() {
           <Avatar name="Robin Park" size={52} />
           <Avatar name="Taylor Reed" size={52} />
         </AvatarGroup>
-        <p>Actual cutouts. Any background.</p>
+        <p>Cut out, not painted over, so they sit on any background.</p>
       </div>
     </div>
   );

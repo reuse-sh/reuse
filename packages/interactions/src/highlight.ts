@@ -1,6 +1,55 @@
 export interface MovingHighlightOptions {
   rowSelector?: string;
   selectedSelector?: string;
+  mode?: "hover" | "selected";
+  className?: string;
+}
+
+type Move = "appear" | "slide" | "fade" | "instant";
+
+interface RootClaim {
+  count: number;
+  style: string | null;
+  marker: string | null;
+  fills: Set<Element>;
+}
+
+const JUMP_ROW_HEIGHTS = 3;
+const FADE_MS = 90;
+const HANDOVER_MS = 80;
+const COLLAPSE_MS = 100;
+const claims = new WeakMap<HTMLElement, RootClaim>();
+
+function claimRoot(root: HTMLElement, view: Window, fill: Element) {
+  let claim = claims.get(root);
+  if (!claim) {
+    claim = {
+      count: 0,
+      style: root.getAttribute("style"),
+      marker: root.getAttribute("data-reuse-highlight-root"),
+      fills: new Set(),
+    };
+    claims.set(root, claim);
+    root.setAttribute("data-reuse-highlight-root", "");
+    const position = view.getComputedStyle(root).position;
+    if (position === "static" || !position) root.style.position = "relative";
+    root.style.isolation = "isolate";
+  }
+  claim.count++;
+  claim.fills.add(fill);
+  return claim;
+}
+
+function releaseRoot(root: HTMLElement, fill: Element) {
+  const claim = claims.get(root);
+  if (!claim) return;
+  claim.fills.delete(fill);
+  if (--claim.count > 0) return;
+  claims.delete(root);
+  if (claim.style === null) root.removeAttribute("style");
+  else root.setAttribute("style", claim.style);
+  if (claim.marker === null) root.removeAttribute("data-reuse-highlight-root");
+  else root.setAttribute("data-reuse-highlight-root", claim.marker);
 }
 
 export function createMovingHighlight(
@@ -13,26 +62,24 @@ export function createMovingHighlight(
   const selectedSelector =
     options.selectedSelector ??
     '[data-current], [aria-selected="true"], [data-highlighted]';
-  const originalStyle = root.getAttribute("style");
-  const originalRoot = root.getAttribute("data-reuse-highlight-root");
-  root.setAttribute("data-reuse-highlight-root", "");
-  if (
-    view.getComputedStyle(root).position === "static" ||
-    !view.getComputedStyle(root).position
-  )
-    root.style.position = "relative";
-  root.style.isolation = "isolate";
+  const followsPointer = (options.mode ?? "hover") === "hover";
   const fill = root.ownerDocument.createElement("span");
-  fill.className = "reuse-moving-highlight";
+  fill.className = ["reuse-moving-highlight", options.className]
+    .filter(Boolean)
+    .join(" ");
   fill.setAttribute("aria-hidden", "true");
+  fill.dataset.move = "appear";
+  fill.dataset.visible = "false";
+  const claim = claimRoot(root, view, fill);
   root.prepend(fill);
   const reduced = view.matchMedia?.("(prefers-reduced-motion: reduce)");
   let hovered: HTMLElement | null = null;
   let keyboardLeads = false;
   let placed: HTMLElement | null = null;
-  let placedTop = 0;
+  let placedBox = { left: 0, top: 0, width: 0, height: 0 };
   let fadeTimer: number | undefined;
   let hideTimer: number | undefined;
+  let collapseTimer: number | undefined;
   let destroyed = false;
   const eligible = (row: HTMLElement | null): row is HTMLElement =>
     Boolean(
@@ -51,66 +98,82 @@ export function createMovingHighlight(
     const row = rowOf(root.ownerDocument.activeElement);
     return eligible(row) ? row : null;
   };
+  const selected = () =>
+    Array.from(root.querySelectorAll<HTMLElement>(rowSelector)).find(
+      (row) => eligible(row) && row.matches(selectedSelector),
+    ) ?? null;
   const pick = () => {
+    if (!followsPointer) return selected();
     const focus = focused();
     if (keyboardLeads && focus) return focus;
     if (eligible(hovered)) return hovered;
-    if (focus) return focus;
-    return (
-      Array.from(root.querySelectorAll<HTMLElement>(rowSelector)).find(
-        (row) => eligible(row) && row.matches(selectedSelector),
-      ) ?? null
-    );
+    return focus ?? selected();
   };
-  const place = (row: HTMLElement, instant: boolean) => {
+  const measure = (row: HTMLElement) => {
     const box = root.getBoundingClientRect();
     const rect = row.getBoundingClientRect();
     const scaleX = root.offsetWidth ? box.width / root.offsetWidth || 1 : 1;
     const scaleY = root.offsetHeight ? box.height / root.offsetHeight || 1 : 1;
-    const top = (rect.top - box.top) / scaleY + root.scrollTop - root.clientTop;
-    const left =
-      (rect.left - box.left) / scaleX + root.scrollLeft - root.clientLeft;
-    fill.dataset.move =
-      instant || reduced?.matches ? "instant" : placed ? "slide" : "appear";
-    fill.style.transform = `translate(${left}px, ${top}px)`;
-    fill.style.width = `${rect.width / scaleX}px`;
-    fill.style.height = `${rect.height / scaleY}px`;
+    return {
+      left: (rect.left - box.left) / scaleX + root.scrollLeft - root.clientLeft,
+      top: (rect.top - box.top) / scaleY + root.scrollTop - root.clientTop,
+      width: rect.width / scaleX,
+      height: rect.height / scaleY,
+    };
+  };
+  const setMove = (move: Move) => {
+    fill.dataset.move = move === "slide" && reduced?.matches ? "instant" : move;
+  };
+  const place = (row: HTMLElement, next: typeof placedBox, move: Move) => {
+    view.clearTimeout(collapseTimer);
+    setMove(move);
+    fill.style.translate = `${next.left}px ${next.top}px`;
+    fill.style.width = `${next.width}px`;
+    fill.style.height = `${next.height}px`;
     fill.style.borderRadius = view.getComputedStyle(row).borderRadius;
     fill.dataset.visible = "true";
     placed = row;
-    placedTop = top;
+    placedBox = next;
   };
-  const sync = (instant = false) => {
+  const hide = () => {
+    setMove("fade");
+    fill.dataset.visible = "false";
+    placed = null;
+    view.clearTimeout(collapseTimer);
+    collapseTimer = view.setTimeout(() => {
+      fill.style.width = "0px";
+      fill.style.height = "0px";
+    }, COLLAPSE_MS);
+  };
+  const sync = (resized = false) => {
     if (destroyed) return;
     view.clearTimeout(fadeTimer);
     view.clearTimeout(hideTimer);
     const row = pick();
     if (!row) {
-      hideTimer = view.setTimeout(() => {
-        fill.dataset.visible = "false";
-        placed = null;
-        hideTimer = view.setTimeout(() => {
-          fill.style.width = "0px";
-          fill.style.height = "0px";
-        }, 100);
-      }, 80);
+      if (placed) hideTimer = view.setTimeout(hide, HANDOVER_MS);
       return;
     }
-    const box = root.getBoundingClientRect();
-    const rect = row.getBoundingClientRect();
-    const scale = root.offsetHeight ? box.height / root.offsetHeight || 1 : 1;
-    const top = (rect.top - box.top) / scale + root.scrollTop - root.clientTop;
+    const next = measure(row);
+    if (!placed) return place(row, next, "appear");
     if (
-      !instant &&
-      placed &&
-      !reduced?.matches &&
-      Math.abs(top - placedTop) > (rect.height / scale) * 3
-    ) {
-      fill.dataset.visible = "false";
-      fadeTimer = view.setTimeout(() => {
-        if (eligible(row)) place(row, true);
-      }, 90);
-    } else place(row, instant);
+      row === placed &&
+      next.left === placedBox.left &&
+      next.top === placedBox.top &&
+      next.width === placedBox.width &&
+      next.height === placedBox.height
+    )
+      return;
+    if (
+      resized ||
+      reduced?.matches ||
+      Math.abs(next.top - placedBox.top) <= next.height * JUMP_ROW_HEIGHTS
+    )
+      return place(row, next, resized ? "instant" : "slide");
+    hide();
+    fadeTimer = view.setTimeout(() => {
+      if (eligible(row)) place(row, measure(row), "appear");
+    }, FADE_MS);
   };
   const over = (event: PointerEvent) => {
     if (event.pointerType === "touch") return;
@@ -142,7 +205,8 @@ export function createMovingHighlight(
   };
   const resize = () => sync(true);
   const observer = new view.MutationObserver((records) => {
-    if (records.every((record) => record.target === fill)) return;
+    if (records.every((record) => claim.fills.has(record.target as Element)))
+      return;
     observeRows();
     sync();
   });
@@ -163,11 +227,13 @@ export function createMovingHighlight(
     characterData: true,
   });
   observeRows();
-  root.addEventListener("pointerover", over);
-  root.addEventListener("pointermove", move);
-  root.addEventListener("pointerleave", leave);
-  root.addEventListener("focusin", focusIn);
-  root.addEventListener("focusout", focusOut);
+  if (followsPointer) {
+    root.addEventListener("pointerover", over);
+    root.addEventListener("pointermove", move);
+    root.addEventListener("pointerleave", leave);
+    root.addEventListener("focusin", focusIn);
+    root.addEventListener("focusout", focusOut);
+  }
   root.addEventListener("scroll", resize, true);
   view.addEventListener("resize", resize);
   reduced?.addEventListener("change", resize);
@@ -179,6 +245,7 @@ export function createMovingHighlight(
       destroyed = true;
       view.clearTimeout(fadeTimer);
       view.clearTimeout(hideTimer);
+      view.clearTimeout(collapseTimer);
       observer.disconnect();
       resizeObserver?.disconnect();
       root.removeEventListener("pointerover", over);
@@ -190,11 +257,7 @@ export function createMovingHighlight(
       view.removeEventListener("resize", resize);
       reduced?.removeEventListener("change", resize);
       fill.remove();
-      if (originalStyle === null) root.removeAttribute("style");
-      else root.setAttribute("style", originalStyle);
-      if (originalRoot === null)
-        root.removeAttribute("data-reuse-highlight-root");
-      else root.setAttribute("data-reuse-highlight-root", originalRoot);
+      releaseRoot(root, fill);
     },
   };
 }

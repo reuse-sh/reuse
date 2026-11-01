@@ -1,13 +1,11 @@
-import { docSections, libraries } from "@reuse-sh/catalog";
+import { docHref, docPages, libraries } from "@reuse-sh/catalog";
 import type { MetadataRoute } from "next";
 export default function sitemap(): MetadataRoute.Sitemap {
   return [
     "",
-    "/how-to-use",
     "/for-agents",
-    ...libraries.flatMap((library) => [
-      `/${library.slug}`,
-      ...docSections.map((section) => `/${library.slug}/${section.slug}`),
-    ]),
+    ...libraries.flatMap((library) =>
+      docPages(library).map((page) => docHref(library, page.path)),
+    ),
   ].map((path) => ({ url: `https://reuse.sh${path}` }));
 }

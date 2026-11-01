@@ -2,7 +2,7 @@
 
 import { type ShadowLevel, shadowLevels } from "@reuse-sh/shadows";
 import { useState } from "react";
-import { CodeCard } from "../copy-control";
+import { CopyControl } from "../copy-control";
 import { Icon } from "../icons";
 
 export function ShadowsDemo() {
@@ -12,8 +12,8 @@ export function ShadowsDemo() {
       <div className="shadow-surface">
         <div className={`shadow-object reuse-shadow-ring-${level}`}>
           <Icon name="shadows" size={28} />
-          <strong>A little depth.</strong>
-          <span>Two layers and a fine edge.</span>
+          <strong>Order a test print</strong>
+          <span>reuse-shadow-ring-{level}</span>
         </div>
       </div>
       <fieldset className="shadow-levels">
@@ -33,22 +33,29 @@ export function ShadowsDemo() {
   );
 }
 
+const install = "npm install @reuse-sh/shadows";
+
 export function CardPatterns() {
   return (
     <div className="card-patterns">
-      <CodeCard code={'import "@reuse-sh/shadows/styles.css";'} />
+      <div className="reuse-card reuse-card-code reuse-shadow-ring-sm">
+        <pre>
+          <code className="card-patterns-code">{install}</code>
+        </pre>
+        <CopyControl value={install} />
+      </div>
       <div className="reuse-card-frame">
         <div className="reuse-card reuse-card-action reuse-shadow-ring-xs">
           <div>
-            <h3>Keep the details in one place.</h3>
-            <p>
-              Read the guide, reuse the implementation, and adapt it to your
-              project.
+            <h3 className="card-patterns-title">Order a test print</h3>
+            <p className="card-patterns-text">
+              A 20 × 15 cm proof of Coral sky on the same cotton paper, shipped
+              in two days.
             </p>
           </div>
-          <a className="button button-outline" href="/for-agents">
-            Read the guide <Icon name="arrow" size={14} />
-          </a>
+          <button type="button" className="card-patterns-action">
+            Order a proof <Icon name="arrow" size={14} />
+          </button>
         </div>
       </div>
     </div>

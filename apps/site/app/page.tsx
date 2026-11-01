@@ -1,107 +1,108 @@
-import { libraries } from "@reuse-sh/catalog";
+import "./styles/home.css";
 import Link from "next/link";
-import { CarouselDemo, GalleryDemo } from "../components/demos/media";
+import { CopyPromptButton } from "../components/home/copy-prompt-button";
+import { PhotoStrip } from "../components/home/photo-strip";
+import { SmallDemos } from "../components/home/small-demos";
 import { Icon, type IconName } from "../components/icons";
-import { IntegrationSteps } from "../components/integration-steps";
+
+const features: [IconName, string, string][] = [
+  [
+    "code",
+    "Any stack.",
+    "A browser module binds to the markup you already have. React gets a hook; Vue, Svelte and plain pages call the module directly.",
+  ],
+  [
+    "check",
+    "Clean exits.",
+    "destroy() removes every listener and puts back every style it touched, so a part can come and go with a route.",
+  ],
+  [
+    "shadows",
+    "Scoped styles.",
+    "Classes start with reuse- and values live in --reuse- custom properties. Nothing reaches the rest of your page.",
+  ],
+  [
+    "moving-highlight",
+    "Keyboard first.",
+    "Native dialogs, buttons and focus order. Every part works without a pointer and with a screen reader.",
+  ],
+  [
+    "loaders",
+    "Calm motion.",
+    "Springs that keep their speed when you interrupt them, and no motion at all when the system asks for less.",
+  ],
+  [
+    "book",
+    "Written for agents.",
+    "Each library ships a guide with the markup it expects, its options and the checks to run, so your agent gets it right the first time.",
+  ],
+];
 
 export default function HomePage() {
   return (
-    <main id="main" className="marketing-main">
-      <section className="home-hero">
-        <h1>
-          Good components,
-          <br />
-          <span>ready to reuse.</span>
-        </h1>
-        <p>
-          Lightbox, carousel, annotations, and the small interactions you reach
-          for in every project. Native browser behavior, with room for your own
-          design.
+    <main id="main">
+      <section className="c-col h-open">
+        <h1 className="c-display">Parts you stop writing twice</h1>
+        <p className="h-prose">
+          Reuse is a small set of interface parts: a lightbox, a carousel,
+          tooltips, loaders and a few more. Each one is a plain browser module
+          with a thin React wrapper, so the same part runs in React, Vue,
+          Svelte, a WordPress theme or a static page.
         </p>
-        <div className="hero-actions">
-          <a className="button button-dark" href="#libraries">
-            Explore the libraries <Icon name="down" size={15} />
-          </a>
-          <Link className="text-link" href="/how-to-use">
-            How it works <Icon name="arrow" size={14} />
+        <p className="h-prose">
+          It is also a set of rules every part follows: native browser behavior
+          first, styles scoped to reuse- classes, full cleanup on destroy,
+          keyboard and reduced motion covered. Each library comes with a guide
+          your coding agent reads before it writes code, so what it builds keeps
+          those rules on any stack.
+        </p>
+        <div className="h-actions">
+          <CopyPromptButton />
+          <Link className="c-btn-quiet" href="/lightbox">
+            Start with Lightbox
           </Link>
         </div>
       </section>
-      <section className="home-media">
-        <div className="section-label">
-          <h2>A gallery, with the details worked out.</h2>
-          <Link href="/lightbox">
-            Explore Lightbox <Icon name="arrow" size={14} />
-          </Link>
-        </div>
-        <GalleryDemo compact />
+      <section className="c-col c-sec" aria-labelledby="h-small">
+        <h2 className="c-h2" id="h-small">
+          The small ones
+        </h2>
+        <p className="c-sub">
+          Each card runs the real module. Point along the toolbar, move through
+          the menu, press and hold.
+        </p>
+        <SmallDemos />
       </section>
-      <section className="home-features" aria-label="What the libraries share">
-        {[
-          {
-            icon: "carousel",
-            title: "Native at the core.",
-            text: "Touch scrolling, browser controls, and small JavaScript modules that do one job well.",
-          },
-          {
-            icon: "shadows",
-            title: "One implementation.",
-            text: "Keep the mechanics in one place. Use the same library in React, a theme, or a plain page.",
-          },
-          {
-            icon: "code",
-            title: "Ready for your agent.",
-            text: "Each guide covers the real API, integration steps, and behavior to check in your project.",
-          },
-          {
-            icon: "annotations",
-            title: "Your own interface.",
-            text: "Start with a useful default. Adapt the styles and connect your data without rebuilding the behavior.",
-          },
-        ].map((feature) => (
-          <div key={feature.title}>
-            <Icon name={feature.icon as IconName} size={22} />
-            <p>
-              <strong>{feature.title}</strong> {feature.text}
-            </p>
-          </div>
-        ))}
-      </section>
-      <section className="home-carousel">
-        <div className="section-label">
-          <h2>Keep the browser’s scroll.</h2>
-          <Link href="/carousel">
-            Explore Carousel <Icon name="arrow" size={14} />
-          </Link>
+      <section className="c-sec" aria-labelledby="h-carousel">
+        <div className="c-col">
+          <h2 className="c-h2" id="h-carousel">
+            Carousel
+          </h2>
+          <p className="c-sub">
+            Drag it with a mouse or scroll it with a trackpad. Every image opens
+            in the lightbox.
+          </p>
         </div>
-        <CarouselDemo compact />
+        <PhotoStrip />
       </section>
-      <section id="libraries" className="library-index">
-        <div className="section-label">
-          <h2>The libraries</h2>
-          <span>Independent parts. Shared care.</span>
-        </div>
-        <div className="library-index-grid">
-          {libraries.map((library) => (
-            <Link key={library.slug} href={`/${library.slug}`}>
-              <Icon name={library.slug as IconName} size={24} />
-              <h3>
-                {library.name}
-                <Icon name="arrow" size={14} />
-              </h3>
-              <p>{library.description}</p>
-            </Link>
+      <section className="c-col c-sec" aria-labelledby="h-rules">
+        <h2 className="c-h2" id="h-rules">
+          The rules every part follows
+        </h2>
+        <p className="c-sub">
+          They are why a part written once keeps working in the next project,
+          whatever it runs on.
+        </p>
+        <ul className="c-feats c-feats-3 h-feats">
+          {features.map(([icon, title, text]) => (
+            <li key={title}>
+              <Icon name={icon} size={22} />
+              <p>
+                <b>{title}</b> {text}
+              </p>
+            </li>
           ))}
-        </div>
-      </section>
-      <section className="home-steps">
-        <div className="section-label">
-          <h2>Bring one into your project.</h2>
-          <Link href="/how-to-use">
-            See the workflow <Icon name="arrow" size={14} />
-          </Link>
-        </div>
-        <IntegrationSteps />
+        </ul>
       </section>
     </main>
   );

@@ -321,7 +321,11 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
         clearTimeout(timer);
         s.animations.delete(animation);
         s.finishAnimations.delete(finish);
-        if (node.isConnected) animation.commitStyles?.();
+        // commitStyles throws on an element that is no longer rendered, such
+        // as one inside a dialog the browser already closed.
+        try {
+          if (node.isConnected) animation.commitStyles?.();
+        } catch {}
         animation.cancel();
         resolve();
       };

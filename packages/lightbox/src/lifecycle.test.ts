@@ -86,6 +86,7 @@ afterEach(() => {
   document.body.removeAttribute("style");
   vi.restoreAllMocks();
   vi.unstubAllGlobals();
+  vi.useRealTimers();
 });
 
 describe("lightbox lifecycle", () => {
@@ -121,6 +122,9 @@ describe("lightbox lifecycle", () => {
   });
 
   it("pages with mouse drag over an image without turning the drag into zoom", () => {
+    vi.useFakeTimers({
+      toFake: ["requestAnimationFrame", "cancelAnimationFrame", "performance"],
+    });
     const controller = create();
     controller.open(gallery);
     const viewport = dialog().querySelector<HTMLElement>(
@@ -146,6 +150,8 @@ describe("lightbox lifecycle", () => {
     pointer(window, "pointermove", 150);
     pointer(window, "pointerup", 150);
     viewport.dispatchEvent(new Event("scrollend"));
+    vi.advanceTimersByTime(1000);
+    vi.useRealTimers();
     expect(controller.getState()).toMatchObject({
       index: 1,
       zoom: { scale: 1, x: 0, y: 0 },
@@ -277,6 +283,35 @@ describe("lightbox lifecycle", () => {
     );
     controller.destroy();
     await closing;
+    delete (HTMLElement.prototype as { animate?: unknown }).animate;
+  });
+
+  it("tears down fully when the browser closes the dialog during an animation", () => {
+    Object.defineProperty(HTMLElement.prototype, "animate", {
+      configurable: true,
+      value() {
+        return {
+          finished: new Promise<void>(() => {}),
+          commitStyles() {
+            throw new DOMException(
+              "Target element is not rendered.",
+              "InvalidStateError",
+            );
+          },
+          cancel() {},
+        };
+      },
+    });
+    const trigger = document.createElement("button");
+    document.body.append(trigger);
+    const controller = create({ duration: 280 });
+    controller.open([{ ...gallery[0], origin: trigger }]);
+    expect(trigger.style.visibility).toBe("hidden");
+    dialog().close();
+    expect(document.querySelector("dialog")).toBeNull();
+    expect(document.body.style.overflow).toBe("");
+    expect(trigger.style.visibility).toBe("");
+    expect(controller.getState().isOpen).toBe(false);
     delete (HTMLElement.prototype as { animate?: unknown }).animate;
   });
 

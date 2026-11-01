@@ -5,21 +5,39 @@
   position: fixed;
   inset: 0 auto auto 0;
   z-index: var(--reuse-tooltip-z-index, 1000);
-  max-width: min(24rem, calc(100vw - 24px));
   box-sizing: border-box;
-  padding: 0.45rem 0.65rem;
-  color: var(--reuse-tooltip-color, #fff);
-  background: var(--reuse-tooltip-background, #202020);
-  border-radius: var(--reuse-tooltip-radius, 0.5rem);
-  font: inherit;
-  font-size: 0.8125rem;
-  line-height: 1.4;
-  overflow-wrap: anywhere;
   width: max-content;
-  box-shadow: 0 3px 12px #0002;
+  max-width: min(20rem, calc(100vw - 24px));
+  overflow: hidden;
+  padding: var(--reuse-tooltip-padding, 4px 10px);
+  color: var(--reuse-tooltip-color, #fff);
+  background: var(--reuse-tooltip-background, #111);
+  border-radius: var(--reuse-tooltip-radius, 16px);
+  box-shadow: var(--reuse-tooltip-shadow, 0 4px 12px -2px rgb(0 0 0 / 18%));
+  font: inherit;
+  font-size: var(--reuse-tooltip-font-size, 12px);
+  line-height: 16px;
+  overflow-wrap: anywhere;
+  will-change: transform;
 }
 .reuse-floating-tooltip[hidden] {
   display: none;
+}
+.reuse-floating-tooltip[data-rich] {
+  max-width: none;
+  padding: var(--reuse-tooltip-rich-padding, 6px);
+  color: var(--reuse-tooltip-rich-color, #111);
+  background: var(--reuse-tooltip-rich-background, #fff);
+  border-radius: var(--reuse-tooltip-rich-radius, 16px);
+  box-shadow: var(
+    --reuse-tooltip-rich-shadow,
+    0 0 0 1px rgb(0 0 0 / 6%),
+    0 6px 12px -4px rgb(0 0 0 / 8%),
+    0 20px 40px -12px rgb(0 0 0 / 14%)
+  );
+}
+.reuse-floating-tooltip-content {
+  display: block;
 }
 .reuse-moving-highlight {
   pointer-events: none;
@@ -27,19 +45,26 @@
   inset: 0 auto auto 0;
   z-index: -1;
   opacity: 0;
+  scale: 0.97;
   background: var(--reuse-highlight-background, #8882);
   border-radius: var(--reuse-highlight-radius, 0.4rem);
-  transition: opacity 100ms ease-out;
+  transition-timing-function: cubic-bezier(0, 0, 0.2, 1);
 }
 .reuse-moving-highlight[data-visible="true"] {
   opacity: 1;
+  scale: 1;
+}
+.reuse-moving-highlight[data-move="appear"] {
+  transition-property: opacity, scale;
+  transition-duration: 150ms;
+}
+.reuse-moving-highlight[data-move="fade"] {
+  transition-property: opacity, scale;
+  transition-duration: 100ms;
 }
 .reuse-moving-highlight[data-move="slide"] {
-  transition:
-    transform 150ms ease-out,
-    width 150ms ease-out,
-    height 150ms ease-out,
-    opacity 100ms ease-out;
+  transition-property: translate, width, height, opacity;
+  transition-duration: 150ms;
 }
 .reuse-moving-highlight[data-move="instant"] {
   transition: none;
@@ -62,9 +87,9 @@
 }
 @media (prefers-reduced-motion: reduce) {
   .reuse-moving-highlight {
-    transition: opacity 100ms;
+    scale: none;
   }
   .reuse-moving-highlight[data-move="slide"] {
-    transition: opacity 100ms;
+    transition-property: opacity;
   }
 }

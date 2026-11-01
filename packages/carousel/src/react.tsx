@@ -32,7 +32,16 @@ export function useCarousel(options: CarouselOptions = {}) {
   const [state, setState] = useState<CarouselState>(emptyState);
   const onChange = useRef(options.onChange);
   onChange.current = options.onChange;
-  const { slides, align, loop, drag, group, autoplay } = options;
+  const {
+    slides,
+    align,
+    loop,
+    drag,
+    group,
+    autoplay,
+    releaseMotion,
+    releaseDuration,
+  } = options;
   useEffect(() => {
     if (!viewport) return;
     const instance = createCarousel(viewport, {
@@ -42,6 +51,8 @@ export function useCarousel(options: CarouselOptions = {}) {
       drag,
       group,
       autoplay,
+      releaseMotion,
+      releaseDuration,
       onChange: (next) => {
         setState(next);
         onChange.current?.(next);
@@ -50,7 +61,17 @@ export function useCarousel(options: CarouselOptions = {}) {
     setCarousel(instance);
     setState(instance.getState());
     return () => instance.destroy();
-  }, [viewport, slides, align, loop, drag, group, autoplay]);
+  }, [
+    viewport,
+    slides,
+    align,
+    loop,
+    drag,
+    group,
+    autoplay,
+    releaseMotion,
+    releaseDuration,
+  ]);
   return { ref: setViewport, carousel, state };
 }
 
