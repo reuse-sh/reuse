@@ -10,6 +10,9 @@ Read DESIGN.md before visible UI work and docs/catalogue.md before expanding the
 - Reuse native browser interactions when they meet the documented scope. Do not recreate accessible state handling without a reason.
 - Every selected library needs an implementation, a live example, a usage snippet, an agent guide, and meaningful verification. Do not add a broad planned component catalogue. Keep the selected scope in docs/catalogue.md.
 - The catalogue is the shared inventory. Keep generated human and agent documentation consistent by reading it from packages/catalog.
+- Principles are the core of the set. Every library lists its principles in packages/catalog. They are short rules its code keeps, and any adaptation must keep them too.
+- A change that alters a component's behavior updates its principles in the same pull request.
+- pnpm principles rewrites the Principles section of each package README from the catalog. pnpm lint fails when a README drifts from it.
 - Test behavior and observable output. Cover failure, teardown, repeated input, reduced motion, keyboard access, and narrow layouts where relevant.
 - Use synthetic examples. Do not copy customer data, credentials, environment files, or product-specific services into this repository.
 - Original code is MIT. Packages publish to npm through Changesets. Every user-visible package change adds a changeset with pnpm changeset.

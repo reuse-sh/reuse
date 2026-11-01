@@ -9,10 +9,10 @@ import {
   C,
   CodePair,
   ExampleCode,
-  Features,
   Install,
   Keys,
   OverviewActions,
+  Principles,
   Section,
   Text,
 } from "./parts";
@@ -38,9 +38,9 @@ export function LightboxOverview({ library }: { library: Library }) {
         <kbd>→</kbd> to page, <kbd>+</kbd>
         <kbd>−</kbd> to zoom, <kbd>Esc</kbd> to close.
       </Keys>
-      <Features
-        rows={library.features}
-        icons={["resize", "touch", "zoom", "keyboard", "layers", "code"]}
+      <Principles
+        rows={library.principles}
+        icons={["touch", "resize", "layers", "zoom", "keyboard", "code"]}
       />
     </>
   );

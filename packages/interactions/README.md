@@ -2,6 +2,41 @@
 
 Three small interactions: a floating tooltip shared by nearby triggers, a moving highlight that follows hover and keyboard focus, and a hold-to-confirm button. Each works on plain DOM and has a React wrapper.
 
+<!-- principles:start -->
+
+## Principles
+
+These are the rules the code keeps. An adaptation on any framework keeps them too.
+
+### Floating tooltip
+
+- **Share one popup.** Nearby triggers share one tooltip, so moving along a toolbar slides it across instead of closing and reopening it.
+- **Follow the pointer on a spring.** It trails the pointer with a little weight, below and to the right, and never jumps.
+- **Anchor to keyboard focus.** Keyboard focus places it on the element, and Escape hides it.
+- **Treat touch as touch.** A touch is not hover, so touch input never opens it.
+- **Hold only a hint.** It describes its trigger through aria-describedby and never holds controls or required instructions.
+- **Stay inside the window.** It keeps a margin from every edge of the viewport.
+
+### Moving highlight
+
+- **Measure the real rows.** The background takes its size and place from the row itself, also inside scaled containers.
+- **Let the keyboard lead.** Focus moves the background like the pointer does, and keyboard focus wins while it is active.
+- **Keep selection apart.** In selected mode it stays on the selected row, and a second highlight on the same root can follow the pointer.
+- **Follow layout changes.** Resizes and content changes move it to the row's new place.
+- **Slide near, fade far.** Nearby rows slide in 150 ms, distant ones fade out and back in, and reduced motion snaps.
+- **Skip disabled rows.** Disabled and hidden rows never take the highlight.
+
+### Hold to confirm
+
+- **Confirm once per hold.** A completed hold calls onConfirm exactly once, and the next action needs a new press.
+- **Cancel on any doubt.** Letting go early, leaving the button, blur, Escape or disabling the button cancels the hold.
+- **Accept pointer and keys.** A pointer, Space or Enter can hold, and keyboard auto-repeat never starts a new hold.
+- **Let assistive technology click.** A click without a physical press, as from a screen reader, confirms at once.
+- **Own the gesture, not the action.** Your code owns the request, the loading state, success and failure.
+- **Keep the native button.** It enhances a button you already have and restores its markup on destroy.
+
+<!-- principles:end -->
+
 ## Install
 
 ```sh

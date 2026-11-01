@@ -4,7 +4,7 @@ The public collection is limited to Lightbox, Carousel, Annotations, Loaders wit
 
 ## Architecture
 
-Keep one monorepository with independent packages. Native entries own behavior and cleanup, React entries adapt lifecycle and composition, and the site imports the actual packages. Carousel is shared by Lightbox. Annotation protocol/rendering is shared by browser and server. The small core package contains internal clipboard and HTML escaping utilities.
+Every selected library lists its principles in packages/catalog, and those rules matter more than any one implementation of them. Keep one monorepository with independent packages. Native entries own behavior and cleanup, React entries adapt lifecycle and composition, and the site imports the actual packages. Carousel is shared by Lightbox. Annotation protocol/rendering is shared by browser and server. The small core package contains internal clipboard and HTML escaping utilities.
 
 ## Delivery and use
 

@@ -2,6 +2,21 @@
 
 Avatars with images, Unicode-aware initials, and badges cut out of the image instead of painted rings. Groups keep that shape where avatars overlap.
 
+<!-- principles:start -->
+
+## Principles
+
+These are the rules the code keeps. An adaptation on any framework keeps them too.
+
+- **Cut, never paint.** Badges and overlaps are masks through the image, so no painted ring fights the background.
+- **Keep initials underneath.** Initials show until the image loads and stay if it fails.
+- **Name badges in words.** The badge label joins the accessible name, and the drawing stays decorative.
+- **Treat text as text.** Names, labels and icons go in as text or nodes and are never parsed as HTML.
+- **Size cutouts from the badge.** Counts of two digits or more get a capsule cutout measured from the badge itself.
+- **Restore the host.** Destroy puts back the original content, styles and listeners.
+
+<!-- principles:end -->
+
 ## Install
 
 ```sh

@@ -2,6 +2,21 @@
 
 A carousel that keeps native touch and trackpad scrolling with CSS snap. It adds mouse dragging, grouping, RTL, synchronized carousels, optional repeat, and autoplay.
 
+<!-- principles:start -->
+
+## Principles
+
+These are the rules the code keeps. An adaptation on any framework keeps them too.
+
+- **Let the browser scroll.** Touch and trackpads scroll natively with CSS scroll snap, and every move from code is a scroll too.
+- **Never let a drag click.** A mouse drag never opens the link under it, an ordinary click still works, and touch stays native.
+- **Repeat without clones.** The loop moves the original slides, so ids, links and buttons stay unique, and it turns on only when the slides can cover the viewport.
+- **Let autoplay wait for people.** Autoplay pauses for hover, focus, dragging, hidden pages, offscreen strips and reduced motion.
+- **Keep keys local.** Arrow keys act only inside the focused strip and swap sides in right-to-left layouts.
+- **Put back what it moved.** Destroy cancels timers and restores the styles, transforms and listeners it added.
+
+<!-- principles:end -->
+
 ## Install
 
 ```sh

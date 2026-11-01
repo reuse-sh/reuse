@@ -4,6 +4,7 @@ export function GET() {
   const text = [
     "# Reuse",
     "Native web libraries with thin React adapters, published to npm under the @reuse-sh scope. Original code is MIT.",
+    "Every library guide opens with that library's principles, the rules its code keeps. An adaptation on any framework must keep them.",
     "- /agent.md: Integration agreement",
     "- /for-agents: Agent guides",
     ...libraries.map(
