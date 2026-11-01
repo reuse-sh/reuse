@@ -1,6 +1,6 @@
 {
   "name": "@reuse-sh/loaders",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "description": "Animated canvas loaders whose dots move between sixteen geometric figures.",
   "keywords": [
     "reuse",
