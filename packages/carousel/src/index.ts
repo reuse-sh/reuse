@@ -210,7 +210,6 @@ export function createCarousel(
     }
   }
 
-  // Past an end, a non-repeating strip scrolls to the edge and translates its slides by the rest.
   function moveTo(virtual: number) {
     if (span || max <= 0) {
       scrollTo(virtual, "instant");
@@ -422,8 +421,6 @@ export function createCarousel(
     spring.frame = window.requestAnimationFrame(springFrame);
   }
 
-  // A critically damped spring. Toward the target, a frequency of at least twice speed over
-  // distance starts it at the release speed and only slows it down, so it never overshoots.
   function startSpring(target: number, velocity: number, flick: boolean) {
     const value = position() + stretch;
     const distance = target - value;
@@ -549,7 +546,6 @@ export function createCarousel(
       releaseSpeed !== undefined &&
       options.releaseMotion !== "native" &&
       !reducedMotion?.matches;
-    // A glide recenters the loop as it travels, so its target may lie past the track.
     if (span && !glide && (target < 0 || target > max)) {
       target = loopPosition(target);
       pendingPosition = target;
