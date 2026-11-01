@@ -1,6 +1,7 @@
 "use client";
 
 import { Avatar, AvatarGroup } from "@reuse-sh/avatars/react";
+import { photos } from "../../lib/photos";
 import { Icon } from "../icons";
 
 export function AvatarsDemo() {
@@ -10,7 +11,7 @@ export function AvatarsDemo() {
         <div>
           <Avatar
             name="Field notes"
-            src="/_next/image?url=%2Fimages%2Flake.webp&w=128&q=75"
+            src={photos[0].src}
             size={64}
             badge={{ type: "dot", label: "Available" }}
           />

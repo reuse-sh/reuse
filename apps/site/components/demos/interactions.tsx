@@ -1,41 +1,11 @@
 "use client";
 
 import {
-  FloatingTooltip,
-  FloatingTooltipGroup,
   HoldToConfirmButton,
   MovingHighlight,
 } from "@reuse-sh/interactions/react";
 import { useState } from "react";
 import { Icon, type IconName } from "../icons";
-
-export function TooltipDemo() {
-  return (
-    <div className="interaction-stage">
-      <FloatingTooltipGroup>
-        <div className="toolbar-demo reuse-shadow-ring-sm">
-          {[
-            { name: "Edit image", icon: "annotations" },
-            { name: "Add layers", icon: "shadows" },
-            { name: "View gallery", icon: "lightbox" },
-            { name: "Share with the team", icon: "avatars" },
-          ].map((item) => (
-            <FloatingTooltip key={item.name} content={item.name}>
-              <a
-                className="icon-button"
-                href={`/${item.icon}/examples`}
-                aria-label={item.name}
-              >
-                <Icon name={item.icon as IconName} size={22} />
-              </a>
-            </FloatingTooltip>
-          ))}
-        </div>
-      </FloatingTooltipGroup>
-      <p className="demo-hint">Move between the controls, or use Tab.</p>
-    </div>
-  );
-}
 
 export function HighlightDemo() {
   const [selected, setSelected] = useState("Overview");

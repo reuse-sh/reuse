@@ -1,16 +1,58 @@
-import type { Library } from "@reuse-sh/catalog";
+import { installCommand, type Library } from "@reuse-sh/catalog";
 export const snippets: Record<string, { native: string; react: string }> = {
   lightbox: {
-    native:
-      'import { createLightbox } from "@reuse-sh/lightbox";\nimport "@reuse-sh/lightbox/styles.css";\n\nconst viewer = createLightbox({ thumbnails: true });\nviewer.open([{\n  src: "/photo.jpg",\n  alt: "A mountain lake",\n  width: 1600,\n  height: 1200,\n  origin: document.querySelector("img"),\n}]);',
-    react:
-      'import { useLightbox } from "@reuse-sh/lightbox/react";\nimport "@reuse-sh/lightbox/styles.css";\n\nfunction Gallery({ images }) {\n  const viewer = useLightbox();\n  return <button onClick={() => viewer.open(images)}>\n    Open gallery\n  </button>;\n}',
+    native: `import { bindLightboxGallery } from "@reuse-sh/lightbox";
+import "@reuse-sh/lightbox/styles.css";
+
+const gallery = document.querySelector("[data-gallery]");
+const lightbox = bindLightboxGallery(gallery, {
+  thumbnails: true,
+  imageClick: "zoom",
+});
+
+// Later, when the gallery leaves the page
+lightbox.destroy();`,
+    react: `import { useLightbox } from "@reuse-sh/lightbox/react";
+import "@reuse-sh/lightbox/styles.css";
+
+export function Gallery({ photos }) {
+  const lightbox = useLightbox({ thumbnails: true });
+  return photos.map((photo, index) => (
+    <button key={photo.src} onClick={() => lightbox.open(photos, index)}>
+      <img src={photo.src} alt={photo.alt} />
+    </button>
+  ));
+}`,
   },
   carousel: {
-    native:
-      'import { createCarousel } from "@reuse-sh/carousel";\nimport "@reuse-sh/carousel/styles.css";\n\nconst viewport = document.querySelector("[data-carousel]");\nconst carousel = createCarousel(viewport, {\n  align: "center",\n  loop: true,\n});\nnextButton.addEventListener("click", () => carousel.next());\ncarousel.subscribe((state) => {\n  counter.textContent = String(state.index + 1);\n});',
-    react:
-      'import { useCarousel } from "@reuse-sh/carousel/react";\nimport "@reuse-sh/carousel/styles.css";\n\nfunction Gallery({ children }) {\n  const { ref, carousel } = useCarousel({ loop: true });\n  return <>\n    <div ref={ref} className="reuse-carousel">\n      {children}\n    </div>\n    <button onClick={() => carousel?.next()}>Next</button>\n  </>;\n}',
+    native: `import { createCarousel } from "@reuse-sh/carousel";
+import "@reuse-sh/carousel/styles.css";
+
+const viewport = document.querySelector(".reuse-carousel");
+const carousel = createCarousel(viewport, { loop: true, align: "start" });
+
+carousel.subscribe((state) => {
+  counter.textContent = state.index + 1 + " / " + state.count;
+});
+
+// Later, when the strip leaves the page
+carousel.destroy();`,
+    react: `import { useCarousel } from "@reuse-sh/carousel/react";
+import "@reuse-sh/carousel/styles.css";
+
+export function Strip({ photos }) {
+  const { ref, carousel } = useCarousel({ loop: true });
+  return (
+    <div>
+      <div ref={ref} className="reuse-carousel">
+        {photos.map((photo) => (
+          <img key={photo.src} src={photo.src} alt={photo.alt} data-carousel-slide />
+        ))}
+      </div>
+      <button onClick={() => carousel?.next()}>Next</button>
+    </div>
+  );
+}`,
   },
   annotations: {
     native:
@@ -31,10 +73,27 @@ export const snippets: Record<string, { native: string; react: string }> = {
       'import "@reuse-sh/shadows/styles.css";\n\n<div className="reuse-card reuse-shadow-ring-md">\n  Your content\n</div>',
   },
   "floating-tooltip": {
-    native:
-      'import { createFloatingTooltip } from "@reuse-sh/interactions";\nimport "@reuse-sh/interactions/styles.css";\n\nconst tooltip = createFloatingTooltip(toolbar, {\n  side: "top",\n  delay: 150,\n});',
-    react:
-      'import {\n  FloatingTooltip,\n  FloatingTooltipGroup,\n} from "@reuse-sh/interactions/react";\nimport "@reuse-sh/interactions/styles.css";\n\n<FloatingTooltipGroup>\n  <FloatingTooltip content="Add an annotation">\n    <button>Add</button>\n  </FloatingTooltip>\n</FloatingTooltipGroup>',
+    native: `import { createFloatingTooltip } from "@reuse-sh/interactions";
+import "@reuse-sh/interactions/styles.css";
+
+// Any element inside the root with data-reuse-tooltip gets the hint.
+// <button aria-label="Share" data-reuse-tooltip="Share">…</button>
+const toolbar = document.querySelector(".toolbar");
+const tooltip = createFloatingTooltip(toolbar, { tilt: 5 });
+
+// Later, when the toolbar leaves the page
+tooltip.destroy();`,
+    react: `import { FloatingTooltipGroup } from "@reuse-sh/interactions/react";
+import "@reuse-sh/interactions/styles.css";
+
+export function Toolbar() {
+  return (
+    <FloatingTooltipGroup className="toolbar" tilt={5}>
+      <button aria-label="Share" data-reuse-tooltip="Share"><ShareIcon /></button>
+      <button aria-label="Delete" data-reuse-tooltip="Delete"><TrashIcon /></button>
+    </FloatingTooltipGroup>
+  );
+}`,
   },
   "moving-highlight": {
     native:
@@ -62,28 +121,29 @@ export function libraryGuide(library: Library) {
     `# ${library.name}`,
     library.description,
     `Package: ${library.packageName}`,
-    "Status: implemented in this local workspace. The packages have not been published to npm. Use the existing source/workspace package, not a guessed public install.",
+    "## Install",
+    `${fence}bash\n${installCommand(library)}\n${fence}`,
     "## Behavior",
-    ...library.features.map((value) => `- ${value}`),
+    ...library.features.map(([name, text]) => `- ${name}. ${text}`),
     "## Integration notes",
     ...library.notes.map((value) => `- ${value}`),
-    "## Native API",
-    ...library.api.map((value) => `- ${value}`),
+    "## API",
+    ...library.api.map(([name, text]) => `- \`${name}\`: ${text}`),
     "## Browser JavaScript",
-    `${fence}\n${example.native}\n${fence}`,
+    `${fence}js\n${example.native}\n${fence}`,
     "## React",
     `${fence}tsx\n${example.react}\n${fence}`,
     "## Agent workflow",
-    "1. Inspect the project and read the actual source, types, and stylesheet for this package.",
+    "1. Inspect the project and read the installed package's types and stylesheet.",
     "2. Reuse the native controller. Use the React adapter only in a React surface.",
     "3. Adapt styles and data connections to the project. Do not recreate the gesture or state engine.",
     "4. Connect destroy and unsubscribe callbacks to the owner lifecycle.",
     "5. Verify keyboard access, pointer/touch behavior, resize, empty/one-item states, errors, reduced motion, and teardown where applicable.",
     "6. Report the actual checks and remaining browser/device limits.",
     "## Source",
-    `${library.packageName.replace("@reuse-sh/", "packages/")}/src`,
+    `https://github.com/reuse-sh/reuse/tree/main/${library.packageName.replace("@reuse-sh/", "packages/")}/src`,
     "License: MIT for original library code. Preserve dependency and asset license notices.",
   ].join("\n\n")}\n`;
 }
 export const agentGuide =
-  "# Reuse integration guide\n\nRead /llms.txt, then the selected library guide at /{library}/guide.md. Reuse the native implementation and adapt the integration. Packages are local workspace code and not published to npm. Read actual types, import only the required entry points and CSS, connect teardown, and exercise the result in the host project. Do not invent API methods, claim unsupported media or devices, or publish packages as part of an integration. Original code is MIT.\n";
+  "# Reuse integration guide\n\nRead /llms.txt, then the selected library guide at /{library}/guide.md. Install the package with npm install @reuse-sh/<package>, reuse the native implementation and adapt the integration. Read the installed types, import only the required entry points and CSS, connect teardown, and exercise the result in the host project. Do not invent API methods or claim unsupported media or devices. Original code is MIT.\n";

@@ -1,0 +1,191 @@
+import type { Library } from "@reuse-sh/catalog";
+import { snippets } from "../../lib/guides";
+import { photos } from "../../lib/photos";
+import { CarouselControls } from "./carousel-controls";
+import { exampleCode } from "./example-code";
+import {
+  C,
+  CodePair,
+  ExampleCode,
+  Features,
+  Install,
+  Keys,
+  OverviewActions,
+  Section,
+  Text,
+} from "./parts";
+import { type Photo, PhotoButton, PhotoLightbox } from "./photos";
+import { Arrows, CarouselMount, Dots } from "./strip";
+
+const [lake, mountains, coast, forest, night, woods] = photos;
+
+function Strip({
+  slides,
+  className,
+  slideClass,
+  counter = false,
+}: {
+  slides: Photo[];
+  className: string;
+  slideClass: string;
+  counter?: boolean;
+}) {
+  return (
+    <PhotoLightbox className={`d-strip ${className}`}>
+      <CarouselMount>
+        <section
+          className="reuse-carousel"
+          data-viewport
+          data-photo-group
+          aria-label="Photos"
+        >
+          {slides.map((photo) => (
+            <figure
+              key={photo.id}
+              className={`reuse-carousel__slide ${slideClass}`}
+              data-carousel-slide
+            >
+              <PhotoButton photo={photo} />
+              <figcaption>{photo.caption}</figcaption>
+            </figure>
+          ))}
+        </section>
+        <div className="d-strip-ctrl">
+          <Dots labels={slides.map((photo) => photo.caption)} />
+          {counter ? (
+            <span className="d-counter" data-counter>
+              01 / {String(slides.length).padStart(2, "0")}
+            </span>
+          ) : null}
+          <Arrows />
+        </div>
+      </CarouselMount>
+    </PhotoLightbox>
+  );
+}
+
+export function CarouselOverview({ library }: { library: Library }) {
+  return (
+    <>
+      <OverviewActions library={library} />
+      <Strip
+        slides={[mountains, night, lake, woods, forest, coast]}
+        className="d-strip-demo"
+        slideClass="d-slide"
+      />
+      <Keys>
+        Drag with a mouse, swipe, or focus the strip and use <kbd>←</kbd>
+        <kbd>→</kbd>. Photos open in the lightbox.
+      </Keys>
+      <Features
+        rows={library.features}
+        icons={["touch", "cursor", "chevrons", "timer"]}
+        columns={4}
+      />
+    </>
+  );
+}
+
+export function CarouselStart({ library }: { library: Library }) {
+  const code = snippets.carousel;
+  return (
+    <>
+      <Section title="Install">
+        <Install library={library} />
+      </Section>
+      <Section title="Bind a strip">
+        <Text>
+          The viewport gets the <C>reuse-carousel</C> class. Slides are its
+          children, or anything marked with <C>data-carousel-slide</C>. Links
+          and buttons inside them keep working.
+        </Text>
+        <CodePair js={code.native} react={code.react} />
+      </Section>
+      <Section title="Style it">
+        <Text>
+          Set <C>--reuse-carousel-slide-width</C> and{" "}
+          <C>--reuse-carousel-gap</C> on the viewport. Arrows, dots and counters
+          are your own markup, driven by the state you subscribe to.
+        </Text>
+      </Section>
+    </>
+  );
+}
+
+const prints = [
+  [lake, "Braies cabin", "$84"],
+  [mountains, "Kluane valley", "$72"],
+  [night, "After dark", "$96"],
+  [forest, "Forest path", "$64"],
+  [woods, "Granite wall", "$88"],
+  [coast, "Last light", "$72"],
+] as const;
+
+export function CarouselProductStrip() {
+  const [js, react] = exampleCode.strip;
+  return (
+    <>
+      <section className="x-related" aria-labelledby="x-related-h">
+        <CarouselMount options={{ loop: false, group: "page" }}>
+          <div className="x-related-head">
+            <h2 id="x-related-h">More from the series</h2>
+            <Arrows ring label="prints" />
+          </div>
+          <section className="reuse-carousel" data-viewport aria-label="Prints">
+            {prints.map(([photo, name, price]) => (
+              <a
+                key={name}
+                className="reuse-carousel__slide x-print"
+                href="#x-related-h"
+                data-carousel-slide
+              >
+                <span className="x-print-img">
+                  {/* biome-ignore lint/performance/noImgElement: a static SVG texture inside a dragged slide. */}
+                  <img
+                    className="x-print-photo"
+                    src={photo.src}
+                    alt={photo.alt}
+                    width={photo.width}
+                    height={photo.height}
+                    loading="lazy"
+                    draggable={false}
+                  />
+                </span>
+                <span className="x-print-name">{name}</span>
+                <span className="x-print-price">From {price}</span>
+              </a>
+            ))}
+          </section>
+        </CarouselMount>
+      </section>
+      <ExampleCode js={js} react={react} />
+    </>
+  );
+}
+
+export function CarouselEditorial() {
+  const [js, react] = exampleCode.editorial;
+  return (
+    <>
+      <article className="x-story">
+        <p className="x-date">Field notes · October 2026</p>
+        <h2 className="x-j-title">Six places, one week of weather</h2>
+        <p className="x-j-text">
+          We drove north with no plan beyond the forecast. These are the stops
+          where the light was worth waiting for, in the order we reached them.
+        </p>
+      </article>
+      <Strip
+        slides={[night, mountains, lake, forest, woods, coast]}
+        className="d-strip-story"
+        slideClass="x-story-slide"
+        counter
+      />
+      <ExampleCode js={js} react={react} />
+    </>
+  );
+}
+
+export function CarouselControlsGuide() {
+  return <CarouselControls />;
+}

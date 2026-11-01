@@ -3,6 +3,7 @@
 import type { Annotation } from "@reuse-sh/annotations";
 import { AnnotatedImage, AnnotationEditor } from "@reuse-sh/annotations/react";
 import { useState } from "react";
+import { photos } from "../../lib/photos";
 
 const initial: Annotation[] = [
   { kind: "area", box: [12, 19, 32, 36], label: "A quieter corner" },
@@ -20,8 +21,8 @@ export function AnnotationsDemo({ editable = false }: { editable?: boolean }) {
     <div className="annotation-demo">
       {editable ? (
         <AnnotationEditor
-          src="/images/lake.webp"
-          alt="A mountain lake with editable annotations"
+          src={photos[0].src}
+          alt={`${photos[0].alt}, with editable annotations`}
           width={1600}
           height={1200}
           annotations={annotations}
@@ -29,8 +30,8 @@ export function AnnotationsDemo({ editable = false }: { editable?: boolean }) {
         />
       ) : (
         <AnnotatedImage
-          src="/images/lake.webp"
-          alt="A mountain lake with three annotations"
+          src={photos[0].src}
+          alt={`${photos[0].alt}, with three annotations`}
           width={1600}
           height={1200}
           annotations={initial}
