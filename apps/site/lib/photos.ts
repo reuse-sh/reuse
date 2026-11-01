@@ -1,44 +1,29 @@
-export const photos = [
-  {
-    src: "/images/lake.webp",
-    alt: "A quiet lake below the mountains",
-    caption: "Still water",
-    width: 1600,
-    height: 1200,
-  },
-  {
-    src: "/images/mountains.webp",
-    alt: "A mountain peak reaching into the clouds",
-    caption: "Higher ground",
-    width: 1600,
-    height: 1200,
-  },
-  {
-    src: "/images/coast.webp",
-    alt: "A landscape in the late afternoon light",
-    caption: "Last light",
-    width: 1600,
-    height: 1200,
-  },
-  {
-    src: "/images/forest.webp",
-    alt: "Sunlight falling through a forest",
-    caption: "Through the trees",
-    width: 1600,
-    height: 1200,
-  },
-  {
-    src: "/images/night.webp",
-    alt: "A mountain under a starry sky",
-    caption: "After dark",
-    width: 1600,
-    height: 1200,
-  },
-  {
-    src: "/images/woods.webp",
-    alt: "Woodland with warm light between the trees",
-    caption: "A slower path",
-    width: 1600,
-    height: 1200,
-  },
-];
+const marble = [
+  ["lake", "Coral sky", "A soft marble texture in coral, sand and blue"],
+  [
+    "mountains",
+    "Mint and ember",
+    "A soft marble texture in mint, blue and orange",
+  ],
+  [
+    "coast",
+    "Lilac bloom",
+    "A soft marble texture in lilac, rose and sea green",
+  ],
+  [
+    "forest",
+    "Sand and fern",
+    "A soft marble texture in sand, green and violet",
+  ],
+  ["night", "Blue hour", "A soft marble texture in blue, lilac and gold"],
+  ["woods", "Amber", "A soft marble texture in orange, yellow and blue"],
+] as const;
+
+export const photos = marble.map(([id, caption, alt]) => ({
+  id,
+  src: `/images/marble-${id}.svg`,
+  alt,
+  caption,
+  width: 1600,
+  height: 1200,
+}));

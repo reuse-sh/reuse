@@ -2,28 +2,51 @@
 
 ## Purpose
 
-Show reusable, tested web building blocks through real interactions. The home page is a concise presentation with a working carousel and image gallery, a small library overview, and three integration steps. It contains no installation code or author byline.
+Show reusable, tested web building blocks through real interactions, and give coding agents what they need to install them. The home page presents the parts at work. Each library has its own pages at /{library}. Agent guides live at /for-agents.
 
-## Direction
+## Tokens
 
-Use local Geist Sans and Geist Mono, a neutral #fcfcfc page, white surfaces, charcoal text and neutral gray secondary text. Hugeicons provide the non-directional icons. Four local Lucide SVGs provide every arrow and chevron without a Lucide runtime dependency. The site has no green accent. Meaningful media and status colors belong only to their examples.
+Tokens are fixed on :root in apps/site/app/globals.css. There are no runtime settings or data attributes that switch them.
 
-The global header links to a native library dropdown, How to use, and agent documentation. Each library has its own landing page at /{library} and scoped documentation. Desktop library pages use a fixed 180px sidebar 40px from the viewport edge, with 14px links. The active link uses dark medium text and a small dot, without a filled row. Content is about 720px wide. Below 1000px the sidebar becomes a disclosure. The header follows the viewport gutter, not the prose width.
+- Color: --bg #fcfcfc off-white page, --surface #fff, --ink #111, --ink-2 #2e2e2e for leads, --prose #5b5b5b for body copy, --mute #858585 for secondary text. The site has no accent color. Media and status colors belong only to their examples.
+- Hover: --hover is black at 3%. Every quiet hover and moving highlight uses it.
+- Shape: --r 1.35 multiplies base radii, so a 16px card corner becomes about 22px. Code blocks use 12px times --r.
+- Layout: --col 840px content column with a 16px gutter (80px from 1100px), --sec 120px between sections (88px at 760px and below).
+- Depth: --ring for code blocks and joined surfaces, --pop for menus and popovers, the card tokens below for cards.
+- Motion: --ease cubic-bezier(0.23, 1, 0.32, 1).
+
+## Type
+
+Geist Sans for interface and body text at 15px/24px, Geist Mono for code, and Fraunces (next/font/google, opsz axis) as the display face at weight 300 with -0.02em tracking. Page titles (c-h1, 34px) and the home display line (c-display, 50px) use Fraunces. Section titles (c-h2, 21px/600) and subsection titles (c-h3, 17px/600) stay in Geist. Body copy is --prose, never lighter.
 
 ## Surfaces
 
-Use the shadows library for code cards, action cards, steps and distinct demonstration frames. Most features are icon and text in open space. Do not wrap every sentence in a card. Cards use white on the neutral page, a visible fine edge, considered radius and generous padding. Integration steps use 24px corners, about 28–32px padding, 14–15px descriptions and actual component/content previews. Reuse the same step cards on the home and How to use pages.
+Cards are a double ring: a 4px outer frame of white at 55% with a 5% ring, around a white inner card with a 7% ring and a soft two-step shadow (c-card > c-card-in). Most features are an icon and text in open space (c-feats, three columns, two at 760px, one at 600px). Do not wrap every sentence in a card. The hold-to-confirm button uses an inset 1px ring instead of a border. Previous and next links are one joined card split by a 1px line.
 
-## Elements and fixtures
+## Header and Libraries menu
 
-Header: identity, library switcher and reading paths. Home: purpose, real media demo, selected library links, three steps. Library overview: name, concrete description, working demo and feature explanations. Documentation: behavior, usage, API, integration checks and copyable agent guide. No large unimplemented catalogue.
+The header is sticky, 56px, with a translucent page-colored background and a 1px line once the page scrolls. Left: the "reuse" wordmark, a slash, and the library switcher. On a library page the switcher shows that library's icon and name, elsewhere it reads "Libraries". Right: Agent guides and a GitHub icon with a tooltip. A moving highlight follows the pointer across both groups.
 
-Verify media with different crops and widths; rapid next/previous and close/open; empty/one-item galleries; failed image decode; long annotation text; all six annotation kinds; multi-digit badges; loading/offscreen/reduced-motion states. Check 320px, 390px, 768px and ordinary laptop widths, keyboard navigation and 200% text scaling where supported.
+The switcher opens a three-column menu grouped as Media, Interface, and Motion and style. Each row has an icon, the name and one short line. The current library's row holds the highlight at rest. Pointer users see a live preview card at the cursor. Keyboard and touch users get the same menu without it. ArrowDown opens the menu, arrows move between rows and columns, Home and End jump, Escape closes and returns focus, and an outside press or navigation closes it. At 600px and below the menu is one scrolling column inside the viewport.
 
-## Motion and ownership
+The footer is the wordmark with Agent guides, GitHub and License.
 
-Native scroll snap owns carousel and lightbox paging. Zoom and gestures never run through a React render on every pointer event. CSS/WAAPI/rAF explain actual state changes; no page entrance choreography. Animations stop offscreen or when the document is hidden and use static alternatives under reduced motion. Each controller restores its owned styles and listeners on destroy. Carousel bullets keep their circular shape. One filled 4px mark moves over the static marks in 300ms with cubic-bezier(0.32, 0.72, 0, 1). Each button has a separate 24px hit target.
+## Tabs, code and highlight
+
+Tabs are a segmented control with two moving highlights on one root. The selected highlight marks the active tab and moves only when another tab is chosen by click or arrow keys. A lighter hover fill follows the pointer separately. Code blocks use the Pills look of the same control: a 5.5% gray pill for the active language and a 3% hover fill, with JavaScript and React tabs. The chosen language is remembered in localStorage under reuse-code-tab and every code block opens on it. The copy button appears on hover and focus and crossfades to a check.
+
+## Motion
+
+Moving highlights follow Poise: they appear with a scale from 0.97 to 1, slide in 150ms and fade in 100ms. Tooltips are dark pills placed bottom-right of the pointer, 10px away, leaning up to 5 degrees with pointer speed. Native scroll snap owns carousel and lightbox paging, with a spring glide after release. CSS, WAAPI and rAF explain actual state changes. There is no page entrance choreography. Animations stop offscreen or when the document is hidden and use static alternatives under reduced motion. Each controller restores its owned styles and listeners on destroy.
+
+## Media
+
+Demonstration media are generated marble textures in apps/site/public/images/marble-*.svg, written by scripts/generate-marble.mjs. They carry no third-party image license.
+
+## Verification
+
+Verify media with different crops and widths, rapid next and previous, empty and one-item galleries, failed image decode, long annotation text and multi-digit badges. Check 320px, 390px, 768px and laptop widths, keyboard navigation, reduced motion and 200% text where supported.
 
 ## Content
 
-Public copy is English. Keep claims limited to implemented, verified behavior. Brand is Reuse, the domain is reuse.sh, and packages use the @reuse-sh scope. Do not list design references in product copy. Required software and image licensing stays in distribution notices.
+Public copy is English and plain. No eyebrows above headings, no package sizes, and no filler about price or license. Claims stay limited to implemented, verified behavior. The brand is Reuse, the domain is reuse.sh, and packages use the @reuse-sh scope. Required software and font licensing stays in distribution notices.
