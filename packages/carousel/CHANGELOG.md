@@ -1,5 +1,11 @@
 # @reuse-sh/carousel
 
+## 0.0.4
+
+### Patch Changes
+
+- 73973fc: Read a percentage or `calc()` `scroll-padding-inline` correctly, so slides line up with the padded edge instead of the viewport edge.
+
 ## 0.0.3
 
 ### Patch Changes
