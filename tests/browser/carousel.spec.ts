@@ -157,9 +157,7 @@ test("a drag past the end stretches the slides, keeps the scroll edge, and sprin
     return {
       left: strip.scrollLeft,
       width: strip.scrollWidth,
-      shift: Number(
-        /translateX\((-?[\d.]+)px\)/.exec(slide?.style.transform ?? "")?.[1],
-      ),
+      shift: Number.parseFloat(slide?.style.translate ?? ""),
       cursor: getComputedStyle(strip).cursor,
     };
   });
@@ -171,16 +169,16 @@ test("a drag past the end stretches the slides, keeps the scroll edge, and sprin
   await page.mouse.up();
   await framesUntilIdle(
     page,
-    "document.querySelector('#strip [data-carousel-slide]').style.transform",
+    "document.querySelector('#strip [data-carousel-slide]').style.translate",
   );
   const settled = await page.evaluate(() => {
     const strip = document.getElementById("strip") as HTMLElement;
     return {
       left: strip.scrollLeft,
-      transform: strip.querySelector<HTMLElement>("[data-carousel-slide]")
-        ?.style.transform,
+      translate: strip.querySelector<HTMLElement>("[data-carousel-slide]")
+        ?.style.translate,
       cursor: getComputedStyle(strip).cursor,
     };
   });
-  expect(settled).toEqual({ left: edge.left, transform: "", cursor: "grab" });
+  expect(settled).toEqual({ left: edge.left, translate: "", cursor: "grab" });
 });

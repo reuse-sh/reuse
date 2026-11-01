@@ -246,11 +246,11 @@ export const libraries: Library[] = [
       ],
       [
         "Never let a drag click",
-        "A mouse drag never opens the link under it, an ordinary click still works, and touch stays native.",
+        "A mouse drag, or the press that stops a moving strip, never opens the link under it. An ordinary click still works, and touch stays native.",
       ],
       [
         "Drag like a trackpad",
-        "A released mouse drag keeps its speed and glides to the slide nearest where it would stop. Past either end it stretches and springs back.",
+        "A released mouse drag keeps its speed and glides to the slide nearest where it would stop, never past a slide that asks to stop. Past either end it stretches and springs back.",
       ],
       [
         "Repeat without clones",
