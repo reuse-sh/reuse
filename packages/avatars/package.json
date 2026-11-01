@@ -1,6 +1,6 @@
 {
   "name": "@reuse-sh/avatars",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "description": "Avatars with image and initials fallbacks, transparent badge cutouts, and overlapping groups.",
   "keywords": [
     "reuse",

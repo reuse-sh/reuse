@@ -1,6 +1,6 @@
 {
   "name": "@reuse-sh/annotations",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "description": "Validated image annotations with a shared JSON format, a renderer, and an editor.",
   "keywords": [
     "reuse",
