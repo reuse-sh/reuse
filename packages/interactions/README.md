@@ -1,6 +1,6 @@
 # @reuse-sh/interactions
 
-Three small interactions: a floating tooltip shared by nearby triggers, a moving highlight that follows hover and keyboard focus, and a hold-to-confirm button. Each works on plain DOM and has a React wrapper.
+Four small interactions: a floating tooltip shared by nearby triggers, a moving highlight that follows hover and keyboard focus, a hold-to-confirm button, and a copy button. Each works on plain DOM and has a React wrapper.
 
 <!-- principles:start -->
 
@@ -50,6 +50,7 @@ import {
   createFloatingTooltip,
   createMovingHighlight,
   createHoldToConfirm,
+  createCopyButton,
 } from "@reuse-sh/interactions";
 import "@reuse-sh/interactions/styles.css";
 
@@ -62,14 +63,19 @@ const hold = createHoldToConfirm(button, {
   holdMs: 1200,
   onConfirm: () => removeDraft(),
 });
+
+const copy = createCopyButton(copyButton, {
+  text: "npm install @reuse-sh/interactions",
+});
 ```
 
-Tooltip triggers use `data-re-tooltip="Description"`. Highlight rows use `data-re-row`, and the selected row has `data-current`.
+Tooltip triggers use `data-re-tooltip="Description"`. Highlight rows use `data-re-row`, and the selected row has `data-current`. The copy button sets `data-state` to `idle`, `copied` or `error`, swaps its icon, and announces the result to screen readers. It returns to idle after `resetMs`, 1600 by default.
 
 ## React
 
 ```tsx
 import {
+  CopyButton,
   FloatingTooltip,
   FloatingTooltipGroup,
   HoldToConfirmButton,
@@ -91,6 +97,8 @@ import "@reuse-sh/interactions/styles.css";
 <HoldToConfirmButton holdMs={1200} onConfirm={removeDraft}>
   Hold to remove
 </HoldToConfirmButton>
+
+<CopyButton text="npm install @reuse-sh/interactions">Copy</CopyButton>
 ```
 
 ## Documentation

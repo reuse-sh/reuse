@@ -126,6 +126,8 @@ importers:
 
   packages/core: {}
 
+  packages/gradients: {}
+
   packages/interactions:
     devDependencies:
       '@types/react':

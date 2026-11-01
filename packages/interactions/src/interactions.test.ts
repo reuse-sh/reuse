@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
+  createCopyButton,
   createFloatingTooltip,
   createHoldToConfirm,
   createMovingHighlight,
@@ -452,5 +453,128 @@ describe("moving highlight", () => {
     vi.advanceTimersByTime(1000);
     expect(root.children).toHaveLength(3);
     expect(vi.getTimerCount()).toBe(0);
+  });
+});
+
+describe("copy button", () => {
+  let writeText: ReturnType<typeof vi.fn>;
+  const flush = () => vi.advanceTimersByTimeAsync(0);
+  function setup(options: Parameters<typeof createCopyButton>[1]) {
+    const wrapper = document.createElement("div");
+    wrapper.innerHTML = '<button class="code-copy">Copy code</button>';
+    document.body.append(wrapper);
+    const button = wrapper.querySelector("button") as HTMLButtonElement;
+    const original = wrapper.innerHTML;
+    const controller = createCopyButton(button, options);
+    controllers.push(controller);
+    const status = () =>
+      wrapper.querySelector(".re-copy-button-status")?.textContent;
+    return { wrapper, button, original, controller, status };
+  }
+  beforeEach(() => {
+    writeText = vi.fn(async () => {});
+    Object.defineProperty(navigator, "clipboard", {
+      value: { writeText },
+      configurable: true,
+    });
+  });
+  afterEach(() => {
+    Reflect.deleteProperty(navigator, "clipboard");
+    Reflect.deleteProperty(document, "execCommand");
+  });
+
+  it("copies the text, announces it, and returns to idle after resetMs", async () => {
+    const copied: string[] = [];
+    const { button, status } = setup({
+      text: "pnpm add @reuse-sh/interactions",
+      onCopy: (text) => copied.push(text),
+    });
+    expect(button.dataset.state).toBe("idle");
+    button.click();
+    await flush();
+    expect(writeText).toHaveBeenCalledWith("pnpm add @reuse-sh/interactions");
+    expect(copied).toEqual(["pnpm add @reuse-sh/interactions"]);
+    expect(button.dataset.state).toBe("copied");
+    expect(status()).toBe("Copied");
+    vi.advanceTimersByTime(1599);
+    expect(button.dataset.state).toBe("copied");
+    vi.advanceTimersByTime(1);
+    expect(button.dataset.state).toBe("idle");
+    expect(status()).toBe("");
+  });
+
+  it("restarts the copied timer on a second click instead of stacking timers", async () => {
+    const { button } = setup({ getText: () => "value", resetMs: 1000 });
+    button.click();
+    await flush();
+    vi.advanceTimersByTime(800);
+    button.click();
+    await flush();
+    vi.advanceTimersByTime(800);
+    expect(button.dataset.state).toBe("copied");
+    expect(vi.getTimerCount()).toBe(1);
+    vi.advanceTimersByTime(200);
+    expect(button.dataset.state).toBe("idle");
+  });
+
+  it("falls back to a selected textarea when the Clipboard API is missing", async () => {
+    Reflect.deleteProperty(navigator, "clipboard");
+    let selected = "";
+    Object.defineProperty(document, "execCommand", {
+      value: (command: string) => {
+        selected = (document.activeElement as HTMLTextAreaElement).value;
+        return command === "copy";
+      },
+      configurable: true,
+    });
+    const { button } = setup({ text: "fallback" });
+    button.focus();
+    button.click();
+    await flush();
+    expect(selected).toBe("fallback");
+    expect(button.dataset.state).toBe("copied");
+    expect(document.querySelector("textarea")).toBeNull();
+    expect(document.activeElement).toBe(button);
+  });
+
+  it("enters the error state when both copy paths fail", async () => {
+    writeText.mockRejectedValue(new DOMException("Denied", "NotAllowedError"));
+    Object.defineProperty(document, "execCommand", {
+      value: () => false,
+      configurable: true,
+    });
+    const errors: unknown[] = [];
+    const { button, status } = setup({
+      text: "secret",
+      onError: (error) => errors.push(error),
+    });
+    button.click();
+    await flush();
+    expect(button.dataset.state).toBe("error");
+    expect(status()).toBe("Copy failed");
+    expect((errors[0] as DOMException).name).toBe("NotAllowedError");
+    vi.advanceTimersByTime(1600);
+    expect(button.dataset.state).toBe("idle");
+  });
+
+  it("names an icon-only button", () => {
+    const button = document.createElement("button");
+    document.body.append(button);
+    controllers.push(createCopyButton(button, { text: "x" }));
+    expect(button.getAttribute("aria-label")).toBe("Copy");
+  });
+
+  it("destroy removes listeners and timers and restores the original markup", async () => {
+    const { wrapper, button, original, controller } = setup({ text: "value" });
+    button.click();
+    await flush();
+    expect(vi.getTimerCount()).toBe(1);
+    controller.destroy();
+    expect(vi.getTimerCount()).toBe(0);
+    expect(wrapper.innerHTML).toBe(original);
+    button.click();
+    await flush();
+    expect(writeText).toHaveBeenCalledTimes(1);
+    expect(button.hasAttribute("data-state")).toBe(false);
   });
 });

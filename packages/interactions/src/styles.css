@@ -85,11 +85,65 @@
   transition-property: transform;
   transition-timing-function: linear;
 }
+.re-copy-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--re-copy-gap, 6px);
+  transition: scale var(--re-copy-press-duration, 150ms)
+    var(--re-copy-ease, cubic-bezier(0.23, 1, 0.32, 1));
+  touch-action: manipulation;
+}
+.re-copy-button:active {
+  scale: var(--re-copy-press-scale, 0.97);
+}
+.re-copy-button-icon {
+  display: inline-grid;
+  flex: none;
+  width: var(--re-copy-icon-size, 16px);
+  height: var(--re-copy-icon-size, 16px);
+}
+.re-copy-button-icon > svg {
+  grid-area: 1 / 1;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  scale: 0.25;
+  transition-property: opacity, scale;
+  transition-duration: var(--re-copy-duration, 200ms);
+  transition-timing-function: var(
+    --re-copy-ease,
+    cubic-bezier(0.23, 1, 0.32, 1)
+  );
+}
+.re-copy-button:not([data-state="copied"], [data-state="error"])
+  .re-copy-button-copy,
+.re-copy-button[data-state="copied"] .re-copy-button-check,
+.re-copy-button[data-state="error"] .re-copy-button-error {
+  opacity: 1;
+  scale: 1;
+}
+.re-copy-button-status {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
 @media (prefers-reduced-motion: reduce) {
   .re-moving-highlight {
     scale: none;
   }
   .re-moving-highlight[data-move="slide"] {
     transition-property: opacity;
+  }
+  .re-copy-button,
+  .re-copy-button-icon > svg {
+    transition: none;
+  }
+  .re-copy-button:active,
+  .re-copy-button-icon > svg {
+    scale: none;
   }
 }
