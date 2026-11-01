@@ -4,6 +4,7 @@ import { Avatar } from "@reuse-sh/avatars/react";
 import { createMovingHighlight } from "@reuse-sh/interactions";
 import { type CSSProperties, useEffect, useRef, useState } from "react";
 import { photos } from "../../lib/photos";
+import { createSegmentHighlights } from "../segment-highlight";
 
 function useHighlight<T extends HTMLElement>() {
   const ref = useRef<T>(null);
@@ -24,7 +25,11 @@ const sizes = [
 export function ProductOptions() {
   const [size, setSize] = useState(1);
   const [added, setAdded] = useState(false);
-  const group = useHighlight<HTMLFieldSetElement>();
+  const group = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!group.current) return;
+    return createSegmentHighlights(group.current);
+  }, []);
   const timer = useRef<ReturnType<typeof setTimeout>>(undefined);
   useEffect(() => () => clearTimeout(timer.current), []);
   const [label, cost] = sizes[size];
@@ -38,9 +43,9 @@ export function ProductOptions() {
         Coral, sand and blue drift across the sheet like ink on water. Printed
         to order on matte cotton paper with a 2 cm border.
       </p>
-      <fieldset ref={group} className="x-field">
+      <fieldset className="x-field">
         <legend className="x-label">Size</legend>
-        <div className="x-sizes">
+        <div ref={group} className="x-sizes">
           {sizes.map(([name], index) => (
             <label
               key={name}

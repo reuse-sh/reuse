@@ -7,6 +7,7 @@ import {
 } from "@reuse-sh/interactions/react";
 import { ThinkingDots } from "@reuse-sh/loaders/react";
 import { type ReactNode, useEffect, useRef, useState } from "react";
+import { HoldLabel } from "../hold-label";
 import { Icon, type IconName } from "../icons";
 
 const tools: [IconName, string][] = [
@@ -72,11 +73,14 @@ function HoldDemo() {
         onConfirm={() => {
           setDone(true);
           clearTimeout(timer.current);
-          timer.current = setTimeout(() => setDone(false), 1800);
+          timer.current = setTimeout(() => setDone(false), 2400);
         }}
       >
         <Icon name="trash" size={16} />
-        <span>{done ? "Deleted" : "Hold to delete"}</span>
+        <HoldLabel
+          labels={["Hold to delete", "Deleted"]}
+          shown={done ? "Deleted" : "Hold to delete"}
+        />
       </HoldToConfirmButton>
       <p className="c-hold-hint" aria-live="polite">
         {done ? "Restoring in a moment" : "Release early to cancel"}
@@ -114,10 +118,10 @@ export function SmallDemos() {
         <HoldDemo />
       </DemoCard>
       <DemoCard slug="loaders">
-        <div className="h-load">
-          <ThinkingDots size={56} label="Thinking" />
+        <p className="h-load">
+          <ThinkingDots size={26} label="Thinking" />
           <span aria-hidden="true">Thinking</span>
-        </div>
+        </p>
       </DemoCard>
     </div>
   );

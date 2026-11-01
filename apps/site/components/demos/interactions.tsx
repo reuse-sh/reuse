@@ -5,6 +5,7 @@ import {
   MovingHighlight,
 } from "@reuse-sh/interactions/react";
 import { useState } from "react";
+import { HoldLabel } from "../hold-label";
 import { Icon, type IconName } from "../icons";
 
 export function HighlightDemo() {
@@ -54,7 +55,10 @@ export function HoldDemo() {
           disabled={confirmed}
           className="c-hold"
         >
-          {confirmed ? "Confirmed" : "Hold to remove"}
+          <HoldLabel
+            labels={["Hold to remove", "Confirmed"]}
+            shown={confirmed ? "Confirmed" : "Hold to remove"}
+          />
         </HoldToConfirmButton>
         <span className="hold-feedback" role="status">
           {confirmed ? "Removed" : "Release early to cancel"}

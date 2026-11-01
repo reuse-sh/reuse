@@ -127,8 +127,8 @@ export function CodePair({ js, react }: { js: string; react: string }) {
   return (
     <CodeBlock
       tabs={[
-        { label: "JavaScript", code: js },
-        { label: "React", code: react },
+        { label: "JavaScript", code: js, lang: "ts" },
+        { label: "React", code: react, lang: "tsx" },
       ]}
     />
   );

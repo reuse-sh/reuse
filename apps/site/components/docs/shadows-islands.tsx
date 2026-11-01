@@ -1,6 +1,6 @@
 "use client";
 
-import { createMovingHighlight } from "@reuse-sh/interactions";
+import { createCarousel } from "@reuse-sh/carousel";
 import {
   createFadeEdge,
   FADE_CURVES,
@@ -11,6 +11,7 @@ import {
 } from "@reuse-sh/shadows";
 import { useEffect, useRef, useState } from "react";
 import { photos } from "../../lib/photos";
+import { createSegmentHighlights } from "../segment-highlight";
 
 const label = (value: string) => value[0].toUpperCase() + value.slice(1);
 
@@ -30,8 +31,7 @@ function Choice<T extends string>({
   const group = useRef<HTMLFieldSetElement>(null);
   useEffect(() => {
     if (!group.current) return;
-    const highlight = createMovingHighlight(group.current);
-    return () => highlight.destroy();
+    return createSegmentHighlights(group.current);
   }, []);
   return (
     <fieldset ref={group} className="cc-seg">
@@ -66,6 +66,7 @@ export function FadeEdgeStrip() {
 
   useEffect(() => {
     if (!strip.current) return;
+    const carousel = createCarousel(strip.current, { align: "start" });
     const created = createFadeEdge(strip.current, {
       size: 64,
       ...initial.current,
@@ -74,6 +75,7 @@ export function FadeEdgeStrip() {
     return () => {
       created.destroy();
       fade.current = null;
+      carousel.destroy();
     };
   }, []);
 
@@ -101,13 +103,17 @@ export function FadeEdgeStrip() {
       </div>
       <section
         ref={strip}
-        className="x-fade-strip"
+        className="re-carousel x-fade-strip"
         aria-label="Prints in the series"
         // biome-ignore lint/a11y/noNoninteractiveTabindex: a scrolling region needs focus so keyboard users can scroll it.
         tabIndex={0}
       >
         {photos.map((photo) => (
-          <figure key={photo.id} className="x-fade-item">
+          <figure
+            key={photo.id}
+            className="re-carousel__slide x-fade-item"
+            data-carousel-slide=""
+          >
             {/* biome-ignore lint/performance/noImgElement: a static SVG texture inside a plain scroller. */}
             <img
               className="x-fade-img"

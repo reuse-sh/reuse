@@ -4,9 +4,9 @@ import {
   type CarouselState,
   createCarousel,
 } from "@reuse-sh/carousel";
-import { createMovingHighlight } from "@reuse-sh/interactions";
 import { photos } from "../../lib/photos";
 import { arrowPaths } from "../lucide-arrows";
+import { createSegmentHighlights } from "../segment-highlight";
 
 export const carouselStyles = [
   {
@@ -626,14 +626,14 @@ const builders: Record<CarouselStyleName, (demo: HTMLElement) => Cleanup> = {
       centerChild(tabs, buttons[state.index], shown < 0);
       shown = state.index;
     });
-    const highlight = createMovingHighlight(tabs);
+    const unhighlight = createSegmentHighlights(tabs);
     const off = listen(tabs, "click", (event) => {
       const index = closestIndex(event);
       if (index !== null) carousel.goTo(index);
     });
     return () => {
       off();
-      highlight.destroy();
+      unhighlight();
       unsubscribe();
       carousel.destroy();
     };

@@ -130,14 +130,16 @@
   outline-offset: -2px;
 }
 .h-load {
-  display: grid;
-  justify-items: center;
+  display: flex;
+  align-items: center;
   gap: 8px;
+  margin: 0;
   color: var(--ink);
 }
 .h-load > span:last-child {
-  font-size: 13px;
-  color: var(--mute);
+  font-size: 15px;
+  line-height: 24px;
+  color: var(--prose);
 }
 
 /* Carousel: starts at the column and runs off the right edge */

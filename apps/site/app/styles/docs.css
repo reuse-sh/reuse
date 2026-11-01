@@ -193,10 +193,6 @@
   width: 100%;
   height: 100%;
   object-fit: cover;
-  transition: filter 200ms ease;
-}
-.d-photo:hover {
-  filter: brightness(0.97);
 }
 .d-photo[hidden] {
   display: none;
@@ -764,7 +760,6 @@
   color: var(--ink-2);
 }
 .x-sizes {
-  --re-highlight-background: #fff;
   --re-highlight-radius: 8px;
   display: flex;
   gap: 2px;
@@ -772,8 +767,12 @@
   border-radius: 11px;
   background: rgb(0 0 0 / 4%);
 }
-.x-sizes .re-moving-highlight {
+.x-sizes .c-seg-fill {
+  background: #fff;
   box-shadow: var(--shadow-control);
+}
+.x-sizes .c-seg-hover {
+  background: var(--hover);
 }
 .x-sizes label {
   position: relative;
@@ -1110,10 +1109,6 @@
   width: 100%;
   height: 100%;
   object-fit: cover;
-  transition: transform 500ms var(--ease);
-}
-.x-print:hover .x-print-photo {
-  transform: scale(1.03);
 }
 .x-print-name {
   font-size: 14px;
@@ -1156,7 +1151,6 @@
   display: none;
 }
 .cc-seg {
-  --re-highlight-background: #fff;
   --re-highlight-radius: 999px;
   display: flex;
   width: fit-content;
@@ -1174,9 +1168,14 @@
 .cc-seg::-webkit-scrollbar {
   display: none;
 }
-.cc-seg .re-moving-highlight,
-.cc-tabs .re-moving-highlight {
+.cc-seg .c-seg-fill,
+.cc-tabs .c-seg-fill {
+  background: #fff;
   box-shadow: var(--shadow-control);
+}
+.cc-seg .c-seg-hover,
+.cc-tabs .c-seg-hover {
+  background: var(--hover);
 }
 .cc-seg-item {
   position: relative;
@@ -1550,9 +1549,6 @@
   height: 100%;
   object-fit: cover;
 }
-.cc-thumb:hover {
-  opacity: 0.8;
-}
 .cc-thumb[aria-current] {
   opacity: 1;
   box-shadow:
@@ -1703,7 +1699,6 @@
   border-radius: 16px;
 }
 .cc-tabs {
-  --re-highlight-background: #fff;
   --re-highlight-radius: 999px;
   display: flex;
   max-width: 100%;
@@ -2266,27 +2261,21 @@
   margin-bottom: 18px;
 }
 .x-fade-strip {
-  display: flex;
-  gap: 12px;
-  overflow-x: auto;
-  scrollbar-width: none;
-  overscroll-behavior-x: contain;
-}
-.x-fade-strip::-webkit-scrollbar {
-  display: none;
+  --re-carousel-gap: 12px;
+  --re-carousel-slide-width: 240px;
 }
 .x-fade-strip:focus-visible {
   outline: 2px solid var(--ink);
   outline-offset: 4px;
 }
 .x-fade-item {
-  flex: none;
-  width: 200px;
+  margin: 0;
 }
 .x-fade-img {
   display: block;
   width: 100%;
-  aspect-ratio: 1;
+  height: auto;
+  aspect-ratio: 4 / 3;
   object-fit: cover;
   border-radius: 8px;
 }
@@ -2595,8 +2584,8 @@
   .x-setting-danger .c-hold {
     justify-content: center;
   }
-  .x-fade-item {
-    width: 168px;
+  .x-fade-strip {
+    --re-carousel-slide-width: 200px;
   }
 }
 
@@ -2698,9 +2687,6 @@
   .d-doc *::after {
     animation: none !important;
     transition-duration: 0ms !important;
-  }
-  .x-print:hover .x-print-photo {
-    transform: none;
   }
 }
 /* biome-ignore-end lint/complexity/noImportantStyles: see above. */

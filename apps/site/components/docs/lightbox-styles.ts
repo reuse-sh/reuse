@@ -166,7 +166,6 @@ const rules: readonly (readonly [(o: LightboxStyle) => boolean, string])[] = [
   opacity: 0.45;
   transition: opacity 200ms ease, box-shadow 200ms ease;
 }
-.re-lightbox-style .re-lightbox-thumbnails button:hover { opacity: 0.8; }
 .re-lightbox-style .re-lightbox-thumbnails button[aria-current="true"] {
   opacity: 1;
   box-shadow: 0 0 0 2px var(--re-lightbox-background), 0 0 0 3.5px var(--re-lightbox-foreground);

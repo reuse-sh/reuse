@@ -24,6 +24,10 @@ function img(index: number, on = false) {
   return image;
 }
 
+function cursor() {
+  return el("span", "pk-cursor", iconNode("cursor", 15));
+}
+
 function stage(slug: MenuSlug, cleanups: (() => void)[]) {
   switch (slug) {
     case "lightbox":
@@ -82,24 +86,39 @@ function stage(slug: MenuSlug, cleanups: (() => void)[]) {
       });
       return el("div", "pk pk-av", single, group);
     }
-    case "floating-tooltip":
-      return el(
-        "div",
-        "pk pk-tip",
-        el(
-          "span",
-          "pk-tip-bar",
-          ...(["zoom", "heart", "share", "trash"] as const).map((name) =>
-            iconNode(name, 15),
-          ),
-        ),
-        el(
-          "span",
-          "pk-tip-move",
-          el("span", "pk-tip-pop", "Share"),
-          el("span", "pk-tip-cursor", iconNode("cursor", 15)),
-        ),
+    case "floating-tooltip": {
+      const tools = [
+        ["zoom", "Zoom"],
+        ["heart", "Favorite"],
+        ["share", "Share"],
+        ["trash", "Delete"],
+      ] as const;
+      const tip = el("span", "pk-tip-pop", tools[0][1]);
+      const move = el("span", "pk-tip-move", cursor(), tip);
+      const bar = el(
+        "span",
+        "pk-tip-bar",
+        ...tools.map(([name]) => iconNode(name, 15)),
+        move,
       );
+      if (!matchMedia("(prefers-reduced-motion: reduce)").matches) {
+        let index = 0;
+        const arrive = () => {
+          tip.textContent = tools[index][1];
+        };
+        move.addEventListener("transitionend", arrive);
+        const step = setInterval(() => {
+          if (!bar.isConnected) return;
+          index = (index + 1) % tools.length;
+          move.style.setProperty("--i", String(index));
+        }, 1400);
+        cleanups.push(() => {
+          clearInterval(step);
+          move.removeEventListener("transitionend", arrive);
+        });
+      }
+      return el("div", "pk pk-tip", bar);
+    }
     case "moving-highlight":
       return el(
         "div",
@@ -111,6 +130,7 @@ function stage(slug: MenuSlug, cleanups: (() => void)[]) {
           ...["Inbox", "Drafts", "Sent", "Archive"].map((label) =>
             el("span", "", label),
           ),
+          el("span", "pk-hl-move", cursor()),
         ),
       );
     case "hold-to-confirm":
