@@ -9,11 +9,33 @@ import { DocIcon } from "./doc-icon";
 function useKeepFocus<E extends HTMLElement>(swap: unknown) {
   const root = useRef<E>(null);
   const refocus = useRef(false);
+  const keyHeld = useRef(false);
+  useEffect(() => {
+    const down = (event: KeyboardEvent) => {
+      if (event.key === "Enter" || event.key === " ") keyHeld.current = true;
+    };
+    const up = () => {
+      keyHeld.current = false;
+    };
+    document.addEventListener("keydown", down, true);
+    document.addEventListener("keyup", up, true);
+    return () => {
+      document.removeEventListener("keydown", down, true);
+      document.removeEventListener("keyup", up, true);
+    };
+  }, []);
   // biome-ignore lint/correctness/useExhaustiveDependencies: focus moves after each swap renders.
   useEffect(() => {
     if (!refocus.current) return;
     refocus.current = false;
-    root.current?.querySelector("button")?.focus();
+    const focus = () => root.current?.querySelector("button")?.focus();
+    if (!keyHeld.current) {
+      focus();
+      return;
+    }
+    // A held Enter or Space would activate the new button, so wait for its release.
+    document.addEventListener("keyup", focus, { once: true });
+    return () => document.removeEventListener("keyup", focus);
   }, [swap]);
   const mark = () => {
     refocus.current = Boolean(root.current?.contains(document.activeElement));
