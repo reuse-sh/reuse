@@ -1,14 +1,30 @@
 {
   "name": "@reuse-sh/interactions",
-  "version": "0.1.0",
-  "private": true,
+  "version": "0.0.1",
+  "description": "A floating tooltip, a moving highlight, and a hold-to-confirm button for native and React interfaces.",
+  "keywords": [
+    "reuse",
+    "tooltip",
+    "highlight",
+    "hold-to-confirm",
+    "interaction"
+  ],
+  "homepage": "https://reuse.sh",
+  "bugs": "https://github.com/reuse-sh/reuse/issues",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/reuse-sh/reuse.git",
+    "directory": "packages/interactions"
+  },
   "license": "MIT",
+  "author": "nK <https://nkdev.info>",
   "type": "module",
   "sideEffects": [
     "**/*.css"
   ],
   "files": [
     "dist",
+    "README.md",
     "LICENSE"
   ],
   "exports": {
@@ -38,5 +54,8 @@
   "devDependencies": {
     "react": "19.3.0",
     "@types/react": "19.3.0"
+  },
+  "publishConfig": {
+    "access": "public"
   }
 }

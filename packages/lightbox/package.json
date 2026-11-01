@@ -1,14 +1,30 @@
 {
   "name": "@reuse-sh/lightbox",
-  "version": "0.1.0",
-  "private": true,
+  "version": "0.0.1",
+  "description": "An image lightbox on native scrolling, with thumbnail transitions, zoom, pan, and pinch.",
+  "keywords": [
+    "reuse",
+    "lightbox",
+    "gallery",
+    "zoom",
+    "image-viewer"
+  ],
+  "homepage": "https://reuse.sh/lightbox",
+  "bugs": "https://github.com/reuse-sh/reuse/issues",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/reuse-sh/reuse.git",
+    "directory": "packages/lightbox"
+  },
   "license": "MIT",
+  "author": "nK <https://nkdev.info>",
   "type": "module",
   "sideEffects": [
     "**/*.css"
   ],
   "files": [
     "dist",
+    "README.md",
     "LICENSE"
   ],
   "exports": {
@@ -41,5 +57,8 @@
   },
   "dependencies": {
     "@reuse-sh/carousel": "workspace:*"
+  },
+  "publishConfig": {
+    "access": "public"
   }
 }

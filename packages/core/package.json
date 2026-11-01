@@ -1,13 +1,29 @@
 {
   "name": "@reuse-sh/core",
-  "version": "0.0.0",
-  "private": true,
+  "version": "0.0.1",
+  "description": "Small clipboard and HTML escaping utilities shared by the Reuse packages.",
+  "keywords": [
+    "reuse",
+    "clipboard",
+    "escape-html"
+  ],
+  "homepage": "https://reuse.sh",
+  "bugs": "https://github.com/reuse-sh/reuse/issues",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/reuse-sh/reuse.git",
+    "directory": "packages/core"
+  },
+  "license": "MIT",
+  "author": "nK <https://nkdev.info>",
   "type": "module",
   "sideEffects": [
     "**/*.css"
   ],
   "files": [
-    "dist"
+    "dist",
+    "README.md",
+    "LICENSE"
   ],
   "exports": {
     "./clipboard": {
@@ -24,5 +40,7 @@
     "type-check": "tsc -p tsconfig.json --noEmit",
     "test": "vitest run"
   },
-  "license": "MIT"
+  "publishConfig": {
+    "access": "public"
+  }
 }

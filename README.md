@@ -23,7 +23,19 @@ Open http://127.0.0.1:4300. The site needs no environment variables or external 
 - Interactions contains floating tooltip, moving highlight, and hold to confirm.
 - Avatars provides images/initials, transparent badge cutouts, and overlapping groups.
 
-Each native entry is independent of React. Import the package's /react entry when needed. Original code is MIT. Packages are private workspace packages and have not been published to npm.
+Each native entry is independent of React. Import the package's /react entry when needed. Original code is MIT.
+
+## Packages and releases
+
+The published packages are @reuse-sh/annotations, avatars, carousel, core, interactions, lightbox, loaders, and shadows. Each one lives in packages/<name>, with its README.md and, after its first versioned release, its CHANGELOG.md. packages/catalog and apps/site are private and never published.
+
+Every pull request that changes a published package adds a changeset:
+
+    pnpm changeset
+
+Pick the packages, choose patch, minor, or major, and write one line a user of the package would understand. The changeset file is committed with the change.
+
+On every push to main, the release workflow (.github/workflows/release.yml) runs lint, type-check, and tests, then opens or updates a "chore: version packages" pull request with the pending changesets. Merging that pull request bumps the versions, writes the changelogs, and publishes the new versions to npm through npm trusted publishing. No npm token is stored in the repository.
 
 ## Workspace
 
@@ -53,7 +65,7 @@ No existing product has been migrated by this change. Poise, Visual Portfolio, P
 
 ## Agent guides
 
-Read /llms.txt, then /{library}/guide.md. Guides describe the real API, current boundaries, and checks. Reuse the implementation, adapt the integration, and report evidence. Do not generate a replacement engine or guess a public npm install.
+Read /llms.txt, then /{library}/guide.md. Guides describe the real API, current boundaries, and checks. Reuse the implementation, adapt the integration, and report evidence. Do not generate a replacement engine.
 
 ## Licensing
 

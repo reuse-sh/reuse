@@ -1,14 +1,30 @@
 {
   "name": "@reuse-sh/annotations",
-  "version": "0.1.0",
-  "private": true,
+  "version": "0.0.1",
+  "description": "Validated image annotations with a shared JSON format, a renderer, and an editor.",
+  "keywords": [
+    "reuse",
+    "annotations",
+    "image",
+    "markup",
+    "editor"
+  ],
+  "homepage": "https://reuse.sh/annotations",
+  "bugs": "https://github.com/reuse-sh/reuse/issues",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/reuse-sh/reuse.git",
+    "directory": "packages/annotations"
+  },
   "license": "MIT",
+  "author": "nK <https://nkdev.info>",
   "type": "module",
   "sideEffects": [
     "**/*.css"
   ],
   "files": [
     "dist",
+    "README.md",
     "LICENSE"
   ],
   "exports": {
@@ -41,5 +57,8 @@
   },
   "dependencies": {
     "@reuse-sh/core": "workspace:*"
+  },
+  "publishConfig": {
+    "access": "public"
   }
 }
