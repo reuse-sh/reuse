@@ -68,6 +68,11 @@
   padding: 0;
   background: var(--re-avatar-status-color, #288c5d);
 }
+.re-avatar-badge[data-re-avatar-badge="icon"] {
+  min-width: 0;
+  width: var(--re-avatar-badge-size, 18px);
+  padding: 0;
+}
 .re-avatar-badge svg {
   width: 12px;
   height: 12px;

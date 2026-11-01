@@ -19,6 +19,7 @@ export function AvatarsDemo() {
         <div>
           <Avatar
             name="Sam Field"
+            src={photos[1].src}
             size={64}
             badge={{ type: "count", count: 128, label: "128 unread messages" }}
           />
@@ -26,6 +27,7 @@ export function AvatarsDemo() {
         <div>
           <Avatar
             name="Robin Park"
+            src={photos[2].src}
             size={64}
             badge={{
               type: "icon",
@@ -37,10 +39,10 @@ export function AvatarsDemo() {
       </div>
       <div className="avatar-group-example">
         <AvatarGroup overlap={12}>
-          <Avatar name="Alex Rivers" size={52} />
-          <Avatar name="Sam Field" size={52} />
-          <Avatar name="Robin Park" size={52} />
-          <Avatar name="Taylor Reed" size={52} />
+          <Avatar name="Alex Rivers" src={photos[3].src} size={52} />
+          <Avatar name="Sam Field" src={photos[4].src} size={52} />
+          <Avatar name="Robin Park" src={photos[5].src} size={52} />
+          <Avatar name="Taylor Reed" src={photos[0].src} size={52} />
         </AvatarGroup>
       </div>
     </div>

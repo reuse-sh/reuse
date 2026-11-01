@@ -292,31 +292,197 @@ describe("native carousel", () => {
     expect(viewport.style.scrollSnapType).toBe("");
   });
 
-  it("glides a released flick to its snap point with the drag speed and then stops", () => {
-    const { viewport, scrollTo } = fixture([100, 100, 100, 100]);
+  it("glides a released flick on with its momentum to the snap point nearest where it would stop", () => {
+    const { viewport, scrollTo } = fixture([100, 100, 100, 100, 100, 100]);
     const carousel = createCarousel(viewport);
     cleanups.push(carousel.destroy);
     pointer(viewport, "pointerdown", 300);
     vi.advanceTimersByTime(16);
-    pointer(window, "pointermove", 280);
+    pointer(window, "pointermove", 290);
     vi.advanceTimersByTime(16);
-    pointer(window, "pointermove", 240);
+    pointer(window, "pointermove", 270);
     vi.advanceTimersByTime(16);
-    pointer(window, "pointermove", 170);
+    pointer(window, "pointermove", 250);
     scrollTo.mockClear();
-    pointer(window, "pointerup", 170);
-    expect(viewport.scrollLeft).toBe(130);
-    expect(carousel.getState().index).toBe(2);
+    pointer(window, "pointerup", 250);
+    expect(viewport.scrollLeft).toBe(50);
+    expect(carousel.getState().index).toBe(4);
     vi.advanceTimersByTime(16);
-    expect(viewport.scrollLeft).toBeGreaterThan(150);
-    expect(viewport.scrollLeft).toBeLessThan(200);
+    expect(viewport.scrollLeft).toBeGreaterThan(65);
+    expect(viewport.scrollLeft).toBeLessThan(90);
     vi.advanceTimersByTime(2000);
-    expect(viewport.scrollLeft).toBe(200);
+    expect(viewport.scrollLeft).toBe(400);
     expect(viewport.style.scrollSnapType).toBe("");
     expect(scrollTo).not.toHaveBeenCalledWith(
       expect.objectContaining({ behavior: "smooth" }),
     );
     expect(vi.getTimerCount()).toBe(0);
+  });
+
+  it("stretches a mouse drag past either end and springs back after release", () => {
+    const { viewport, slides } = fixture();
+    slides[0].style.transform = "rotate(1deg)";
+    const carousel = createCarousel(viewport);
+    cleanups.push(carousel.destroy);
+    const shift = (slide: HTMLElement) =>
+      Number.parseFloat(slide.style.translate);
+    pointer(viewport, "pointerdown", 100);
+    pointer(window, "pointermove", 200);
+    expect(viewport.scrollLeft).toBe(0);
+    const pulled = shift(slides[1]);
+    expect(pulled).toBeGreaterThan(10);
+    expect(pulled).toBeLessThan(100);
+    expect(slides[0].style.translate).toBe(`${pulled}px`);
+    expect(slides[0].style.transform).toBe("rotate(1deg)");
+    pointer(window, "pointermove", 300);
+    expect(shift(slides[1]) - pulled).toBeLessThan(pulled);
+    pointer(window, "pointerup", 300);
+    vi.advanceTimersByTime(1000);
+    expect(slides[0].style.transform).toBe("rotate(1deg)");
+    expect(slides[1].style.translate).toBe("");
+    expect(viewport.scrollLeft).toBe(0);
+    carousel.goTo(2, "instant");
+    vi.advanceTimersByTime(1000);
+    pointer(viewport, "pointerdown", 300);
+    pointer(window, "pointermove", 200);
+    expect(viewport.scrollLeft).toBe(200);
+    expect(shift(slides[1])).toBeLessThan(-10);
+    pointer(window, "pointerup", 200);
+    vi.advanceTimersByTime(1000);
+    expect(slides[1].style.translate).toBe("");
+    expect(viewport.scrollLeft).toBe(200);
+    expect(carousel.getState().index).toBe(2);
+  });
+
+  it("brings a stretch back on a spring after any interruption and drops it on teardown", () => {
+    const shift = (slide: HTMLElement) =>
+      Number.parseFloat(slide.style.translate);
+    const pull = (viewport: HTMLElement, to = 200) => {
+      pointer(viewport, "pointerdown", 100);
+      pointer(window, "pointermove", to);
+      pointer(window, "pointerup", to);
+    };
+    const { viewport, slides } = fixture();
+    const carousel = createCarousel(viewport);
+    cleanups.push(carousel.destroy);
+    pull(viewport);
+    vi.advanceTimersByTime(16);
+    pointer(viewport, "pointerdown", 100);
+    const caught = shift(slides[1]);
+    expect(caught).toBeGreaterThan(5);
+    window.dispatchEvent(new Event("blur"));
+    vi.advanceTimersByTime(16);
+    expect(shift(slides[1])).toBeGreaterThan(0);
+    expect(shift(slides[1])).toBeLessThan(caught);
+    vi.advanceTimersByTime(1000);
+    expect(slides[1].style.translate).toBe("");
+    pull(viewport);
+    vi.advanceTimersByTime(16);
+    const wheeled = shift(slides[1]);
+    for (let frame = 0; frame < 10; frame++) {
+      viewport.dispatchEvent(new Event("wheel"));
+      vi.advanceTimersByTime(16);
+    }
+    expect(shift(slides[1])).toBeGreaterThan(0);
+    expect(shift(slides[1])).toBeLessThan(wheeled / 2);
+    vi.advanceTimersByTime(1000);
+    expect(slides[1].style.translate).toBe("");
+    pull(viewport);
+    vi.advanceTimersByTime(16);
+    carousel.destroy();
+    expect(slides[1].style.translate).toBe("");
+    expect(viewport.style.cursor).toBe("");
+    expect(vi.getTimerCount()).toBe(0);
+
+    const native = fixture();
+    const glide = createCarousel(native.viewport, { releaseMotion: "native" });
+    cleanups.push(glide.destroy);
+    pull(native.viewport);
+    expect(shift(native.slides[1])).toBeGreaterThan(5);
+    vi.advanceTimersByTime(1000);
+    expect(native.slides[1].style.translate).toBe("");
+
+    const mirrored = fixture([100, 100, 100], 100, true);
+    const rtl = createCarousel(mirrored.viewport);
+    cleanups.push(rtl.destroy);
+    pointer(mirrored.viewport, "pointerdown", 100);
+    pointer(window, "pointermove", 0);
+    expect(shift(mirrored.slides[1])).toBeLessThan(-5);
+    pointer(window, "pointerup", 0);
+    vi.advanceTimersByTime(1000);
+    expect(mirrored.slides[1].style.translate).toBe("");
+
+    motion.matches = true;
+    const still = fixture();
+    const reduced = createCarousel(still.viewport);
+    cleanups.push(reduced.destroy);
+    pull(still.viewport);
+    expect(still.slides[1].style.translate).toBe("");
+  });
+
+  it("stops a flick at the first slide on its way that asks for a snap stop", () => {
+    for (const [stopping, landing] of [
+      [[0, 1, 2, 3, 4, 5], 1],
+      [[3], 3],
+      [[], 5],
+    ] as const) {
+      const { viewport, slides } = fixture([100, 100, 100, 100, 100, 100]);
+      for (const index of stopping)
+        slides[index].style.scrollSnapStop = "always";
+      const carousel = createCarousel(viewport);
+      cleanups.push(carousel.destroy);
+      pointer(viewport, "pointerdown", 300);
+      for (const x of [290, 260, 230]) {
+        vi.advanceTimersByTime(16);
+        pointer(window, "pointermove", x);
+      }
+      pointer(window, "pointerup", 230);
+      vi.advanceTimersByTime(2000);
+      expect(carousel.getState().index).toBe(landing);
+      expect(viewport.scrollLeft).toBe(landing * 100);
+      carousel.destroy();
+      viewport.remove();
+    }
+  });
+
+  it("keeps the click after a programmatic move that leaves the strip still", () => {
+    const { viewport, slides } = fixture();
+    const button = document.createElement("button");
+    slides[0].append(button);
+    let clicks = 0;
+    button.addEventListener("click", () => clicks++);
+    const carousel = createCarousel(viewport);
+    cleanups.push(carousel.destroy);
+    vi.advanceTimersByTime(200);
+    carousel.goTo(0, "instant");
+    vi.advanceTimersByTime(50);
+    pointer(button, "pointerdown", 20);
+    pointer(window, "pointerup", 20);
+    button.click();
+    expect(clicks).toBe(1);
+  });
+
+  it("shows a grab cursor while a mouse drag can move the strip", () => {
+    const { viewport } = fixture();
+    viewport.style.cursor = "default";
+    const carousel = createCarousel(viewport);
+    expect(viewport.style.cursor).toBe("grab");
+    pointer(viewport, "pointerdown", 100);
+    expect(viewport.style.cursor).toBe("grabbing");
+    pointer(window, "pointerup", 100);
+    expect(viewport.style.cursor).toBe("grab");
+    carousel.setEnabled(false);
+    expect(viewport.style.cursor).toBe("default");
+    carousel.destroy();
+    expect(viewport.style.cursor).toBe("default");
+    const fixed = fixture([100], 100);
+    const still = createCarousel(fixed.viewport);
+    cleanups.push(still.destroy);
+    expect(fixed.viewport.style.cursor).toBe("");
+    const off = fixture();
+    const undraggable = createCarousel(off.viewport, { drag: false });
+    cleanups.push(undraggable.destroy);
+    expect(off.viewport.style.cursor).toBe("");
   });
 
   it("cancels a release glide for a new drag, a wheel, or a programmatic move", () => {
@@ -413,7 +579,33 @@ describe("native carousel", () => {
     expect(viewport.style.scrollSnapType).toBe("");
   });
 
-  it("drags an interactive photo slide without activating it and preserves the next tap", () => {
+  it("keeps a long glide on a repeated track moving one way across seams", () => {
+    const { viewport } = fixture();
+    const carousel = createCarousel(viewport, { loop: true });
+    cleanups.push(carousel.destroy);
+    pointer(viewport, "pointerdown", 300);
+    for (const x of [260, 220, 180]) {
+      vi.advanceTimersByTime(16);
+      pointer(window, "pointermove", x);
+    }
+    pointer(window, "pointerup", 180);
+    let previous = viewport.scrollLeft;
+    let travelled = 0;
+    for (let frame = 0; frame < 250; frame++) {
+      vi.advanceTimersByTime(16);
+      let step = viewport.scrollLeft - previous;
+      if (step < -150) step += 300;
+      expect(step).toBeGreaterThanOrEqual(0);
+      travelled += step;
+      previous = viewport.scrollLeft;
+    }
+    expect(travelled).toBeGreaterThan(600);
+    expect(viewport.scrollLeft % 100).toBe(0);
+    expect(viewport.scrollLeft).toBeGreaterThanOrEqual(300);
+    expect(viewport.scrollLeft).toBeLessThan(600);
+  });
+
+  it("drags an interactive photo slide without activating it, stops a glide without a click, and preserves the next tap", () => {
     const { viewport, slides } = fixture();
     const button = document.createElement("button");
     const image = document.createElement("img");
@@ -432,6 +624,11 @@ describe("native carousel", () => {
       new MouseEvent("click", { bubbles: true, cancelable: true }),
     );
     expect(clicks).toBe(0);
+    pointer(image, "pointerdown", 20);
+    pointer(window, "pointerup", 20);
+    button.click();
+    expect(clicks).toBe(0);
+    vi.advanceTimersByTime(1000);
     pointer(image, "pointerdown", 20);
     pointer(window, "pointerup", 20);
     button.click();

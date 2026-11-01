@@ -12,7 +12,7 @@ export function HighlightDemo() {
   const [selected, setSelected] = useState("Overview");
   return (
     <div className="interaction-stage">
-      <MovingHighlight className="highlight-menu">
+      <MovingHighlight className="c-menu-card">
         {[
           { label: "Overview", icon: "book" },
           { label: "Image library", icon: "lightbox" },
@@ -27,7 +27,7 @@ export function HighlightDemo() {
             key={item.label}
             onClick={() => setSelected(item.label)}
           >
-            <Icon name={item.icon as IconName} />
+            <Icon name={item.icon as IconName} size={16} />
             <span>{item.label}</span>
           </button>
         ))}

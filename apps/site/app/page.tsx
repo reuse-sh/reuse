@@ -8,7 +8,7 @@ import { Icon, type IconName } from "../components/icons";
 import { agentPrompt } from "../lib/prompt";
 
 const icons: IconName[] = [
-  "code",
+  "terminal",
   "check",
   "shadows",
   "moving-highlight",

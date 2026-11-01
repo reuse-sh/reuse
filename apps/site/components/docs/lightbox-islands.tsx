@@ -2,7 +2,7 @@
 
 import { Avatar } from "@reuse-sh/avatars/react";
 import { createMovingHighlight } from "@reuse-sh/interactions";
-import { type CSSProperties, useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { photos } from "../../lib/photos";
 import { createSegmentHighlights } from "../segment-highlight";
 
@@ -80,11 +80,6 @@ export function ProductOptions() {
   );
 }
 
-const marble = (index: number) =>
-  ({
-    "--re-avatar-background": `url(${photos[index].src}) center / cover`,
-  }) as CSSProperties;
-
 const people = [
   ["Mara Lind", "Proofs from the new series, finally", "18:42"],
   ["Jonas Weber", "Invoice is in the shared folder", "16:05"],
@@ -109,7 +104,7 @@ export function ChatList() {
             aria-current={index === current ? "true" : undefined}
             onClick={() => setCurrent(index)}
           >
-            <Avatar name={name} size={36} style={marble(index)} />
+            <Avatar name={name} src={photos[index].src} size={36} />
             <span className="x-person-text">
               <b>{name}</b>
               <small>{text}</small>
@@ -127,9 +122,9 @@ export function ThreadHead() {
     <div className="x-thread-head">
       <Avatar
         name="Mara Lind"
+        src={photos[0].src}
         size={32}
         badge={{ type: "dot", label: "Online" }}
-        style={marble(0)}
       />
       <span>
         <b>Mara Lind</b>

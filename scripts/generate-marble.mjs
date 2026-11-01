@@ -2,7 +2,16 @@
 // https://github.com/boringdesigners/boring-avatars
 import { mkdirSync, writeFileSync } from "node:fs";
 
-const SEEDS = ["lake", "mountains", "coast", "forest", "night", "woods"];
+const SEEDS = [
+  "lake",
+  "mountains",
+  "coast",
+  "forest",
+  "night",
+  "woods",
+  "dune",
+  "meadow",
+];
 const PALETTES = [
   ["#f4a6a0", "#f6d28b", "#8fcfb1", "#7fa8e8", "#a891e0"],
   ["#ee8f74", "#f3c463", "#7cc3a1", "#5f8fd6", "#9b7fd3"],

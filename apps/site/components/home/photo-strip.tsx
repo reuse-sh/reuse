@@ -7,11 +7,17 @@ import type { CSSProperties } from "react";
 import { photos } from "../../lib/photos";
 import { Icon, lightboxIcons } from "../icons";
 
-const strip = [0, 4, 1, 5, 2, 3].map((index) => photos[index]);
+const strip = [0, 4, 6, 1, 5, 7, 2, 3].map((index) => photos[index]);
 
 export function PhotoStrip() {
   const { ref, carousel, state } = useCarousel({ align: "start" });
-  const lightbox = useLightbox({ icons: lightboxIcons, thumbnails: true });
+  const lightbox = useLightbox({
+    icons: lightboxIcons,
+    thumbnails: true,
+    onChange: (next) => {
+      if (next.isOpen && next.index !== state.index) carousel?.goTo(next.index);
+    },
+  });
   const open = (index: number, trigger: HTMLElement) => {
     const images = trigger
       .closest(".re-carousel")
@@ -49,7 +55,7 @@ export function PhotoStrip() {
                 width={photo.width}
                 height={photo.height}
                 draggable={false}
-                sizes="288px"
+                sizes="(max-width: 430px) 72vw, 310px"
               />
             </button>
             <figcaption>{photo.caption}</figcaption>

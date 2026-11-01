@@ -4,7 +4,8 @@
   Layout: c-col (centered column), c-sec (section spacing).
   Type: c-display, c-h1 (page title, display font), c-h2, c-sub, c-h3, c-text,
   c-link, c-gray, kbd.
-  Surfaces: c-card > c-card-in (double ring card), c-badge[data-state].
+  Surfaces: c-card > c-card-in (double ring card), c-badge[data-state],
+  c-toolbar, c-menu-card.
   Actions: c-btn (primary), c-btn-quiet, c-copy (components/copy-control.tsx).
   Features: c-feats c-feats-3 (li > svg + p > b).
   Components: c-head, c-menu, c-peek-pane, c-foot, c-tabs, c-code, f-tip.
@@ -281,6 +282,7 @@ kbd {
 .c-logo {
   display: inline-flex;
   align-items: center;
+  gap: 6px;
   height: 32px;
   padding: 0 8px;
   margin-left: -8px;
@@ -351,6 +353,76 @@ kbd {
   padding: 0;
 }
 
+/* Toolbar and menu card, shared by the home cards and the library pages. */
+.c-toolbar,
+.c-menu-card {
+  border-radius: 13px;
+  background: var(--surface);
+  box-shadow: var(--shadow-raised);
+  --re-highlight-background: var(--hover);
+  --re-highlight-radius: 8px;
+}
+.c-toolbar {
+  display: flex;
+  gap: 2px;
+  padding: 4px;
+}
+.c-toolbar button {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: #555;
+  transition:
+    color 150ms ease,
+    transform 160ms var(--ease);
+}
+.c-toolbar button:hover {
+  color: var(--ink);
+}
+.c-toolbar button:active {
+  transform: scale(0.94);
+}
+.c-menu-card {
+  display: grid;
+  gap: 1px;
+  width: min(100%, 232px);
+  padding: 5px;
+}
+.c-menu-card button {
+  display: grid;
+  grid-template-columns: 16px 1fr auto;
+  align-items: center;
+  gap: 10px;
+  height: 32px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  font-size: 13.5px;
+  text-align: left;
+}
+.c-menu-card svg {
+  color: #666;
+}
+.c-menu-card kbd {
+  min-width: 0;
+  height: auto;
+  padding: 0;
+  background: none;
+  box-shadow: none;
+  color: var(--mute);
+  font-size: 12px;
+  font-weight: 400;
+}
+.c-toolbar button:focus-visible,
+.c-menu-card button:focus-visible {
+  outline-offset: -2px;
+}
 /* Libraries menu */
 .c-menu {
   position: absolute;
@@ -617,7 +689,6 @@ kbd {
   border: 1.5px solid #fff;
   border-radius: 6px;
   box-shadow: 0 1px 6px rgb(0 0 0 / 25%);
-  animation: c-ann 4s ease-in-out infinite;
 }
 .f-peek-tip .pk-ann-label {
   position: absolute;
@@ -631,7 +702,6 @@ kbd {
   font-weight: 520;
   white-space: nowrap;
   box-shadow: 0 2px 6px rgb(0 0 0 / 15%);
-  animation: c-ann 4s ease-in-out infinite;
 }
 .f-peek-tip .pk-ann-pin {
   position: absolute;
@@ -647,21 +717,6 @@ kbd {
   font-size: 10px;
   font-weight: 600;
   box-shadow: 0 1px 4px rgb(0 0 0 / 25%);
-}
-@keyframes c-ann {
-  0%,
-  15% {
-    opacity: 0;
-    translate: 0 3px;
-  }
-  25%,
-  85% {
-    opacity: 1;
-    translate: 0 0;
-  }
-  100% {
-    opacity: 0;
-  }
 }
 .f-peek-tip .pk-av {
   display: flex;
@@ -800,15 +855,9 @@ kbd {
   color: #c2362b;
   font-size: 12.5px;
   font-weight: 550;
-  box-shadow: var(--shadow-control-soft);
-}
-.f-peek-tip .pk-hold-btn::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  border-radius: inherit;
-  box-shadow: inset 0 0 0 1px rgb(0 0 0 / 10%);
-  pointer-events: none;
+  box-shadow:
+    inset 0 0 0 1px var(--ring-color),
+    var(--shadow-raised-soft);
 }
 .f-peek-tip .pk-hold-fill {
   position: absolute;
@@ -915,6 +964,10 @@ kbd {
   font-size: 13.5px;
 }
 .c-foot-logo {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  align-self: center;
   font-weight: 640;
   letter-spacing: -0.03em;
 }
@@ -1147,7 +1200,9 @@ kbd {
   cursor: pointer;
   user-select: none;
   -webkit-user-select: none;
-  box-shadow: var(--shadow-control-soft);
+  box-shadow:
+    inset 0 0 0 1px var(--ring-color),
+    var(--shadow-raised-soft);
   transition:
     transform 160ms var(--ease),
     background-color 150ms ease;
@@ -1156,14 +1211,6 @@ kbd {
   .c-hold:hover {
     background-image: linear-gradient(var(--hover), var(--hover));
   }
-}
-.c-hold::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  border-radius: inherit;
-  box-shadow: inset 0 0 0 1px rgb(0 0 0 / 10%);
-  pointer-events: none;
 }
 .c-hold:active {
   transform: scale(0.97);

@@ -42,7 +42,7 @@ function DemoCard({ slug, children }: { slug: string; children: ReactNode }) {
 function MenuDemo() {
   const [current, setCurrent] = useState(menu[0][1]);
   return (
-    <MovingHighlight className="h-menu" role="group" aria-label="File">
+    <MovingHighlight className="c-menu-card" role="group" aria-label="File">
       {menu.map(([icon, label, key]) => (
         <button
           type="button"
@@ -94,7 +94,7 @@ export function SmallDemos() {
     <div className="h-cards">
       <DemoCard slug="floating-tooltip">
         <MovingHighlight
-          className="h-tools"
+          className="c-toolbar"
           role="group"
           aria-label="Photo actions"
         >

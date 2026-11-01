@@ -50,75 +50,6 @@
   color: var(--prose);
   text-wrap: pretty;
 }
-.h-tools,
-.h-menu {
-  border-radius: 13px;
-  background: var(--surface);
-  box-shadow: var(--shadow-raised);
-  --re-highlight-background: var(--hover);
-  --re-highlight-radius: 8px;
-}
-.h-tools {
-  display: flex;
-  gap: 2px;
-  padding: 4px;
-}
-.h-tools button {
-  display: grid;
-  place-items: center;
-  width: 32px;
-  height: 32px;
-  padding: 0;
-  border: 0;
-  border-radius: 8px;
-  background: transparent;
-  color: #555;
-  transition:
-    color 150ms ease,
-    transform 160ms var(--ease);
-}
-.h-tools button:hover {
-  color: var(--ink);
-}
-.h-tools button:active {
-  transform: scale(0.94);
-}
-.h-menu {
-  display: grid;
-  gap: 1px;
-  width: min(100%, 232px);
-  padding: 5px;
-}
-.h-menu button {
-  display: grid;
-  grid-template-columns: 16px 1fr auto;
-  align-items: center;
-  gap: 10px;
-  height: 32px;
-  padding: 0 10px;
-  border: 0;
-  border-radius: 8px;
-  background: transparent;
-  font-size: 13.5px;
-  text-align: left;
-}
-.h-menu svg {
-  color: #666;
-}
-.h-menu kbd {
-  min-width: 0;
-  height: auto;
-  padding: 0;
-  background: none;
-  box-shadow: none;
-  color: var(--mute);
-  font-size: 12px;
-  font-weight: 400;
-}
-.h-tools button:focus-visible,
-.h-menu button:focus-visible {
-  outline-offset: -2px;
-}
 .h-load {
   display: flex;
   align-items: center;
@@ -138,7 +69,7 @@
 }
 .h-strip-vp {
   --h-off: max(var(--gutter), (100% - var(--col)) / 2);
-  --re-carousel-slide-width: min(288px, 72vw);
+  --re-carousel-slide-width: min(310px, 72vw);
   --re-carousel-gap: 12px;
   padding-inline: var(--h-off);
   scroll-padding-inline: var(--h-off);
@@ -152,7 +83,7 @@
   overflow: hidden;
   border-radius: calc(10px * var(--r));
   background: #ececec;
-  cursor: zoom-in;
+  cursor: inherit;
 }
 .h-slide button:focus-visible {
   outline-offset: -2px;
@@ -273,7 +204,7 @@
   place-items: center;
   width: 24px;
   height: 24px;
-  margin-bottom: 14px;
+  margin-bottom: 80px;
   border-radius: 50%;
   background: var(--surface);
   box-shadow: var(--shadow-control);
@@ -289,24 +220,6 @@
 }
 .h-steps b {
   display: block;
-}
-.h-prompt {
-  margin-top: 12px;
-}
-.h-prompt pre {
-  margin: 0;
-  padding: 18px 20px 4px;
-  font-family: var(--mono);
-  font-size: 13px;
-  line-height: 1.65;
-  color: var(--ink-2);
-  white-space: pre-wrap;
-  overflow-wrap: anywhere;
-}
-.h-prompt-bar {
-  display: flex;
-  justify-content: flex-end;
-  padding: 10px 12px 12px;
 }
 .h-guides-h {
   margin-top: 64px;
@@ -396,6 +309,9 @@
 @media (max-width: 760px) {
   .h-steps {
     grid-template-columns: 1fr;
+  }
+  .h-step-n {
+    margin-bottom: 14px;
   }
 }
 @media (max-width: 600px) {

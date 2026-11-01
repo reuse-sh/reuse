@@ -1,7 +1,7 @@
 import type { Library } from "@reuse-sh/catalog";
 import { shadowLevels } from "@reuse-sh/shadows";
 import { CardPatterns } from "../demos/shadows";
-import { C, Install, Section, SingleCode, Text } from "./parts";
+import { C, Install, Section, SingleCode, Stage, Text } from "./parts";
 
 const importCss = `@import "@reuse-sh/shadows/styles.css";`;
 
@@ -70,9 +70,11 @@ export function ShadowsStart({ library }: { library: Library }) {
 export function ShadowsCards() {
   return (
     <>
-      <div className="x-cards">
-        <CardPatterns />
-      </div>
+      <Stage>
+        <div className="x-cards">
+          <CardPatterns />
+        </div>
+      </Stage>
       <HtmlExample code={cardsHtml} />
     </>
   );
@@ -89,14 +91,16 @@ export function ShadowsScale() {
           <h2 className="c-h3">
             <code className="d-inline">{title}</code>
           </h2>
-          <ul className="x-scale-list">
-            {shadowLevels.map((level) => (
-              <li key={level} className="x-scale-item">
-                <span className={`x-scale-tile ${prefix}${level}`} />
-                <code className="x-scale-name">{level}</code>
-              </li>
-            ))}
-          </ul>
+          <Stage>
+            <ul className="x-scale-list">
+              {shadowLevels.map((level) => (
+                <li key={level} className="x-scale-item">
+                  <span className={`x-scale-tile ${prefix}${level}`} />
+                  <code className="x-scale-name">{level}</code>
+                </li>
+              ))}
+            </ul>
+          </Stage>
         </div>
       ))}
       <HtmlExample code={scaleHtml} />

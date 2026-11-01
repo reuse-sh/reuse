@@ -8,7 +8,7 @@ import {
   AnnotationsEditor,
   AnnotationsReviewNotes,
 } from "./annotations-pages";
-import { AvatarsGroups, AvatarsTeam } from "./avatars-pages";
+import { AvatarsStack, AvatarsTeam } from "./avatars-pages";
 import { basicCode } from "./basic-code";
 import {
   CarouselControlsGuide,
@@ -45,6 +45,7 @@ import {
   OverviewActions,
   Principles,
   Section,
+  Stage,
   Text,
 } from "./parts";
 import { ShadowsCards, ShadowsScale, ShadowsStart } from "./shadows-pages";
@@ -80,9 +81,9 @@ function BasicOverview({ library }: { library: Library }) {
   return (
     <>
       <OverviewActions library={library} />
-      <div className="d-demo">
+      <Stage>
         <LibraryDemo slug={library.slug} />
-      </div>
+      </Stage>
       <Principles
         rows={library.principles}
         icons={basicIcons[library.slug] ?? []}
@@ -115,7 +116,7 @@ function example(demo: ReactNode, code: keyof typeof basicCode) {
   const [js, react] = basicCode[code];
   return () => (
     <>
-      {demo}
+      <Stage>{demo}</Stage>
       <ExampleCode js={js} react={react} />
     </>
   );
@@ -155,7 +156,7 @@ const bodies: Record<string, Record<string, Body>> = {
   },
   avatars: {
     "examples/team": () => <AvatarsTeam />,
-    "examples/groups": () => <AvatarsGroups />,
+    "examples/stack": () => <AvatarsStack />,
   },
   loaders: {
     "examples/chat-reply": example(<ChatReply />, "chatReply"),

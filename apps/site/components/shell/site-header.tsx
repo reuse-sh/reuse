@@ -97,7 +97,8 @@ export function SiteHeader() {
       <div className="c-head-in" ref={wrap}>
         <div className="c-brand" ref={brand}>
           <Link className="c-logo" data-re-row href="/">
-            reuse
+            <Icon name="logo" size={18} />
+            Reuse
           </Link>
           <span className="c-slash" aria-hidden="true">
             /

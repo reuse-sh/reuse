@@ -138,3 +138,47 @@ test("a percentage scroll padding places the slide at the padded edge", async ({
   });
   expect(result).toEqual({ scrollLeft: 600, edge: 100, index: 2, children: 6 });
 });
+
+test("a drag past the end stretches the slides, keeps the scroll edge, and springs back", async ({
+  page,
+}) => {
+  await setup(page);
+  const edge = await page.evaluate(() => {
+    const strip = document.getElementById("strip") as HTMLElement;
+    strip.scrollTo({ left: strip.scrollWidth, behavior: "instant" });
+    return { left: strip.scrollLeft, width: strip.scrollWidth };
+  });
+  await page.mouse.move(400, 100);
+  await page.mouse.down();
+  await page.mouse.move(100, 100, { steps: 20 });
+  const pulled = await page.evaluate(() => {
+    const strip = document.getElementById("strip") as HTMLElement;
+    const slide = strip.querySelector<HTMLElement>("[data-carousel-slide]");
+    return {
+      left: strip.scrollLeft,
+      width: strip.scrollWidth,
+      shift: Number.parseFloat(slide?.style.translate ?? ""),
+      cursor: getComputedStyle(strip).cursor,
+    };
+  });
+  expect(pulled.left).toBe(edge.left);
+  expect(pulled.width).toBe(edge.width);
+  expect(pulled.shift).toBeLessThan(-30);
+  expect(pulled.shift).toBeGreaterThan(-300);
+  expect(pulled.cursor).toBe("grabbing");
+  await page.mouse.up();
+  await framesUntilIdle(
+    page,
+    "document.querySelector('#strip [data-carousel-slide]').style.translate",
+  );
+  const settled = await page.evaluate(() => {
+    const strip = document.getElementById("strip") as HTMLElement;
+    return {
+      left: strip.scrollLeft,
+      translate: strip.querySelector<HTMLElement>("[data-carousel-slide]")
+        ?.style.translate,
+      cursor: getComputedStyle(strip).cursor,
+    };
+  });
+  expect(settled).toEqual({ left: edge.left, translate: "", cursor: "grab" });
+});
