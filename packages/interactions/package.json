@@ -1,6 +1,6 @@
 {
   "name": "@reuse-sh/interactions",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "A floating tooltip, a moving highlight, and a hold-to-confirm button for native and React interfaces.",
   "keywords": [
     "reuse",
