@@ -6,6 +6,8 @@ Put reusable browser behavior in packages/core. Put React integration in package
 
 Run pnpm lint, pnpm type-check, pnpm test, and pnpm build. Check the actual interaction at desktop and narrow widths, with keyboard input and reduced motion where relevant. Report browser or device behavior that has not been tested.
 
+Every library lists its principles in packages/catalog. They are the rules the code keeps, and they matter more than the code itself, because an adaptation on another framework keeps them too. When you change how a component behaves, update its principles in the same pull request, then run `pnpm principles` to rewrite the package READMEs. `pnpm lint` fails while a README is out of date.
+
 Do not change an entry to available until it has working code, a demo, usage, an agent guide, and verification. Do not publish packages or create a deployment as part of a local component change.
 
 ## Releasing

@@ -35,9 +35,9 @@ import {
   ApiTable,
   CodePair,
   ExampleCode,
-  Features,
   Install,
   OverviewActions,
+  Principles,
   Section,
   Text,
 } from "./parts";
@@ -58,12 +58,19 @@ import {
 type Body = (library: Library) => ReactNode;
 
 const basicIcons: Record<string, DocIconName[]> = {
-  annotations: ["layers", "resize", "doc", "keyboard"],
-  loaders: ["layers", "chevrons", "code", "timer"],
-  shadows: ["layers", "feather", "code", "chevrons"],
-  "moving-highlight": ["cursor", "layers", "resize", "chevrons"],
-  "hold-to-confirm": ["touch", "cursor", "timer", "keyboard"],
-  avatars: ["feather", "plus", "layers", "doc"],
+  annotations: ["doc", "resize", "code", "layers", "share", "keyboard"],
+  loaders: ["chevrons", "layers", "feather", "timer", "doc", "code"],
+  shadows: ["layers", "feather", "resize", "code", "chevrons", "doc"],
+  "moving-highlight": [
+    "resize",
+    "keyboard",
+    "layers",
+    "chevrons",
+    "cursor",
+    "minus",
+  ],
+  "hold-to-confirm": ["timer", "minus", "keyboard", "cursor", "code", "layers"],
+  avatars: ["feather", "doc", "plus", "code", "resize", "layers"],
 };
 
 function BasicOverview({ library }: { library: Library }) {
@@ -73,10 +80,9 @@ function BasicOverview({ library }: { library: Library }) {
       <div className="d-demo">
         <LibraryDemo slug={library.slug} />
       </div>
-      <Features
-        rows={library.features}
+      <Principles
+        rows={library.principles}
         icons={basicIcons[library.slug] ?? []}
-        columns={4}
       />
     </>
   );

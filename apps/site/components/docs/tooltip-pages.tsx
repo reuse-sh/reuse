@@ -9,10 +9,10 @@ import {
   C,
   CodePair,
   ExampleCode,
-  Features,
   Install,
   Keys,
   OverviewActions,
+  Principles,
   Section,
   Text,
 } from "./parts";
@@ -83,9 +83,9 @@ export function TooltipOverview({ library }: { library: Library }) {
         Move along the toolbar, or press <kbd>Tab</kbd> to reach it and{" "}
         <kbd>Esc</kbd> to hide the hint.
       </Keys>
-      <Features
-        rows={library.features}
-        icons={["layers", "cursor", "feather", "doc", "keyboard", "resize"]}
+      <Principles
+        rows={library.principles}
+        icons={["layers", "cursor", "keyboard", "touch", "doc", "resize"]}
       />
     </>
   );

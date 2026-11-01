@@ -156,6 +156,9 @@
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 36px 24px;
 }
+.d-principles + .c-feats {
+  margin-top: 20px;
+}
 .d-demo {
   margin-top: 44px;
 }

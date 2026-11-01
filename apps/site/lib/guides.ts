@@ -178,10 +178,11 @@ export function libraryGuide(library: Library) {
     `# ${library.name}`,
     library.description,
     `Package: ${library.packageName}`,
+    "## Principles",
+    "These are the rules to keep when you adapt this library. The code is one way to keep them. An adaptation on any framework must keep every one.",
+    ...library.principles.map(([name, text]) => `- ${name}. ${text}`),
     "## Install",
     `${fence}bash\n${installCommand(library)}\n${fence}`,
-    "## Behavior",
-    ...library.features.map(([name, text]) => `- ${name}. ${text}`),
     "## Integration notes",
     ...library.notes.map((value) => `- ${value}`),
     "## API",
@@ -193,7 +194,7 @@ export function libraryGuide(library: Library) {
     "## Agent workflow",
     "1. Inspect the project and read the installed package's types and stylesheet.",
     "2. Reuse the native controller. Use the React adapter only in a React surface.",
-    "3. Adapt styles and data connections to the project. Do not recreate the gesture or state engine.",
+    "3. Adapt styles and data connections to the project. Keep every principle above. Do not recreate the gesture or state engine.",
     "4. Connect destroy and unsubscribe callbacks to the owner lifecycle.",
     "5. Verify keyboard access, pointer/touch behavior, resize, empty/one-item states, errors, reduced motion, and teardown where applicable.",
     "6. Report the actual checks and remaining browser/device limits.",
@@ -203,4 +204,4 @@ export function libraryGuide(library: Library) {
   ].join("\n\n")}\n`;
 }
 export const agentGuide =
-  "# Reuse integration guide\n\nRead /llms.txt, then the selected library guide at /{library}/guide.md. Install the package with npm install @reuse-sh/<package>, reuse the native implementation and adapt the integration. Read the installed types, import only the required entry points and CSS, connect teardown, and exercise the result in the host project. Do not invent API methods or claim unsupported media or devices. Original code is MIT.\n";
+  "# Reuse integration guide\n\nRead /llms.txt, then the selected library guide at /{library}/guide.md. The guide opens with the library's principles: keep every one of them, on any framework. Install the package with npm install @reuse-sh/<package>, reuse the native implementation and adapt the integration. Read the installed types, import only the required entry points and CSS, connect teardown, and exercise the result in the host project. Do not invent API methods or claim unsupported media or devices. Original code is MIT.\n";

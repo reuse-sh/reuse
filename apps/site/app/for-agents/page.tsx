@@ -11,15 +11,15 @@ export const metadata: Metadata = { title: "Agent guides" };
 const steps = [
   [
     "Try it on the site.",
-    "Each library page opens with the working part, so you can judge how it behaves before anyone writes code.",
+    "Each library page opens with the working part and its principles. You see the rules at work before anyone writes code.",
   ],
   [
     "Hand your agent the guide.",
-    "Paste the prompt or a guide link. The guide lists the markup the part expects, its options, and how to remove it cleanly.",
+    "Paste the prompt or a guide link. The guide starts with the principles your agent must keep, then the markup, the options and the cleanup.",
   ],
   [
-    "Check what it built.",
-    "Every guide ends with checks: keyboard, narrow screens, reduced motion and teardown. Ask your agent to run them and show you the result.",
+    "Check that it kept them.",
+    "Every guide ends with checks for keyboard, narrow screens, reduced motion and teardown. Ask your agent to run them and show you that each principle still holds.",
   ],
 ];
 
@@ -28,8 +28,9 @@ export default function AgentGuidesPage() {
     <main id="main" className="c-col h-page">
       <h1 className="c-h1">Agent guides</h1>
       <p className="h-lead">
-        Every library has a guide written for coding agents. Give your agent the
-        link and say where the part should go.
+        Every library has a guide written for coding agents. It opens with the
+        library's principles, and your agent must keep them on any framework.
+        Give it the link and say where the part should go.
       </p>
       <ol className="h-steps">
         {steps.map(([title, text], index) => (

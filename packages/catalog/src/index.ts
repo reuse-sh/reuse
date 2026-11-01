@@ -1,4 +1,4 @@
-/** A name and its explanation: an API entry or a feature. */
+/** A name and its explanation: an API entry or a principle. */
 export type Row = readonly [name: string, text: string];
 
 /** One documentation page. The path is relative to the library, "" for its overview. */
@@ -20,7 +20,7 @@ export interface Library {
   name: string;
   description: string;
   packageName: string;
-  features: readonly Row[];
+  principles: readonly Row[];
   api: readonly Row[];
   notes: readonly string[];
   agentPrompt: string;
@@ -62,36 +62,64 @@ const holdDescription =
 const avatarsDescription =
   "Photos and initials with badges and groups, cut out cleanly on any background.";
 
+/** The rules every library in the collection follows. */
+export const collectionPrinciples: readonly Row[] = [
+  [
+    "Run on any stack",
+    "A browser module binds to the markup you already have, React gets a thin wrapper, and Vue, Svelte and plain pages call the module directly.",
+  ],
+  [
+    "Exit cleanly",
+    "destroy() removes every listener and puts back every style it touched, so a part can come and go with a route.",
+  ],
+  [
+    "Scope every style",
+    "Classes start with reuse- and values live in --reuse- custom properties, so nothing reaches the rest of your page.",
+  ],
+  [
+    "Work from the keyboard",
+    "Native dialogs, buttons and focus order let every part work without a pointer and with a screen reader.",
+  ],
+  [
+    "Move calmly",
+    "Springs keep their speed when you interrupt them, and nothing moves when the system asks for less motion.",
+  ],
+  [
+    "Write the rules down",
+    "Each library lists its principles and ships a guide with its markup, options and checks, so your agent keeps them on any stack.",
+  ],
+];
+
 export const libraries: Library[] = [
   {
     slug: "lightbox",
     name: "Lightbox",
     description: lightboxDescription,
     packageName: "@reuse-sh/lightbox",
-    features: [
+    principles: [
       [
-        "Opens from the thumbnail",
+        "Page with native scroll snap",
+        "Pages are a scroll-snap strip from the carousel, so touch and trackpads keep the system's momentum.",
+      ],
+      [
+        "Open from the thumbnail and return to it",
         "The image grows out of its cropped preview and goes back to the same place on close.",
       ],
       [
-        "Native paging",
-        "Pages are a scroll-snap strip, so touch and trackpads keep the system's momentum.",
+        "Load only what is near",
+        "Only the current and neighboring images load, and a long jump skips the pages in between.",
       ],
       [
-        "Pinch, wheel, double-tap",
-        "Zoom follows the pointer or fingers and pans within the image's edges.",
+        "Zoom around the point you touch",
+        "Pinch, wheel and double-tap zoom around the pointer or fingers, and panning stops at the image's edges.",
       ],
       [
-        "Focus and scroll kept",
-        "Focus returns to the trigger and the page behind never jumps.",
+        "Keep focus inside and give it back",
+        "The viewer is a native modal dialog, and closing it returns focus to the element that opened it.",
       ],
       [
-        "Loads what it shows",
-        "Only the current and neighboring images load. Long jumps skip the pages in between.",
-      ],
-      [
-        "Your markup",
-        "Captions, thumbnails and controls take your CSS, not ours.",
+        "Leave the page as it was",
+        "Destroy restores the page scroll, the hidden thumbnail, and every style and listener the viewer touched.",
       ],
     ],
     api: [
@@ -212,22 +240,30 @@ export const libraries: Library[] = [
     name: "Carousel",
     description: carouselDescription,
     packageName: "@reuse-sh/carousel",
-    features: [
+    principles: [
       [
-        "Native scroll",
-        "Touch and trackpads use CSS scroll snap and keep their momentum.",
+        "Let the browser scroll",
+        "Touch and trackpads scroll natively with CSS scroll snap, and every move from code is a scroll too.",
       ],
       [
-        "Mouse drag",
-        "Drag with a mouse. A drag never opens the link under it.",
+        "Never let a drag click",
+        "A mouse drag never opens the link under it, an ordinary click still works, and touch stays native.",
       ],
       [
-        "Endless loop",
-        "Slides repeat without cloning, so buttons and links inside stay unique.",
+        "Repeat without clones",
+        "The loop moves the original slides, so ids, links and buttons stay unique, and it turns on only when the slides can cover the viewport.",
       ],
       [
-        "Autoplay that waits",
-        "Pauses for hover, focus, drag, hidden tabs and reduced motion.",
+        "Let autoplay wait for people",
+        "Autoplay pauses for hover, focus, dragging, hidden pages, offscreen strips and reduced motion.",
+      ],
+      [
+        "Keep keys local",
+        "Arrow keys act only inside the focused strip and swap sides in right-to-left layouts.",
+      ],
+      [
+        "Put back what it moved",
+        "Destroy cancels timers and restores the styles, transforms and listeners it added.",
       ],
     ],
     api: [
@@ -317,22 +353,30 @@ export const libraries: Library[] = [
     name: "Annotations",
     description: annotationsDescription,
     packageName: "@reuse-sh/annotations",
-    features: [
+    principles: [
       [
-        "Six kinds",
-        "Area, spotlight, arrow, line, pointer and numbered marker.",
+        "Store one versioned format",
+        "Annotations live in one version 1 JSON document, and an unknown version throws instead of being guessed.",
       ],
       [
-        "Marks that stay put",
-        "Coordinates are percentages, so every mark keeps its place at any image size.",
+        "Place marks in percent",
+        "Coordinates are percentages of the image, so every mark keeps its place at any size.",
       ],
       [
-        "One format",
-        "A versioned JSON document you can store, render on the server and edit.",
+        "Check input at the edge",
+        "Parsing clamps coordinates, drops invalid marks, and escapes marker text except strong, em and code.",
       ],
       [
-        "An editor",
-        "Draw, move and resize marks with a pointer or the keyboard, with undo and redo.",
+        "Render without a browser",
+        "The same document renders to HTML on the server, with no DOM needed.",
+      ],
+      [
+        "Leave storage to the host",
+        "The editor reports every change through onChange, and your code decides where the document goes.",
+      ],
+      [
+        "Edit from the keyboard",
+        "Marks can be created, selected, moved and deleted with keys, and one drag is one undo step.",
       ],
     ],
     api: [
@@ -417,22 +461,30 @@ export const libraries: Library[] = [
     name: "Loaders",
     description: loadersDescription,
     packageName: "@reuse-sh/loaders",
-    features: [
+    principles: [
       [
-        "Sixteen figures",
-        "Triangles, squares, circles, a spiral and rows, each drawn with three or four dots.",
+        "Move dots, not frames",
+        "Between figures each dot travels to its new place instead of popping.",
       ],
       [
-        "Dots that travel",
-        "Between figures the dots move to their new places instead of popping.",
+        "Show every figure in turn",
+        "The default sequence shows each figure once per round and never the same one twice running.",
       ],
       [
-        "One engine",
-        "The same timeline runs a single figure or the whole sequence.",
+        "Draw in the text color",
+        "The canvas takes its color from the surrounding text, so it fits any theme.",
       ],
       [
-        "Still when unseen",
-        "It stops offscreen and in hidden tabs, and shows a still frame under reduced motion.",
+        "Stop when unseen",
+        "The clock pauses offscreen and in hidden tabs, and reduced motion shows a still figure.",
+      ],
+      [
+        "Stay silent unless labeled",
+        "The dots are decorative, and a label turns them into a status for screen readers.",
+      ],
+      [
+        "Give the canvas back",
+        "Destroy stops the clock and restores the canvas.",
       ],
     ],
     api: [
@@ -502,19 +554,30 @@ export const libraries: Library[] = [
     name: "Shadows",
     description: shadowsDescription,
     packageName: "@reuse-sh/shadows",
-    features: [
-      ["Six levels", "From a small control to a floating panel."],
+    principles: [
       [
-        "Two soft layers",
-        "Each level is a close shadow and a wide one, with an optional hairline ring.",
+        "Build each level from two layers",
+        "Every level is a close shadow and a wide one, drawn from one color and one strength.",
       ],
       [
-        "Custom properties",
-        "Set the color and strength once with --reuse-shadow-color and --reuse-shadow-strength.",
+        "Set color and strength once",
+        "--reuse-shadow-color and --reuse-shadow-strength drive all six levels, and a dark ancestor raises the strength and lightens the ring.",
       ],
       [
-        "Fade edge",
-        "Scrolling strips fade out at the side that has more to show.",
+        "Use a ring, not a border",
+        "The ring variants add a hairline in the shadow itself, so the element's size never changes.",
+      ],
+      [
+        "Work without JavaScript",
+        "The levels and cards are plain classes in one stylesheet.",
+      ],
+      [
+        "Fade only where there is more",
+        "The fade edge masks a side only while there is content left to scroll toward it, and it follows right-to-left layouts.",
+      ],
+      [
+        "Put the inline style back",
+        "Destroy restores the scroller's original inline style exactly.",
       ],
     ],
     api: [
@@ -595,30 +658,30 @@ export const libraries: Library[] = [
     name: "Floating tooltip",
     description: tooltipDescription,
     packageName: "@reuse-sh/interactions",
-    features: [
+    principles: [
       [
-        "One popup",
-        "Nearby triggers share it, so moving along a toolbar slides the hint across instead of closing and opening it.",
+        "Share one popup",
+        "Nearby triggers share one tooltip, so moving along a toolbar slides it across instead of closing and reopening it.",
       ],
       [
-        "Follows on a spring",
-        "It trails the pointer with a little weight, below and to the right of it, and never jumps.",
+        "Follow the pointer on a spring",
+        "It trails the pointer with a little weight, below and to the right, and never jumps.",
       ],
       [
-        "Leans as it moves",
-        "It tilts a few degrees toward the direction of travel and settles when the pointer stops.",
+        "Anchor to keyboard focus",
+        "Keyboard focus places it on the element, and Escape hides it.",
       ],
       [
-        "Rich content",
-        "Text by default. A template or a function can put a shortcut, an image or a person's card inside.",
+        "Treat touch as touch",
+        "A touch is not hover, so touch input never opens it.",
       ],
       [
-        "Keyboard focus",
-        "Focus anchors it to the element, and Escape hides it.",
+        "Hold only a hint",
+        "It describes its trigger through aria-describedby and never holds controls or required instructions.",
       ],
       [
-        "Stays on screen",
-        "It keeps a 12 px margin from every edge of the window.",
+        "Stay inside the window",
+        "It keeps a margin from every edge of the viewport.",
       ],
     ],
     api: [
@@ -706,22 +769,30 @@ export const libraries: Library[] = [
     name: "Moving highlight",
     description: highlightDescription,
     packageName: "@reuse-sh/interactions",
-    features: [
+    principles: [
       [
-        "Pointer and keyboard",
-        "Hover and focus move the same background, measured from the real row.",
+        "Measure the real rows",
+        "The background takes its size and place from the row itself, also inside scaled containers.",
       ],
       [
-        "Selection kept apart",
-        "A second highlight can hold the selected row while the first follows the pointer.",
+        "Let the keyboard lead",
+        "Focus moves the background like the pointer does, and keyboard focus wins while it is active.",
       ],
       [
-        "Keeps up with layout",
+        "Keep selection apart",
+        "In selected mode it stays on the selected row, and a second highlight on the same root can follow the pointer.",
+      ],
+      [
+        "Follow layout changes",
         "Resizes and content changes move it to the row's new place.",
       ],
       [
-        "Short and long moves",
-        "Nearby rows slide in 150 ms. Distant ones fade out and back in.",
+        "Slide near, fade far",
+        "Nearby rows slide in 150 ms, distant ones fade out and back in, and reduced motion snaps.",
+      ],
+      [
+        "Skip disabled rows",
+        "Disabled and hidden rows never take the highlight.",
       ],
     ],
     api: [
@@ -793,16 +864,30 @@ export const libraries: Library[] = [
     name: "Hold to confirm",
     description: holdDescription,
     packageName: "@reuse-sh/interactions",
-    features: [
-      ["Any input", "Hold with a pointer, Space or Enter."],
+    principles: [
       [
-        "Easy to cancel",
-        "Release early, move off the button or press Escape, and nothing happens.",
+        "Confirm once per hold",
+        "A completed hold calls onConfirm exactly once, and the next action needs a new press.",
       ],
-      ["Once per hold", "Each completed hold confirms exactly once."],
       [
-        "Assistive activation",
-        "A click from assistive technology confirms without a physical hold.",
+        "Cancel on any doubt",
+        "Letting go early, leaving the button, blur, Escape or disabling the button cancels the hold.",
+      ],
+      [
+        "Accept pointer and keys",
+        "A pointer, Space or Enter can hold, and keyboard auto-repeat never starts a new hold.",
+      ],
+      [
+        "Let assistive technology click",
+        "A click without a physical press, as from a screen reader, confirms at once.",
+      ],
+      [
+        "Own the gesture, not the action",
+        "Your code owns the request, the loading state, success and failure.",
+      ],
+      [
+        "Keep the native button",
+        "It enhances a button you already have and restores its markup on destroy.",
       ],
     ],
     api: [
@@ -864,16 +949,30 @@ export const libraries: Library[] = [
     name: "Avatars",
     description: avatarsDescription,
     packageName: "@reuse-sh/avatars",
-    features: [
+    principles: [
       [
-        "Real cutouts",
-        "Badges and overlaps cut through the image, so no painted ring fights your background.",
+        "Cut, never paint",
+        "Badges and overlaps are masks through the image, so no painted ring fights the background.",
       ],
-      ["Badges", "A dot, a count or an icon, each with its own cutout."],
-      ["Groups", "Each avatar in a stack is cut where the next one covers it."],
       [
-        "Fallbacks",
-        "Initials show until the image loads, and stay if it fails.",
+        "Keep initials underneath",
+        "Initials show until the image loads and stay if it fails.",
+      ],
+      [
+        "Name badges in words",
+        "The badge label joins the accessible name, and the drawing stays decorative.",
+      ],
+      [
+        "Treat text as text",
+        "Names, labels and icons go in as text or nodes and are never parsed as HTML.",
+      ],
+      [
+        "Size cutouts from the badge",
+        "Counts of two digits or more get a capsule cutout measured from the badge itself.",
+      ],
+      [
+        "Restore the host",
+        "Destroy puts back the original content, styles and listeners.",
       ],
     ],
     api: [

@@ -70,26 +70,29 @@ export function Keys({ children }: { children: ReactNode }) {
   return <p className="d-keys">{children}</p>;
 }
 
-export function Features({
+export function Principles({
   rows,
   icons,
-  columns = 3,
 }: {
   rows: readonly Row[];
   icons: readonly DocIconName[];
-  columns?: 3 | 4;
 }) {
   return (
-    <ul className={`c-feats ${columns === 3 ? "c-feats-3" : "d-feats-4"}`}>
-      {rows.map(([name, text], index) => (
-        <li key={name}>
-          <DocIcon name={icons[index] ?? "code"} />
-          <p>
-            <b>{name}.</b> {text}
-          </p>
-        </li>
-      ))}
-    </ul>
+    <>
+      <h2 className="c-h3 d-principles">Principles</h2>
+      <ul
+        className={`c-feats ${rows.length === 4 ? "d-feats-4" : "c-feats-3"}`}
+      >
+        {rows.map(([name, text], index) => (
+          <li key={name}>
+            <DocIcon name={icons[index] ?? "code"} />
+            <p>
+              <b>{name}.</b> {text}
+            </p>
+          </li>
+        ))}
+      </ul>
+    </>
   );
 }
 

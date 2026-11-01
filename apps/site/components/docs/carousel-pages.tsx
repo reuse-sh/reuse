@@ -7,10 +7,10 @@ import {
   C,
   CodePair,
   ExampleCode,
-  Features,
   Install,
   Keys,
   OverviewActions,
+  Principles,
   Section,
   Text,
 } from "./parts";
@@ -77,10 +77,9 @@ export function CarouselOverview({ library }: { library: Library }) {
         Drag with a mouse, swipe, or focus the strip and use <kbd>←</kbd>
         <kbd>→</kbd>. Images open in the lightbox.
       </Keys>
-      <Features
-        rows={library.features}
-        icons={["touch", "cursor", "chevrons", "timer"]}
-        columns={4}
+      <Principles
+        rows={library.principles}
+        icons={["touch", "cursor", "chevrons", "timer", "keyboard", "code"]}
       />
     </>
   );

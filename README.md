@@ -4,6 +4,8 @@ Project domain: reuse.sh.
 
 Reusable native web libraries with thin React adapters, live examples, and integration guides for coding agents.
 
+The principles are the core of the set. Each library lists a few rules its code keeps: how it scrolls, where focus goes, what it cleans up, how it moves. They carry from one product to the next, and an adaptation on any framework keeps them. They live in packages/catalog and appear on the site, in each package README, and in the agent guides.
+
 ## Local development
 
 Use Node.js 22.13 or newer and pnpm 11.15.1.
