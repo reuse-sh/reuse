@@ -1884,7 +1884,8 @@
 .x-saved {
   overflow: hidden;
   border-radius: 12px;
-  background: #f4f4f2;
+  background: var(--surface);
+  box-shadow: var(--shadow-raised);
 }
 .x-saved-head {
   display: flex;
@@ -2017,13 +2018,6 @@
 }
 
 /* Example: shadows */
-.x-cards {
-  margin-top: 44px;
-  padding: 40px 32px;
-  border-radius: 18px;
-  background: #f4f4f2;
-  box-shadow: inset 0 0 0 1px rgb(0 0 0 / 4%);
-}
 .card-patterns {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
@@ -2166,7 +2160,7 @@
   line-height: 24px;
   font-weight: 600;
 }
-.x-fade + .c-text {
+.d-stage + .c-text {
   margin-top: 20px;
 }
 
@@ -2582,9 +2576,6 @@
 @media (max-width: 600px) {
   .loader-gallery {
     grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-  .x-cards {
-    padding: 24px 16px;
   }
   .x-file {
     grid-template-columns: 40px minmax(0, 1fr);

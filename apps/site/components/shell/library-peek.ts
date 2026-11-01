@@ -36,7 +36,7 @@ function stage(slug: MenuSlug, cleanups: (() => void)[]) {
         "div",
         "pk pk-lb",
         el("span", "pk-lb-photo", img(0)),
-        el("span", "pk-lb-n", "1 / 6"),
+        el("span", "pk-lb-n", `1 / ${photos.length}`),
         el("span", "pk-lb-x", iconNode("close", 10)),
         el("span", "pk-lb-thumbs", ...photos.map((_, i) => img(i, i === 0))),
       );
