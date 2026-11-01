@@ -2,7 +2,7 @@ import "../styles/home.css";
 import { libraries } from "@reuse-sh/catalog";
 import { MovingHighlight } from "@reuse-sh/interactions/react";
 import type { Metadata } from "next";
-import { CopyControl } from "../../components/copy-control";
+import { PromptButton } from "../../components/copy-control";
 import { Icon, type IconName } from "../../components/icons";
 import { agentPrompt } from "../../lib/prompt";
 
@@ -32,6 +32,9 @@ export default function AgentGuidesPage() {
         library's principles, and your agent must keep them on any framework.
         Give it the link and say where the part should go.
       </p>
+      <div className="h-actions">
+        <PromptButton prompt={agentPrompt} />
+      </div>
       <ol className="h-steps">
         {steps.map(([title, text], index) => (
           <li key={title} className="c-card">
@@ -44,14 +47,6 @@ export default function AgentGuidesPage() {
           </li>
         ))}
       </ol>
-      <div className="c-card h-prompt">
-        <div className="c-card-in">
-          <pre>{agentPrompt}</pre>
-          <div className="h-prompt-bar">
-            <CopyControl value={agentPrompt} label="Copy prompt" text />
-          </div>
-        </div>
-      </div>
       <h2 className="c-h2 h-guides-h">Guides</h2>
       <MovingHighlight className="h-guides">
         {libraries.map((library) => (

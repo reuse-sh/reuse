@@ -4,6 +4,7 @@ import Cancel01Icon from "@hugeicons/core-free-icons/Cancel01Icon";
 import CarouselHorizontal02Icon from "@hugeicons/core-free-icons/CarouselHorizontal02Icon";
 import ClipboardCopyIcon from "@hugeicons/core-free-icons/ClipboardCopyIcon";
 import CodeIcon from "@hugeicons/core-free-icons/CodeIcon";
+import ComputerTerminal01Icon from "@hugeicons/core-free-icons/ComputerTerminal01Icon";
 import Copy01Icon from "@hugeicons/core-free-icons/Copy01Icon";
 import Cursor01Icon from "@hugeicons/core-free-icons/Cursor01Icon";
 import CursorInWindowIcon from "@hugeicons/core-free-icons/CursorInWindowIcon";
@@ -18,6 +19,7 @@ import Layers01Icon from "@hugeicons/core-free-icons/Layers01Icon";
 import Loading03Icon from "@hugeicons/core-free-icons/Loading03Icon";
 import ReactIcon from "@hugeicons/core-free-icons/ReactIcon";
 import Share08Icon from "@hugeicons/core-free-icons/Share08Icon";
+import SquareDashedMousePointerIcon from "@hugeicons/core-free-icons/SquareDashedMousePointerIcon";
 import Tick02Icon from "@hugeicons/core-free-icons/Tick02Icon";
 import UserGroupIcon from "@hugeicons/core-free-icons/UserGroupIcon";
 import ZoomInAreaIcon from "@hugeicons/core-free-icons/ZoomInAreaIcon";
@@ -43,6 +45,8 @@ export const iconData = {
   "copy-button": ClipboardCopyIcon,
   book: BookOpen01Icon,
   code: CodeIcon,
+  terminal: ComputerTerminal01Icon,
+  logo: SquareDashedMousePointerIcon,
   copy: Copy01Icon,
   check: Tick02Icon,
   close: Cancel01Icon,

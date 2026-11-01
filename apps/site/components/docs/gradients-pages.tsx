@@ -15,6 +15,7 @@ import {
   Install,
   Keys,
   Section,
+  Stage,
   Text,
 } from "./parts";
 
@@ -49,7 +50,9 @@ export function GradientsCaption() {
   const [js, react] = basicCode.imageCaption;
   return (
     <>
-      <ImageCaption />
+      <Stage>
+        <ImageCaption />
+      </Stage>
       <Text>
         Both scrims end at the same darkness. The linear one starts with a line
         you can see across the print. The eased one starts so gently that the
@@ -65,7 +68,9 @@ export function GradientsFadeEdge() {
   const [js, react] = basicCode.fadeEdge;
   return (
     <>
-      <FadeEdgeStrip />
+      <Stage>
+        <FadeEdgeStrip />
+      </Stage>
       <Keys>
         Drag the strip with a mouse, scroll it with a trackpad or{" "}
         <kbd>Shift</kbd> and the wheel, or focus it and press <kbd>←</kbd>

@@ -126,27 +126,42 @@ export function MemberRow({ member }) {
   );
 }`,
   ],
-  groups: [
-    `import { createAvatarGroup } from "@reuse-sh/avatars";
+  stack: [
+    `import { createAvatar, createAvatarGroup } from "@reuse-sh/avatars";
+import "@reuse-sh/avatars/styles.css";
 
-// Children with data-re-avatar are overlapped and cut.
-// The last one carries a count badge for everyone not shown.
-const group = createAvatarGroup(document.querySelector(".project-people"), {
-  overlap: 10,
-  clearance: 2,
-});`,
+const people = document.querySelector(".people");
+const shown = team.slice(0, 4);
+const rest = team.length - shown.length;
+
+shown.forEach((person, index) => {
+  const slot = document.createElement("span");
+  people.append(slot);
+  createAvatar(slot, {
+    name: person.name,
+    src: person.photo,
+    size: 48,
+    badge: index === shown.length - 1 && rest > 0
+      ? { type: "count", count: rest, label: \`and \${rest} more\` }
+      : undefined,
+  });
+});
+
+// Overlaps the avatars and cuts each one around the next.
+createAvatarGroup(people, { overlap: 12 });`,
     `import { Avatar, AvatarGroup } from "@reuse-sh/avatars/react";
+import "@reuse-sh/avatars/styles.css";
 
-export function ProjectPeople({ people, shown = 4 }) {
-  const rest = people.length - shown;
+export function People({ team, shown = 4 }) {
+  const rest = team.length - shown;
   return (
-    <AvatarGroup overlap={10}>
-      {people.slice(0, shown).map((person, index) => (
+    <AvatarGroup overlap={12} role="group" aria-label={\`\${team.length} people\`}>
+      {team.slice(0, shown).map((person, index) => (
         <Avatar
           key={person.id}
           name={person.name}
           src={person.photo}
-          size={32}
+          size={48}
           badge={rest > 0 && index === shown - 1
             ? { type: "count", count: rest, label: \`and \${rest} more\` }
             : undefined}
@@ -223,12 +238,12 @@ export function Prints({ prints, mode = "scroll" }) {
 // </figure>
 const caption = document.querySelector(".print figcaption");
 caption.style.backgroundImage = easingGradient({
-  to: "rgb(0 0 0 / 0.72)",
+  to: "rgb(0 0 0 / 0.6)",
   direction: "to bottom",
 });`,
     `import { easingGradient } from "@reuse-sh/gradients";
 
-const scrim = easingGradient({ to: "rgb(0 0 0 / 0.72)", direction: "to bottom" });
+const scrim = easingGradient({ to: "rgb(0 0 0 / 0.6)", direction: "to bottom" });
 
 export function Print({ src, alt, title }) {
   return (

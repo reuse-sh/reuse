@@ -10,7 +10,7 @@ import { photos } from "../../lib/photos";
 import { CodeBlock } from "../shell/code-block";
 import { ProofEditor } from "./annotations-islands";
 import { basicCode } from "./basic-code";
-import { C, CodePair, ExampleCode, Keys, Section, Text } from "./parts";
+import { C, CodePair, ExampleCode, Keys, Section, Stage, Text } from "./parts";
 
 const proof = photos[1];
 
@@ -36,25 +36,27 @@ export function AnnotationsReviewNotes() {
   const [js, react] = basicCode.reviewNotes;
   return (
     <>
-      <article className="x-review">
-        <header className="x-review-head">
-          <Avatar name="Aiko Tanaka" src={photos[3].src} size={32} />
-          <p className="x-review-meta">
-            <span>
-              <b>Aiko Tanaka</b> reviewed proof 3 of {proof.caption}
-            </span>
-            <small>Six notes · Tuesday 14:10</small>
-          </p>
-        </header>
-        <AnnotatedImage
-          className="x-annot"
-          src={proof.src}
-          alt={`${proof.alt}, with six review notes`}
-          width={proof.width}
-          height={proof.height}
-          annotations={review}
-        />
-      </article>
+      <Stage>
+        <article className="x-review">
+          <header className="x-review-head">
+            <Avatar name="Aiko Tanaka" src={photos[3].src} size={32} />
+            <p className="x-review-meta">
+              <span>
+                <b>Aiko Tanaka</b> reviewed proof 3 of {proof.caption}
+              </span>
+              <small>Six notes · Tuesday 14:10</small>
+            </p>
+          </header>
+          <AnnotatedImage
+            className="x-annot"
+            src={proof.src}
+            alt={`${proof.alt}, with six review notes`}
+            width={proof.width}
+            height={proof.height}
+            annotations={review}
+          />
+        </article>
+      </Stage>
       <ExampleCode js={js} react={react} />
     </>
   );
@@ -64,7 +66,9 @@ export function AnnotationsEditor() {
   const [js, react] = basicCode.editor;
   return (
     <>
-      <ProofEditor />
+      <Stage>
+        <ProofEditor />
+      </Stage>
       <Keys>
         <kbd>⌘Z</kbd> undoes and <kbd>⇧⌘Z</kbd> redoes while the image has
         focus. Arrow keys move the selected mark.

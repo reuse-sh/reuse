@@ -141,6 +141,11 @@ export function SingleCode({
   return <CodeBlock tabs={{ code, lang }} />;
 }
 
+/** The gray stage a live example sits on, apart from the page text. */
+export function Stage({ children }: { children: ReactNode }) {
+  return <div className="d-stage">{children}</div>;
+}
+
 export function ExampleCode({ js, react }: { js: string; react: string }) {
   return (
     <section className="d-ex-code" aria-label="Code">

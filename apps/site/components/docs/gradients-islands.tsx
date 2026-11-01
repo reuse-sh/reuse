@@ -136,9 +136,9 @@ const SCRIM_CURVES = ["eased", "linear"] as const;
 type ScrimCurve = (typeof SCRIM_CURVES)[number];
 
 const scrims: Record<ScrimCurve, string> = {
-  eased: easingGradient({ to: "rgb(0 0 0 / 0.72)", direction: "to bottom" }),
+  eased: easingGradient({ to: "rgb(0 0 0 / 0.6)", direction: "to bottom" }),
   linear: easingGradient({
-    to: "rgb(0 0 0 / 0.72)",
+    to: "rgb(0 0 0 / 0.6)",
     direction: "to bottom",
     easing: "linear",
   }),
@@ -146,7 +146,7 @@ const scrims: Record<ScrimCurve, string> = {
 
 export function ImageCaption() {
   const [curve, setCurve] = useState<ScrimCurve>("eased");
-  const photo = photos[4];
+  const photo = photos[3];
   return (
     <div className="x-fade">
       <div className="x-fade-bar">

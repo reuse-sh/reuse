@@ -17,6 +17,8 @@ const marble = [
   ],
   ["night", "Blue hour", "A soft marble texture in blue, lilac and gold"],
   ["woods", "Amber", "A soft marble texture in orange, yellow and blue"],
+  ["dune", "Sea glass", "A soft marble texture in sea green, blue and pink"],
+  ["meadow", "Dusk", "A soft marble texture in periwinkle, peach and green"],
 ] as const;
 
 export const photos = marble.map(([id, caption, alt]) => ({

@@ -159,9 +159,6 @@
 .d-principles + .c-feats {
   margin-top: 20px;
 }
-.d-demo {
-  margin-top: 44px;
-}
 .d-planned .c-code pre {
   background: repeating-linear-gradient(
     -45deg,
@@ -505,54 +502,30 @@
   }
 }
 
-/* Floating tooltip stages */
+/* The gray stage under every live example */
 .d-stage {
   display: grid;
-  place-items: center;
-  min-height: 240px;
-  margin-top: 40px;
-  padding: 32px;
+  align-content: center;
+  gap: 24px;
+  min-height: 280px;
+  margin-top: 44px;
+  padding: 40px 24px;
   border-radius: 18px;
   background: #f4f4f2;
   box-shadow: inset 0 0 0 1px rgb(0 0 0 / 4%);
 }
-.d-tools {
-  display: flex;
-  gap: 2px;
-  padding: 4px;
-  border-radius: 13px;
-  background: var(--surface);
-  box-shadow: var(--shadow-raised);
+.d-body .d-stage > * {
+  min-width: 0;
+  margin-top: 0;
 }
 .d-tool {
   display: contents;
 }
-.d-tools button {
-  display: grid;
-  place-items: center;
-  width: 38px;
-  height: 38px;
-  padding: 0;
-  border: 0;
-  border-radius: 9px;
-  background: transparent;
-  color: #555;
-  cursor: pointer;
-  transition:
-    background-color 150ms ease,
-    color 150ms ease,
-    transform 160ms var(--ease);
+.d-stage > .c-toolbar {
+  justify-self: center;
 }
-.d-tools button:hover {
-  background: var(--hover);
-  color: var(--ink);
-}
-.d-tools button:active {
-  transform: scale(0.94);
-}
-.d-tools-lg button {
-  width: 42px;
-  height: 42px;
+.d-stage :is(.d-strip, .d-strip-ctrl) {
+  width: auto;
 }
 .d-stage-editor {
   padding: 0;
@@ -1726,93 +1699,49 @@
 }
 
 /* Demos of the libraries without their own examples yet */
-.d-demo :is(.interaction-stage, .loader-stage, .avatar-stage) {
+.d-stage :is(.interaction-stage, .loader-stage, .avatar-stage) {
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  min-height: 300px;
-  padding: 40px 24px;
-  border-radius: 18px;
-  background: #f4f4f2;
-  box-shadow: inset 0 0 0 1px rgb(0 0 0 / 4%);
 }
-.d-demo .highlight-menu {
-  width: min(100%, 270px);
-  padding: 6px;
-  border-radius: 12px;
-  background: var(--surface);
-  box-shadow: var(--shadow-raised);
-  --re-highlight-background: var(--hover);
-  --re-highlight-radius: 8px;
-}
-.d-demo .highlight-menu > button {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  width: 100%;
-  padding: 10px 12px;
-  border: 0;
-  border-radius: 8px;
-  background: transparent;
-  font-size: 14px;
-  text-align: left;
-}
-.d-demo .button {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  height: 40px;
-  padding: 0 16px;
-  border: 0;
-  border-radius: 11px;
-  background: var(--surface);
-  box-shadow: var(--shadow-control);
-  font-size: 14px;
-  font-weight: 520;
-}
-.d-demo .avatar-examples {
+.d-stage .avatar-examples {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   justify-content: center;
   gap: 40px;
 }
-.d-demo .avatar-examples > div {
+.d-stage .avatar-examples > div {
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 14px;
 }
-.d-demo .avatar-examples :where(div) > span:where(:last-child),
-.d-demo .avatar-group-example p,
-.d-demo .loader-stage p {
+.d-stage .avatar-examples :where(div) > span:where(:last-child),
+.d-stage .avatar-group-example p,
+.d-stage .loader-stage p {
   font-size: 13px;
   color: var(--mute);
 }
-.d-demo .avatar-group-example {
+.d-stage .avatar-group-example {
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 14px;
   margin-top: 32px;
 }
-.d-demo .loader-stage {
+.d-stage .loader-stage {
   gap: 28px;
   color: var(--ink);
 }
-.d-demo .shadow-playground {
-  overflow: hidden;
-  border-radius: 18px;
-  background: #f4f4f2;
-}
-.d-demo .shadow-surface {
+.d-stage .shadow-surface {
   display: grid;
-  min-height: 280px;
-  padding: 32px;
+  min-height: 240px;
+  padding-bottom: 32px;
   place-items: center;
 }
-.d-demo .shadow-object {
+.d-stage .shadow-object {
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -1823,15 +1752,15 @@
   background: var(--surface);
   transition: box-shadow 220ms ease;
 }
-.d-demo .shadow-object span {
+.d-stage .shadow-object span {
   font-size: 13px;
   color: var(--mute);
 }
-.d-demo .shadow-levels {
+.d-stage .shadow-levels {
   display: flex;
   width: fit-content;
-  max-width: calc(100% - 32px);
-  margin: 0 auto 24px;
+  max-width: 100%;
+  margin: 0 auto;
   padding: 3px;
   gap: 2px;
   overflow-x: auto;
@@ -1839,21 +1768,21 @@
   border-radius: 10px;
   background: rgb(0 0 0 / 5%);
 }
-.d-demo .shadow-levels button {
+.d-stage .shadow-levels button {
   padding: 6px 11px;
   border: 0;
   border-radius: 8px;
   background: transparent;
   font-size: 13px;
 }
-.d-demo .shadow-levels button[aria-pressed="true"] {
+.d-stage .shadow-levels button[aria-pressed="true"] {
   background: var(--surface);
   box-shadow: var(--shadow-control);
 }
-.d-demo .annotation-demo img {
+.d-stage .annotation-demo img {
   border-radius: 12px;
 }
-.d-demo .annotation-demo [data-re-annotations] {
+.d-stage .annotation-demo [data-re-annotations] {
   --re-annotation-color: #d95746;
   --re-annotation-radius: 12px;
   font-size: 13px;
@@ -1990,31 +1919,16 @@
 
 /* Example: avatars */
 .x-members {
-  margin-top: 44px;
-  max-width: 520px;
+  justify-self: center;
+  width: min(100%, 400px);
 }
-.x-members-head,
-.x-project {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-}
-.x-members-head {
-  padding: 0 10px 10px;
-  box-shadow: inset 0 -1px rgb(0 0 0 / 7%);
-}
-.x-members-title {
-  font-size: 15px;
-  font-weight: 600;
-}
-.x-members-count {
-  font-size: 13px;
-  color: var(--mute);
+.x-members .c-card-in {
+  --re-highlight-background: var(--hover);
+  --re-highlight-radius: 12px;
 }
 .x-member-list {
   display: grid;
-  margin-top: 6px;
+  padding: 6px;
 }
 .x-member {
   display: grid;
@@ -2024,11 +1938,7 @@
   padding: 9px 10px;
   border-radius: 12px;
 }
-.x-member:hover {
-  background: var(--hover);
-}
-.x-member-text,
-.x-project-text {
+.x-member-text {
   display: grid;
   min-width: 0;
 }
@@ -2042,25 +1952,13 @@
   line-height: 18px;
   color: var(--mute);
 }
-.x-members .re-avatar,
-.x-projects .re-avatar {
+.x-members .re-avatar {
   --re-avatar-badge-size: 16px;
   --re-avatar-dot-size: 9px;
   font-size: 12px;
 }
-.x-projects {
-  display: grid;
-  max-width: 520px;
-  margin-top: 44px;
-}
-.x-project {
-  padding: 14px 4px;
-  box-shadow: inset 0 -1px rgb(0 0 0 / 7%);
-}
-.x-project:first-child {
-  box-shadow:
-    inset 0 1px rgb(0 0 0 / 7%),
-    inset 0 -1px rgb(0 0 0 / 7%);
+.x-stack {
+  justify-self: center;
 }
 
 /* Example: loaders */
@@ -2263,12 +2161,10 @@
   line-height: 20px;
 }
 .x-caption-text b {
+  color: inherit;
   font-size: 17px;
   line-height: 24px;
   font-weight: 600;
-}
-.x-caption + * {
-  margin-top: 0;
 }
 .x-fade + .c-text {
   margin-top: 20px;
@@ -2398,7 +2294,7 @@
   height: 72px;
   border-radius: 10px;
 }
-.d-demo .copy-demo {
+.d-stage .copy-demo {
   flex-direction: row;
   gap: 12px;
 }

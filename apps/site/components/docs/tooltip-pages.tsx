@@ -1,5 +1,6 @@
 import type { Library } from "@reuse-sh/catalog";
 import { escapeHtml } from "@reuse-sh/core/escape-html";
+import { MovingHighlight } from "@reuse-sh/interactions/react";
 import type { CSSProperties } from "react";
 import { snippets } from "../../lib/guides";
 import { photos } from "../../lib/photos";
@@ -14,6 +15,7 @@ import {
   OverviewActions,
   Principles,
   Section,
+  Stage,
   Text,
 } from "./parts";
 import { PhotoButton, PhotoLightbox } from "./photos";
@@ -28,8 +30,8 @@ type Tool = readonly [icon: DocIconName, label: string, shortcut?: string];
 
 function Toolbar({ tools, className }: { tools: Tool[]; className?: string }) {
   return (
-    <div
-      className={["d-tools", className].filter(Boolean).join(" ")}
+    <MovingHighlight
+      className={["c-toolbar", className].filter(Boolean).join(" ")}
       role="toolbar"
       aria-label="Photo actions"
     >
@@ -39,6 +41,7 @@ function Toolbar({ tools, className }: { tools: Tool[]; className?: string }) {
             <button
               type="button"
               aria-label={label}
+              data-re-row=""
               data-re-tooltip-template={`tt-${icon}`}
             >
               <DocIcon name={icon} size={18} />
@@ -53,13 +56,14 @@ function Toolbar({ tools, className }: { tools: Tool[]; className?: string }) {
             key={label}
             type="button"
             aria-label={label}
+            data-re-row=""
             data-re-tooltip={label}
           >
             <DocIcon name={icon} size={18} />
           </button>
         ),
       )}
-    </div>
+    </MovingHighlight>
   );
 }
 
@@ -67,9 +71,8 @@ export function TooltipOverview({ library }: { library: Library }) {
   return (
     <>
       <OverviewActions library={library} />
-      <div className="d-stage">
+      <Stage>
         <Toolbar
-          className="d-tools-lg"
           tools={[
             ["zoom", "Zoom in"],
             ["heart", "Add to favorites"],
@@ -78,7 +81,7 @@ export function TooltipOverview({ library }: { library: Library }) {
             ["trash", "Move to trash"],
           ]}
         />
-      </div>
+      </Stage>
       <Keys>
         Move along the toolbar, or press <kbd>Tab</kbd> to reach it and{" "}
         <kbd>Esc</kbd> to hide the hint.
@@ -182,20 +185,22 @@ export function TooltipLinks() {
   const [js, react] = tooltipCode.links;
   return (
     <>
-      <article className="x-story">
-        <p className="x-date">Print series · October 2026</p>
-        <h2 className="x-j-title">Three prints from one tray</h2>
-        <p className="x-j-text">
-          The series opens with <PrintLink id="coral">Coral sky</PrintLink>, the
-          first sheet we pulled. <PrintLink id="mint">Mint and ember</PrintLink>{" "}
-          came from the same water an hour later.{" "}
-          <PrintLink id="lilac">Lilac bloom</PrintLink> was the last, once the
-          colors had softened.
-        </p>
-        <p className="x-j-text" id="links-note">
-          Point at a print name to see it.
-        </p>
-      </article>
+      <Stage>
+        <article className="x-story">
+          <p className="x-date">Print series · October 2026</p>
+          <h2 className="x-j-title">Three prints from one tray</h2>
+          <p className="x-j-text">
+            The series opens with <PrintLink id="coral">Coral sky</PrintLink>,
+            the first sheet we pulled.{" "}
+            <PrintLink id="mint">Mint and ember</PrintLink> came from the same
+            water an hour later. <PrintLink id="lilac">Lilac bloom</PrintLink>{" "}
+            was the last, once the colors had softened.
+          </p>
+          <p className="x-j-text" id="links-note">
+            Point at a print name to see it.
+          </p>
+        </article>
+      </Stage>
       {prints.map(([id, photo, name, text]) => (
         <Template
           key={id}
@@ -230,23 +235,25 @@ export function TooltipPeople() {
   const [js, react] = tooltipCode.people;
   return (
     <>
-      <div className="x-thread-list">
-        {comments.map(([index, text]) => (
-          <div key={text} className="x-comment">
-            <span className="f-face f-face-sm" style={face(index)} />
-            <p>
-              <button
-                type="button"
-                className="x-name"
-                data-re-tooltip-template={`tt-person-${index}`}
-              >
-                {people[index][0]}
-              </button>{" "}
-              {text}
-            </p>
-          </div>
-        ))}
-      </div>
+      <Stage>
+        <div className="x-thread-list">
+          {comments.map(([index, text]) => (
+            <div key={text} className="x-comment">
+              <span className="f-face f-face-sm" style={face(index)} />
+              <p>
+                <button
+                  type="button"
+                  className="x-name"
+                  data-re-tooltip-template={`tt-person-${index}`}
+                >
+                  {people[index][0]}
+                </button>{" "}
+                {text}
+              </p>
+            </div>
+          ))}
+        </div>
+      </Stage>
       {people.map(([name, role, time], index) => (
         <Template
           key={name}

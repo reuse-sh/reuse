@@ -63,27 +63,27 @@ const avatarsDescription =
 export const collectionPrinciples: readonly Row[] = [
   [
     "Run on any stack",
-    "A browser module binds to the markup you already have, React gets a thin wrapper, and Vue, Svelte and plain pages call the module directly.",
+    "Each part is a plain browser module with a thin React wrapper, so it works the same in Vue, Svelte or a page with no framework.",
   ],
   [
-    "Exit cleanly",
-    "destroy() removes every listener and puts back every style it touched, so a part can come and go with a route.",
+    "Build on the browser",
+    "Parts use what modern browsers already do well: native dialogs, CSS scroll snap and CSS animations. They stay small and feel native.",
   ],
   [
-    "Scope every style",
-    "Classes start with re- and values live in --re- custom properties, so nothing reaches the rest of your page.",
+    "Leave the page alone",
+    "Styles stay inside the part and never reach the rest of your page. When a part is removed, it takes everything it added with it.",
   ],
   [
     "Work from the keyboard",
-    "Native dialogs, buttons and focus order let every part work without a pointer and with a screen reader.",
+    "Real buttons, dialogs and focus order let every part work without a mouse and with a screen reader.",
   ],
   [
     "Move calmly",
-    "Springs keep their speed when you interrupt them, and nothing moves when the system asks for less motion.",
+    "Motion can be interrupted halfway without a jump, and it stops when your system asks for less motion.",
   ],
   [
     "Write the rules down",
-    "Each library lists its principles and ships a guide with its markup, options and checks, so your agent keeps them on any stack.",
+    "Each library lists its principles and ships a guide, so your coding agent can rebuild it on any stack and keep them.",
   ],
 ];
 
@@ -249,6 +249,10 @@ export const libraries: Library[] = [
         "A mouse drag never opens the link under it, an ordinary click still works, and touch stays native.",
       ],
       [
+        "Drag like a trackpad",
+        "A released mouse drag keeps its speed and glides to the slide nearest where it would stop. Past either end it stretches and springs back.",
+      ],
+      [
         "Repeat without clones",
         "The loop moves the original slides, so ids, links and buttons stay unique, and it turns on only when the slides can cover the viewport.",
       ],
@@ -272,11 +276,11 @@ export const libraries: Library[] = [
       ],
       [
         "releaseMotion",
-        'How a released mouse drag travels to its slide. "spring" starts at the drag speed and eases in; "native" uses the browser\'s smooth scroll. Both pick the same slide. "spring" by default; reduced motion jumps.',
+        'How a released mouse drag travels to its slide. "spring" starts at the drag speed and decays like trackpad momentum; "native" uses the browser\'s smooth scroll. Both pick the same slide: the one nearest where the drag would stop. "spring" by default; reduced motion jumps.',
       ],
       [
         "releaseDuration",
-        "How long the spring glide takes, in milliseconds. 260 by default.",
+        "How long the spring takes to settle a slow release or a stretched end, in milliseconds. 260 by default. A flick glides on with its own momentum.",
       ],
       [
         "next(), prev(), goTo(index, behavior?)",
@@ -325,7 +329,7 @@ export const libraries: Library[] = [
           {
             path: "examples/editorial",
             title: "Editorial gallery",
-            lead: "A series of prints at a readable size, starting at the text column and running off the page.",
+            lead: "A series of prints at a readable size, one after another. On an article page the strip starts at the text column and runs off the edge.",
             build: "an editorial gallery that starts at the text column",
           },
         ],
@@ -1208,10 +1212,10 @@ export const libraries: Library[] = [
             build: "a team list with status badges",
           },
           {
-            path: "examples/groups",
-            title: "Groups",
-            lead: "Overlapping stacks for who is in a project, ending in a count of the rest.",
-            build: "overlapping avatar groups that end in a count",
+            path: "examples/stack",
+            title: "Stack",
+            lead: "A few people in one overlapping stack, ending in a count of the rest.",
+            build: "an overlapping avatar stack that ends in a count",
           },
         ],
       },
