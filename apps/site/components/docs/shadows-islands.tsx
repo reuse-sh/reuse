@@ -1,5 +1,6 @@
 "use client";
 
+import { createMovingHighlight } from "@reuse-sh/interactions";
 import {
   createFadeEdge,
   FADE_CURVES,
@@ -10,9 +11,51 @@ import {
 } from "@reuse-sh/shadows";
 import { useEffect, useRef, useState } from "react";
 import { photos } from "../../lib/photos";
-import { Tabs } from "../shell/tabs";
 
 const label = (value: string) => value[0].toUpperCase() + value.slice(1);
+
+function Choice<T extends string>({
+  name,
+  legend,
+  values,
+  selected,
+  onSelect,
+}: {
+  name: string;
+  legend: string;
+  values: readonly T[];
+  selected: T;
+  onSelect: (value: T) => void;
+}) {
+  const group = useRef<HTMLFieldSetElement>(null);
+  useEffect(() => {
+    if (!group.current) return;
+    const highlight = createMovingHighlight(group.current);
+    return () => highlight.destroy();
+  }, []);
+  return (
+    <fieldset ref={group} className="cc-seg">
+      <legend className="sr-only">{legend}</legend>
+      {values.map((value) => (
+        <label
+          key={value}
+          className="cc-seg-item"
+          data-reuse-row
+          data-current={value === selected ? "" : undefined}
+        >
+          <input
+            type="radio"
+            name={name}
+            className="sr-only"
+            checked={value === selected}
+            onChange={() => onSelect(value)}
+          />
+          {label(value)}
+        </label>
+      ))}
+    </fieldset>
+  );
+}
 
 export function FadeEdgeStrip() {
   const strip = useRef<HTMLDivElement>(null);
@@ -41,19 +84,19 @@ export function FadeEdgeStrip() {
   return (
     <div className="x-fade">
       <div className="x-fade-bar">
-        <Tabs
-          idBase="x-fade-mode"
-          label="Fade mode"
-          items={FADE_MODES.map((id) => ({ id, label: label(id) }))}
+        <Choice
+          name="x-fade-mode"
+          legend="Fade mode"
+          values={FADE_MODES}
           selected={mode}
-          onSelect={(id) => setMode(id as FadeMode)}
+          onSelect={setMode}
         />
-        <Tabs
-          idBase="x-fade-curve"
-          label="Fade curve"
-          items={FADE_CURVES.map((id) => ({ id, label: label(id) }))}
+        <Choice
+          name="x-fade-curve"
+          legend="Fade curve"
+          values={FADE_CURVES}
           selected={curve}
-          onSelect={(id) => setCurve(id as FadeCurve)}
+          onSelect={setCurve}
         />
       </div>
       <section

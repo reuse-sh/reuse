@@ -41,11 +41,11 @@ function DemoCard({ slug, children }: { slug: string; children: ReactNode }) {
 function MenuDemo() {
   const [current, setCurrent] = useState(menu[0][1]);
   return (
-    <MovingHighlight className="h-menu" role="menu" aria-label="File">
+    <MovingHighlight className="h-menu" role="group" aria-label="File">
       {menu.map(([icon, label, key]) => (
         <button
           type="button"
-          role="menuitem"
+          aria-pressed={current === label}
           data-reuse-row=""
           data-current={current === label ? "" : undefined}
           key={label}
@@ -91,7 +91,7 @@ export function SmallDemos() {
       <DemoCard slug="floating-tooltip">
         <MovingHighlight
           className="h-tools"
-          role="toolbar"
+          role="group"
           aria-label="Photo actions"
         >
           {tools.map(([icon, label]) => (

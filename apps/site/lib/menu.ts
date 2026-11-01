@@ -1,4 +1,4 @@
-import { type Library, libraries } from "@reuse-sh/catalog";
+import { docHref, docPages, type Library, libraries } from "@reuse-sh/catalog";
 
 export const menuGroups = [
   ["Media", ["lightbox", "carousel", "annotations"]],
@@ -33,7 +33,12 @@ export function menuLibrary(slug: MenuSlug) {
   return library;
 }
 
+const byRoute = new Map<string, Library>(
+  libraries.flatMap((library) =>
+    docPages(library).map((page) => [docHref(library, page.path), library]),
+  ),
+);
+
 export function libraryAt(pathname: string | null) {
-  const slug = pathname?.split("/")[1];
-  return (slug && bySlug.get(slug)) || null;
+  return (pathname && byRoute.get(pathname)) || null;
 }

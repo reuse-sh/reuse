@@ -9,13 +9,19 @@ import "@reuse-sh/lightbox/styles.css";
 const photos = document.querySelector(".product-photos");
 const lightbox = bindLightboxGallery(photos, { thumbnails: true });`,
     `import { useLightbox } from "@reuse-sh/lightbox/react";
+import { useRef } from "react";
 
 export function ProductPhotos({ photos }) {
   const lightbox = useLightbox({ thumbnails: true });
+  const root = useRef(null);
+  const open = (index) => {
+    const images = root.current.querySelectorAll("img");
+    lightbox.open(photos.map((photo, i) => ({ ...photo, origin: images[i] })), index);
+  };
   return (
-    <div className="product-photos">
+    <div ref={root} className="product-photos">
       {photos.map((photo, index) => (
-        <button key={photo.src} onClick={() => lightbox.open(photos, index)}>
+        <button key={photo.src} onClick={() => open(index)}>
           <img src={photo.src} alt={photo.alt} />
         </button>
       ))}
@@ -32,14 +38,20 @@ for (const message of document.querySelectorAll(".message-photos")) {
   bindLightboxGallery(message, { thumbnails: false });
 }`,
     `import { useLightbox } from "@reuse-sh/lightbox/react";
+import { useRef } from "react";
 
 export function MessagePhotos({ photos }) {
   const lightbox = useLightbox();
+  const root = useRef(null);
   const shown = photos.slice(0, 3);
+  const open = (index) => {
+    const images = root.current.querySelectorAll("img");
+    lightbox.open(photos.map((photo, i) => ({ ...photo, origin: images[i] })), index);
+  };
   return (
-    <div className="message-photos">
+    <div ref={root} className="message-photos">
       {shown.map((photo, index) => (
-        <button key={photo.src} onClick={() => lightbox.open(photos, index)}>
+        <button key={photo.src} onClick={() => open(index)}>
           <img src={photo.src} alt={photo.alt} />
           {index === 2 && photos.length > 3 && <span>+{photos.length - 3}</span>}
         </button>
@@ -55,11 +67,16 @@ export function MessagePhotos({ photos }) {
 const article = document.querySelector("article.journal");
 bindLightboxGallery(article, { thumbnails: true, imageClick: "zoom" });`,
     `import { useLightbox } from "@reuse-sh/lightbox/react";
+import { useRef } from "react";
 
 export function Journal({ photos, children }) {
   const lightbox = useLightbox({ thumbnails: true, imageClick: "zoom" });
-  const open = (index) => lightbox.open(photos, index);
-  return <article className="journal">{children(open)}</article>;
+  const root = useRef(null);
+  const open = (index) => {
+    const images = root.current.querySelectorAll("img");
+    lightbox.open(photos.map((photo, i) => ({ ...photo, origin: images[i] })), index);
+  };
+  return <article ref={root} className="journal">{children(open)}</article>;
 }`,
   ],
   strip: [
@@ -70,10 +87,12 @@ const carousel = createCarousel(strip, { group: "page" });
 
 prevButton.onclick = () => carousel.prev();
 nextButton.onclick = () => carousel.next();
-carousel.subscribe((state) => {
+const render = (state) => {
   prevButton.disabled = !state.canPrev;
   nextButton.disabled = !state.canNext;
-});`,
+};
+carousel.subscribe(render);
+render(carousel.getState());`,
     `import { useCarousel } from "@reuse-sh/carousel/react";
 
 export function Related({ prints }) {
@@ -126,7 +145,10 @@ export function EditorToolbar() {
   return (
     <FloatingTooltipGroup className="editor-toolbar" tilt={5}>
       <button aria-label="Duplicate" data-reuse-tooltip-template="tip-duplicate"><LayersIcon /></button>
-      <template id="tip-duplicate">Duplicate <kbd>⌘D</kbd></template>
+      <template
+        id="tip-duplicate"
+        dangerouslySetInnerHTML={{ __html: "Duplicate <kbd>⌘D</kbd>" }}
+      />
     </FloatingTooltipGroup>
   );
 }`,

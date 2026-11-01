@@ -1,14 +1,35 @@
 "use client";
 
 import { HoldToConfirmButton } from "@reuse-sh/interactions/react";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Icon } from "../icons";
 import { DocIcon } from "./doc-icon";
 
+/** After a swap unmounts the focused button, focus the button that replaced it. */
+function useKeepFocus<E extends HTMLElement>(swap: unknown) {
+  const root = useRef<E>(null);
+  const refocus = useRef(false);
+  // biome-ignore lint/correctness/useExhaustiveDependencies: focus moves after each swap renders.
+  useEffect(() => {
+    if (!refocus.current) return;
+    refocus.current = false;
+    root.current?.querySelector("button")?.focus();
+  }, [swap]);
+  const mark = () => {
+    refocus.current = Boolean(root.current?.contains(document.activeElement));
+  };
+  return { root, mark };
+}
+
 export function DeleteFile() {
   const [deleted, setDeleted] = useState(false);
+  const { root, mark } = useKeepFocus<HTMLDivElement>(deleted);
+  const change = (next: boolean) => {
+    mark();
+    setDeleted(next);
+  };
   return (
-    <div className="x-file-wrap">
+    <div className="x-file-wrap" ref={root}>
       {deleted ? (
         <div className="x-file x-file-gone" role="status">
           <p>
@@ -18,7 +39,7 @@ export function DeleteFile() {
           <button
             type="button"
             className="x-text-btn"
-            onClick={() => setDeleted(false)}
+            onClick={() => change(false)}
           >
             Undo
           </button>
@@ -37,7 +58,7 @@ export function DeleteFile() {
           <div className="c-hold-wrap x-file-hold">
             <HoldToConfirmButton
               className="c-hold"
-              onConfirm={() => setDeleted(true)}
+              onConfirm={() => change(true)}
             >
               <Icon name="trash" size={16} />
               <span>Hold to delete</span>
@@ -60,8 +81,13 @@ const rows = [
 
 export function SettingsRow() {
   const [scheduled, setScheduled] = useState(false);
+  const { root, mark } = useKeepFocus<HTMLElement>(scheduled);
+  const change = (next: boolean) => {
+    mark();
+    setScheduled(next);
+  };
   return (
-    <section className="x-settings" aria-labelledby="x-settings-h">
+    <section className="x-settings" aria-labelledby="x-settings-h" ref={root}>
       <h2 id="x-settings-h" className="x-settings-title">
         Workspace
       </h2>
@@ -86,7 +112,7 @@ export function SettingsRow() {
           <button
             type="button"
             className="x-text-btn"
-            onClick={() => setScheduled(false)}
+            onClick={() => change(false)}
           >
             Cancel deletion
           </button>
@@ -94,7 +120,7 @@ export function SettingsRow() {
           <HoldToConfirmButton
             className="c-hold"
             holdMs={2000}
-            onConfirm={() => setScheduled(true)}
+            onConfirm={() => change(true)}
           >
             Hold to delete
           </HoldToConfirmButton>

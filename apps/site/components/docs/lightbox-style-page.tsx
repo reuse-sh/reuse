@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
+import { CodeBlock } from "../shell/code-block";
 import { lightboxCode, lightboxStyles } from "./lightbox-styles";
-import { CodePair, Keys } from "./parts";
+import { C, CodePair, Keys, Section } from "./parts";
 
 export function LightboxStylePage({ style }: { style: string }) {
   const options = lightboxStyles[style];
@@ -21,6 +22,14 @@ export function LightboxStylePage({ style }: { style: string }) {
       </Keys>
       <section className="d-ex-code" aria-label="Code">
         <CodePair js={code.js} react={code.react} />
+        <Section title={<C>lightbox-style.css</C>}>
+          <CodeBlock tabs={{ code: code.css, lang: "text" }} />
+        </Section>
+        {code.chrome ? (
+          <Section title={<C>lightbox-chrome.js</C>}>
+            <CodeBlock tabs={{ code: code.chrome }} />
+          </Section>
+        ) : null}
       </section>
     </>
   );

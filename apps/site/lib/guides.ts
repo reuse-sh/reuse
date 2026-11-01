@@ -14,14 +14,24 @@ const lightbox = bindLightboxGallery(gallery, {
 lightbox.destroy();`,
     react: `import { useLightbox } from "@reuse-sh/lightbox/react";
 import "@reuse-sh/lightbox/styles.css";
+import { useRef } from "react";
 
 export function Gallery({ photos }) {
   const lightbox = useLightbox({ thumbnails: true });
-  return photos.map((photo, index) => (
-    <button key={photo.src} onClick={() => lightbox.open(photos, index)}>
-      <img src={photo.src} alt={photo.alt} />
-    </button>
-  ));
+  const root = useRef(null);
+  const open = (index) => {
+    const images = root.current.querySelectorAll("img");
+    lightbox.open(photos.map((photo, i) => ({ ...photo, origin: images[i] })), index);
+  };
+  return (
+    <div ref={root}>
+      {photos.map((photo, index) => (
+        <button key={photo.src} onClick={() => open(index)}>
+          <img src={photo.src} alt={photo.alt} />
+        </button>
+      ))}
+    </div>
+  );
 }`,
   },
   carousel: {
@@ -31,9 +41,11 @@ import "@reuse-sh/carousel/styles.css";
 const viewport = document.querySelector(".reuse-carousel");
 const carousel = createCarousel(viewport, { loop: true, align: "start" });
 
-carousel.subscribe((state) => {
+const render = (state) => {
   counter.textContent = state.index + 1 + " / " + state.count;
-});
+};
+carousel.subscribe(render);
+render(carousel.getState());
 
 // Later, when the strip leaves the page
 carousel.destroy();`,
@@ -70,9 +82,12 @@ export function Strip({ photos }) {
     native: `import "@reuse-sh/shadows/styles.css";
 import { createFadeEdge } from "@reuse-sh/shadows";
 
-// <div class="reuse-card reuse-shadow-ring-md">Your content</div>
+// <div class="reuse-card reuse-shadow-ring-md">
+//   <div class="strip">Your content</div>
+// </div>
 
-// Fade the sides of a horizontal scroller.
+// Fade the sides of the scroller inside the card, so the ring stays.
+const strip = document.querySelector(".strip");
 const fade = createFadeEdge(strip, { size: 64, curve: "smooth", mode: "scroll" });
 
 // Later, when the strip leaves the page
@@ -88,8 +103,10 @@ export function Strip({ children }) {
     return () => fade.destroy();
   }, []);
   return (
-    <div ref={ref} className="reuse-card reuse-shadow-ring-md strip">
-      {children}
+    <div className="reuse-card reuse-shadow-ring-md">
+      <div ref={ref} className="strip">
+        {children}
+      </div>
     </div>
   );
 }`,

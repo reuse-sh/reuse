@@ -77,11 +77,11 @@ export function SiteHeader() {
     };
     const head = wrap.current;
     document.addEventListener("pointerdown", onDown);
-    head?.addEventListener("keydown", onEscape);
+    document.addEventListener("keydown", onEscape);
     head?.addEventListener("focusout", onFocusOut);
     return () => {
       document.removeEventListener("pointerdown", onDown);
-      head?.removeEventListener("keydown", onEscape);
+      document.removeEventListener("keydown", onEscape);
       head?.removeEventListener("focusout", onFocusOut);
     };
   }, [open]);

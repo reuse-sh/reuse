@@ -2,22 +2,16 @@ import { AnnotationsDemo } from "./demos/annotations";
 import { AvatarsDemo } from "./demos/avatars";
 import { HighlightDemo, HoldDemo } from "./demos/interactions";
 import { LoadersDemo } from "./demos/loaders";
-import { CardPatterns, ShadowsDemo } from "./demos/shadows";
+import { ShadowsDemo } from "./demos/shadows";
 
-export function LibraryDemo({
-  slug,
-  examples = false,
-}: {
-  slug: string;
-  examples?: boolean;
-}) {
+export function LibraryDemo({ slug }: { slug: string }) {
   switch (slug) {
     case "annotations":
-      return <AnnotationsDemo editable={examples} />;
+      return <AnnotationsDemo />;
     case "loaders":
-      return <LoadersDemo gallery={examples} />;
+      return <LoadersDemo />;
     case "shadows":
-      return examples ? <CardPatterns /> : <ShadowsDemo />;
+      return <ShadowsDemo />;
     case "moving-highlight":
       return <HighlightDemo />;
     case "hold-to-confirm":
