@@ -12,7 +12,7 @@ Tokens are fixed on :root in apps/site/app/globals.css. There are no runtime set
 - Hover: --hover is black at 3%. Every quiet hover and moving highlight uses it.
 - Shape: --r 1.35 multiplies base radii, so a 16px card corner becomes about 22px. Code blocks use 12px times --r.
 - Layout: --col 840px content column with a 16px gutter (80px from 1100px), --sec 120px between sections (88px at 760px and below).
-- Depth: --ring for code blocks and joined surfaces, --pop for menus and popovers, the card tokens below for cards.
+- Depth: shadow tokens built from the @reuse-sh/shadows levels with its 0.5px ring: --shadow-ring alone, --shadow-control (xs) for buttons, pills and keys, --shadow-raised (sm) for cards, code blocks and small floating surfaces, --shadow-panel (md) for example app windows, --shadow-pop (lg) for menus, popovers and dialogs.
 - Motion: --ease cubic-bezier(0.23, 1, 0.32, 1).
 
 ## Type
@@ -21,7 +21,7 @@ Geist Sans for interface and body text at 15px/24px, Geist Mono for code, and Fr
 
 ## Surfaces
 
-Cards are a double ring: a 4px outer frame of white at 55% with a 5% ring, around a white inner card with a 7% ring and a soft two-step shadow (c-card > c-card-in). Most features are an icon and text in open space (c-feats, three columns, two at 760px, one at 600px). Do not wrap every sentence in a card. The hold-to-confirm button uses an inset 1px ring instead of a border. Previous and next links are one joined card split by a 1px line.
+Cards are a double ring: a 4px outer frame of white at 55% with --shadow-ring, around a white inner card with --shadow-raised (c-card > c-card-in). Most features are an icon and text in open space (c-feats, three columns, two at 760px, one at 600px). Do not wrap every sentence in a card. The hold-to-confirm button uses an inset 1px ring instead of a border. Previous and next links are one joined card split by a 1px line.
 
 ## Header and Libraries menu
 

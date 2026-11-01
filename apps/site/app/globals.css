@@ -8,12 +8,15 @@
   --mute: #858585;
   --side: rgb(18 18 18 / 40%);
   --hover: rgb(0 0 0 / 3%);
-  --ring:
-    0 0 0 1px rgb(0 0 0 / 6%), 0 1px 2px -1px rgb(0 0 0 / 6%),
-    0 2px 4px rgb(0 0 0 / 4%);
-  --pop:
-    0 0 0 1px rgb(0 0 0 / 6%), 0 6px 12px -4px rgb(0 0 0 / 8%),
-    0 20px 40px -12px rgb(0 0 0 / 14%);
+  --shadow-ring: 0 0 0 0.5px rgb(0 0 0 / 8%);
+  --shadow-control:
+    var(--shadow-ring), 0 1px 2px rgb(0 0 0 / 5%), 0 2px 4px rgb(0 0 0 / 2%);
+  --shadow-raised:
+    var(--shadow-ring), 0 1px 2px rgb(0 0 0 / 5%), 0 4px 8px rgb(0 0 0 / 3.5%);
+  --shadow-panel:
+    var(--shadow-ring), 0 2px 4px rgb(0 0 0 / 4%), 0 8px 16px rgb(0 0 0 / 5%);
+  --shadow-pop:
+    var(--shadow-ring), 0 4px 8px rgb(0 0 0 / 4%), 0 16px 32px rgb(0 0 0 / 7%);
   --ease: cubic-bezier(0.23, 1, 0.32, 1);
   --r: 1.35;
   --col: 840px;
@@ -21,10 +24,6 @@
   --sec: 120px;
   --card-pad: 4px;
   --card-outer-bg: rgb(255 255 255 / 55%);
-  --card-outer: 0 0 0 1px rgb(0 0 0 / 5%);
-  --card-inner:
-    0 0 0 1px rgb(0 0 0 / 7%), 0 1px 2px rgb(0 0 0 / 4%),
-    0 6px 14px -6px rgb(0 0 0 / 7%);
   --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
   --mono:
     var(--font-geist-mono), ui-monospace, SFMono-Regular, Menlo, monospace;
@@ -145,7 +144,7 @@ summary {
   padding: 8px 12px;
   border-radius: 10px;
   background: var(--surface);
-  box-shadow: var(--pop);
+  box-shadow: var(--shadow-pop);
   font-size: 14px;
 }
 

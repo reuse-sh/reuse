@@ -58,7 +58,7 @@
   margin-bottom: 36px;
   border-radius: 12px;
   background: var(--surface);
-  box-shadow: var(--ring);
+  box-shadow: var(--shadow-raised);
 }
 .d-toc-m summary {
   display: flex;
@@ -210,9 +210,7 @@
 }
 .d-lightbox .reuse-lightbox-button,
 .d-lightbox .reuse-lightbox-counter {
-  box-shadow:
-    0 0 0 0.5px rgb(0 0 0 / 10%),
-    0 2px 8px rgb(0 0 0 / 5%);
+  box-shadow: var(--shadow-raised);
 }
 
 /* Overview gallery */
@@ -344,7 +342,7 @@
   overflow: hidden;
   border-radius: 14px;
   background: var(--surface);
-  box-shadow: var(--ring);
+  box-shadow: var(--shadow-raised);
 }
 .d-pager a {
   display: grid;
@@ -467,7 +465,7 @@
 }
 .d-arrows-ring button {
   background: var(--surface);
-  box-shadow: 0 0 0 1px rgb(0 0 0 / 9%);
+  box-shadow: var(--shadow-control);
 }
 .d-counter {
   font-size: 13px;
@@ -538,9 +536,7 @@
   padding: 4px;
   border-radius: 13px;
   background: var(--surface);
-  box-shadow:
-    0 0 0 1px rgb(0 0 0 / 7%),
-    0 2px 6px -2px rgb(0 0 0 / 8%);
+  box-shadow: var(--shadow-raised);
 }
 .d-tool {
   display: contents;
@@ -777,9 +773,7 @@
   background: rgb(0 0 0 / 4%);
 }
 .x-sizes .reuse-moving-highlight {
-  box-shadow:
-    0 0 0 0.5px rgb(0 0 0 / 10%),
-    0 1px 3px rgb(0 0 0 / 8%);
+  box-shadow: var(--shadow-control);
 }
 .x-sizes label {
   position: relative;
@@ -840,9 +834,7 @@
   overflow: hidden;
   border-radius: 16px;
   background: var(--surface);
-  box-shadow:
-    var(--ring),
-    0 12px 32px -16px rgb(0 0 0 / 12%);
+  box-shadow: var(--shadow-panel);
 }
 .x-list {
   padding: 14px 8px;
@@ -1140,9 +1132,7 @@
   overflow: hidden;
   border-radius: 16px;
   background: #f6f6f5;
-  box-shadow:
-    0 0 0 1px rgb(0 0 0 / 7%),
-    0 1px 2px rgb(0 0 0 / 4%);
+  box-shadow: var(--shadow-raised);
 }
 .d-frame iframe {
   display: block;
@@ -1157,9 +1147,6 @@
   --cc-muted: #646464;
   --cc-faint: #8a8a8a;
   --cc-wash: #ececea;
-  --cc-ring:
-    0 0 0 0.5px rgb(0 0 0 / 10%), 0 1px 2px rgb(0 0 0 / 6%),
-    0 2px 6px rgb(0 0 0 / 4%);
   --cc-ease: cubic-bezier(0.32, 0.72, 0, 1);
   min-width: 0;
   margin-top: 36px;
@@ -1189,7 +1176,7 @@
 }
 .cc-seg .reuse-moving-highlight,
 .cc-tabs .reuse-moving-highlight {
-  box-shadow: var(--cc-ring);
+  box-shadow: var(--shadow-control);
 }
 .cc-seg-item {
   position: relative;
@@ -1279,7 +1266,7 @@
   border: 0;
   border-radius: 50%;
   background: #fff;
-  box-shadow: var(--cc-ring);
+  box-shadow: var(--shadow-control);
   color: inherit;
   cursor: pointer;
   transition:
@@ -1776,7 +1763,7 @@
   padding: 6px;
   border-radius: 12px;
   background: var(--surface);
-  box-shadow: var(--ring);
+  box-shadow: var(--shadow-raised);
   --reuse-highlight-background: var(--hover);
   --reuse-highlight-radius: 8px;
 }
@@ -1809,7 +1796,7 @@
   height: 66px;
   border-radius: 12px;
   background: var(--surface);
-  box-shadow: var(--ring);
+  box-shadow: var(--shadow-raised);
   color: var(--mute);
 }
 .d-demo .hold-example p,
@@ -1826,7 +1813,7 @@
   border: 0;
   border-radius: 11px;
   background: var(--surface);
-  box-shadow: var(--ring);
+  box-shadow: var(--shadow-control);
   font-size: 14px;
   font-weight: 520;
 }
@@ -1915,7 +1902,7 @@
 }
 .d-demo .shadow-levels button[aria-pressed="true"] {
   background: var(--surface);
-  box-shadow: 0 1px 3px rgb(0 0 0 / 10%);
+  box-shadow: var(--shadow-control);
 }
 .d-demo .annotation-demo img {
   border-radius: 12px;
@@ -1932,9 +1919,7 @@
   overflow: hidden;
   border-radius: 16px;
   background: var(--surface);
-  box-shadow:
-    var(--ring),
-    0 12px 32px -16px rgb(0 0 0 / 12%);
+  box-shadow: var(--shadow-panel);
 }
 .x-text-btn {
   padding: 4px 2px;
@@ -2140,9 +2125,7 @@
   overflow: hidden;
   border-radius: 16px;
   background: var(--surface);
-  box-shadow:
-    var(--ring),
-    0 12px 32px -16px rgb(0 0 0 / 12%);
+  box-shadow: var(--shadow-panel);
 }
 .x-assist-msgs {
   display: grid;
@@ -2277,9 +2260,6 @@
 }
 .x-fade-bar {
   --cc-ink: #1f1f1f;
-  --cc-ring:
-    0 0 0 0.5px rgb(0 0 0 / 10%), 0 1px 2px rgb(0 0 0 / 6%),
-    0 2px 6px rgb(0 0 0 / 4%);
   display: flex;
   flex-wrap: wrap;
   gap: 10px;
@@ -2490,9 +2470,7 @@
   padding: 14px 14px 14px 16px;
   border-radius: 14px;
   background: var(--surface);
-  box-shadow:
-    var(--ring),
-    0 8px 24px -14px rgb(0 0 0 / 14%);
+  box-shadow: var(--shadow-raised);
 }
 .x-file-icon {
   display: grid;
