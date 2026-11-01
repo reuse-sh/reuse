@@ -140,6 +140,36 @@ describe("native carousel", () => {
     expect(carousel.getState().canNext).toBe(false);
   });
 
+  it("resolves percentage scroll padding against the scrollport", () => {
+    const { viewport } = fixture([100, 100, 100, 100], 200);
+    viewport.style.scrollPaddingInlineStart = "25%";
+    const layout = Object.getOwnPropertyDescriptor(
+      HTMLElement.prototype,
+      "offsetWidth",
+    );
+    Object.defineProperty(HTMLElement.prototype, "offsetWidth", {
+      configurable: true,
+      get(this: HTMLElement) {
+        const own = this.style.width;
+        const parent = Number.parseFloat(this.parentElement?.style.width ?? "");
+        return own.endsWith("%")
+          ? (Number.parseFloat(own) / 100) * parent
+          : Number.parseFloat(own) || 0;
+      },
+    });
+    cleanups.push(() => {
+      if (layout)
+        Object.defineProperty(HTMLElement.prototype, "offsetWidth", layout);
+    });
+    const carousel = createCarousel(viewport);
+    cleanups.push(carousel.destroy);
+    carousel.goTo(1, "instant");
+    expect(viewport.scrollLeft).toBe(50);
+    carousel.goTo(2, "instant");
+    expect(viewport.scrollLeft).toBe(150);
+    expect(viewport.childElementCount).toBe(4);
+  });
+
   it("moves groups without losing rapid presses and handles RTL keys locally", () => {
     const { viewport } = fixture([100, 100, 100, 100, 100], 100, true);
     const carousel = createCarousel(viewport, { group: 2 });

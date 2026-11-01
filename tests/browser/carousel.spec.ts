@@ -112,3 +112,29 @@ test("a click during a smooth scroll travels on to a snap point instead of stopp
     ),
   ).toBe("");
 });
+
+test("a percentage scroll padding places the slide at the padded edge", async ({
+  page,
+}) => {
+  await mount(
+    page,
+    `<div id="strip" style="box-sizing:border-box;width:800px;--re-carousel-gap:0px;padding-inline:100px;scroll-padding-inline:max(20px, (100% - 600px) / 2)">${slides}</div>`,
+    ["carousel/styles.css"],
+  );
+  const result = await page.evaluate(async () => {
+    const { createCarousel } = await import("/modules/carousel/index.js");
+    const strip = document.getElementById("strip") as HTMLElement;
+    const carousel = createCarousel(strip);
+    carousel.goTo(2, "instant");
+    const edge = (index: number) =>
+      strip.children[index].getBoundingClientRect().left -
+      strip.getBoundingClientRect().left;
+    return {
+      scrollLeft: strip.scrollLeft,
+      edge: edge(2),
+      index: carousel.getState().index,
+      children: strip.childElementCount,
+    };
+  });
+  expect(result).toEqual({ scrollLeft: 600, edge: 100, index: 2, children: 6 });
+});

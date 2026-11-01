@@ -135,10 +135,9 @@
 /* Carousel: starts at the column and runs off the right edge */
 .h-strip {
   margin-top: 28px;
-  container-type: inline-size;
 }
 .h-strip-vp {
-  --h-off: max(var(--gutter), (100cqi - var(--col)) / 2);
+  --h-off: max(var(--gutter), (100% - var(--col)) / 2);
   --re-carousel-slide-width: min(288px, 72vw);
   --re-carousel-gap: 12px;
   padding-inline: var(--h-off);
