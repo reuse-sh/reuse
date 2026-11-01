@@ -66,6 +66,10 @@ function clamp(value: number, max: number): number {
 
 // Scroll speed in px/ms above which a released mouse drag moves on to the next slide.
 const FLICK_VELOCITY = 0.4;
+// How far ahead in ms a released drag's speed carries it, close to trackpad momentum.
+const GLIDE = 260;
+// Rubber band constant for a mouse drag past either end.
+const STRETCH = 0.55;
 const RELEASE_SAMPLE_WINDOW = 80;
 const MAX_SPRING_STEP = 64;
 
@@ -107,6 +111,7 @@ export function createCarousel(
   const previousOverflow = viewport.style.overflowX;
   const previousSnap = viewport.style.scrollSnapType;
   const previousUserSelect = viewport.style.userSelect;
+  const previousCursor = viewport.style.cursor;
   const ownedSlides = new Set<HTMLElement>();
   const slideStyles = new Map<
     HTMLElement,
@@ -133,6 +138,7 @@ export function createCarousel(
   let pendingIndex: number | undefined;
   let pendingPosition: number | undefined;
   let disabledPosition = 0;
+  let stretch = 0;
   let pointer: {
     id: number;
     x: number;
@@ -150,6 +156,7 @@ export function createCarousel(
     velocity: number;
     target: number;
     time: number;
+    frequency: number;
   } | null = null;
   let scrolling = false;
   let suppressClick = false;
@@ -192,6 +199,50 @@ export function createCarousel(
     });
   }
 
+  function setStretch(value: number) {
+    if (value === stretch) return;
+    stretch = value;
+    for (const slide of slides) {
+      const original = slideStyles.get(slide)?.transform ?? "";
+      slide.style.transform = value
+        ? `translateX(${rtl ? value : -value}px) ${original}`.trim()
+        : original;
+    }
+  }
+
+  // Past an end, a non-repeating strip scrolls to the edge and translates its slides by the rest.
+  function moveTo(virtual: number) {
+    if (span || max <= 0) {
+      scrollTo(virtual, "instant");
+      return;
+    }
+    const edge = clamp(virtual, max);
+    scrollTo(edge, "instant");
+    setStretch(virtual - edge);
+  }
+
+  function rubberBand(overflow: number) {
+    const width = viewport.clientWidth || 1;
+    const damped =
+      (1 - 1 / ((Math.abs(overflow) * STRETCH) / width + 1)) * width;
+    return Math.sign(overflow) * damped;
+  }
+
+  function undoRubberBand(shown: number) {
+    const width = viewport.clientWidth || 1;
+    const size = Math.min(Math.abs(shown), width * 0.95);
+    return (Math.sign(shown) * size * width) / ((width - size) * STRETCH);
+  }
+
+  function updateCursor() {
+    viewport.style.cursor =
+      enabled && options.drag !== false && max > 0 && !destroyed
+        ? pointer
+          ? "grabbing"
+          : "grab"
+        : previousCursor;
+  }
+
   function loopPosition(current: number) {
     const origin = targets[0] ?? span;
     return origin + ((((current - origin) % span) + span) % span);
@@ -215,6 +266,10 @@ export function createCarousel(
     jumpLoop(centered);
     shiftPointer(shift);
     if (pendingPosition !== undefined) pendingPosition += shift;
+    if (spring) {
+      spring.value += shift;
+      spring.target += shift;
+    }
   }
 
   function shiftPointer(shift: number) {
@@ -283,13 +338,12 @@ export function createCarousel(
     }
   }
 
-  function nearestIndex() {
-    const current = position();
+  function nearestIndex(current = position()) {
     let nearest = 0;
     for (let index = 1; index < targets.length; index++) {
       if (
-        Math.abs(targetAt(index) - current) <
-        Math.abs(targetAt(nearest) - current) - 0.5
+        Math.abs(targetAt(index, current) - current) <
+        Math.abs(targetAt(nearest, current) - current) - 0.5
       ) {
         nearest = index;
       }
@@ -344,7 +398,7 @@ export function createCarousel(
   function springFrame(now: number) {
     if (!spring) return;
     const dt = Math.min(Math.max(now - spring.time, 0), MAX_SPRING_STEP);
-    const frequency = 6 / releaseDuration;
+    const { frequency } = spring;
     const offset = spring.value - spring.target;
     const slope = spring.velocity + frequency * offset;
     const decay = Math.exp(-frequency * dt);
@@ -357,28 +411,38 @@ export function createCarousel(
     ) {
       const { target } = spring;
       spring = null;
-      scrollTo(target, "instant");
+      moveTo(target);
       renderLoop();
       settle();
       return;
     }
-    scrollTo(spring.value, "instant");
+    moveTo(spring.value);
+    recenterLoop();
     renderLoop();
     spring.frame = window.requestAnimationFrame(springFrame);
   }
 
-  function startSpring(target: number, velocity: number) {
+  // A critically damped spring. Toward the target, a frequency of at least twice speed over
+  // distance starts it at the release speed and only slows it down, so it never overshoots.
+  function startSpring(target: number, velocity: number, flick: boolean) {
+    const value = position() + stretch;
+    const distance = target - value;
+    const floor = flick ? 2 / GLIDE : 6 / releaseDuration;
     spring = {
       frame: window.requestAnimationFrame(springFrame),
-      value: position(),
+      value,
       velocity,
       target,
       time: window.performance.now(),
+      frequency:
+        velocity * distance > 0
+          ? Math.max(floor, Math.abs((2 * velocity) / distance))
+          : 6 / releaseDuration,
     };
   }
 
   function settle() {
-    if (pointer || grabbedTouch !== undefined) return;
+    if (pointer || spring || grabbedTouch !== undefined) return;
     if (
       pendingPosition !== undefined &&
       Math.abs(position() - pendingPosition) > 1
@@ -388,6 +452,10 @@ export function createCarousel(
     pendingIndex = undefined;
     pendingPosition = undefined;
     const index = nearestIndex();
+    if (stretch && enabled) {
+      goTo(index, "smooth", undefined, 0);
+      return;
+    }
     // Restoring mandatory snap away from a snap point makes the browser jump there
     // in one frame, so travel to the point first.
     if (
@@ -410,8 +478,9 @@ export function createCarousel(
     schedule();
   }
 
-  function interrupt(restoreSnap = true) {
+  function interrupt(restoreSnap = true, keepStretch = false) {
     stopSpring();
+    if (!keepStretch) setStretch(0);
     clearTimeout(settleTimer);
     pendingIndex = undefined;
     pendingPosition = undefined;
@@ -457,6 +526,8 @@ export function createCarousel(
     behavior: ScrollBehavior = "smooth",
     direction?: 1 | -1,
     releaseSpeed?: number,
+    reference = pendingPosition ?? position(),
+    flick = false,
   ) {
     if (destroyed || !enabled || !slides.length || !Number.isFinite(index))
       return;
@@ -466,7 +537,6 @@ export function createCarousel(
       span > 0
         ? ((rounded % slides.length) + slides.length) % slides.length
         : clamp(rounded, slides.length - 1);
-    const reference = pendingPosition ?? position();
     let target = targetAt(next, reference);
     if (span && direction === 1 && target <= reference + 0.5) target += span;
     if (span && direction === -1 && target >= reference - 0.5) target -= span;
@@ -475,18 +545,21 @@ export function createCarousel(
       span > 0
         ? next
         : targets.findIndex((value) => Math.abs(value - target) < 0.5);
-    if (span && (target < 0 || target > max)) {
+    const glide =
+      releaseSpeed !== undefined &&
+      options.releaseMotion !== "native" &&
+      !reducedMotion?.matches;
+    // A glide recenters the loop as it travels, so its target may lie past the track.
+    if (span && !glide && (target < 0 || target > max)) {
       target = loopPosition(target);
       pendingPosition = target;
     }
     viewport.style.scrollSnapType = "none";
-    if (
-      releaseSpeed !== undefined &&
-      options.releaseMotion !== "native" &&
-      !reducedMotion?.matches
-    )
-      startSpring(target, releaseSpeed);
-    else scrollTo(target, behavior);
+    if (glide) startSpring(target, releaseSpeed, flick);
+    else {
+      setStretch(0);
+      scrollTo(target, behavior);
+    }
     renderLoop();
     publish(pendingIndex);
     clearTimeout(settleTimer);
@@ -560,6 +633,7 @@ export function createCarousel(
     spacers.length = 0;
     for (const [slide, original] of slideStyles)
       slide.style.transform = original.transform;
+    stretch = 0;
     span = 0;
     slides = readSlides();
     rtl = window.getComputedStyle(viewport).direction === "rtl";
@@ -647,6 +721,7 @@ export function createCarousel(
     renderLoop();
     shiftPointer(position() - before);
     viewport.style.scrollSnapType = snap;
+    updateCursor();
     publish(retained);
     schedule();
     mutation?.observe(viewport, { childList: true, subtree: true });
@@ -678,12 +753,20 @@ export function createCarousel(
     pointer = null;
     if (viewport.hasPointerCapture?.(id)) viewport.releasePointerCapture(id);
     viewport.style.userSelect = previousUserSelect;
+    updateCursor();
     suppressClick = moved && snap;
     internalHold("pointer", false);
+    const current = position() + stretch;
+    const stop = current + speed * GLIDE;
+    const projected = nearestIndex(stop);
+    const direction = velocity > 0 ? 1 : -1;
     if (moved && snap && Math.abs(velocity) >= FLICK_VELOCITY) {
-      const direction = velocity > 0 ? 1 : -1;
-      goTo(indexAhead(direction), "smooth", direction, speed);
-    } else if (moved && snap) goTo(nearestIndex(), "smooth", undefined, speed);
+      if ((targetAt(projected, stop) - current) * direction > 1)
+        goTo(projected, "smooth", undefined, speed, stop, true);
+      else
+        goTo(indexAhead(direction), "smooth", direction, speed, current, true);
+    } else if (moved && snap)
+      goTo(nearestIndex(current), "smooth", undefined, speed, current);
     else if (moved || snap) settle();
     else viewport.style.scrollSnapType = previousSnap;
     publish();
@@ -708,6 +791,7 @@ export function createCarousel(
       disabledPosition = position();
       viewport.style.overflowX = value ? previousOverflow : "hidden";
       if (!value) scrollTo(disabledPosition, "instant");
+      updateCursor();
       schedule();
     },
     play() {
@@ -757,6 +841,7 @@ export function createCarousel(
       viewport.style.overflowX = previousOverflow;
       viewport.style.scrollSnapType = previousSnap;
       viewport.style.userSelect = previousUserSelect;
+      viewport.style.cursor = previousCursor;
     },
   };
 
@@ -857,15 +942,16 @@ export function createCarousel(
       grabbedTouch = input.pointerId;
       return;
     }
-    interrupt(false);
+    interrupt(false, true);
     suppressClick = false;
     pointer = {
       id: input.pointerId,
       x: input.clientX,
-      position: position(),
+      position: position() + (stretch && undoRubberBand(stretch)),
       moved: false,
       samples: [],
     };
+    updateCursor();
     internalHold("pointer", true);
   });
   listen(window, "pointermove", (event) => {
@@ -880,8 +966,14 @@ export function createCarousel(
       viewport.style.userSelect = "none";
     }
     input.preventDefault();
-    scrollTo(clamp(pointer.position + (rtl ? delta : -delta), max), "instant");
-    pointer.samples.push({ time: input.timeStamp, position: position() });
+    const goal = pointer.position + (rtl ? delta : -delta);
+    const edge = clamp(goal, max);
+    scrollTo(edge, "instant");
+    if (!span && max > 0) setStretch(rubberBand(goal - edge));
+    pointer.samples.push({
+      time: input.timeStamp,
+      position: position() + stretch,
+    });
     if (pointer.samples.length > 8) pointer.samples.shift();
     recenterLoop();
     renderLoop();
