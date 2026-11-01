@@ -1,0 +1,41 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "site",
+      "runtimeExecutable": "pnpm",
+      "runtimeArgs": ["--filter", "@reuse-sh/site", "start"],
+      "port": 4300
+    },
+    {
+      "name": "site-prototypes",
+      "runtimeExecutable": "python3",
+      "runtimeArgs": [
+        "-m",
+        "http.server",
+        "4310",
+        "--bind",
+        "127.0.0.1",
+        "--directory",
+        "/Users/nikita/work/libs/reuse"
+      ],
+      "port": 4310
+    },
+    {
+      "name": "site-build-check",
+      "runtimeExecutable": "pnpm",
+      "runtimeArgs": [
+        "--dir",
+        "apps/site",
+        "exec",
+        "next",
+        "start",
+        "--hostname",
+        "127.0.0.1",
+        "--port",
+        "4301"
+      ],
+      "port": 4301
+    }
+  ]
+}

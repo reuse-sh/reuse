@@ -1,0 +1,9 @@
+.reuse-thinking-dots {
+  display: inline-flex;
+  flex: none;
+  vertical-align: middle;
+  color: inherit;
+}
+.reuse-thinking-dots canvas {
+  display: block;
+}

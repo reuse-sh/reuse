@@ -1,0 +1,362 @@
+@import "./editor.css";
+
+[data-reuse-annotations] {
+  --annot-accent: var(--reuse-annotation-color, #e04e3b);
+  --annot-accent-ink: var(--reuse-annotation-ink, #fff);
+}
+
+[data-annot-color="red"],
+[data-annot-swatch="red"] {
+  --annot-accent: oklch(0.63 0.23 27);
+  --annot-accent-ink: oklch(0.99 0 0);
+}
+[data-annot-color="orange"],
+[data-annot-swatch="orange"] {
+  --annot-accent: oklch(0.7 0.19 48);
+  --annot-accent-ink: oklch(0.99 0 0);
+}
+[data-annot-color="yellow"],
+[data-annot-swatch="yellow"] {
+  --annot-accent: oklch(0.86 0.17 92);
+  --annot-accent-ink: oklch(0.28 0.06 80);
+}
+[data-annot-color="green"],
+[data-annot-swatch="green"] {
+  --annot-accent: oklch(0.65 0.18 150);
+  --annot-accent-ink: oklch(0.99 0 0);
+}
+[data-annot-color="blue"],
+[data-annot-swatch="blue"] {
+  --annot-accent: oklch(0.6 0.2 255);
+  --annot-accent-ink: oklch(0.99 0 0);
+}
+[data-annot-color="purple"],
+[data-annot-swatch="purple"] {
+  --annot-accent: oklch(0.57 0.22 300);
+  --annot-accent-ink: oklch(0.99 0 0);
+}
+[data-annot-swatch="accent"] {
+  --annot-accent: var(--reuse-annotation-color, #e04e3b);
+}
+
+[data-reuse-annotations] figure[data-annotated] {
+  container: annot-figure / inline-size;
+  width: 100%;
+}
+[data-annot-lightbox] {
+  container: annot-figure / inline-size;
+}
+
+[data-reuse-annotations] [data-annot-stage] {
+  position: relative;
+  padding: var(--annot-top, 0) var(--annot-right, 0) var(--annot-bottom, 0)
+    var(--annot-left, 0);
+}
+[data-reuse-annotations]
+  figure[data-annotated]
+  :is([data-frame-card], figure)
+  > :is([data-annot-stage], a:has(> [data-annot-stage])) {
+  display: block;
+  width: min(100%, calc(var(--image-width, 100%) + var(--annot-x, 0px)));
+  max-width: 100%;
+}
+[data-reuse-annotations]
+  figure[data-annotated]:not([data-framed])
+  > :is([data-annot-stage], a:has(> [data-annot-stage])) {
+  margin-inline: auto;
+}
+[data-reuse-annotations]
+  figure[data-annotated]:not([data-framed])[data-align="left"]
+  > :is([data-annot-stage], a:has(> [data-annot-stage])) {
+  margin-left: 0;
+}
+[data-reuse-annotations]
+  figure[data-annotated]:not([data-framed])[data-align="right"]
+  > :is([data-annot-stage], a:has(> [data-annot-stage])) {
+  margin-right: 0;
+}
+[data-reuse-annotations] [data-annot-media] {
+  position: relative;
+  container: annot / inline-size;
+  border-radius: var(--reuse-annotation-radius, 0);
+}
+[data-reuse-annotations] [data-annot-media] > img {
+  display: block;
+  width: 100%;
+  height: auto;
+  margin: 0;
+  border-radius: inherit;
+}
+
+[data-annot-shade] {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+[data-annot-shade] > svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  fill: oklch(0 0 0 / 0.35);
+}
+[data-reuse-annotations] [data-annot-shade] {
+  border-radius: var(--reuse-annotation-radius, 0);
+}
+[data-annot-spotlight] {
+  position: absolute;
+}
+
+[data-annot-area] {
+  position: absolute;
+  border: 2px solid var(--annot-accent);
+  border-radius: 6px;
+}
+[data-annot-tag] {
+  position: absolute;
+  bottom: calc(100% + 4px);
+  left: -2px;
+  padding: 0.1em 0.45em;
+  border-radius: 5px;
+  background: var(--annot-accent);
+  color: var(--annot-accent-ink);
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1.35;
+  white-space: nowrap;
+}
+[data-annot-tag][data-below] {
+  top: calc(100% + 4px);
+  bottom: auto;
+}
+[data-annot-tag][data-end] {
+  right: -2px;
+  left: auto;
+}
+
+[data-annot-shape] {
+  position: absolute;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--annot-accent);
+  transform: translateY(-50%) rotate(var(--angle, 0deg));
+  transform-origin: 0 50%;
+  pointer-events: none;
+}
+[data-annot-shape="arrow"] {
+  container-type: inline-size;
+  height: auto;
+  border-radius: 0;
+  background: none;
+}
+[data-annot-shape="arrow"]::before {
+  content: "";
+  display: block;
+  height: min(20px, 45cqw);
+  background: var(--annot-accent);
+  clip-path: polygon(
+    0 45.5%,
+    calc(100% - min(16px, 36%)) 37.5%,
+    calc(100% - min(22px, 50%)) 0,
+    100% 50%,
+    calc(100% - min(22px, 50%)) 100%,
+    calc(100% - min(16px, 36%)) 62.5%,
+    0 54.5%
+  );
+}
+
+[data-annot-marker] {
+  position: absolute;
+  display: grid;
+  place-items: center;
+  width: 22px;
+  aspect-ratio: 1;
+  border-radius: 999px;
+  background: var(--annot-accent);
+  color: var(--annot-accent-ink);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+  line-height: 1;
+  transform: translate(-50%, -50%);
+  transition: transform 150ms;
+}
+[data-annot-marker][data-active] {
+  transform: translate(-50%, -50%) scale(1.15);
+}
+[data-annot-marker][data-pointer] {
+  display: none;
+}
+
+[data-annot-drawing] {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  color: var(--reuse-annotation-text, #202020);
+  pointer-events: none;
+}
+[data-annot-drawing] [data-annot-line] {
+  fill: none;
+  stroke: var(--annot-accent);
+  stroke-width: 1.5;
+  vector-effect: non-scaling-stroke;
+}
+[data-annot-drawing] [data-annot-tip] {
+  fill: var(--annot-accent);
+}
+[data-annot-drawing] text {
+  fill: color-mix(in oklch, currentColor 82%, transparent);
+  font-family: inherit;
+  dominant-baseline: middle;
+}
+
+[data-reuse-annotations] ol[data-annot-list] {
+  position: relative;
+  display: grid;
+  gap: 2px;
+  margin: 0.75rem 0 0;
+  padding: 0;
+  list-style: none;
+  font-size: var(--text-md, 1rem);
+  line-height: 1.5rem;
+}
+[data-reuse-annotations] ol[data-annot-list] > li {
+  display: flex;
+  gap: 0.625rem;
+  align-items: flex-start;
+  margin: 0;
+  padding: 0.25rem 0.375rem;
+  border-radius: 0.5rem;
+}
+[data-reuse-annotations] ol[data-annot-list] > li::before {
+  content: attr(value);
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 1.375rem;
+  height: 1.375rem;
+  margin-top: 0.0625rem;
+  border-radius: 999px;
+  background: var(--annot-accent);
+  color: var(--annot-accent-ink);
+  font-size: 0.75rem;
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+  line-height: 1;
+}
+[data-reuse-annotations] [data-annot-text] {
+  flex: 1;
+  min-width: 0;
+  color: var(--reuse-annotation-text, #202020);
+}
+[data-reuse-annotations] [data-annot-text] strong {
+  font-weight: 600;
+}
+
+[data-reuse-annotations] ol[data-annot-list] > li[data-pointer] {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+@container annot-figure (max-width: 559px) {
+  [data-annot-stage] {
+    padding: 0;
+  }
+  [data-reuse-annotations]
+    figure[data-annotated]
+    :is([data-frame-card], figure)
+    > :is([data-annot-stage], a:has(> [data-annot-stage])) {
+    width: min(100%, var(--image-width, 100%));
+  }
+  [data-reuse-annotations] .docs-image[data-annotated] .docs-image-box {
+    width: min(100%, var(--image-width, 100%));
+  }
+  [data-annot-drawing] {
+    display: none;
+  }
+  [data-annot-marker][data-pointer] {
+    display: grid;
+  }
+  [data-reuse-annotations] ol[data-annot-list] > li[data-pointer] {
+    position: static;
+    width: auto;
+    height: auto;
+    overflow: visible;
+    clip-path: none;
+    white-space: normal;
+  }
+}
+figure[data-pointer-markers] [data-annot-marker][data-pointer] {
+  display: grid;
+}
+[data-reuse-annotations]
+  figure[data-pointer-markers]
+  ol[data-annot-list]
+  > li[data-pointer] {
+  position: static;
+  width: auto;
+  height: auto;
+  overflow: visible;
+  clip-path: none;
+  white-space: normal;
+}
+
+[data-annot-lightbox] > [data-annot-stage]:has([data-annot-drawing]) {
+  border-radius: calc(var(--reuse-annotation-radius, 0) / var(--annot-zoom, 1));
+  background: color-mix(
+    in oklch,
+    var(--reuse-annotation-background, #fff) 0%,
+    transparent
+  );
+  box-shadow: 0 0 0 calc(1rem / var(--annot-zoom, 1))
+    color-mix(
+      in oklch,
+      var(--reuse-annotation-background, #fff) 0%,
+      transparent
+    );
+  transition:
+    background-color 160ms ease-out,
+    box-shadow 160ms ease-out;
+}
+[data-annot-lightbox][data-open]
+  > [data-annot-stage]:has([data-annot-drawing]) {
+  background: var(--reuse-annotation-background, #fff);
+  box-shadow: 0 0 0 calc(1rem / var(--annot-zoom, 1))
+    var(--reuse-annotation-background, #fff);
+}
+@media (prefers-reduced-motion: reduce) {
+  [data-annot-lightbox] > [data-annot-stage] {
+    transition: none;
+  }
+}
+
+[data-reuse-annotations] {
+  container: annot-figure / inline-size;
+  display: block;
+  width: 100%;
+  margin: 0;
+}
+[data-reuse-annotations] [data-annot-media] {
+  width: 100%;
+}
+[data-reuse-annotations] [data-annot-stage] {
+  margin-inline: auto;
+}
+
+[data-reuse-annotations] [data-annotation-overlay] {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+[data-reuse-annotations] [data-annotation-overlay] > * {
+  pointer-events: auto;
+}
+[data-reuse-annotations] [data-annot-drawing] {
+  pointer-events: none;
+}

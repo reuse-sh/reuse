@@ -1,0 +1,48 @@
+{
+  "measured": "2026-11-01",
+  "method": "Sum of individually gzipped, unminified native ESM modules reachable from each entry. Includes shared internal dependencies. Excludes CSS, React adapters, images, and fonts. No external runtime imports allowed.",
+  "results": [
+    {
+      "name": "carousel",
+      "modules": 1,
+      "bytes": 24035,
+      "gzipBytes": 5368
+    },
+    {
+      "name": "lightbox",
+      "modules": 3,
+      "bytes": 62942,
+      "gzipBytes": 14100
+    },
+    {
+      "name": "annotations",
+      "modules": 4,
+      "bytes": 53864,
+      "gzipBytes": 14454
+    },
+    {
+      "name": "loaders",
+      "modules": 4,
+      "bytes": 19681,
+      "gzipBytes": 6279
+    },
+    {
+      "name": "interactions",
+      "modules": 4,
+      "bytes": 22655,
+      "gzipBytes": 5817
+    },
+    {
+      "name": "avatars",
+      "modules": 1,
+      "bytes": 12620,
+      "gzipBytes": 3093
+    },
+    {
+      "name": "shadows",
+      "modules": 1,
+      "bytes": 67,
+      "gzipBytes": 77
+    }
+  ]
+}
