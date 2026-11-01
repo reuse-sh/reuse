@@ -1,48 +1,78 @@
+import "../styles/home.css";
 import { libraries } from "@reuse-sh/catalog";
-import Link from "next/link";
+import { MovingHighlight } from "@reuse-sh/interactions/react";
+import type { Metadata } from "next";
 import { CopyControl } from "../../components/copy-control";
 import { Icon, type IconName } from "../../components/icons";
-import { agentGuide } from "../../lib/guides";
-export default function AgentPage() {
+import { agentPrompt } from "../../lib/prompt";
+
+export const metadata: Metadata = { title: "Agent guides" };
+
+const steps = [
+  [
+    "Try it on the site.",
+    "Each library page opens with the working part, so you can judge how it behaves before anyone writes code.",
+  ],
+  [
+    "Hand your agent the guide.",
+    "Paste the prompt or a guide link. The guide lists the markup the part expects, its options, and how to remove it cleanly.",
+  ],
+  [
+    "Check what it built.",
+    "Every guide ends with checks: keyboard, narrow screens, reduced motion and teardown. Ask your agent to run them and show you the result.",
+  ],
+];
+
+export default function AgentGuidesPage() {
   return (
-    <main id="main" className="reading-page">
-      <p className="eyebrow">For coding agents</p>
-      <h1>
-        Read the guide.
-        <br />
-        Use the real component.
-      </h1>
-      <p>
-        Each library has a small Markdown guide with its API, integration notes,
-        and behavior to verify. Start with the library that solves the task.
+    <main id="main" className="c-col h-page">
+      <h1 className="c-h1">Agent guides</h1>
+      <p className="h-lead">
+        Every library has a guide written for coding agents. Give your agent the
+        link and say where the part should go.
       </p>
-      <div className="library-header-actions">
-        <CopyControl value={agentGuide} label="Copy integration guide" text />
-        <a className="text-link" href="/llms.txt">
-          llms.txt <Icon name="arrow" size={14} />
-        </a>
-      </div>
-      <div className="library-index-grid" style={{ marginTop: 40 }}>
-        {libraries.map((library) => (
-          <Link href={`/${library.slug}/guide.md`} key={library.slug}>
-            <Icon name={library.slug as IconName} />
-            <h3>
-              {library.name}
-              <Icon name="arrow" size={13} />
-            </h3>
-            <p>Read the Markdown guide.</p>
-          </Link>
+      <ol className="h-steps">
+        {steps.map(([title, text], index) => (
+          <li key={title} className="c-card">
+            <div className="c-card-in">
+              <span className="h-step-n">{index + 1}</span>
+              <p>
+                <b>{title}</b> {text}
+              </p>
+            </div>
+          </li>
         ))}
+      </ol>
+      <div className="c-card h-prompt">
+        <div className="c-card-in">
+          <pre>{agentPrompt}</pre>
+          <div className="h-prompt-bar">
+            <CopyControl value={agentPrompt} label="Copy prompt" text />
+          </div>
+        </div>
       </div>
-      <section className="reading-section">
-        <h2>Keep the mechanics shared</h2>
-        <p>
-          Inspect the host project, read the actual types, adapt styles and
-          data, and connect teardown. Exercise the result in the real interface.
-          Do not recreate the controller or invent an installation command for
-          an unpublished package.
-        </p>
-      </section>
+      <h2 className="c-h2 h-guides-h">Guides</h2>
+      <MovingHighlight className="h-guides">
+        {libraries.map((library) => (
+          <a
+            key={library.slug}
+            className="h-guide"
+            data-reuse-row=""
+            href={`/${library.slug}/guide.md`}
+          >
+            <Icon name={library.slug as IconName} size={18} />
+            <span className="h-guide-name">{library.name}</span>
+            <code>/{library.slug}/guide.md</code>
+          </a>
+        ))}
+      </MovingHighlight>
+      <p className="h-index-note">
+        The index of every guide is at{" "}
+        <a className="c-link" href="/llms.txt">
+          /llms.txt
+        </a>
+        .
+      </p>
     </main>
   );
 }
