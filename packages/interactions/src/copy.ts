@@ -23,7 +23,8 @@ const MESSAGES: Record<CopyButtonState, string> = {
   error: "Copy failed",
 };
 
-function copyWithSelection(text: string, document: Document): boolean {
+function copyWithSelection(text: string, host: Element): boolean {
+  const document = host.ownerDocument;
   const area = document.createElement("textarea");
   area.value = text;
   area.setAttribute("readonly", "");
@@ -33,12 +34,14 @@ function copyWithSelection(text: string, document: Document): boolean {
   const focused = document.activeElement as HTMLElement | null;
   const selection = document.getSelection();
   const range = selection?.rangeCount ? selection.getRangeAt(0) : null;
-  document.body.append(area);
+  // An open modal dialog makes the rest of the page inert, so the textarea
+  // has to live inside it to take focus and a selection.
+  (host.closest("dialog[open]") ?? document.body).append(area);
   area.focus({ preventScroll: true });
   area.select();
   let copied = false;
   try {
-    copied = document.execCommand("copy");
+    copied = document.activeElement === area && document.execCommand("copy");
   } catch {
     copied = false;
   }
@@ -51,18 +54,18 @@ function copyWithSelection(text: string, document: Document): boolean {
   return copied;
 }
 
-async function writeText(text: string, document: Document): Promise<void> {
-  const clipboard = document.defaultView?.navigator.clipboard;
+async function writeText(text: string, host: Element): Promise<void> {
+  const clipboard = host.ownerDocument.defaultView?.navigator.clipboard;
   if (clipboard?.writeText) {
     try {
       await clipboard.writeText(text);
       return;
     } catch (error) {
-      if (copyWithSelection(text, document)) return;
+      if (copyWithSelection(text, host)) return;
       throw error;
     }
   }
-  if (!copyWithSelection(text, document))
+  if (!copyWithSelection(text, host))
     throw new Error("The browser did not allow copying.");
 }
 
@@ -81,7 +84,7 @@ export function createCopyButton(
 
   const originalState = button.getAttribute("data-state");
   const originalLabel = button.getAttribute("aria-label");
-  const originalClass = button.getAttribute("class");
+  const hadClass = button.classList.contains("re-copy-button");
   const icon = document.createElement("span");
   icon.className = "re-copy-button-icon";
   icon.setAttribute("aria-hidden", "true");
@@ -113,17 +116,23 @@ export function createCopyButton(
 
   const click = async () => {
     const current = ++attempt;
+    let text: string;
     try {
-      const text = await (options.getText ? options.getText() : options.text);
+      text = await (options.getText ? options.getText() : options.text);
       if (!text) throw new Error("There is no text to copy.");
-      await writeText(text, document);
+      await writeText(text, button);
       if (destroyed || current !== attempt) return;
-      set("copied");
-      options.onCopy?.(text);
     } catch (error) {
       if (destroyed || current !== attempt) return;
       set("error");
       options.onError?.(error);
+      return;
+    }
+    set("copied");
+    try {
+      options.onCopy?.(text);
+    } catch (error) {
+      console.error(error);
     }
   };
 
@@ -139,12 +148,11 @@ export function createCopyButton(
       button.removeEventListener("click", click);
       icon.remove();
       status.remove();
-      if (originalClass === null) button.removeAttribute("class");
-      else button.setAttribute("class", originalClass);
+      if (!hadClass) button.classList.remove("re-copy-button");
       if (originalState === null) button.removeAttribute("data-state");
       else button.setAttribute("data-state", originalState);
-      if (originalLabel === null) button.removeAttribute("aria-label");
-      else button.setAttribute("aria-label", originalLabel);
+      if (!named && button.getAttribute("aria-label") === "Copy")
+        button.removeAttribute("aria-label");
     },
   };
 }

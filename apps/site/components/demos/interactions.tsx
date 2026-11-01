@@ -56,6 +56,9 @@ export function HoldDemo() {
           shown={done ? "Deleted" : "Hold to delete"}
         />
       </HoldToConfirmButton>
+      <span className="sr-only" role="status">
+        {done ? "Deleted" : ""}
+      </span>
     </div>
   );
 }

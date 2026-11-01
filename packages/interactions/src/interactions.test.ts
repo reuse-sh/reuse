@@ -557,6 +557,49 @@ describe("copy button", () => {
     expect(button.dataset.state).toBe("idle");
   });
 
+  it("stays copied when onCopy throws", async () => {
+    const logged = vi.spyOn(console, "error").mockImplementation(() => {});
+    const errors: unknown[] = [];
+    const { button, status } = setup({
+      text: "value",
+      onCopy: () => {
+        throw new Error("analytics down");
+      },
+      onError: (error) => errors.push(error),
+    });
+    button.click();
+    await flush();
+    expect(writeText).toHaveBeenCalledWith("value");
+    expect(button.dataset.state).toBe("copied");
+    expect(status()).toBe("Copied");
+    expect(errors).toEqual([]);
+    expect((logged.mock.calls[0][0] as Error).message).toBe("analytics down");
+    logged.mockRestore();
+  });
+
+  it("selects the fallback text inside an open modal dialog", async () => {
+    Reflect.deleteProperty(navigator, "clipboard");
+    let parent: Element | null = null;
+    Object.defineProperty(document, "execCommand", {
+      value: () => {
+        parent = (document.activeElement as HTMLElement).parentElement;
+        return true;
+      },
+      configurable: true,
+    });
+    const dialog = document.createElement("dialog");
+    dialog.setAttribute("open", "");
+    dialog.innerHTML = "<button>Copy link</button>";
+    document.body.append(dialog);
+    const button = dialog.querySelector("button") as HTMLButtonElement;
+    controllers.push(createCopyButton(button, { text: "link" }));
+    button.click();
+    await flush();
+    expect(parent).toBe(dialog);
+    expect(button.dataset.state).toBe("copied");
+    dialog.remove();
+  });
+
   it("names an icon-only button", () => {
     const button = document.createElement("button");
     document.body.append(button);
