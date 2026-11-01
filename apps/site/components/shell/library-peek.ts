@@ -1,4 +1,5 @@
 import { createAvatar, createAvatarGroup } from "@reuse-sh/avatars";
+import { easingGradient } from "@reuse-sh/gradients";
 import { createThinkingDots } from "@reuse-sh/loaders";
 import { type MenuSlug, menuLibrary } from "../../lib/menu";
 import { photos } from "../../lib/photos";
@@ -22,6 +23,10 @@ function img(index: number, on = false) {
   image.decoding = "async";
   if (on) image.setAttribute("data-on", "");
   return image;
+}
+
+function cursor() {
+  return el("span", "pk-cursor", iconNode("cursor", 15));
 }
 
 function stage(slug: MenuSlug, cleanups: (() => void)[]) {
@@ -82,24 +87,39 @@ function stage(slug: MenuSlug, cleanups: (() => void)[]) {
       });
       return el("div", "pk pk-av", single, group);
     }
-    case "floating-tooltip":
-      return el(
-        "div",
-        "pk pk-tip",
-        el(
-          "span",
-          "pk-tip-bar",
-          ...(["zoom", "heart", "share", "trash"] as const).map((name) =>
-            iconNode(name, 15),
-          ),
-        ),
-        el(
-          "span",
-          "pk-tip-move",
-          el("span", "pk-tip-pop", "Share"),
-          el("span", "pk-tip-cursor", iconNode("cursor", 15)),
-        ),
+    case "floating-tooltip": {
+      const tools = [
+        ["zoom", "Zoom"],
+        ["heart", "Favorite"],
+        ["share", "Share"],
+        ["trash", "Delete"],
+      ] as const;
+      const tip = el("span", "pk-tip-pop", tools[0][1]);
+      const move = el("span", "pk-tip-move", cursor(), tip);
+      const bar = el(
+        "span",
+        "pk-tip-bar",
+        ...tools.map(([name]) => iconNode(name, 15)),
+        move,
       );
+      if (!matchMedia("(prefers-reduced-motion: reduce)").matches) {
+        let index = 0;
+        const arrive = () => {
+          tip.textContent = tools[index][1];
+        };
+        move.addEventListener("transitionend", arrive);
+        const step = setInterval(() => {
+          if (!bar.isConnected) return;
+          index = (index + 1) % tools.length;
+          move.style.setProperty("--i", String(index));
+        }, 1400);
+        cleanups.push(() => {
+          clearInterval(step);
+          move.removeEventListener("transitionend", arrive);
+        });
+      }
+      return el("div", "pk pk-tip", bar);
+    }
     case "moving-highlight":
       return el(
         "div",
@@ -111,6 +131,7 @@ function stage(slug: MenuSlug, cleanups: (() => void)[]) {
           ...["Inbox", "Drafts", "Sent", "Archive"].map((label) =>
             el("span", "", label),
           ),
+          el("span", "pk-hl-move", cursor()),
         ),
       );
     case "hold-to-confirm":
@@ -131,12 +152,51 @@ function stage(slug: MenuSlug, cleanups: (() => void)[]) {
       cleanups.push(() => dots.destroy());
       return el("div", "pk pk-load", canvas);
     }
+    case "easing-gradients":
+      return el(
+        "div",
+        "pk pk-gr",
+        ...(["linear", "ease-in-out-sine"] as const).map((easing) => {
+          const bar = el("span");
+          bar.style.backgroundImage = easingGradient({
+            to: "#111",
+            easing,
+            direction: "to right",
+          });
+          return bar;
+        }),
+      );
+    case "copy-button": {
+      const icons = el(
+        "span",
+        "pk-copy-icons",
+        iconNode("copy", 14),
+        iconNode("check", 14),
+      );
+      const button = el("span", "pk-copy-btn", icons);
+      if (!matchMedia("(prefers-reduced-motion: reduce)").matches) {
+        const step = setInterval(() => {
+          if (button.isConnected) button.toggleAttribute("data-copied");
+        }, 1400);
+        cleanups.push(() => clearInterval(step));
+      }
+      return el(
+        "div",
+        "pk pk-copy",
+        el(
+          "span",
+          "pk-copy-code",
+          el("code", "", "reuse.sh/copy-button"),
+          button,
+        ),
+      );
+    }
     case "shadows":
       return el(
         "div",
         "pk pk-sh",
         ...["sm", "md", "xl"].map((level) =>
-          el("span", `reuse-shadow-ring-${level}`),
+          el("span", `re-shadow-ring-${level}`),
         ),
       );
   }

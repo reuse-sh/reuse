@@ -58,7 +58,7 @@ export default function AgentGuidesPage() {
           <a
             key={library.slug}
             className="h-guide"
-            data-reuse-row=""
+            data-re-row=""
             href={`/${library.slug}/guide.md`}
           >
             <Icon name={library.slug as IconName} size={18} />

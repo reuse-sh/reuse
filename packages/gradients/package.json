@@ -1,0 +1,43 @@
+{
+  "name": "@reuse-sh/gradients",
+  "version": "0.0.1",
+  "description": "Eased CSS gradients without banding, and a fade edge for horizontal scrollers.",
+  "keywords": [
+    "reuse",
+    "gradient",
+    "easing",
+    "css",
+    "fade",
+    "mask"
+  ],
+  "homepage": "https://reuse.sh/easing-gradients",
+  "bugs": "https://github.com/reuse-sh/reuse/issues",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/reuse-sh/reuse.git",
+    "directory": "packages/gradients"
+  },
+  "license": "MIT",
+  "author": "nK <https://nkdev.info>",
+  "type": "module",
+  "sideEffects": false,
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "node ../../scripts/clean-dist.mjs && tsc -p tsconfig.json",
+    "type-check": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}

@@ -109,7 +109,7 @@ export function LibraryMenu({
                 key={slug}
                 href={`/${slug}`}
                 className="c-menu-row"
-                data-reuse-row
+                data-re-row
                 data-peek={slug}
                 data-current={slug === current ? "" : undefined}
                 aria-current={slug === current ? "true" : undefined}

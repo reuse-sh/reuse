@@ -1,7 +1,7 @@
 "use client";
 
-import { createMovingHighlight } from "@reuse-sh/interactions";
 import { useEffect, useRef, useState } from "react";
+import { createSegmentHighlights } from "../segment-highlight";
 import { carouselStyles, mountCarouselStyle } from "./carousel-styles";
 
 export function CarouselControls() {
@@ -12,8 +12,7 @@ export function CarouselControls() {
 
   useEffect(() => {
     if (!group.current) return;
-    const highlight = createMovingHighlight(group.current);
-    return () => highlight.destroy();
+    return createSegmentHighlights(group.current);
   }, []);
 
   useEffect(() => {
@@ -34,7 +33,7 @@ export function CarouselControls() {
           <label
             key={entry.name}
             className="cc-seg-item"
-            data-reuse-row
+            data-re-row
             data-current={at === index ? "" : undefined}
           >
             <input

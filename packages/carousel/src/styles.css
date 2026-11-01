@@ -1,30 +1,30 @@
-.reuse-carousel {
+.re-carousel {
   position: relative;
   display: flex;
-  gap: var(--reuse-carousel-gap, 1rem);
+  gap: var(--re-carousel-gap, 1rem);
   overflow-x: auto;
   overscroll-behavior-x: contain;
   scroll-snap-type: x mandatory;
   scrollbar-width: none;
 }
 
-.reuse-carousel::-webkit-scrollbar {
+.re-carousel::-webkit-scrollbar {
   display: none;
 }
 
-.reuse-carousel__slide {
-  flex: 0 0 var(--reuse-carousel-slide-width, 100%);
+.re-carousel__slide {
+  flex: 0 0 var(--re-carousel-slide-width, 100%);
   min-width: 0;
-  scroll-snap-align: var(--reuse-carousel-align, start);
+  scroll-snap-align: var(--re-carousel-align, start);
 }
 
-.reuse-carousel:focus-visible {
+.re-carousel:focus-visible {
   outline: 2px solid currentColor;
   outline-offset: 4px;
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .reuse-carousel {
+  .re-carousel {
     scroll-behavior: auto;
   }
 }

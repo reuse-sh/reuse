@@ -31,7 +31,7 @@ function sampleStrip(page: Page, duration: number) {
         { left: number; opacity: number; emptyVisible: number; index: number }[]
       >((resolve) => {
         const viewport = document.querySelector<HTMLElement>(
-          ".reuse-lightbox-viewport",
+          ".re-lightbox-viewport",
         ) as HTMLElement;
         const samples: {
           left: number;
@@ -43,13 +43,13 @@ function sampleStrip(page: Page, duration: number) {
         const tick = () => {
           const box = viewport.getBoundingClientRect();
           const slides = [
-            ...viewport.querySelectorAll<HTMLElement>(".reuse-lightbox-slide"),
+            ...viewport.querySelectorAll<HTMLElement>(".re-lightbox-slide"),
           ];
           const emptyVisible = slides.filter((slide) => {
             const rect = slide.getBoundingClientRect();
             const visible =
               rect.right > box.left + 1 && rect.left < box.right - 1;
-            return visible && !slide.querySelector(".reuse-lightbox-frame");
+            return visible && !slide.querySelector(".re-lightbox-frame");
           }).length;
           samples.push({
             left: Math.round(viewport.scrollLeft),
@@ -90,7 +90,7 @@ test("a distant thumbnail jump fades instead of scrolling past the photos betwee
   await open(page, { thumbnails: true });
   const width = await page.evaluate(
     () =>
-      document.querySelector<HTMLElement>(".reuse-lightbox-viewport")
+      document.querySelector<HTMLElement>(".re-lightbox-viewport")
         ?.clientWidth ?? 0,
   );
   const samples = sampleStrip(page, 900);

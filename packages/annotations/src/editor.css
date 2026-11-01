@@ -1,8 +1,8 @@
-.reuse-annotation-editor {
+.re-annotation-editor {
   display: grid;
   gap: 1rem;
 }
-.reuse-annotation-toolbar {
+.re-annotation-toolbar {
   border: 0;
   margin: 0;
   padding: 0;
@@ -11,45 +11,45 @@
   gap: 0.35rem;
   flex-wrap: wrap;
 }
-.reuse-annotation-toolbar button {
+.re-annotation-toolbar button {
   font: inherit;
   color: inherit;
-  background: var(--reuse-annotation-control-background, transparent);
-  border: 1px solid var(--reuse-annotation-control-border, #8885);
+  background: var(--re-annotation-control-background, transparent);
+  border: 1px solid var(--re-annotation-control-border, #8885);
   border-radius: 0.4rem;
   padding: 0.4rem 0.6rem;
   cursor: pointer;
 }
-.reuse-annotation-toolbar button[aria-pressed="true"] {
-  background: var(--reuse-annotation-selected-background, #8882);
+.re-annotation-toolbar button[aria-pressed="true"] {
+  background: var(--re-annotation-selected-background, #8882);
   border-color: currentColor;
 }
-.reuse-annotation-toolbar button:disabled {
+.re-annotation-toolbar button:disabled {
   opacity: 0.4;
   cursor: default;
 }
-.reuse-annotation-toolbar button:focus-visible,
-.reuse-annotation-editor-canvas:focus-visible,
-.reuse-annotation-fields input:focus-visible,
-.reuse-annotation-fields select:focus-visible {
-  outline: 2px solid var(--reuse-annotation-color, #6657c7);
+.re-annotation-toolbar button:focus-visible,
+.re-annotation-editor-canvas:focus-visible,
+.re-annotation-fields input:focus-visible,
+.re-annotation-fields select:focus-visible {
+  outline: 2px solid var(--re-annotation-color, #6657c7);
   outline-offset: 3px;
 }
-.reuse-annotation-editor-canvas {
+.re-annotation-editor-canvas {
   position: relative;
 }
-.reuse-annotation-edit-layer {
+.re-annotation-edit-layer {
   position: absolute;
   z-index: 2;
   touch-action: none;
   cursor: crosshair;
 }
-.reuse-annotation-editor-canvas[data-reuse-annotation-tool="select"]
-  .reuse-annotation-edit-layer {
+.re-annotation-editor-canvas[data-re-annotation-tool="select"]
+  .re-annotation-edit-layer {
   cursor: default;
 }
-.reuse-annotation-target,
-.reuse-annotation-resize {
+.re-annotation-target,
+.re-annotation-resize {
   appearance: none;
   box-sizing: border-box;
   position: absolute;
@@ -59,53 +59,53 @@
   background: transparent;
   color: inherit;
 }
-.reuse-annotation-target {
+.re-annotation-target {
   cursor: move;
   border-radius: 4px;
 }
-.reuse-annotation-target[data-kind="marker"],
-.reuse-annotation-target[data-kind="pointer"] {
+.re-annotation-target[data-kind="marker"],
+.re-annotation-target[data-kind="pointer"] {
   width: 24px;
   height: 24px;
   border-radius: 50%;
   transform: translate(-50%, -50%);
 }
-.reuse-annotation-target[data-kind="arrow"],
-.reuse-annotation-target[data-kind="line"] {
+.re-annotation-target[data-kind="arrow"],
+.re-annotation-target[data-kind="line"] {
   height: 18px;
 }
-.reuse-annotation-target[data-selected="true"] {
-  outline: 2px solid var(--reuse-annotation-color, #6657c7);
+.re-annotation-target[data-selected="true"] {
+  outline: 2px solid var(--re-annotation-color, #6657c7);
   outline-offset: 3px;
 }
-.reuse-annotation-target:focus-visible,
-.reuse-annotation-resize:focus-visible {
+.re-annotation-target:focus-visible,
+.re-annotation-resize:focus-visible {
   outline: 2px solid currentColor;
   outline-offset: 3px;
 }
-.reuse-annotation-resize {
+.re-annotation-resize {
   z-index: 1;
   width: 12px;
   height: 12px;
-  border: 2px solid var(--reuse-annotation-color, #6657c7);
+  border: 2px solid var(--re-annotation-color, #6657c7);
   border-radius: 3px;
-  background: var(--reuse-annotation-handle-background, #fff);
+  background: var(--re-annotation-handle-background, #fff);
   transform: translate(-50%, -50%);
   cursor: crosshair;
 }
-.reuse-annotation-fields {
+.re-annotation-fields {
   display: flex;
   flex-wrap: wrap;
   gap: 0.75rem;
 }
-.reuse-annotation-fields label {
+.re-annotation-fields label {
   display: grid;
   gap: 0.35rem;
   flex: 1 1 12rem;
   font: inherit;
 }
-.reuse-annotation-fields input,
-.reuse-annotation-fields select {
+.re-annotation-fields input,
+.re-annotation-fields select {
   box-sizing: border-box;
   min-width: 0;
   max-width: 100%;
@@ -113,10 +113,10 @@
   color: inherit;
   background: transparent;
   padding: 0.45rem 0.6rem;
-  border: 1px solid var(--reuse-annotation-control-border, #8885);
+  border: 1px solid var(--re-annotation-control-border, #8885);
   border-radius: 0.4rem;
 }
-.reuse-annotation-editor-hint {
+.re-annotation-editor-hint {
   margin: 0;
   color: inherit;
   opacity: 0.65;

@@ -142,7 +142,7 @@ export function LightboxChat() {
               placeholder="Message Mara"
               aria-label="Message Mara"
             />
-            <button type="button" aria-label="Send" data-reuse-tooltip="Send">
+            <button type="button" aria-label="Send" data-re-tooltip="Send">
               <svg
                 width="16"
                 height="16"

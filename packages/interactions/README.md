@@ -1,6 +1,6 @@
 # @reuse-sh/interactions
 
-Three small interactions: a floating tooltip shared by nearby triggers, a moving highlight that follows hover and keyboard focus, and a hold-to-confirm button. Each works on plain DOM and has a React wrapper.
+Four small interactions: a floating tooltip shared by nearby triggers, a moving highlight that follows hover and keyboard focus, a hold-to-confirm button, and a copy button. Each works on plain DOM and has a React wrapper.
 
 <!-- principles:start -->
 
@@ -35,6 +35,15 @@ These are the rules the code keeps. An adaptation on any framework keeps them to
 - **Own the gesture, not the action.** Your code owns the request, the loading state, success and failure.
 - **Keep the native button.** It enhances a button you already have and restores its markup on destroy.
 
+### Copy button
+
+- **Keep one timer.** Each result clears the pending reset before it starts a new one, and a slow earlier copy never overwrites a newer result.
+- **Swap the icon in place.** The copy, check and error icons share one grid cell, so the state changes without moving the label or resizing the button.
+- **Announce the result.** A polite live region beside the button says Copied or Copy failed, so screen reader users hear what happened.
+- **Fall back when refused.** When the Clipboard API is missing or refused, it copies through a hidden selection, then restores the selection and focus it found.
+- **Name an icon-only button.** A button with no text and no label gets the accessible name Copy.
+- **Restore the button.** Destroy clears the timer, removes the icon, the status and the class and label it added, and puts back data-state.
+
 <!-- principles:end -->
 
 ## Install
@@ -50,6 +59,7 @@ import {
   createFloatingTooltip,
   createMovingHighlight,
   createHoldToConfirm,
+  createCopyButton,
 } from "@reuse-sh/interactions";
 import "@reuse-sh/interactions/styles.css";
 
@@ -62,14 +72,19 @@ const hold = createHoldToConfirm(button, {
   holdMs: 1200,
   onConfirm: () => removeDraft(),
 });
+
+const copy = createCopyButton(copyButton, {
+  text: "npm install @reuse-sh/interactions",
+});
 ```
 
-Tooltip triggers use `data-reuse-tooltip="Description"`. Highlight rows use `data-reuse-row`, and the selected row has `data-current`.
+Tooltip triggers use `data-re-tooltip="Description"`. Highlight rows use `data-re-row`, and the selected row has `data-current`. The copy button sets `data-state` to `idle`, `copied` or `error`, swaps its icon, and announces the result to screen readers. It returns to idle after `resetMs`, 1600 by default.
 
 ## React
 
 ```tsx
 import {
+  CopyButton,
   FloatingTooltip,
   FloatingTooltipGroup,
   HoldToConfirmButton,
@@ -84,13 +99,15 @@ import "@reuse-sh/interactions/styles.css";
 </FloatingTooltipGroup>
 
 <MovingHighlight>
-  <button data-reuse-row data-current>Overview</button>
-  <button data-reuse-row>Examples</button>
+  <button data-re-row data-current>Overview</button>
+  <button data-re-row>Examples</button>
 </MovingHighlight>
 
 <HoldToConfirmButton holdMs={1200} onConfirm={removeDraft}>
   Hold to remove
 </HoldToConfirmButton>
+
+<CopyButton text="npm install @reuse-sh/interactions">Copy</CopyButton>
 ```
 
 ## Documentation

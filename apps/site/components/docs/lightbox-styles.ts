@@ -1,7 +1,7 @@
 /**
  * Lightbox control styles. The package draws its own buttons, counter, caption and
  * thumbnails; each style rearranges and restyles them with page CSS on the
- * lightbox-style class, plus a small chrome script for the styles that move parts.
+ * re-lightbox-style class, plus a small chrome script for the styles that move parts.
  * The preview frame (lightbox-frame.ts) runs exactly the CSS and chrome shown on the page.
  */
 export interface LightboxStyle {
@@ -41,7 +41,7 @@ export const lightboxStyles: Record<string, LightboxStyle> = {
   toolbar: style("Toolbar", "Toolbar", false, "Below", "Light", false, true),
 };
 
-export const LIGHTBOX_STYLE_CLASS = "lightbox-style";
+export const LIGHTBOX_STYLE_CLASS = "re-lightbox-style";
 
 const hasBar = (o: LightboxStyle) =>
   o.arrows === "Toolbar" || o.counter === "Toolbar";
@@ -51,47 +51,47 @@ const always = () => true;
 const rules: readonly (readonly [(o: LightboxStyle) => boolean, string])[] = [
   [
     always,
-    `.lightbox-style {
-  --lightbox-pad: 16px;
-  --lightbox-side: 0px;
-  --lightbox-caption: 0px;
-  --lightbox-strip: 0px;
-  --lightbox-bar: 0px;
-  --lightbox-under: 0px;
-  --lightbox-bottom: calc(var(--lightbox-caption) + var(--lightbox-strip) + var(--lightbox-bar) + var(--lightbox-under));
-  --lightbox-ring: 0 0 0 0.5px rgb(0 0 0 / 10%), 0 1px 2px rgb(0 0 0 / 6%), 0 2px 6px rgb(0 0 0 / 4%);
-  --reuse-lightbox-background: #fcfcfc;
-  --reuse-lightbox-foreground: #1f1f1f;
-  --reuse-lightbox-control: #fff;
+    `.re-lightbox-style {
+  --re-lightbox-pad: 16px;
+  --re-lightbox-side: 0px;
+  --re-lightbox-caption: 0px;
+  --re-lightbox-strip: 0px;
+  --re-lightbox-bar: 0px;
+  --re-lightbox-under: 0px;
+  --re-lightbox-bottom: calc(var(--re-lightbox-caption) + var(--re-lightbox-strip) + var(--re-lightbox-bar) + var(--re-lightbox-under));
+  --re-lightbox-ring: 0 0 0 0.5px rgb(0 0 0 / 10%), 0 1px 2px rgb(0 0 0 / 6%), 0 2px 6px rgb(0 0 0 / 4%);
+  --re-lightbox-background: #fcfcfc;
+  --re-lightbox-foreground: #1f1f1f;
+  --re-lightbox-control: #fff;
 }
-.lightbox-style *, .lightbox-style *::before, .lightbox-style *::after { box-sizing: border-box; }
-.lightbox-style .reuse-lightbox-viewport {
-  width: calc(100% - var(--lightbox-side));
-  height: calc(100% - var(--lightbox-bottom));
+.re-lightbox-style *, .re-lightbox-style *::before, .re-lightbox-style *::after { box-sizing: border-box; }
+.re-lightbox-style .re-lightbox-viewport {
+  width: calc(100% - var(--re-lightbox-side));
+  height: calc(100% - var(--re-lightbox-bottom));
 }
-.lightbox-style .reuse-lightbox-button {
+.re-lightbox-style .re-lightbox-button {
   width: 40px;
   height: 40px;
   padding: 0;
   color: inherit;
-  box-shadow: var(--lightbox-ring);
+  box-shadow: var(--re-lightbox-ring);
   backdrop-filter: none;
   transition: background-color 150ms ease, transform 160ms cubic-bezier(0.23, 1, 0.32, 1), opacity 300ms ease;
 }
-.lightbox-style .reuse-lightbox-button svg { width: 18px; height: 18px; }
-.lightbox-style .reuse-lightbox-button:hover { background: #f4f4f4; }
-.lightbox-style .reuse-lightbox-button:active:not(:disabled) { transform: scale(0.95); }
-.lightbox-style .reuse-lightbox-button:disabled { opacity: 0.3; }
-.lightbox-style .reuse-lightbox-close, .lightbox-style .reuse-lightbox-zoom { top: var(--lightbox-pad); }
-.lightbox-style .reuse-lightbox-close { right: var(--lightbox-pad); }
-.lightbox-style .reuse-lightbox-zoom { right: calc(var(--lightbox-pad) + 48px); }
-.lightbox-style .reuse-lightbox-footer {
-  right: calc(var(--lightbox-side) + var(--lightbox-pad));
-  bottom: calc(var(--lightbox-under) + var(--lightbox-pad));
-  left: var(--lightbox-pad);
+.re-lightbox-style .re-lightbox-button svg { width: 18px; height: 18px; }
+.re-lightbox-style .re-lightbox-button:hover { background: #f4f4f4; }
+.re-lightbox-style .re-lightbox-button:active:not(:disabled) { transform: scale(0.95); }
+.re-lightbox-style .re-lightbox-button:disabled { opacity: 0.3; }
+.re-lightbox-style .re-lightbox-close, .re-lightbox-style .re-lightbox-zoom { top: var(--re-lightbox-pad); }
+.re-lightbox-style .re-lightbox-close { right: var(--re-lightbox-pad); }
+.re-lightbox-style .re-lightbox-zoom { right: calc(var(--re-lightbox-pad) + 48px); }
+.re-lightbox-style .re-lightbox-footer {
+  right: calc(var(--re-lightbox-side) + var(--re-lightbox-pad));
+  bottom: calc(var(--re-lightbox-under) + var(--re-lightbox-pad));
+  left: var(--re-lightbox-pad);
   gap: 10px;
 }
-.lightbox-style .reuse-lightbox-counter {
+.re-lightbox-style .re-lightbox-counter {
   padding: 0;
   background: none;
   backdrop-filter: none;
@@ -100,45 +100,45 @@ const rules: readonly (readonly [(o: LightboxStyle) => boolean, string])[] = [
   ],
   [
     (o) => o.arrows === "Sides",
-    `.lightbox-style .reuse-lightbox-prev,
-.lightbox-style .reuse-lightbox-next { top: calc((100% - var(--lightbox-bottom)) / 2 - 20px); }
-.lightbox-style .reuse-lightbox-prev { left: var(--lightbox-pad); }
-.lightbox-style .reuse-lightbox-next { right: calc(var(--lightbox-side) + var(--lightbox-pad)); }`,
+    `.re-lightbox-style .re-lightbox-prev,
+.re-lightbox-style .re-lightbox-next { top: calc((100% - var(--re-lightbox-bottom)) / 2 - 20px); }
+.re-lightbox-style .re-lightbox-prev { left: var(--re-lightbox-pad); }
+.re-lightbox-style .re-lightbox-next { right: calc(var(--re-lightbox-side) + var(--re-lightbox-pad)); }`,
   ],
   [
     (o) => o.arrows === "None",
-    `.lightbox-style .reuse-lightbox-prev,
-.lightbox-style .reuse-lightbox-next { display: none; }`,
+    `.re-lightbox-style .re-lightbox-prev,
+.re-lightbox-style .re-lightbox-next { display: none; }`,
   ],
   [
     (o) => o.counter === "None",
-    ".lightbox-style .reuse-lightbox-counter { display: none; }",
+    ".re-lightbox-style .re-lightbox-counter { display: none; }",
   ],
   [
     (o) => o.counter === "Corner",
-    `.lightbox-style .reuse-lightbox-counter {
+    `.re-lightbox-style .re-lightbox-counter {
   position: fixed;
   z-index: 2;
-  top: var(--lightbox-pad);
-  left: var(--lightbox-pad);
+  top: var(--re-lightbox-pad);
+  left: var(--re-lightbox-pad);
   display: grid;
   height: 40px;
   padding: 0 14px;
   place-items: center;
   border-radius: 999px;
   background: #fff;
-  box-shadow: var(--lightbox-ring);
+  box-shadow: var(--re-lightbox-ring);
   font-weight: 500;
 }`,
   ],
   [
     (o) => !o.zoomButton,
-    ".lightbox-style .reuse-lightbox-zoom { display: none; }",
+    ".re-lightbox-style .re-lightbox-zoom { display: none; }",
   ],
   [
     (o) => o.caption === "Below",
-    `.lightbox-style { --lightbox-caption: 30px; }
-.lightbox-style .reuse-lightbox-caption {
+    `.re-lightbox-style { --re-lightbox-caption: 30px; }
+.re-lightbox-style .re-lightbox-caption {
   order: 1;
   padding: 0;
   background: none;
@@ -149,14 +149,14 @@ const rules: readonly (readonly [(o: LightboxStyle) => boolean, string])[] = [
   ],
   [
     (o) => o.caption !== "Below",
-    ".lightbox-style .reuse-lightbox-caption { display: none; }",
+    ".re-lightbox-style .re-lightbox-caption { display: none; }",
   ],
   [
     (o) => o.thumbnails,
-    `.lightbox-style { --lightbox-strip: 64px; }
-.lightbox-style .reuse-lightbox-thumbnails { order: 2; max-width: 100%; gap: 6px; padding: 5px; scrollbar-width: none; }
-.lightbox-style .reuse-lightbox-thumbnails::-webkit-scrollbar { display: none; }
-.lightbox-style .reuse-lightbox-thumbnails button {
+    `.re-lightbox-style { --re-lightbox-strip: 64px; }
+.re-lightbox-style .re-lightbox-thumbnails { order: 2; max-width: 100%; gap: 6px; padding: 5px; scrollbar-width: none; }
+.re-lightbox-style .re-lightbox-thumbnails::-webkit-scrollbar { display: none; }
+.re-lightbox-style .re-lightbox-thumbnails button {
   flex: 0 0 60px;
   width: 60px;
   height: 44px;
@@ -166,16 +166,15 @@ const rules: readonly (readonly [(o: LightboxStyle) => boolean, string])[] = [
   opacity: 0.45;
   transition: opacity 200ms ease, box-shadow 200ms ease;
 }
-.lightbox-style .reuse-lightbox-thumbnails button:hover { opacity: 0.8; }
-.lightbox-style .reuse-lightbox-thumbnails button[aria-current="true"] {
+.re-lightbox-style .re-lightbox-thumbnails button[aria-current="true"] {
   opacity: 1;
-  box-shadow: 0 0 0 2px var(--reuse-lightbox-background), 0 0 0 3.5px var(--reuse-lightbox-foreground);
+  box-shadow: 0 0 0 2px var(--re-lightbox-background), 0 0 0 3.5px var(--re-lightbox-foreground);
 }`,
   ],
   [
     hasBar,
-    `.lightbox-style { --lightbox-bar: 58px; }
-.lightbox-style-toolbar {
+    `.re-lightbox-style { --re-lightbox-bar: 58px; }
+.re-lightbox-style-toolbar {
   order: 3;
   display: flex;
   align-items: center;
@@ -187,15 +186,15 @@ const rules: readonly (readonly [(o: LightboxStyle) => boolean, string])[] = [
   box-shadow: 0 0 0 0.5px rgb(0 0 0 / 10%), 0 2px 4px rgb(0 0 0 / 5%), 0 8px 24px rgb(0 0 0 / 7%);
   pointer-events: auto;
 }
-.lightbox-style-toolbar .reuse-lightbox-button { position: static; box-shadow: none; background: transparent; }
-.lightbox-style-toolbar .reuse-lightbox-button:hover { background: rgb(0 0 0 / 5%); }
-.lightbox-style-toolbar .reuse-lightbox-counter { min-width: 52px; padding: 0 6px; font-weight: 500; text-align: center; }
-.lightbox-style-toolbar-divider { width: 1px; height: 20px; margin: 0 4px; background: rgb(0 0 0 / 10%); }`,
+.re-lightbox-style-toolbar .re-lightbox-button { position: static; box-shadow: none; background: transparent; }
+.re-lightbox-style-toolbar .re-lightbox-button:hover { background: rgb(0 0 0 / 5%); }
+.re-lightbox-style-toolbar .re-lightbox-counter { min-width: 52px; padding: 0 6px; font-weight: 500; text-align: center; }
+.re-lightbox-style-toolbar-divider { width: 1px; height: 20px; margin: 0 4px; background: rgb(0 0 0 / 10%); }`,
   ],
   [
     (o) => o.caption === "Panel",
-    `.lightbox-style { --lightbox-side: 240px; }
-.lightbox-style-panel {
+    `.re-lightbox-style { --re-lightbox-side: 240px; }
+.re-lightbox-style-panel {
   position: absolute;
   z-index: 1;
   top: 0;
@@ -203,38 +202,38 @@ const rules: readonly (readonly [(o: LightboxStyle) => boolean, string])[] = [
   bottom: 0;
   display: flex;
   flex-direction: column;
-  width: var(--lightbox-side);
+  width: var(--re-lightbox-side);
   padding: 72px 24px 24px;
   background: #fff;
   box-shadow: -1px 0 0 rgb(0 0 0 / 6%);
   color: #1f1f1f;
 }
-.lightbox-style-panel :where(h2, p) { margin: 0; }
-.lightbox-style-panel h2 { font-size: 19px; font-weight: 560; line-height: 26px; letter-spacing: -0.01em; }
-.lightbox-style-panel-place { margin-top: 2px; color: #8a8a8a; font-size: 13.5px; line-height: 20px; }
-.lightbox-style-panel-text { margin-top: 16px; color: #4a4a4a; font-size: 13.5px; line-height: 21px; }`,
+.re-lightbox-style-panel :where(h2, p) { margin: 0; }
+.re-lightbox-style-panel h2 { font-size: 19px; font-weight: 560; line-height: 26px; letter-spacing: -0.01em; }
+.re-lightbox-style-panel-place { margin-top: 2px; color: #8a8a8a; font-size: 13.5px; line-height: 20px; }
+.re-lightbox-style-panel-text { margin-top: 16px; color: #4a4a4a; font-size: 13.5px; line-height: 21px; }`,
   ],
   [
     dark,
-    `.lightbox-style {
-  --lightbox-ring: none;
-  --reuse-lightbox-background: #09090a;
-  --reuse-lightbox-foreground: #fff;
-  --reuse-lightbox-control: rgb(255 255 255 / 8%);
+    `.re-lightbox-style {
+  --re-lightbox-ring: none;
+  --re-lightbox-background: #09090a;
+  --re-lightbox-foreground: #fff;
+  --re-lightbox-control: rgb(255 255 255 / 8%);
 }
-.lightbox-style .reuse-lightbox-button:hover { background: rgb(255 255 255 / 14%); }`,
+.re-lightbox-style .re-lightbox-button:hover { background: rgb(255 255 255 / 14%); }`,
   ],
   [
     (o) => dark(o) && o.caption === "Below",
-    ".lightbox-style .reuse-lightbox-caption { color: rgb(255 255 255 / 72%); }",
+    ".re-lightbox-style .re-lightbox-caption { color: rgb(255 255 255 / 72%); }",
   ],
   [
     (o) => dark(o) && o.counter === "Corner",
-    `.lightbox-style .reuse-lightbox-counter {
+    `.re-lightbox-style .re-lightbox-counter {
   height: auto;
   padding: 0;
-  top: calc(var(--lightbox-pad) + 12px);
-  left: calc(var(--lightbox-pad) + 4px);
+  top: calc(var(--re-lightbox-pad) + 12px);
+  left: calc(var(--re-lightbox-pad) + 4px);
   background: none;
   color: rgb(255 255 255 / 60%);
   font-family: ui-monospace, monospace;
@@ -244,27 +243,27 @@ const rules: readonly (readonly [(o: LightboxStyle) => boolean, string])[] = [
   ],
   [
     (o) => dark(o) && o.thumbnails,
-    ".lightbox-style .reuse-lightbox-thumbnails button { background: #222; }",
+    ".re-lightbox-style .re-lightbox-thumbnails button { background: #222; }",
   ],
   [
     (o) => dark(o) && hasBar(o),
-    `.lightbox-style-toolbar { background: rgb(32 32 34 / 94%); box-shadow: 0 0 0 0.5px rgb(255 255 255 / 10%); }
-.lightbox-style .lightbox-style-toolbar .reuse-lightbox-button:hover { background: rgb(255 255 255 / 10%); }
-.lightbox-style-toolbar-divider { background: rgb(255 255 255 / 14%); }`,
+    `.re-lightbox-style-toolbar { background: rgb(32 32 34 / 94%); box-shadow: 0 0 0 0.5px rgb(255 255 255 / 10%); }
+.re-lightbox-style .re-lightbox-style-toolbar .re-lightbox-button:hover { background: rgb(255 255 255 / 10%); }
+.re-lightbox-style-toolbar-divider { background: rgb(255 255 255 / 14%); }`,
   ],
   [
     (o) => dark(o) && o.caption === "Panel",
-    `.lightbox-style-panel { background: #151517; box-shadow: -1px 0 0 rgb(255 255 255 / 8%); color: #fff; }
-.lightbox-style-panel-place { color: rgb(255 255 255 / 50%); }
-.lightbox-style-panel-text { color: rgb(255 255 255 / 70%); }`,
+    `.re-lightbox-style-panel { background: #151517; box-shadow: -1px 0 0 rgb(255 255 255 / 8%); color: #fff; }
+.re-lightbox-style-panel-place { color: rgb(255 255 255 / 50%); }
+.re-lightbox-style-panel-text { color: rgb(255 255 255 / 70%); }`,
   ],
   [
     (o) => o.autoHide,
-    `.lightbox-style :is(.reuse-lightbox-button, .reuse-lightbox-counter, .reuse-lightbox-caption, .reuse-lightbox-thumbnails, .lightbox-style-toolbar) {
+    `.re-lightbox-style :is(.re-lightbox-button, .re-lightbox-counter, .re-lightbox-caption, .re-lightbox-thumbnails, .re-lightbox-style-toolbar) {
   transition: opacity 400ms ease, background-color 150ms ease, transform 160ms cubic-bezier(0.23, 1, 0.32, 1);
 }
-.lightbox-style[data-idle], .lightbox-style[data-idle] .reuse-lightbox-frame { cursor: none; }
-.lightbox-style[data-idle] :is(.reuse-lightbox-button, .reuse-lightbox-counter, .reuse-lightbox-caption, .reuse-lightbox-thumbnails, .lightbox-style-toolbar) {
+.re-lightbox-style[data-idle], .re-lightbox-style[data-idle] .re-lightbox-frame { cursor: none; }
+.re-lightbox-style[data-idle] :is(.re-lightbox-button, .re-lightbox-counter, .re-lightbox-caption, .re-lightbox-thumbnails, .re-lightbox-style-toolbar) {
   opacity: 0;
   transition-duration: 700ms;
 }`,
@@ -272,48 +271,48 @@ const rules: readonly (readonly [(o: LightboxStyle) => boolean, string])[] = [
   [
     always,
     `@media (max-width: 559px) {
-  .lightbox-style { --lightbox-pad: 12px; }
+  .re-lightbox-style { --re-lightbox-pad: 12px; }
 }`,
   ],
   [
     (o) => o.thumbnails,
     `@media (max-width: 559px) {
-  .lightbox-style { --lightbox-strip: 56px; }
-  .lightbox-style .reuse-lightbox-thumbnails button { flex-basis: 48px; width: 48px; height: 36px; }
+  .re-lightbox-style { --re-lightbox-strip: 56px; }
+  .re-lightbox-style .re-lightbox-thumbnails button { flex-basis: 48px; width: 48px; height: 36px; }
 }`,
   ],
   [
     (o) => o.caption === "Panel",
     `@media (max-width: 559px) {
-  .lightbox-style { --lightbox-side: 0px; --lightbox-under: 112px; }
-  .lightbox-style-panel {
+  .re-lightbox-style { --re-lightbox-side: 0px; --re-lightbox-under: 112px; }
+  .re-lightbox-style-panel {
     top: auto;
     left: 0;
     width: auto;
-    height: var(--lightbox-under);
+    height: var(--re-lightbox-under);
     padding: 16px;
     box-shadow: 0 -1px 0 rgb(0 0 0 / 6%);
   }
-  .lightbox-style-panel h2 { font-size: 16px; line-height: 22px; }
-  .lightbox-style-panel-place { font-size: 13px; }
-  .lightbox-style-panel-text { margin-top: 6px; font-size: 13px; line-height: 19px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+  .re-lightbox-style-panel h2 { font-size: 16px; line-height: 22px; }
+  .re-lightbox-style-panel-place { font-size: 13px; }
+  .re-lightbox-style-panel-text { margin-top: 6px; font-size: 13px; line-height: 19px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 }`,
   ],
   [
     (o) => dark(o) && o.caption === "Panel",
     `@media (max-width: 559px) {
-  .lightbox-style-panel { box-shadow: 0 -1px 0 rgb(255 255 255 / 8%); }
+  .re-lightbox-style-panel { box-shadow: 0 -1px 0 rgb(255 255 255 / 8%); }
 }`,
   ],
   [
     always,
     `@media (prefers-reduced-motion: reduce) {
-  .lightbox-style, .lightbox-style * { transition-duration: 0ms !important; }
+  .re-lightbox-style, .re-lightbox-style * { transition-duration: 0ms !important; }
 }`,
   ],
 ];
 
-/** The page CSS one style needs, written against the lightbox-style class. */
+/** The page CSS one style needs, written against the re-lightbox-style class. */
 export function lightboxStyleCss(options: LightboxStyle) {
   return rules
     .filter(([when]) => when(options))
@@ -339,14 +338,14 @@ export function lightboxChrome(options: LightboxStyle) {
       options.arrows === "Toolbar" && `part("next")`,
     ].filter(Boolean);
     parts.push(`  const bar = document.createElement("div");
-  bar.className = "lightbox-style-toolbar";
+  bar.className = "re-lightbox-style-toolbar";
   bar.setAttribute("role", "group");
   bar.setAttribute("aria-label", "Photo controls");
   bar.append(${order.join(", ")});${
     options.zoomButton
       ? `
   const divider = document.createElement("span");
-  divider.className = "lightbox-style-toolbar-divider";
+  divider.className = "re-lightbox-style-toolbar-divider";
   divider.setAttribute("aria-hidden", "true");
   bar.append(divider, part("zoom"));`
       : ""
@@ -355,8 +354,8 @@ export function lightboxChrome(options: LightboxStyle) {
   }
   if (panel)
     parts.push(`  const panel = document.createElement("aside");
-  panel.className = "lightbox-style-panel";
-  panel.innerHTML = \`<h2></h2><p class="lightbox-style-panel-place"></p><p class="lightbox-style-panel-text"></p>\`;
+  panel.className = "re-lightbox-style-panel";
+  panel.innerHTML = \`<h2></h2><p class="re-lightbox-style-panel-place"></p><p class="re-lightbox-style-panel-text"></p>\`;
   dialog.append(panel);
   const [title, place, text] = panel.children;
   syncs.push((state) => {
@@ -387,8 +386,8 @@ export function lightboxChrome(options: LightboxStyle) {
   wake();
   cleanups.push(() => clearTimeout(timer));`);
   return `export function addChrome(lightbox, items) {
-  const dialog = document.querySelector("dialog.lightbox-style");
-  const part = (name) => dialog.querySelector(\`.reuse-lightbox-\${name}\`);
+  const dialog = document.querySelector("dialog.re-lightbox-style");
+  const part = (name) => dialog.querySelector(\`.re-lightbox-\${name}\`);
   const syncs = [];
   const cleanups = [];
 

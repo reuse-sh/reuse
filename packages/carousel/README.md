@@ -49,7 +49,7 @@ import "@reuse-sh/carousel/styles.css";
 function Gallery({ children }) {
   const { ref, carousel } = useCarousel({ loop: true });
   return <>
-    <div ref={ref} className="reuse-carousel">
+    <div ref={ref} className="re-carousel">
       {children}
     </div>
     <button onClick={() => carousel?.next()}>Next</button>

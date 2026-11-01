@@ -1,7 +1,7 @@
-.reuse-lightbox {
-  --reuse-lightbox-background: rgb(15 15 17 / 96%);
-  --reuse-lightbox-foreground: #fff;
-  --reuse-lightbox-control: rgb(35 35 38 / 96%);
+.re-lightbox {
+  --re-lightbox-background: rgb(15 15 17 / 96%);
+  --re-lightbox-foreground: #fff;
+  --re-lightbox-control: rgb(35 35 38 / 96%);
   position: fixed;
   inset: 0;
   width: 100%;
@@ -13,20 +13,20 @@
   overflow: hidden;
   border: 0;
   background: transparent;
-  color: var(--reuse-lightbox-foreground);
+  color: var(--re-lightbox-foreground);
   overscroll-behavior: contain;
   font-family: inherit;
 }
-.reuse-lightbox::backdrop {
+.re-lightbox::backdrop {
   background: transparent;
 }
-.reuse-lightbox-backdrop {
+.re-lightbox-backdrop {
   position: absolute;
   inset: 0;
-  background: var(--reuse-lightbox-background);
+  background: var(--re-lightbox-background);
   pointer-events: none;
 }
-.reuse-lightbox-viewport {
+.re-lightbox-viewport {
   position: relative;
   display: flex;
   width: 100%;
@@ -39,10 +39,10 @@
   touch-action: pan-x;
   outline-offset: -4px;
 }
-.reuse-lightbox-viewport::-webkit-scrollbar {
+.re-lightbox-viewport::-webkit-scrollbar {
   display: none;
 }
-.reuse-lightbox-slide {
+.re-lightbox-slide {
   position: relative;
   display: grid;
   flex: 0 0 100%;
@@ -53,19 +53,19 @@
   scroll-snap-stop: always;
   overflow: hidden;
 }
-.reuse-lightbox-frame {
+.re-lightbox-frame {
   position: relative;
   flex: none;
   transform-origin: center;
   cursor: zoom-in;
 }
-.reuse-lightbox[data-zoomed="true"] .reuse-lightbox-frame {
+.re-lightbox[data-zoomed="true"] .re-lightbox-frame {
   cursor: grab;
 }
-.reuse-lightbox[data-zoomed="true"] .reuse-lightbox-frame:active {
+.re-lightbox[data-zoomed="true"] .re-lightbox-frame:active {
   cursor: grabbing;
 }
-.reuse-lightbox-image {
+.re-lightbox-image {
   display: block;
   width: 100%;
   height: 100%;
@@ -74,7 +74,7 @@
   user-select: none;
   -webkit-user-drag: none;
 }
-.reuse-lightbox-button {
+.re-lightbox-button {
   position: absolute;
   z-index: 2;
   display: grid;
@@ -84,7 +84,7 @@
   place-items: center;
   border: 0;
   border-radius: 50%;
-  background: var(--reuse-lightbox-control);
+  background: var(--re-lightbox-control);
   color: inherit;
   font: inherit;
   font-size: 26px;
@@ -93,39 +93,39 @@
   touch-action: manipulation;
   backdrop-filter: blur(16px);
 }
-.reuse-lightbox-button svg {
+.re-lightbox-button svg {
   width: 24px;
   height: 24px;
 }
-.reuse-lightbox-button:hover {
+.re-lightbox-button:hover {
   background: rgb(58 58 62 / 98%);
 }
-.reuse-lightbox-button:disabled {
+.re-lightbox-button:disabled {
   opacity: 0.3;
   cursor: default;
 }
-.reuse-lightbox-button:focus-visible,
-.reuse-lightbox-thumbnails button:focus-visible {
+.re-lightbox-button:focus-visible,
+.re-lightbox-thumbnails button:focus-visible {
   outline: 2px solid currentColor;
   outline-offset: 3px;
 }
-.reuse-lightbox-close {
+.re-lightbox-close {
   top: max(16px, env(safe-area-inset-top));
   right: max(16px, env(safe-area-inset-right));
 }
-.reuse-lightbox-zoom {
+.re-lightbox-zoom {
   top: max(16px, env(safe-area-inset-top));
   right: calc(max(16px, env(safe-area-inset-right)) + 54px);
 }
-.reuse-lightbox-prev {
+.re-lightbox-prev {
   top: calc(50% - 22px);
   left: max(16px, env(safe-area-inset-left));
 }
-.reuse-lightbox-next {
+.re-lightbox-next {
   top: calc(50% - 22px);
   right: max(16px, env(safe-area-inset-right));
 }
-.reuse-lightbox-footer {
+.re-lightbox-footer {
   position: absolute;
   z-index: 2;
   right: 72px;
@@ -136,32 +136,32 @@
   gap: 10px;
   pointer-events: none;
 }
-.reuse-lightbox-counter {
+.re-lightbox-counter {
   padding: 6px 12px;
   border-radius: 20px;
-  background: var(--reuse-lightbox-control);
+  background: var(--re-lightbox-control);
   font-size: 13px;
   font-variant-numeric: tabular-nums;
   backdrop-filter: blur(16px);
 }
-.reuse-lightbox-caption {
+.re-lightbox-caption {
   max-width: 60ch;
   max-height: 20vh;
   margin: 0;
   overflow: auto;
   padding: 4px 10px;
   border-radius: 4px;
-  background: var(--reuse-lightbox-background);
+  background: var(--re-lightbox-background);
   font-size: 14px;
   line-height: 1.5;
   text-align: center;
   overflow-wrap: anywhere;
   pointer-events: auto;
 }
-.reuse-lightbox-caption:empty {
+.re-lightbox-caption:empty {
   display: none;
 }
-.reuse-lightbox-thumbnails {
+.re-lightbox-thumbnails {
   display: flex;
   max-width: 100%;
   gap: 8px;
@@ -169,7 +169,7 @@
   padding: 4px;
   pointer-events: auto;
 }
-.reuse-lightbox-thumbnails button {
+.re-lightbox-thumbnails button {
   flex: 0 0 44px;
   width: 44px;
   height: 44px;
@@ -181,17 +181,17 @@
   opacity: 0.6;
   cursor: pointer;
 }
-.reuse-lightbox-thumbnails button[aria-current="true"] {
-  border-color: var(--reuse-lightbox-foreground);
+.re-lightbox-thumbnails button[aria-current="true"] {
+  border-color: var(--re-lightbox-foreground);
   opacity: 1;
 }
-.reuse-lightbox-thumbnails img {
+.re-lightbox-thumbnails img {
   width: 100%;
   height: 100%;
   object-fit: cover;
 }
 
-.reuse-lightbox-error {
+.re-lightbox-error {
   position: absolute;
   inset: 0;
   display: grid;
@@ -200,19 +200,19 @@
   text-align: center;
 }
 @media (max-width: 480px) {
-  .reuse-lightbox-prev {
+  .re-lightbox-prev {
     left: 8px;
   }
-  .reuse-lightbox-next {
+  .re-lightbox-next {
     right: 8px;
   }
-  .reuse-lightbox-footer {
+  .re-lightbox-footer {
     right: 16px;
     left: 16px;
   }
 }
 @media (prefers-reduced-motion: reduce) {
-  .reuse-lightbox-viewport {
+  .re-lightbox-viewport {
     scroll-behavior: auto;
   }
 }

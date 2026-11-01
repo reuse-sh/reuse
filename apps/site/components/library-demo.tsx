@@ -1,5 +1,7 @@
 import { AnnotationsDemo } from "./demos/annotations";
 import { AvatarsDemo } from "./demos/avatars";
+import { CopyDemo } from "./demos/copy";
+import { GradientsDemo } from "./demos/gradients";
 import { HighlightDemo, HoldDemo } from "./demos/interactions";
 import { LoadersDemo } from "./demos/loaders";
 import { ShadowsDemo } from "./demos/shadows";
@@ -18,6 +20,10 @@ export function LibraryDemo({ slug }: { slug: string }) {
       return <HoldDemo />;
     case "avatars":
       return <AvatarsDemo />;
+    case "easing-gradients":
+      return <GradientsDemo />;
+    case "copy-button":
+      return <CopyDemo />;
     default:
       return null;
   }

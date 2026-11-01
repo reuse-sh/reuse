@@ -11,9 +11,9 @@
     * { box-sizing:border-box; }
     body { margin:0; padding:28px; background:#fcfcfc; font:14px Geist,sans-serif; color:#292929; }
     h1 { font-size:17px; font-weight:500; margin:0 0 24px; }
-    .reuse-carousel { --reuse-carousel-gap:10px; --reuse-carousel-slide-width:67%; }
-    .reuse-carousel__slide { display:block; border-radius:10px; overflow:hidden; }
-    .reuse-carousel__slide img { display:block; width:100%; height:245px; object-fit:cover; }
+    .re-carousel { --re-carousel-gap:10px; --re-carousel-slide-width:67%; }
+    .re-carousel__slide { display:block; border-radius:10px; overflow:hidden; }
+    .re-carousel__slide img { display:block; width:100%; height:245px; object-fit:cover; }
     .controls { display:flex; justify-content:space-between; align-items:center; gap:15px; margin-top:22px; }
     button { font:inherit; color:inherit; border:1px solid #ddd; border-radius:7px; padding:8px 12px; background:white; cursor:pointer; }
     button:focus-visible,a:focus-visible { outline:2px solid #333; outline-offset:4px; }
@@ -24,13 +24,13 @@
 </head>
 <body>
   <h1>The same modules. No React.</h1>
-  <section class="reuse-carousel" data-native-gallery aria-label="Native image carousel">
-    <a class="reuse-carousel__slide" data-carousel-slide href="/images/marble-lake.svg"><img src="/images/marble-lake.svg" alt="A soft marble texture in coral, sand and blue" width="1600" height="1200" loading="lazy"></a>
-    <a class="reuse-carousel__slide" data-carousel-slide href="/images/marble-mountains.svg"><img src="/images/marble-mountains.svg" alt="A soft marble texture in mint, blue and orange" width="1600" height="1200" loading="lazy"></a>
-    <a class="reuse-carousel__slide" data-carousel-slide href="/images/marble-coast.svg"><img src="/images/marble-coast.svg" alt="A soft marble texture in lilac, rose and sea green" width="1600" height="1200" loading="lazy"></a>
-    <a class="reuse-carousel__slide" data-carousel-slide href="/images/marble-forest.svg"><img src="/images/marble-forest.svg" alt="A soft marble texture in sand, green and violet" width="1600" height="1200" loading="lazy"></a>
-    <a class="reuse-carousel__slide" data-carousel-slide href="/images/marble-night.svg"><img src="/images/marble-night.svg" alt="A soft marble texture in blue, lilac and gold" width="1600" height="1200" loading="lazy"></a>
-    <a class="reuse-carousel__slide" data-carousel-slide href="/images/marble-woods.svg"><img src="/images/marble-woods.svg" alt="A soft marble texture in orange, yellow and blue" width="1600" height="1200" loading="lazy"></a>
+  <section class="re-carousel" data-native-gallery aria-label="Native image carousel">
+    <a class="re-carousel__slide" data-carousel-slide href="/images/marble-lake.svg"><img src="/images/marble-lake.svg" alt="A soft marble texture in coral, sand and blue" width="1600" height="1200" loading="lazy"></a>
+    <a class="re-carousel__slide" data-carousel-slide href="/images/marble-mountains.svg"><img src="/images/marble-mountains.svg" alt="A soft marble texture in mint, blue and orange" width="1600" height="1200" loading="lazy"></a>
+    <a class="re-carousel__slide" data-carousel-slide href="/images/marble-coast.svg"><img src="/images/marble-coast.svg" alt="A soft marble texture in lilac, rose and sea green" width="1600" height="1200" loading="lazy"></a>
+    <a class="re-carousel__slide" data-carousel-slide href="/images/marble-forest.svg"><img src="/images/marble-forest.svg" alt="A soft marble texture in sand, green and violet" width="1600" height="1200" loading="lazy"></a>
+    <a class="re-carousel__slide" data-carousel-slide href="/images/marble-night.svg"><img src="/images/marble-night.svg" alt="A soft marble texture in blue, lilac and gold" width="1600" height="1200" loading="lazy"></a>
+    <a class="re-carousel__slide" data-carousel-slide href="/images/marble-woods.svg"><img src="/images/marble-woods.svg" alt="A soft marble texture in orange, yellow and blue" width="1600" height="1200" loading="lazy"></a>
   </section>
   <div class="controls"><output data-current aria-live="polite">1 / 6</output><div><button type="button" data-previous>Previous</button> <button type="button" data-next>Next</button></div></div>
   <p>Drag or scroll the carousel. Open a photograph to use the native viewer.</p>

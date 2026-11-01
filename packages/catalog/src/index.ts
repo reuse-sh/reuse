@@ -6,6 +6,8 @@ export interface DocPage {
   path: string;
   title: string;
   lead: string;
+  /** For an example page: what an agent builds from it, as in "build a product page gallery". */
+  build?: string;
 }
 
 export interface DocGroup {
@@ -23,7 +25,6 @@ export interface Library {
   principles: readonly Row[];
   api: readonly Row[];
   notes: readonly string[];
-  agentPrompt: string;
   pages: readonly DocEntry[];
 }
 
@@ -33,14 +34,6 @@ export interface FlatDocPage extends DocPage {
 
 function guideUrl(slug: string) {
   return `https://reuse.sh/${slug}/guide.md`;
-}
-
-function agentPage(name: string): DocPage {
-  return {
-    path: "agent",
-    title: "Agent guide",
-    lead: `Each library ships a guide written for coding agents. Give yours the link and say where ${name} should go.`,
-  };
 }
 
 const lightboxDescription =
@@ -54,11 +47,15 @@ const annotationsDescription =
 const loadersDescription =
   "A few dots that change shape while an answer is on its way.";
 const shadowsDescription =
-  "Six shadow levels, a hairline ring, and a fade for scrolling edges.";
+  "Six shadow levels and a hairline ring, in one stylesheet with no JavaScript.";
 const highlightDescription =
   "One background that slides to the row under the pointer, the focus or the selection.";
 const holdDescription =
   "A button that acts only after a full press. Let go early and nothing happens.";
+const gradientsDescription =
+  "Gradients that follow an easing curve, so a fade ends without a hard edge.";
+const copyDescription =
+  "A button that copies text, swaps its icon for a check and says what happened.";
 const avatarsDescription =
   "Photos and initials with badges and groups, cut out cleanly on any background.";
 
@@ -74,7 +71,7 @@ export const collectionPrinciples: readonly Row[] = [
   ],
   [
     "Scope every style",
-    "Classes start with reuse- and values live in --reuse- custom properties, so nothing reaches the rest of your page.",
+    "Classes start with re- and values live in --re- custom properties, so nothing reaches the rest of your page.",
   ],
   [
     "Work from the keyboard",
@@ -154,7 +151,6 @@ export const libraries: Library[] = [
       "Paging runs on the carousel package. Only the current and neighboring images stay loaded. Next and previous scroll smoothly, and a jump from a distant thumbnail fades through the backdrop so unloaded pages never flash past.",
       "Images and captions are supported, with optional thumbnails. Video and iframes are not supported yet.",
     ],
-    agentPrompt: `Read ${guideUrl("lightbox")} and add the lightbox to the product gallery. Keep our button styles.`,
     pages: [
       { path: "", title: "Overview", lead: lightboxDescription },
       {
@@ -169,16 +165,20 @@ export const libraries: Library[] = [
             path: "examples/product",
             title: "Product page",
             lead: "A marble art print with its detail shots. The main image and the thumbnails open as one set.",
+            build: "a product page gallery",
           },
           {
             path: "examples/chat",
             title: "Chat thread",
             lead: "Prints shared in a conversation. Each message pages through its own images.",
+            build:
+              "a chat thread where each message pages through its own images",
           },
           {
             path: "examples/journal",
             title: "Journal",
             lead: "A short essay about a print series. Every image opens in one sequence, shown whole whatever its crop.",
+            build: "a journal where every image opens in one sequence",
           },
         ],
       },
@@ -232,7 +232,6 @@ export const libraries: Library[] = [
         title: "API",
         lead: "The browser module exports createLightbox and bindLightboxGallery. The React hook returns the same viewer.",
       },
-      agentPage("Lightbox"),
     ],
   },
   {
@@ -307,7 +306,6 @@ export const libraries: Library[] = [
       "That check runs again after a resize or a content change.",
       "Autoplay pauses for hover, focus, dragging, hidden pages, offscreen strips and reduced motion.",
     ],
-    agentPrompt: `Read ${guideUrl("carousel")} and turn the related products row into a carousel. Keep our arrows.`,
     pages: [
       { path: "", title: "Overview", lead: carouselDescription },
       {
@@ -322,11 +320,13 @@ export const libraries: Library[] = [
             path: "examples/product-strip",
             title: "Product strip",
             lead: "More prints from the series, a page at a time. The arrows know when there is nothing left to show.",
+            build: "a product strip whose arrows know when the strip ends",
           },
           {
             path: "examples/editorial",
             title: "Editorial gallery",
             lead: "A series of prints at a readable size, starting at the text column and running off the page.",
+            build: "an editorial gallery that starts at the text column",
           },
         ],
       },
@@ -345,7 +345,6 @@ export const libraries: Library[] = [
         title: "API",
         lead: "The browser module exports createCarousel. The React package adds useCarousel and a Carousel component.",
       },
-      agentPage("Carousel"),
     ],
   },
   {
@@ -415,7 +414,6 @@ export const libraries: Library[] = [
       "Marker text may hold strong, em and code. Everything else is escaped when it is read.",
       "On a narrow image, pointer labels turn into numbered markers with a list below.",
     ],
-    agentPrompt: `Read ${guideUrl("annotations")} and show annotations on the screenshots in our help articles.`,
     pages: [
       { path: "", title: "Overview", lead: annotationsDescription },
       {
@@ -430,11 +428,13 @@ export const libraries: Library[] = [
             path: "examples/review-notes",
             title: "Review notes",
             lead: "Feedback on a print proof, with all six kinds of mark. Read-only, as a reviewer would send it.",
+            build: "read-only review notes on an image",
           },
           {
             path: "examples/editor",
             title: "Editor",
             lead: "Draw a mark, move it, change your mind. The page holds the annotations and the editor reports each change.",
+            build: "an annotation editor that reports every change",
           },
         ],
       },
@@ -453,7 +453,6 @@ export const libraries: Library[] = [
         title: "API",
         lead: "The browser module parses, renders and edits one annotation format. The React package wraps the image and the editor.",
       },
-      agentPage("Annotations"),
     ],
   },
   {
@@ -518,7 +517,6 @@ export const libraries: Library[] = [
       "ThinkingDots is decorative unless you pass a label, which makes it a status for screen readers.",
       "Pick a figure or write the sequence in code. There is nothing to configure elsewhere.",
     ],
-    agentPrompt: `Read ${guideUrl("loaders")} and show ThinkingDots while the assistant prepares an answer.`,
     pages: [
       { path: "", title: "Overview", lead: loadersDescription },
       {
@@ -533,11 +531,13 @@ export const libraries: Library[] = [
             path: "examples/chat-reply",
             title: "Chat reply",
             lead: "The dots hold the reply's place in the thread until its text arrives.",
+            build: "a chat reply that shows the dots until its text arrives",
           },
           {
             path: "examples/figures",
             title: "Figures",
             lead: "All sixteen figures, each on repeat. Pass a name to figureConfig to use one.",
+            build: "a gallery of the loader figures",
           },
         ],
       },
@@ -546,7 +546,6 @@ export const libraries: Library[] = [
         title: "API",
         lead: "The browser module exports createThinkingDots and its timeline. The React package adds ThinkingDots.",
       },
-      agentPage("Loaders"),
     ],
   },
   {
@@ -561,7 +560,7 @@ export const libraries: Library[] = [
       ],
       [
         "Set color and strength once",
-        "--reuse-shadow-color and --reuse-shadow-strength drive all six levels, and a dark ancestor raises the strength and lightens the ring.",
+        "--re-shadow-color and --re-shadow-strength drive all six levels, and a dark ancestor raises the strength and lightens the ring.",
       ],
       [
         "Use a ring, not a border",
@@ -571,29 +570,118 @@ export const libraries: Library[] = [
         "Work without JavaScript",
         "The levels and cards are plain classes in one stylesheet.",
       ],
+    ],
+    api: [
+      ["re-shadow-xs … re-shadow-2xl", "Six shadow levels."],
       [
-        "Fade only where there is more",
-        "The fade edge masks a side only while there is content left to scroll toward it, and it follows right-to-left layouts.",
+        "re-shadow-ring-xs … re-shadow-ring-2xl",
+        "The same levels with a hairline ring instead of a border.",
+      ],
+      ["re-card, re-card-frame", "A card surface and its outer frame."],
+      [
+        "re-card-code, re-card-action",
+        "Cards for code samples and for actions.",
       ],
       [
-        "Put the inline style back",
-        "Destroy restores the scroller's original inline style exactly.",
+        "--re-shadow-color, --re-shadow-strength",
+        "Any CSS color for the shadows, and a multiplier for their strength. Both drive all six levels.",
+      ],
+      [
+        'data-re-theme="dark"',
+        "On an ancestor, raises the strength and lightens the ring.",
+      ],
+    ],
+    notes: [
+      "Import the stylesheet. The classes need no JavaScript and no Tailwind.",
+      "Use the ring variant instead of adding a border on top of the shadow.",
+      'A data-re-theme="dark" ancestor switches to stronger shadows and a light ring.',
+    ],
+    pages: [
+      { path: "", title: "Overview", lead: shadowsDescription },
+      {
+        path: "getting-started",
+        title: "Getting started",
+        lead: "Install the package and import the stylesheet. Every shadow is a class, so there is no JavaScript to run.",
+      },
+      {
+        title: "Examples",
+        pages: [
+          {
+            path: "examples/cards",
+            title: "Card patterns",
+            lead: "A code card and an action card, both built from the same scale.",
+            build: "a code card and an action card",
+          },
+          {
+            path: "examples/scale",
+            title: "Scale",
+            lead: "The six levels side by side, with and without the hairline ring.",
+            build: "a shadow scale with and without the ring",
+          },
+        ],
+      },
+      {
+        path: "api",
+        title: "API",
+        lead: "The stylesheet holds the shadow and card classes, and two custom properties tune all of them.",
+      },
+    ],
+  },
+  {
+    slug: "easing-gradients",
+    name: "Easing gradients",
+    description: gradientsDescription,
+    packageName: "@reuse-sh/gradients",
+    principles: [
+      [
+        "Ease the stops",
+        "The gradient samples an easing curve into a dozen stops instead of one straight ramp, so a fade has no hard edge where it starts or ends.",
+      ],
+      [
+        "Mix in oklab",
+        "Each stop is a color-mix() in oklab, so a fade to transparent keeps its hue instead of passing through gray.",
+      ],
+      [
+        "Take any CSS color",
+        "The colors are written into the gradient as CSS, so names, oklch() and var() values all work and the browser resolves them.",
+      ],
+      [
+        "Grow the fade with the scroll",
+        "In scroll mode each edge of a scroller fades in by the distance left to scroll, so the start stays sharp until you move, and the mask follows right-to-left layouts.",
+      ],
+      [
+        "Refuse broken input",
+        "An unknown easing, a bezier outside 0 to 1 or fewer than two stops throws a RangeError instead of writing a gradient the browser drops.",
+      ],
+      [
+        "Restore what it touched",
+        "The fade edge's destroy disconnects its observers and puts the scroller's original style attribute back exactly.",
       ],
     ],
     api: [
-      ["reuse-shadow-xs … reuse-shadow-2xl", "Six shadow levels."],
       [
-        "reuse-shadow-ring-xs … reuse-shadow-ring-2xl",
-        "The same levels with a hairline ring instead of a border.",
+        "easingGradient({ from?, to, easing?, direction?, stops?, type? })",
+        "Returns a CSS gradient string to use as a background or a mask.",
       ],
-      ["reuse-card, reuse-card-frame", "A card surface and its outer frame."],
       [
-        "reuse-card-code, reuse-card-action",
-        "Cards for code samples and for actions.",
+        "from, to",
+        'The two colors. from is "transparent" by default. Any CSS color works, var() included.',
       ],
-      ["shadowLevels", 'The level names in order, from "xs" to "2xl".'],
       [
-        "createFadeEdge(scroller, { size, curve, mode })",
+        "easing, EASINGS",
+        '"ease-in-out-sine", "ease-in", "ease-out", "linear", or a cubic bezier tuple such as [0.23, 1, 0.32, 1]. "ease-in-out-sine" by default.',
+      ],
+      [
+        "direction, type",
+        'The gradient\'s direction, "to bottom" by default for a linear gradient, and "linear" or "radial".',
+      ],
+      ["stops", "How many stops to sample. 12 by default, at least 2."],
+      [
+        "easingStops(easing?, stops?)",
+        "The sampled positions and progress, each from 0 to 1, for a gradient you write yourself.",
+      ],
+      [
+        "createFadeEdge(scroller, { size?, curve?, mode? })",
         "Masks the edges of a horizontal scroller. Returns update(options) and destroy().",
       ],
       ["size", "The width of each fade in pixels. 64 by default."],
@@ -605,33 +693,37 @@ export const libraries: Library[] = [
         "mode, FADE_MODES",
         '"scroll" grows each fade with the distance left to scroll. "fixed" keeps it at full size until that edge is reached. "scroll" by default.',
       ],
+      [
+        "buildFadeGradient(curve, rtl?)",
+        "The mask the fade edge writes, for a scroller you measure yourself.",
+      ],
     ],
     notes: [
-      "Import the stylesheet. The classes need no JavaScript and no Tailwind.",
-      "Use the ring variant instead of adding a border on top of the shadow.",
-      'A data-reuse-theme="dark" ancestor switches to stronger shadows and a light ring.',
-      "createFadeEdge writes a mask to the scroller's inline style and puts the old style back on destroy. It follows right-to-left layouts.",
+      "easingGradient returns a string. Set it as background-image or mask-image wherever a gradient goes, in CSS-in-JS, a style attribute or a server template.",
+      "Every stop is a color-mix() in oklab, so the browser needs color-mix support.",
+      "createFadeEdge writes a mask and two custom properties to the scroller's inline style and puts the old style back on destroy. It follows right-to-left layouts.",
     ],
-    agentPrompt: `Read ${guideUrl("shadows")} and move our cards to the shadow scale. Keep our radii.`,
     pages: [
-      { path: "", title: "Overview", lead: shadowsDescription },
+      { path: "", title: "Overview", lead: gradientsDescription },
       {
         path: "getting-started",
         title: "Getting started",
-        lead: "Install the package and import the stylesheet. The shadows are classes, and the fade edge is one function.",
+        lead: "Install the package, build a gradient string, and set it wherever CSS takes a gradient.",
       },
       {
         title: "Examples",
         pages: [
           {
-            path: "examples/cards",
-            title: "Card patterns",
-            lead: "A code card and an action card, both built from the same scale.",
+            path: "examples/image-caption",
+            title: "Image caption",
+            lead: "A caption over a print, made readable by a dark scrim that eases in from nothing.",
+            build: "an image caption over an eased scrim",
           },
           {
-            path: "examples/scale",
-            title: "Scale",
-            lead: "The six levels side by side, with and without the hairline ring.",
+            path: "examples/fade-edge",
+            title: "Fade edge",
+            lead: "A strip that scrolls sideways fades out where there is more to see. Drag it and compare the modes.",
+            build: "a sideways strip with a fade edge",
           },
         ],
       },
@@ -639,18 +731,17 @@ export const libraries: Library[] = [
         title: "Guides",
         pages: [
           {
-            path: "guides/fade-edge",
-            title: "Fade edge",
-            lead: "A strip that scrolls sideways fades out where there is more to see. Scroll it and compare the modes.",
+            path: "guides/easing-curves",
+            title: "Easing curves",
+            lead: "Each curve spreads the change differently across the gradient. Pick by where the fade should be quiet.",
           },
         ],
       },
       {
         path: "api",
         title: "API",
-        lead: "The stylesheet holds the shadow and card classes. The module exports createFadeEdge and the level names.",
+        lead: "The module exports easingGradient and easingStops for gradients, and createFadeEdge for scrollers.",
       },
-      agentPage("Shadows"),
     ],
   },
   {
@@ -690,7 +781,7 @@ export const libraries: Library[] = [
         "Binds every trigger inside root to one shared popup. Returns refresh, dismiss, update(options) and destroy.",
       ],
       [
-        "data-reuse-tooltip, data-reuse-tooltip-template",
+        "data-re-tooltip, data-re-tooltip-template",
         "Marks a trigger. The first holds the hint as text, the second names the id of a template to clone.",
       ],
       [
@@ -724,11 +815,10 @@ export const libraries: Library[] = [
       ],
     ],
     notes: [
-      "Mark triggers with data-reuse-tooltip, or with data-reuse-tooltip-template for rich content.",
+      "Mark triggers with data-re-tooltip, or with data-re-tooltip-template for rich content.",
       "A tooltip holds a short hint that nobody needs to click. Put controls and required instructions somewhere else.",
       "Keyboard focus shows an anchored hint. A touch is not treated as hover.",
     ],
-    agentPrompt: `Read ${guideUrl("floating-tooltip")} and give the editor toolbar buttons one shared tooltip. Use their aria-label text.`,
     pages: [
       { path: "", title: "Overview", lead: tooltipDescription },
       {
@@ -743,16 +833,19 @@ export const libraries: Library[] = [
             path: "examples/shortcuts",
             title: "Toolbar shortcuts",
             lead: "Each button's hint names the action and its shortcut, so the toolbar teaches the keyboard as you use it.",
+            build: "toolbar hints that name each shortcut",
           },
           {
             path: "examples/links",
             title: "Link previews",
             lead: "A card with an image and a line of context for links in running text, so a reader can decide before leaving the page.",
+            build: "link previews with an image and a line of context",
           },
           {
             path: "examples/people",
             title: "People",
             lead: "A person's card on their name: who they are and what time it is for them, without opening a profile.",
+            build: "a person card on their name",
           },
         ],
       },
@@ -761,7 +854,6 @@ export const libraries: Library[] = [
         title: "API",
         lead: "The browser module exports createFloatingTooltip. The React package adds FloatingTooltip for one trigger and FloatingTooltipGroup for many.",
       },
-      agentPage("Floating tooltip"),
     ],
   },
   {
@@ -806,7 +898,7 @@ export const libraries: Library[] = [
       ],
       [
         "rowSelector, selectedSelector",
-        "Which elements are rows, [data-reuse-row] by default, and which one is selected: data-current, aria-selected or data-highlighted.",
+        "Which elements are rows, [data-re-row] by default, and which one is selected: data-current, aria-selected or data-highlighted.",
       ],
       [
         "className",
@@ -818,12 +910,11 @@ export const libraries: Library[] = [
       ],
     ],
     notes: [
-      "Mark rows with data-reuse-row and the selected row with data-current.",
+      "Mark rows with data-re-row and the selected row with data-current.",
       'Two highlights can share a root: one with mode "selected" for the active row, one with mode "hover" for the pointer.',
       "The controller measures the real elements. It does not need a menu library.",
       "Destroy removes the background and restores the styles the controller set.",
     ],
-    agentPrompt: `Read ${guideUrl("moving-highlight")} and add a moving highlight to the sidebar navigation.`,
     pages: [
       { path: "", title: "Overview", lead: highlightDescription },
       {
@@ -838,16 +929,20 @@ export const libraries: Library[] = [
             path: "examples/menu",
             title: "Menu",
             lead: "A file menu where the background follows the pointer and the arrow keys from item to item.",
+            build:
+              "a menu where the highlight follows the pointer and the arrow keys",
           },
           {
             path: "examples/navigation",
             title: "Navigation list",
             lead: "A sidebar with a current page. The background rests there and leaves only while you point elsewhere.",
+            build: "a sidebar navigation that rests on the current page",
           },
           {
             path: "examples/tabs",
             title: "Tabs",
             lead: "Two highlights on one row of tabs. The selected fill moves on click, and a lighter one follows the pointer.",
+            build: "tabs with a selected fill and a hover fill",
           },
         ],
       },
@@ -856,7 +951,6 @@ export const libraries: Library[] = [
         title: "API",
         lead: "The browser module exports createMovingHighlight. The React package adds MovingHighlight.",
       },
-      agentPage("Moving highlight"),
     ],
   },
   {
@@ -900,7 +994,7 @@ export const libraries: Library[] = [
         "Stops a hold in progress, or removes the hold and restores the button.",
       ],
       [
-        "data-holding, reuse-hold-fill",
+        "data-holding, re-hold-fill",
         "The attribute set on the button while it is held, and the fill element that grows across it.",
       ],
       [
@@ -913,7 +1007,6 @@ export const libraries: Library[] = [
       "A click from assistive technology confirms without a physical hold.",
       "Leaving the button, a cancelled pointer, blur, Escape and destroy all cancel a hold in progress.",
     ],
-    agentPrompt: `Read ${guideUrl("hold-to-confirm")} and make the Delete project button a hold to confirm.`,
     pages: [
       { path: "", title: "Overview", lead: holdDescription },
       {
@@ -928,11 +1021,13 @@ export const libraries: Library[] = [
             path: "examples/delete-file",
             title: "Delete file",
             lead: "A file card where delete needs a full press. Let go early and the file stays.",
+            build: "a file card whose delete needs a full press",
           },
           {
             path: "examples/settings",
             title: "Settings row",
             lead: "A destructive action at the end of a settings list, held instead of confirmed in a dialog.",
+            build: "a held destructive action at the end of a settings list",
           },
         ],
       },
@@ -941,7 +1036,103 @@ export const libraries: Library[] = [
         title: "API",
         lead: "The browser module exports createHoldToConfirm. The React package adds HoldToConfirmButton.",
       },
-      agentPage("Hold to confirm"),
+    ],
+  },
+  {
+    slug: "copy-button",
+    name: "Copy button",
+    description: copyDescription,
+    packageName: "@reuse-sh/interactions",
+    principles: [
+      [
+        "Keep one timer",
+        "Each result clears the pending reset before it starts a new one, and a slow earlier copy never overwrites a newer result.",
+      ],
+      [
+        "Swap the icon in place",
+        "The copy, check and error icons share one grid cell, so the state changes without moving the label or resizing the button.",
+      ],
+      [
+        "Announce the result",
+        "A polite live region beside the button says Copied or Copy failed, so screen reader users hear what happened.",
+      ],
+      [
+        "Fall back when refused",
+        "When the Clipboard API is missing or refused, it copies through a hidden selection, then restores the selection and focus it found.",
+      ],
+      [
+        "Name an icon-only button",
+        "A button with no text and no label gets the accessible name Copy.",
+      ],
+      [
+        "Restore the button",
+        "Destroy clears the timer, removes the icon, the status and the class and label it added, and puts back data-state.",
+      ],
+    ],
+    api: [
+      [
+        "createCopyButton(button, options)",
+        "Turns a button you already have into a copy button. Returns destroy.",
+      ],
+      [
+        "text, getText()",
+        "The text to copy, or a function that returns it, also as a promise. Pass one of the two.",
+      ],
+      [
+        "resetMs",
+        "How long the copied or failed state stays before the button returns to idle. 1600 by default.",
+      ],
+      [
+        "onCopy(text), onError(error)",
+        "Called after a copy succeeds or fails, for your own logging or toasts.",
+      ],
+      [
+        "data-state",
+        'Set on the button to "idle", "copied" or "error". Style the states from it.',
+      ],
+      [
+        "--re-copy-icon-size, --re-copy-gap, --re-copy-duration",
+        "The icon size, 16 px, the gap to the label, 6 px, and the icon swap time, 200 ms.",
+      ],
+      [
+        "CopyButton",
+        "The React button around the same controller. It takes text or getText, resetMs, onCopy and onError.",
+      ],
+    ],
+    notes: [
+      "The controller adds the icon and a status region and leaves the button's look to your styles.",
+      "An empty text or a getText that throws ends in the error state, as a refused copy does.",
+      "Give an icon-only button an aria-label that names what it copies, such as Copy link.",
+    ],
+    pages: [
+      { path: "", title: "Overview", lead: copyDescription },
+      {
+        path: "getting-started",
+        title: "Getting started",
+        lead: "Install the package, import the stylesheet once, then turn any button into a copy button.",
+      },
+      {
+        title: "Examples",
+        pages: [
+          {
+            path: "examples/code-block",
+            title: "Code block",
+            lead: "A command with a copy button in its corner. The icon turns into a check, and the block stays still.",
+            build: "a code block with a copy button",
+          },
+          {
+            path: "examples/share-link",
+            title: "Share link",
+            lead: "A link to a print, ready to paste. The button copies it and says so.",
+            build: "a share panel that copies its link",
+          },
+        ],
+      },
+      {
+        path: "api",
+        title: "API",
+        lead: "The browser module exports createCopyButton. The React package adds CopyButton.",
+      },
     ],
   },
   {
@@ -1000,7 +1191,6 @@ export const libraries: Library[] = [
       "Counts of two digits or more get a capsule cutout measured from the badge itself.",
       "Initials split on whole characters, so accents and emoji stay intact.",
     ],
-    agentPrompt: `Read ${guideUrl("avatars")} and use it for the avatars in the member list, with an online dot.`,
     pages: [
       { path: "", title: "Overview", lead: avatarsDescription },
       {
@@ -1015,11 +1205,13 @@ export const libraries: Library[] = [
             path: "examples/team",
             title: "Team list",
             lead: "Members of a workspace with their status. The badge cuts into the photo, not a ring around it.",
+            build: "a team list with status badges",
           },
           {
             path: "examples/groups",
             title: "Groups",
             lead: "Overlapping stacks for who is in a project, ending in a count of the rest.",
+            build: "overlapping avatar groups that end in a count",
           },
         ],
       },
@@ -1028,7 +1220,6 @@ export const libraries: Library[] = [
         title: "API",
         lead: "The browser module exports enhanceAvatar, createAvatar and createAvatarGroup. The React package adds Avatar and AvatarGroup.",
       },
-      agentPage("Avatars"),
     ],
   },
 ];
@@ -1073,3 +1264,103 @@ export function docHref(library: Library, path: string) {
 export function installCommand(library: Library) {
   return `npm install ${library.packageName}`;
 }
+
+const siteUrl = "https://reuse.sh";
+const keepPrinciples = "Keep the principles the guide lists.";
+
+/** The short prompt that hands a library to a coding agent. */
+export function libraryPrompt(library: Library) {
+  return `Read ${guideUrl(library.slug)} and add ${library.name} to <where>. ${keepPrinciples}`;
+}
+
+/** The prompt for a documentation page, or null when the page has none. */
+export function pagePrompt(library: Library, path: string) {
+  if (path === "getting-started")
+    return `Read ${guideUrl(library.slug)}, install ${library.packageName} and add ${library.name} to <where>. ${keepPrinciples}`;
+  const page = findDocPage(library, path);
+  if (!page?.build) return null;
+  return `Read ${guideUrl(library.slug)} and build ${page.build} like ${siteUrl}${docHref(library, path)}. ${keepPrinciples}`;
+}
+
+export const toolGroups = [
+  "Icons",
+  "Components",
+  "Motion and numbers",
+  "Code",
+] as const;
+
+export type ToolGroup = (typeof toolGroups)[number];
+
+/** An interface tool we use beside Reuse, with one line on why. */
+export interface Tool {
+  name: string;
+  url: string;
+  reason: string;
+  group: ToolGroup;
+}
+
+export const tools: readonly Tool[] = [
+  {
+    name: "Hugeicons",
+    url: "https://hugeicons.com",
+    reason:
+      "Thousands of free stroke-rounded icons on one 24 px grid, imported one at a time, with packages for React, Vue, Angular and Svelte.",
+    group: "Icons",
+  },
+  {
+    name: "Lucide",
+    url: "https://lucide.dev",
+    reason:
+      "An open-source icon set with a consistent stroke, drawn by a community and shipped for most frameworks.",
+    group: "Icons",
+  },
+  {
+    name: "shadcn/ui",
+    url: "https://ui.shadcn.com",
+    reason:
+      "Accessible components you copy into your project as source, so you own and change every line.",
+    group: "Components",
+  },
+  {
+    name: "Base UI",
+    url: "https://base-ui.com",
+    reason:
+      "Unstyled, accessible React components that handle focus, keyboard and state and leave the look to you.",
+    group: "Components",
+  },
+  {
+    name: "cmdk",
+    url: "https://cmdk.paco.me",
+    reason:
+      "A fast, unstyled command menu for React with filtering and keyboard navigation built in.",
+    group: "Components",
+  },
+  {
+    name: "Sonner",
+    url: "https://sonner.emilkowal.ski",
+    reason:
+      "Toast notifications for React that stack, swipe away and need almost no setup.",
+    group: "Components",
+  },
+  {
+    name: "Motion",
+    url: "https://motion.dev",
+    reason:
+      "Springs, gestures and layout animation for JavaScript and React, with a small API.",
+    group: "Motion and numbers",
+  },
+  {
+    name: "NumberFlow",
+    url: "https://number-flow.barvian.me",
+    reason:
+      "Animates a number from one value to the next, digit by digit, with formatting from Intl.NumberFormat.",
+    group: "Motion and numbers",
+  },
+  {
+    name: "Highlights by Pierre",
+    url: "https://diffs.com/docs#highlights",
+    reason:
+      "A syntax highlighter written in WebAssembly Text, with 80 built-in languages, that runs in Node.js, browsers and Cloudflare Workers.",
+    group: "Code",
+  },
+];

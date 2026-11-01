@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
+  createCopyButton,
   createFloatingTooltip,
   createHoldToConfirm,
   createMovingHighlight,
@@ -152,14 +153,14 @@ describe("hold to confirm", () => {
     controller.destroy();
     expect(button.innerHTML).toBe("Delete");
     expect(button.hasAttribute("style")).toBe(false);
-    expect(button.classList.contains("reuse-hold")).toBe(false);
+    expect(button.classList.contains("re-hold")).toBe(false);
   });
 });
 
 describe("floating tooltip", () => {
   function setup() {
     document.body.innerHTML =
-      '<div><button data-reuse-tooltip="First" aria-describedby="original">One</button><button data-reuse-tooltip="Second">Two</button></div>';
+      '<div><button data-re-tooltip="First" aria-describedby="original">One</button><button data-re-tooltip="Second">Two</button></div>';
     const root = document.body.firstElementChild as HTMLElement;
     const [first, second] = Array.from(root.querySelectorAll("button"));
     rect(first, 100, 100, 80, 32);
@@ -251,7 +252,7 @@ describe("floating tooltip", () => {
   it("renders a template as rich content and gives touch pointers nothing", () => {
     reduced = true;
     document.body.innerHTML =
-      '<div><button data-reuse-tooltip-template="tip-save">Save</button></div><template id="tip-save"><span class="keys">Save<kbd>S</kbd></span></template>';
+      '<div><button data-re-tooltip-template="tip-save">Save</button></div><template id="tip-save"><span class="keys">Save<kbd>S</kbd></span></template>';
     const root = document.body.firstElementChild as HTMLElement;
     const button = root.querySelector("button") as HTMLElement;
     rect(button, 100, 100, 80, 32);
@@ -313,7 +314,7 @@ describe("floating tooltip", () => {
       );
     };
     document.body.innerHTML =
-      '<div><button data-reuse-tooltip="First">One</button></div>';
+      '<div><button data-re-tooltip="First">One</button></div>';
     const root = document.body.firstElementChild as HTMLElement;
     const before = document.documentElement.outerHTML;
     track(root);
@@ -349,7 +350,7 @@ describe("floating tooltip", () => {
 describe("moving highlight", () => {
   function setup(options?: MovingHighlightOptions) {
     document.body.innerHTML =
-      '<div style="color: red"><button data-reuse-row data-current>One</button><button data-reuse-row>Two</button><button data-reuse-row disabled>Three</button></div>';
+      '<div style="color: red"><button data-re-row data-current>One</button><button data-re-row>Two</button><button data-re-row disabled>Three</button></div>';
     const root = document.body.firstElementChild as HTMLElement;
     const rows = Array.from(root.querySelectorAll("button"));
     rect(root, 0, 0, 200, 180);
@@ -361,7 +362,7 @@ describe("moving highlight", () => {
     return {
       root,
       rows,
-      fill: root.querySelector(".reuse-moving-highlight") as HTMLElement,
+      fill: root.querySelector(".re-moving-highlight") as HTMLElement,
       controller,
     };
   }
@@ -394,14 +395,14 @@ describe("moving highlight", () => {
     const hover = createMovingHighlight(root, { className: "hover" });
     controllers.push(hover);
     const hoverFill = root.querySelector(".hover") as HTMLElement;
-    expect(root.querySelectorAll(".reuse-moving-highlight")).toHaveLength(2);
+    expect(root.querySelectorAll(".re-moving-highlight")).toHaveLength(2);
     pointer(rows[1], "pointerover");
     expect(hoverFill.style.translate).toBe("4px 40px");
     expect(fill.style.translate).toBe("4px 0px");
     hover.destroy();
     expect(hoverFill.isConnected).toBe(false);
     expect(fill.isConnected).toBe(true);
-    expect(root.hasAttribute("data-reuse-highlight-root")).toBe(true);
+    expect(root.hasAttribute("data-re-highlight-root")).toBe(true);
     expect(root.style.isolation).toBe("isolate");
     rows[0].removeAttribute("data-current");
     rows[1].setAttribute("data-current", "");
@@ -409,8 +410,8 @@ describe("moving highlight", () => {
     expect(fill.style.translate).toBe("4px 40px");
     controller.destroy();
     expect(root.getAttribute("style")).toBe("color: red");
-    expect(root.hasAttribute("data-reuse-highlight-root")).toBe(false);
-    expect(root.querySelector(".reuse-moving-highlight")).toBe(null);
+    expect(root.hasAttribute("data-re-highlight-root")).toBe(false);
+    expect(root.querySelector(".re-moving-highlight")).toBe(null);
   });
   it("follows pointer and keyboard, ignores disabled rows, and returns to selection", () => {
     const { rows, fill } = setup();
@@ -435,9 +436,9 @@ describe("moving highlight", () => {
     expect(fill.dataset.move).toBe("instant");
     controller.destroy();
     expect(root.getAttribute("style")).toBe("color: red");
-    expect(root.querySelector(".reuse-moving-highlight")).toBe(null);
+    expect(root.querySelector(".re-moving-highlight")).toBe(null);
     pointer(rows[0], "pointerover");
-    expect(root.querySelector(".reuse-moving-highlight")).toBe(null);
+    expect(root.querySelector(".re-moving-highlight")).toBe(null);
   });
   it("updates changing selected data and cancels long-jump timers on teardown", async () => {
     const { root, rows, fill, controller } = setup();
@@ -452,5 +453,207 @@ describe("moving highlight", () => {
     vi.advanceTimersByTime(1000);
     expect(root.children).toHaveLength(3);
     expect(vi.getTimerCount()).toBe(0);
+  });
+});
+
+describe("copy button", () => {
+  let writeText: ReturnType<typeof vi.fn>;
+  const flush = () => vi.advanceTimersByTimeAsync(0);
+  function setup(options: Parameters<typeof createCopyButton>[1]) {
+    const wrapper = document.createElement("div");
+    wrapper.innerHTML = '<button class="code-copy">Copy code</button>';
+    document.body.append(wrapper);
+    const button = wrapper.querySelector("button") as HTMLButtonElement;
+    const original = wrapper.innerHTML;
+    const controller = createCopyButton(button, options);
+    controllers.push(controller);
+    const status = () =>
+      wrapper.querySelector(".re-copy-button-status")?.textContent;
+    return { wrapper, button, original, controller, status };
+  }
+  beforeEach(() => {
+    writeText = vi.fn(async () => {});
+    Object.defineProperty(navigator, "clipboard", {
+      value: { writeText },
+      configurable: true,
+    });
+  });
+  afterEach(() => {
+    Reflect.deleteProperty(navigator, "clipboard");
+    Reflect.deleteProperty(document, "execCommand");
+  });
+
+  it("copies the text, announces it, and returns to idle after resetMs", async () => {
+    const copied: string[] = [];
+    const { button, status } = setup({
+      text: "pnpm add @reuse-sh/interactions",
+      onCopy: (text) => copied.push(text),
+    });
+    expect(button.dataset.state).toBe("idle");
+    button.click();
+    await flush();
+    expect(writeText).toHaveBeenCalledWith("pnpm add @reuse-sh/interactions");
+    expect(copied).toEqual(["pnpm add @reuse-sh/interactions"]);
+    expect(button.dataset.state).toBe("copied");
+    expect(status()).toBe("Copied");
+    vi.advanceTimersByTime(1599);
+    expect(button.dataset.state).toBe("copied");
+    vi.advanceTimersByTime(1);
+    expect(button.dataset.state).toBe("idle");
+    expect(status()).toBe("");
+  });
+
+  it("restarts the copied timer on a second click instead of stacking timers", async () => {
+    const { button } = setup({ getText: () => "value", resetMs: 1000 });
+    button.click();
+    await flush();
+    vi.advanceTimersByTime(800);
+    button.click();
+    await flush();
+    vi.advanceTimersByTime(800);
+    expect(button.dataset.state).toBe("copied");
+    expect(vi.getTimerCount()).toBe(1);
+    vi.advanceTimersByTime(200);
+    expect(button.dataset.state).toBe("idle");
+  });
+
+  it("falls back to a selected textarea when the Clipboard API is missing", async () => {
+    Reflect.deleteProperty(navigator, "clipboard");
+    let selected = "";
+    Object.defineProperty(document, "execCommand", {
+      value: (command: string) => {
+        selected = (document.activeElement as HTMLTextAreaElement).value;
+        return command === "copy";
+      },
+      configurable: true,
+    });
+    const { button } = setup({ text: "fallback" });
+    button.focus();
+    button.click();
+    await flush();
+    expect(selected).toBe("fallback");
+    expect(button.dataset.state).toBe("copied");
+    expect(document.querySelector("textarea")).toBeNull();
+    expect(document.activeElement).toBe(button);
+  });
+
+  it("enters the error state when both copy paths fail", async () => {
+    writeText.mockRejectedValue(new DOMException("Denied", "NotAllowedError"));
+    Object.defineProperty(document, "execCommand", {
+      value: () => false,
+      configurable: true,
+    });
+    const errors: unknown[] = [];
+    const { button, status } = setup({
+      text: "secret",
+      onError: (error) => errors.push(error),
+    });
+    button.click();
+    await flush();
+    expect(button.dataset.state).toBe("error");
+    expect(status()).toBe("Copy failed");
+    expect((errors[0] as DOMException).name).toBe("NotAllowedError");
+    vi.advanceTimersByTime(1600);
+    expect(button.dataset.state).toBe("idle");
+  });
+
+  it("stays copied when onCopy throws", async () => {
+    const reported = vi.fn();
+    vi.stubGlobal("reportError", reported);
+    const errors: unknown[] = [];
+    const { button, status } = setup({
+      text: "value",
+      onCopy: () => {
+        throw new Error("analytics down");
+      },
+      onError: (error) => errors.push(error),
+    });
+    button.click();
+    await flush();
+    expect(writeText).toHaveBeenCalledWith("value");
+    expect(button.dataset.state).toBe("copied");
+    expect(status()).toBe("Copied");
+    expect(errors).toEqual([]);
+    expect((reported.mock.calls[0][0] as Error).message).toBe("analytics down");
+    vi.unstubAllGlobals();
+  });
+
+  it("selects the fallback text inside an open modal dialog", async () => {
+    Reflect.deleteProperty(navigator, "clipboard");
+    let parent: Element | null = null;
+    Object.defineProperty(document, "execCommand", {
+      value: () => {
+        parent = (document.activeElement as HTMLElement).parentElement;
+        return true;
+      },
+      configurable: true,
+    });
+    const dialog = document.createElement("dialog");
+    dialog.setAttribute("open", "");
+    dialog.innerHTML = "<button>Copy link</button>";
+    document.body.append(dialog);
+    const button = dialog.querySelector("button") as HTMLButtonElement;
+    controllers.push(createCopyButton(button, { text: "link" }));
+    button.click();
+    await flush();
+    expect(parent).toBe(dialog);
+    expect(button.dataset.state).toBe("copied");
+    dialog.remove();
+  });
+
+  it("reports an error when the fallback textarea cannot take focus", async () => {
+    Reflect.deleteProperty(navigator, "clipboard");
+    const execCommand = vi.fn(() => true);
+    Object.defineProperty(document, "execCommand", {
+      value: execCommand,
+      configurable: true,
+    });
+    const focus = vi
+      .spyOn(HTMLTextAreaElement.prototype, "focus")
+      .mockImplementation(() => {});
+    const { button } = setup({ text: "value" });
+    button.click();
+    await flush();
+    expect(execCommand).not.toHaveBeenCalled();
+    expect(button.dataset.state).toBe("error");
+    focus.mockRestore();
+  });
+
+  it("keeps class and label changes made after setup when destroyed", () => {
+    const { button, controller } = setup({ text: "value" });
+    button.className = "code-copy theme-dark re-copy-button";
+    button.setAttribute("aria-label", "Copy snippet");
+    controller.destroy();
+    expect(button.className).toBe("code-copy theme-dark");
+    expect(button.getAttribute("aria-label")).toBe("Copy snippet");
+  });
+
+  it("removes the label it added to an icon-only button on destroy", () => {
+    const button = document.createElement("button");
+    document.body.append(button);
+    const controller = createCopyButton(button, { text: "x" });
+    controller.destroy();
+    expect(button.outerHTML).toBe("<button></button>");
+  });
+
+  it("names an icon-only button", () => {
+    const button = document.createElement("button");
+    document.body.append(button);
+    controllers.push(createCopyButton(button, { text: "x" }));
+    expect(button.getAttribute("aria-label")).toBe("Copy");
+  });
+
+  it("destroy removes listeners and timers and restores the original markup", async () => {
+    const { wrapper, button, original, controller } = setup({ text: "value" });
+    button.click();
+    await flush();
+    expect(vi.getTimerCount()).toBe(1);
+    controller.destroy();
+    expect(vi.getTimerCount()).toBe(0);
+    expect(wrapper.innerHTML).toBe(original);
+    button.click();
+    await flush();
+    expect(writeText).toHaveBeenCalledTimes(1);
+    expect(button.hasAttribute("data-state")).toBe(false);
   });
 });

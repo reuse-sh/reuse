@@ -12,6 +12,8 @@ import {
   useRef,
 } from "react";
 import {
+  type CopyButtonOptions,
+  createCopyButton,
   createFloatingTooltip,
   createHoldToConfirm,
   createMovingHighlight,
@@ -111,8 +113,8 @@ export function FloatingTooltip({
   const grouped = useContext(TooltipGroup);
   useFloatingTooltip(ref, !grouped, settings);
   return (
-    <span ref={ref} className="reuse-tooltip-trigger">
-      {cloneElement(children, { "data-reuse-tooltip": content })}
+    <span ref={ref} className="re-tooltip-trigger">
+      {cloneElement(children, { "data-re-tooltip": content })}
     </span>
   );
 }
@@ -175,10 +177,55 @@ export function HoldToConfirmButton({
     <button
       type="button"
       {...props}
-      className={["reuse-hold", className].filter(Boolean).join(" ")}
+      className={["re-hold", className].filter(Boolean).join(" ")}
       ref={ref}
     >
       {children}
+    </button>
+  );
+}
+
+export type CopyButtonProps = Omit<
+  ButtonHTMLAttributes<HTMLButtonElement>,
+  "onCopy" | "onError"
+> &
+  CopyButtonOptions;
+
+export function CopyButton({
+  text,
+  getText,
+  resetMs = 1600,
+  onCopy,
+  onError,
+  children,
+  className,
+  ...props
+}: CopyButtonProps) {
+  const ref = useRef<HTMLButtonElement>(null);
+  const latest = useRef({ text, getText, onCopy, onError });
+  latest.current = { text, getText, onCopy, onError };
+  useEffect(() => {
+    if (!ref.current) return;
+    const controller = createCopyButton(ref.current, {
+      resetMs,
+      getText: () => {
+        const { text, getText } = latest.current;
+        return getText ? getText() : (text ?? "");
+      },
+      onCopy: (value) => latest.current.onCopy?.(value),
+      onError: (error) => latest.current.onError?.(error),
+    });
+    return () => controller.destroy();
+  }, [resetMs]);
+  return (
+    <button
+      type="button"
+      {...props}
+      className={["re-copy-button", className].filter(Boolean).join(" ")}
+      ref={ref}
+    >
+      {/* A string child is updated through textContent, which would drop the icon. */}
+      {children == null ? null : <span>{children}</span>}
     </button>
   );
 }

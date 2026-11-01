@@ -30,7 +30,7 @@ The source references were inspected in the browser before the revision. The sid
 
 Home and integration steps were checked at 320, 390, 768, 1024 and 1440px widths. Every library landing page was also checked at 320 and 1440px. None had horizontal document overflow. Integration steps share the same real preview cards and working guide-copy action on Home and How to use.
 
-The browser checked library navigation, the mobile disclosure, guide-copy feedback, annotation creation and Undo, tooltip keyboard text, confirmation holding, moving selection and shadow size selection. Keyboard area creation changed selectable areas from 1 to 2; Undo restored 1. A 1.4-second hold reached Confirmed. Team selection moved the single highlight. xl selected reuse-shadow-ring-xl. The tooltip displayed Add layers after keyboard navigation.
+The browser checked library navigation, the mobile disclosure, guide-copy feedback, annotation creation and Undo, tooltip keyboard text, confirmation holding, moving selection and shadow size selection. Keyboard area creation changed selectable areas from 1 to 2; Undo restored 1. A 1.4-second hold reached Confirmed. Team selection moved the single highlight. xl selected re-shadow-ring-xl. The tooltip displayed Add layers after keyboard navigation.
 
 Screenshots are JPEG files in the session visualization directory: reuse-home.jpg, reuse-lightbox.jpg and reuse-how-to-use.jpg.
 

@@ -88,7 +88,7 @@ export function createCarousel(
   }
 
   const initialTabIndex = viewport.getAttribute("tabindex");
-  const hadClass = viewport.classList.contains("reuse-carousel");
+  const hadClass = viewport.classList.contains("re-carousel");
   const previousOverflow = viewport.style.overflowX;
   const previousSnap = viewport.style.scrollSnapType;
   const previousUserSelect = viewport.style.userSelect;
@@ -553,8 +553,8 @@ export function createCarousel(
     const styles = window.getComputedStyle(viewport);
     const padding = Number.parseFloat(styles.scrollPaddingInlineStart) || 0;
     targets = slides.map((slide) => {
-      if (!slide.classList.contains("reuse-carousel__slide")) {
-        slide.classList.add("reuse-carousel__slide");
+      if (!slide.classList.contains("re-carousel__slide")) {
+        slide.classList.add("re-carousel__slide");
         ownedSlides.add(slide);
       }
       if (!slideStyles.has(slide))
@@ -719,7 +719,7 @@ export function createCarousel(
       intersection?.disconnect();
       for (const remove of cleanup) remove();
       listeners.clear();
-      if (!hadClass) viewport.classList.remove("reuse-carousel");
+      if (!hadClass) viewport.classList.remove("re-carousel");
       const restoredPosition = span
         ? (targets[state.index] ?? span) - span
         : position();
@@ -735,7 +735,7 @@ export function createCarousel(
         slide.style.scrollSnapAlign = original.snap;
       }
       for (const slide of ownedSlides) {
-        slide.classList.remove("reuse-carousel__slide");
+        slide.classList.remove("re-carousel__slide");
       }
       if (initialTabIndex === null) viewport.removeAttribute("tabindex");
       else viewport.setAttribute("tabindex", initialTabIndex);
@@ -766,7 +766,7 @@ export function createCarousel(
       )
     : undefined;
 
-  viewport.classList.add("reuse-carousel");
+  viewport.classList.add("re-carousel");
   if (initialTabIndex === null) viewport.tabIndex = 0;
   listen(viewport, "scroll", () => {
     if (!enabled) {

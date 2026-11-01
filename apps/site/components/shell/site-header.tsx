@@ -96,7 +96,7 @@ export function SiteHeader() {
     <header className="c-head" ref={header}>
       <div className="c-head-in" ref={wrap}>
         <div className="c-brand" ref={brand}>
-          <Link className="c-logo" data-reuse-row href="/">
+          <Link className="c-logo" data-re-row href="/">
             reuse
           </Link>
           <span className="c-slash" aria-hidden="true">
@@ -106,7 +106,7 @@ export function SiteHeader() {
             ref={button}
             type="button"
             className="c-switch"
-            data-reuse-row
+            data-re-row
             data-highlighted={open ? "" : undefined}
             aria-expanded={open}
             aria-controls={MENU_ID}
@@ -129,18 +129,25 @@ export function SiteHeader() {
         </div>
         <nav className="c-nav" aria-label="Site" ref={nav}>
           <Link
-            data-reuse-row
+            data-re-row
             href="/for-agents"
             aria-current={pathname === "/for-agents" ? "page" : undefined}
           >
             Agent guides
           </Link>
+          <Link
+            data-re-row
+            href="/tools"
+            aria-current={pathname === "/tools" ? "page" : undefined}
+          >
+            Tools
+          </Link>
           <a
-            data-reuse-row
+            data-re-row
             className="c-nav-icon"
             href="https://github.com/reuse-sh/reuse"
             aria-label="GitHub"
-            data-reuse-tooltip="GitHub"
+            data-re-tooltip="GitHub"
           >
             <Icon name="github" size={18} />
           </a>

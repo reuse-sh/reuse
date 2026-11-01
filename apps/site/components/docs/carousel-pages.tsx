@@ -34,7 +34,7 @@ function Strip({
     <PhotoLightbox className={`d-strip ${className}`}>
       <CarouselMount>
         <section
-          className="reuse-carousel"
+          className="re-carousel"
           data-viewport
           data-photo-group
           aria-label="Photos"
@@ -42,7 +42,7 @@ function Strip({
           {slides.map((photo) => (
             <figure
               key={photo.id}
-              className={`reuse-carousel__slide ${slideClass}`}
+              className={`re-carousel__slide ${slideClass}`}
               data-carousel-slide
             >
               <PhotoButton photo={photo} />
@@ -94,7 +94,7 @@ export function CarouselStart({ library }: { library: Library }) {
       </Section>
       <Section title="Bind a strip">
         <Text>
-          The viewport gets the <C>reuse-carousel</C> class. Slides are its
+          The viewport gets the <C>re-carousel</C> class. Slides are its
           children, or anything marked with <C>data-carousel-slide</C>. Links
           and buttons inside them keep working.
         </Text>
@@ -102,9 +102,9 @@ export function CarouselStart({ library }: { library: Library }) {
       </Section>
       <Section title="Style it">
         <Text>
-          Set <C>--reuse-carousel-slide-width</C> and{" "}
-          <C>--reuse-carousel-gap</C> on the viewport. Arrows, dots and counters
-          are your own markup, driven by the state you subscribe to.
+          Set <C>--re-carousel-slide-width</C> and <C>--re-carousel-gap</C> on
+          the viewport. Arrows, dots and counters are your own markup, driven by
+          the state you subscribe to.
         </Text>
       </Section>
     </>
@@ -130,11 +130,11 @@ export function CarouselProductStrip() {
             <h2 id="x-related-h">More from the series</h2>
             <Arrows ring label="prints" />
           </div>
-          <section className="reuse-carousel" data-viewport aria-label="Prints">
+          <section className="re-carousel" data-viewport aria-label="Prints">
             {prints.map(([photo, price]) => (
               <a
                 key={photo.id}
-                className="reuse-carousel__slide x-print"
+                className="re-carousel__slide x-print"
                 href="#x-related-h"
                 data-carousel-slide
               >

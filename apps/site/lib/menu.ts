@@ -4,9 +4,15 @@ export const menuGroups = [
   ["Media", ["lightbox", "carousel", "annotations"]],
   [
     "Interface",
-    ["avatars", "floating-tooltip", "moving-highlight", "hold-to-confirm"],
+    [
+      "avatars",
+      "floating-tooltip",
+      "moving-highlight",
+      "hold-to-confirm",
+      "copy-button",
+    ],
   ],
-  ["Motion and style", ["loaders", "shadows"]],
+  ["Motion and style", ["loaders", "shadows", "easing-gradients"]],
 ] as const;
 
 export type MenuSlug = (typeof menuGroups)[number][1][number];
@@ -19,8 +25,10 @@ export const shortLines: Record<MenuSlug, string> = {
   "floating-tooltip": "A hint that follows the pointer",
   "moving-highlight": "A surface that follows focus",
   "hold-to-confirm": "Press and hold for risky actions",
+  "copy-button": "Copies text and says so",
   loaders: "Dot figures that change shape",
   shadows: "Two-layer depth with a fine edge",
+  "easing-gradients": "Fades without a hard edge",
 };
 
 const bySlug = new Map<string, Library>(

@@ -155,9 +155,9 @@ export function createAnnotationEditor(
   const redoStack: Annotation[][] = [];
   const originalStyle = root.getAttribute("style");
   const originalTabIndex = root.getAttribute("tabindex");
-  const originalTool = root.getAttribute("data-reuse-annotation-tool");
-  const hadClass = root.classList.contains("reuse-annotation-editor-canvas");
-  root.classList.add("reuse-annotation-editor-canvas");
+  const originalTool = root.getAttribute("data-re-annotation-tool");
+  const hadClass = root.classList.contains("re-annotation-editor-canvas");
+  root.classList.add("re-annotation-editor-canvas");
   if (!root.hasAttribute("tabindex")) root.tabIndex = 0;
   if (
     !view.getComputedStyle(root).position ||
@@ -165,7 +165,7 @@ export function createAnnotationEditor(
   )
     root.style.position = "relative";
   const layer = root.ownerDocument.createElement("div");
-  layer.className = "reuse-annotation-edit-layer";
+  layer.className = "re-annotation-edit-layer";
   const media = () =>
     root.querySelector<HTMLElement>("[data-annot-media]") ??
     root.querySelector("img") ??
@@ -192,7 +192,7 @@ export function createAnnotationEditor(
     const button = root.ownerDocument.createElement("button");
     button.type = "button";
     button.className = className;
-    button.dataset.reuseAnnotationIndex = String(index);
+    button.dataset.reAnnotationIndex = String(index);
     button.setAttribute("aria-label", label);
     return button;
   };
@@ -210,7 +210,7 @@ export function createAnnotationEditor(
     layer.style.top = `${(box.top - canvas.top) / scaleY + root.scrollTop - root.clientTop}px`;
     layer.style.width = `${box.width / scaleX}px`;
     layer.style.height = `${box.height / scaleY}px`;
-    root.dataset.reuseAnnotationTool = tool;
+    root.dataset.reAnnotationTool = tool;
     if (layer.parentNode !== root) root.append(layer);
     layer.replaceChildren();
     const shown = preview ?? annotations;
@@ -218,7 +218,7 @@ export function createAnnotationEditor(
       const button = handle(
         index,
         `Select ${annotation.kind} ${index + 1}`,
-        "reuse-annotation-target",
+        "re-annotation-target",
       );
       button.dataset.selected = String(index === selected);
       button.dataset.kind = annotation.kind;
@@ -255,7 +255,7 @@ export function createAnnotationEditor(
           const knob = handle(
             index,
             `Resize ${corner} corner`,
-            "reuse-annotation-resize",
+            "re-annotation-resize",
           );
           knob.dataset.corner = corner;
           Object.assign(knob.style, {
@@ -269,7 +269,7 @@ export function createAnnotationEditor(
           const knob = handle(
             index,
             `Move ${end === 0 ? "start" : "end"} point`,
-            "reuse-annotation-resize",
+            "re-annotation-resize",
           );
           knob.dataset.end = String(end);
           knob.style.left = `${annotation.line[end * 2]}%`;
@@ -318,7 +318,7 @@ export function createAnnotationEditor(
     const point = at(event);
     if (!point || !(event.target instanceof view.Element)) return;
     const target = event.target.closest<HTMLElement>(
-      "[data-reuse-annotation-index]",
+      "[data-re-annotation-index]",
     );
     if (!layer.contains(event.target)) return;
     event.preventDefault();
@@ -343,7 +343,7 @@ export function createAnnotationEditor(
         draw();
         return;
       }
-      const index = Number(target.dataset.reuseAnnotationIndex);
+      const index = Number(target.dataset.reAnnotationIndex);
       if (!annotations[index]) return;
       select(index);
       gesture = {
@@ -505,11 +505,11 @@ export function createAnnotationEditor(
     }
     if (
       event.target instanceof view.HTMLElement &&
-      event.target.dataset.reuseAnnotationIndex &&
+      event.target.dataset.reAnnotationIndex &&
       (event.key === "Enter" || event.key === " ")
     ) {
       event.preventDefault();
-      select(Number(event.target.dataset.reuseAnnotationIndex));
+      select(Number(event.target.dataset.reAnnotationIndex));
       root.focus();
       draw();
       return;
@@ -613,11 +613,11 @@ export function createAnnotationEditor(
       view.removeEventListener("blur", onCancel);
       view.removeEventListener("resize", refresh);
       layer.remove();
-      if (!hadClass) root.classList.remove("reuse-annotation-editor-canvas");
+      if (!hadClass) root.classList.remove("re-annotation-editor-canvas");
       for (const [name, value] of [
         ["style", originalStyle],
         ["tabindex", originalTabIndex],
-        ["data-reuse-annotation-tool", originalTool],
+        ["data-re-annotation-tool", originalTool],
       ] as const) {
         if (value === null) root.removeAttribute(name);
         else root.setAttribute(name, value);

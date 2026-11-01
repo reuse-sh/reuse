@@ -141,7 +141,7 @@ export function AnnotationsDataFormat() {
           and a list. Store it as it is. This one is the package's own output
           for three marks.
         </Text>
-        <CodeBlock tabs={{ code: documentJson(sample) }} />
+        <CodeBlock tabs={{ code: documentJson(sample), lang: "json" }} />
       </Section>
       <Section title="Coordinates">
         <Text>
@@ -159,7 +159,7 @@ export function AnnotationsDataFormat() {
           <C>annotationsFromHtml</C> reads them back. Marker text keeps only{" "}
           <C>strong</C>, <C>em</C> and <C>code</C>.
         </Text>
-        <CodeBlock tabs={{ code: listHtml(sample), lang: "text" }} />
+        <CodeBlock tabs={{ code: listHtml(sample), lang: "html" }} />
       </Section>
       <Section title="Validation">
         <Text>

@@ -23,7 +23,6 @@ export function LoadersDemo({ gallery = false }: { gallery?: boolean }) {
   return (
     <div className="loader-stage">
       <ThinkingDots size={72} label="Loading" />
-      <p>The default sequence, moving through all sixteen figures.</p>
     </div>
   );
 }

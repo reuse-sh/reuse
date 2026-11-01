@@ -14,10 +14,10 @@ export function createHoldToConfirm(
     throw new RangeError("holdMs must be positive.");
   const originalStyle = button.getAttribute("style");
   const originalHolding = button.getAttribute("data-holding");
-  const hadClass = button.classList.contains("reuse-hold");
-  button.classList.add("reuse-hold");
+  const hadClass = button.classList.contains("re-hold");
+  button.classList.add("re-hold");
   const fill = button.ownerDocument.createElement("span");
-  fill.className = "reuse-hold-fill";
+  fill.className = "re-hold-fill";
   fill.setAttribute("aria-hidden", "true");
   button.append(fill);
   let timer: number | undefined;
@@ -120,7 +120,7 @@ export function createHoldToConfirm(
       view.removeEventListener("keydown", onEscape);
       view.removeEventListener("blur", cancel);
       fill.remove();
-      if (!hadClass) button.classList.remove("reuse-hold");
+      if (!hadClass) button.classList.remove("re-hold");
       if (originalStyle === null) button.removeAttribute("style");
       else button.setAttribute("style", originalStyle);
       if (originalHolding === null) button.removeAttribute("data-holding");

@@ -131,7 +131,7 @@ export function createAnnotatedImage(
   };
   const original = Array.from(root.childNodes);
   const figure = doc.createElement("figure");
-  figure.setAttribute("data-reuse-annotations", "");
+  figure.setAttribute("data-re-annotations", "");
   const stage = doc.createElement("div");
   stage.setAttribute("data-annot-stage", "");
   const media = doc.createElement("div");
@@ -145,7 +145,7 @@ export function createAnnotatedImage(
   stage.append(media, drawing);
   figure.append(stage, list);
   root.replaceChildren(figure);
-  const id = `reuse-annotation-${++nextId}`;
+  const id = `re-annotation-${++nextId}`;
   let current = initial;
   let isDestroyed = false;
   let frame = 0;
@@ -219,7 +219,7 @@ export function annotationImageHtml(
   const style = rendered.stageStyle
     ? ` style="${escapeHtml(rendered.stageStyle)}"`
     : "";
-  return `<figure data-reuse-annotations><div data-annot-stage${style}><div data-annot-media><img src="${escapeHtml(options.src)}" alt="${escapeHtml(options.alt)}"><div data-annotation-overlay>${rendered.overlay}</div></div>${rendered.drawing}</div>${rendered.list}</figure>`;
+  return `<figure data-re-annotations><div data-annot-stage${style}><div data-annot-media><img src="${escapeHtml(options.src)}" alt="${escapeHtml(options.alt)}"><div data-annotation-overlay>${rendered.overlay}</div></div>${rendered.drawing}</div>${rendered.list}</figure>`;
 }
 
 export {

@@ -14,7 +14,7 @@ export function PhotoStrip() {
   const lightbox = useLightbox({ icons: lightboxIcons, thumbnails: true });
   const open = (index: number, trigger: HTMLElement) => {
     const images = trigger
-      .closest(".reuse-carousel")
+      .closest(".re-carousel")
       ?.querySelectorAll<HTMLImageElement>("[data-carousel-slide] img");
     lightbox.open(
       strip.map((photo, at) => {
@@ -31,15 +31,11 @@ export function PhotoStrip() {
   };
   return (
     <div className="h-strip">
-      <section
-        ref={ref}
-        className="reuse-carousel h-strip-vp"
-        aria-label="Photos"
-      >
+      <section ref={ref} className="re-carousel h-strip-vp" aria-label="Photos">
         {strip.map((photo, index) => (
           <figure
             key={photo.id}
-            className="reuse-carousel__slide h-slide"
+            className="re-carousel__slide h-slide"
             data-carousel-slide=""
           >
             <button
@@ -79,7 +75,7 @@ export function PhotoStrip() {
           <button
             type="button"
             aria-label="Previous slide"
-            data-reuse-tooltip="Previous"
+            data-re-tooltip="Previous"
             disabled={!state.canPrev}
             onClick={() => carousel?.prev()}
           >
@@ -88,7 +84,7 @@ export function PhotoStrip() {
           <button
             type="button"
             aria-label="Next slide"
-            data-reuse-tooltip="Next"
+            data-re-tooltip="Next"
             disabled={!state.canNext}
             onClick={() => carousel?.next()}
           >

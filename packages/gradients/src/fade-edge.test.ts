@@ -22,7 +22,7 @@ function layout(scrollWidth: number, clientWidth: number, scrollLeft: number) {
   scroller.scrollLeft = scrollLeft;
 }
 
-const fade = (name: "--reuse-fade-start" | "--reuse-fade-end") =>
+const fade = (name: "--re-fade-start" | "--re-fade-end") =>
   scroller.style.getPropertyValue(name);
 
 beforeEach(() => {
@@ -45,19 +45,19 @@ describe("createFadeEdge", () => {
   it("scroll mode keeps the start sharp and fades the end at scrollLeft 0", () => {
     layout(1000, 400, 0);
     const controller = createFadeEdge(scroller);
-    expect(fade("--reuse-fade-start")).toBe("0px");
-    expect(fade("--reuse-fade-end")).toBe("64px");
+    expect(fade("--re-fade-start")).toBe("0px");
+    expect(fade("--re-fade-end")).toBe("64px");
     controller.destroy();
   });
 
   it("fades the end once added content starts to overflow", async () => {
     layout(400, 400, 0);
     const controller = createFadeEdge(scroller);
-    expect(fade("--reuse-fade-end")).toBe("0px");
+    expect(fade("--re-fade-end")).toBe("0px");
     layout(800, 400, 0);
     scroller.append(document.createElement("img"));
     await Promise.resolve();
-    expect(fade("--reuse-fade-end")).toBe("64px");
+    expect(fade("--re-fade-end")).toBe("64px");
     controller.destroy();
   });
 
@@ -66,34 +66,34 @@ describe("createFadeEdge", () => {
     const controller = createFadeEdge(scroller);
     layout(1000, 400, 300);
     scroller.dispatchEvent(new Event("scroll"));
-    expect(fade("--reuse-fade-start")).toBe("64px");
-    expect(fade("--reuse-fade-end")).toBe("64px");
+    expect(fade("--re-fade-start")).toBe("64px");
+    expect(fade("--re-fade-end")).toBe("64px");
     controller.destroy();
   });
 
   it("scroll mode grows the start fade with the distance scrolled", () => {
     layout(1000, 400, 20);
     const controller = createFadeEdge(scroller);
-    expect(fade("--reuse-fade-start")).toBe("20px");
+    expect(fade("--re-fade-start")).toBe("20px");
     controller.destroy();
   });
 
   it("fixed mode fades both edges at the start and the end", () => {
     layout(1000, 400, 0);
     const controller = createFadeEdge(scroller, { mode: "fixed", size: 40 });
-    expect(fade("--reuse-fade-start")).toBe("0px");
+    expect(fade("--re-fade-start")).toBe("0px");
     layout(1000, 400, 1);
     controller.update();
-    expect(fade("--reuse-fade-start")).toBe("40px");
-    expect(fade("--reuse-fade-end")).toBe("40px");
+    expect(fade("--re-fade-start")).toBe("40px");
+    expect(fade("--re-fade-end")).toBe("40px");
     controller.destroy();
   });
 
   it("does not fade when the content fits", () => {
     layout(400, 400, 0);
     const controller = createFadeEdge(scroller, { mode: "fixed" });
-    expect(fade("--reuse-fade-start")).toBe("0px");
-    expect(fade("--reuse-fade-end")).toBe("0px");
+    expect(fade("--re-fade-start")).toBe("0px");
+    expect(fade("--re-fade-end")).toBe("0px");
     controller.destroy();
   });
 
@@ -117,11 +117,11 @@ describe("createFadeEdge", () => {
     layout(1000, 400, 0);
     scroller.setAttribute(
       "style",
-      "color: red; --reuse-fade-end: 7px; overflow-x: auto",
+      "color: red; --re-fade-end: 7px; overflow-x: auto",
     );
     const original = scroller.getAttribute("style");
     const controller = createFadeEdge(scroller);
-    expect(scroller.style.getPropertyValue("--reuse-fade-end")).toBe("64px");
+    expect(scroller.style.getPropertyValue("--re-fade-end")).toBe("64px");
     controller.destroy();
     expect(scroller.getAttribute("style")).toBe(original);
   });

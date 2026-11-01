@@ -69,7 +69,7 @@ export function ChatReply() {
         <button
           type="submit"
           aria-label="Send"
-          data-reuse-tooltip="Send"
+          data-re-tooltip="Send"
           disabled={thinking}
         >
           <svg

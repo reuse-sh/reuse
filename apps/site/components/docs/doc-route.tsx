@@ -3,10 +3,11 @@ import {
   findDocPage,
   findLibrary,
   libraries,
+  pagePrompt,
 } from "@reuse-sh/catalog";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { Pager, PageTitle } from "./parts";
+import { AgentPrompt, Pager, PageTitle } from "./parts";
 import { docBody } from "./registry";
 
 export type DocParams = Promise<{ library: string; page?: string }>;
@@ -53,13 +54,17 @@ export async function DocRoute({
   const found = resolve(slug, path);
   const body = found && docBody(found.library, path);
   if (!found || !body) notFound();
+  const prompt = pagePrompt(found.library, path);
   return (
     <>
       <PageTitle
         title={path ? found.page.title : found.library.name}
         lead={found.page.lead}
       />
-      <div className="d-body">{body}</div>
+      <div className="d-body">
+        {body}
+        {prompt ? <AgentPrompt prompt={prompt} /> : null}
+      </div>
       <Pager library={found.library} path={path} />
     </>
   );

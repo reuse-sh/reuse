@@ -5,6 +5,17 @@ const nextConfig: NextConfig = {
   async redirects() {
     return [
       { source: "/how-to-use", destination: "/for-agents", permanent: true },
+      { source: "/:library/agent", destination: "/:library", permanent: true },
+      {
+        source: "/gradients",
+        destination: "/easing-gradients",
+        permanent: true,
+      },
+      {
+        source: "/shadows/guides/fade-edge",
+        destination: "/easing-gradients/examples/fade-edge",
+        permanent: true,
+      },
     ];
   },
 };

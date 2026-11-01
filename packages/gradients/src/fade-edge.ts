@@ -1,3 +1,5 @@
+import { type Easing, easingStops } from "./easing.js";
+
 export const FADE_CURVES = ["smooth", "linear"] as const;
 export const FADE_MODES = ["scroll", "fixed"] as const;
 
@@ -15,37 +17,26 @@ export interface FadeEdge {
   destroy(): void;
 }
 
-const STOPS = 12;
 const THRESHOLD = 0.5;
-const easeInOutSine = (t: number) => 0.5 - Math.cos(Math.PI * t) / 2;
+const CURVE_EASING: Record<FadeCurve, Easing> = {
+  smooth: "ease-in-out-sine",
+  linear: "linear",
+};
 const round = (value: number) => Math.round(value * 1e4) / 1e4;
 
-function ramp(curve: FadeCurve): Array<[number, number]> {
-  if (curve === "linear") {
-    return [
-      [0, 0],
-      [1, 1],
-    ];
-  }
-  return Array.from({ length: STOPS }, (_, index) => {
-    const t = index / (STOPS - 1);
-    return [t, easeInOutSine(t)];
-  });
-}
-
 export function buildFadeGradient(curve: FadeCurve, rtl = false): string {
-  const points = ramp(curve);
-  const color = (alpha: number) => `rgb(0 0 0 / ${round(alpha)})`;
+  const points = easingStops(CURVE_EASING[curve]);
+  const color = (alpha: number) => `rgb(0 0 0 / ${alpha})`;
   const start = points.map(
-    ([t, alpha]) =>
-      `${color(alpha)} calc(var(--reuse-fade-start) * ${round(t)})`,
+    ({ position, progress }) =>
+      `${color(progress)} calc(var(--re-fade-start) * ${round(position)})`,
   );
   const end = points
     .slice()
     .reverse()
     .map(
-      ([t, alpha]) =>
-        `${color(alpha)} calc(100% - var(--reuse-fade-end) * ${round(t)})`,
+      ({ position, progress }) =>
+        `${color(progress)} calc(100% - var(--re-fade-end) * ${round(position)})`,
     );
   return `linear-gradient(to ${rtl ? "left" : "right"}, ${[...start, ...end].join(", ")})`;
 }
@@ -99,9 +90,8 @@ export function createFadeEdge(
     const end = max < THRESHOLD ? 0 : edge(max - scrolled);
     const next = { start: `${round(start)}px`, end: `${round(end)}px` };
     if (next.start !== written.start)
-      style.setProperty("--reuse-fade-start", next.start);
-    if (next.end !== written.end)
-      style.setProperty("--reuse-fade-end", next.end);
+      style.setProperty("--re-fade-start", next.start);
+    if (next.end !== written.end) style.setProperty("--re-fade-end", next.end);
     written = next;
   }
 

@@ -17,7 +17,14 @@ import {
   CarouselProductStrip,
   CarouselStart,
 } from "./carousel-pages";
+import { CopyCodeBlock, CopyShareLink } from "./copy-pages";
 import type { DocIconName } from "./doc-icon";
+import {
+  GradientsCaption,
+  GradientsCurves,
+  GradientsFadeEdge,
+  GradientsStart,
+} from "./gradients-pages";
 import { FileMenu, HighlightTabs, NavigationList } from "./highlight-islands";
 import { DeleteFile, SettingsRow } from "./hold-islands";
 import {
@@ -31,7 +38,6 @@ import {
 import { LightboxStylePage } from "./lightbox-style-page";
 import { ChatReply } from "./loaders-islands";
 import {
-  AgentCard,
   ApiTable,
   CodePair,
   ExampleCode,
@@ -41,12 +47,7 @@ import {
   Section,
   Text,
 } from "./parts";
-import {
-  ShadowsCards,
-  ShadowsFadeEdge,
-  ShadowsScale,
-  ShadowsStart,
-} from "./shadows-pages";
+import { ShadowsCards, ShadowsScale, ShadowsStart } from "./shadows-pages";
 import {
   TooltipLinks,
   TooltipOverview,
@@ -60,7 +61,9 @@ type Body = (library: Library) => ReactNode;
 const basicIcons: Record<string, DocIconName[]> = {
   annotations: ["doc", "resize", "code", "layers", "share", "keyboard"],
   loaders: ["chevrons", "layers", "feather", "timer", "doc", "code"],
-  shadows: ["layers", "feather", "resize", "code", "chevrons", "doc"],
+  shadows: ["layers", "feather", "resize", "code"],
+  "easing-gradients": ["feather", "layers", "code", "chevrons", "minus", "doc"],
+  "copy-button": ["timer", "resize", "doc", "share", "keyboard", "layers"],
   "moving-highlight": [
     "resize",
     "keyboard",
@@ -120,7 +123,6 @@ function example(demo: ReactNode, code: keyof typeof basicCode) {
 
 const shared: Record<string, Body> = {
   api: (library) => <ApiTable rows={library.api} />,
-  agent: (library) => <AgentCard library={library} />,
 };
 
 const bodies: Record<string, Record<string, Body>> = {
@@ -163,7 +165,16 @@ const bodies: Record<string, Record<string, Body>> = {
     "getting-started": (library) => <ShadowsStart library={library} />,
     "examples/cards": () => <ShadowsCards />,
     "examples/scale": () => <ShadowsScale />,
-    "guides/fade-edge": () => <ShadowsFadeEdge />,
+  },
+  "easing-gradients": {
+    "getting-started": (library) => <GradientsStart library={library} />,
+    "examples/image-caption": () => <GradientsCaption />,
+    "examples/fade-edge": () => <GradientsFadeEdge />,
+    "guides/easing-curves": () => <GradientsCurves />,
+  },
+  "copy-button": {
+    "examples/code-block": () => <CopyCodeBlock />,
+    "examples/share-link": () => <CopyShareLink />,
   },
   "moving-highlight": {
     "examples/menu": example(<FileMenu />, "menu"),

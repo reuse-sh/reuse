@@ -21,15 +21,16 @@ Open http://127.0.0.1:4300. The site needs no environment variables or external 
 - Carousel adds mouse dragging, responsive targets, grouping, RTL, controls, synchronization, optional repeat, and an autoplay clock to native scrolling.
 - Annotations preserves six kinds, percentage coordinates, a versioned JSON format, HTML transport, validation, rendering, and editing.
 - Loaders contains the sixteen ThinkingDots figures, their timeline, native canvas controller, and React integration.
-- Shadows provides the six-level CSS scale, ring variants, and code/action card patterns.
-- Interactions contains floating tooltip, moving highlight, and hold to confirm.
+- Shadows provides the six-level CSS scale, ring variants, and code/action card patterns, with no JavaScript.
+- Easing gradients builds CSS gradients from an easing curve and fades the edges of horizontal scrollers.
+- Interactions contains floating tooltip, moving highlight, hold to confirm, and copy button.
 - Avatars provides images/initials, transparent badge cutouts, and overlapping groups.
 
 Each native entry is independent of React. Import the package's /react entry when needed. Original code is MIT.
 
 ## Packages and releases
 
-The published packages are @reuse-sh/annotations, avatars, carousel, core, interactions, lightbox, loaders, and shadows. Each one lives in packages/<name>, with its README.md and, after its first versioned release, its CHANGELOG.md. packages/catalog and apps/site are private and never published.
+The published packages are @reuse-sh/annotations, avatars, carousel, core, gradients, interactions, lightbox, loaders, and shadows. Each one lives in packages/<name>, with its README.md and, after its first versioned release, its CHANGELOG.md. packages/catalog and apps/site are private and never published.
 
 Every pull request that changes a published package adds a changeset:
 

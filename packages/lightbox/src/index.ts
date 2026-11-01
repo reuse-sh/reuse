@@ -138,9 +138,8 @@ function lockScroll(doc: Document) {
       count: 0,
       overflow: doc.body.style.overflow,
       paddingRight: doc.body.style.paddingRight,
-      gapProperty: doc.documentElement.style.getPropertyValue(
-        "--reuse-scrollbar-gap",
-      ),
+      gapProperty:
+        doc.documentElement.style.getPropertyValue("--re-scrollbar-gap"),
       x: win.scrollX,
       y: win.scrollY,
     };
@@ -149,7 +148,7 @@ function lockScroll(doc: Document) {
     if (gap)
       doc.body.style.paddingRight = `${Number.parseFloat(win.getComputedStyle(doc.body).paddingRight || "0") + gap}px`;
     // Fixed elements ignore body padding; they can add this gap themselves.
-    doc.documentElement.style.setProperty("--reuse-scrollbar-gap", `${gap}px`);
+    doc.documentElement.style.setProperty("--re-scrollbar-gap", `${gap}px`);
     doc.body.style.overflow = "hidden";
   }
   lock.count++;
@@ -163,10 +162,10 @@ function lockScroll(doc: Document) {
     doc.body.style.paddingRight = lock.paddingRight;
     if (lock.gapProperty)
       doc.documentElement.style.setProperty(
-        "--reuse-scrollbar-gap",
+        "--re-scrollbar-gap",
         lock.gapProperty,
       );
-    else doc.documentElement.style.removeProperty("--reuse-scrollbar-gap");
+    else doc.documentElement.style.removeProperty("--re-scrollbar-gap");
     if (win.scrollX !== lock.x || win.scrollY !== lock.y)
       win.scrollTo(lock.x, lock.y);
     locks.delete(doc);
@@ -481,9 +480,9 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
       const item = items[index];
       const doc = s.dialog.ownerDocument;
       const frame = doc.createElement("div");
-      frame.className = "reuse-lightbox-frame";
+      frame.className = "re-lightbox-frame";
       const image = doc.createElement("img");
-      image.className = "reuse-lightbox-image";
+      image.className = "re-lightbox-image";
       image.alt = item.alt || "";
       image.draggable = false;
       image.decoding = "async";
@@ -509,7 +508,7 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
         frame.dataset.error = "true";
         if (!item.previewSrc) {
           const error = doc.createElement("span");
-          error.className = "reuse-lightbox-error";
+          error.className = "re-lightbox-error";
           error.setAttribute("role", "status");
           error.textContent = "Image could not be loaded.";
           frame.append(error);
@@ -933,7 +932,7 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
           )
         )
           return;
-        if (!target.closest(".reuse-lightbox-frame")) {
+        if (!target.closest(".re-lightbox-frame")) {
           void close();
           return;
         }
@@ -1007,17 +1006,17 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
     const dialog = doc.createElement("dialog");
     if (typeof dialog.showModal !== "function")
       throw new Error("Lightbox requires native dialog support.");
-    dialog.className = ["reuse-lightbox", options.className]
+    dialog.className = ["re-lightbox", options.className]
       .filter(Boolean)
       .join(" ");
     dialog.setAttribute("aria-label", options.label || "Image gallery");
     const viewport = doc.createElement("div");
-    viewport.className = "reuse-lightbox-viewport";
+    viewport.className = "re-lightbox-viewport";
     viewport.tabIndex = 0;
     viewport.setAttribute("aria-label", "Images");
     const slides = items.map((_item, imageIndex) => {
       const slide = doc.createElement("div");
-      slide.className = "reuse-lightbox-slide";
+      slide.className = "re-lightbox-slide";
       slide.dataset.carouselSlide = "";
       slide.setAttribute("role", "group");
       slide.setAttribute("aria-label", `${imageIndex + 1} of ${items.length}`);
@@ -1025,7 +1024,7 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
       return slide;
     });
     const backdrop = doc.createElement("div");
-    backdrop.className = "reuse-lightbox-backdrop";
+    backdrop.className = "re-lightbox-backdrop";
     backdrop.setAttribute("aria-hidden", "true");
     dialog.append(backdrop, viewport);
     const abort = new AbortController();
@@ -1037,7 +1036,7 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
     ) => {
       const element = doc.createElement("button");
       element.type = "button";
-      element.className = `reuse-lightbox-button reuse-lightbox-${name}`;
+      element.className = `re-lightbox-button re-lightbox-${name}`;
       element.setAttribute("aria-label", label);
       const icon = options.icons?.[name]?.();
       if (icon) element.append(icon);
@@ -1056,18 +1055,18 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
     const next = button("next", "Next image", "›", () => goTo(state.index + 1));
     const zoomButton = button("zoom", "Zoom in", "+", () => toggleZoom());
     const footer = doc.createElement("div");
-    footer.className = "reuse-lightbox-footer";
+    footer.className = "re-lightbox-footer";
     const counter = doc.createElement("output");
-    counter.className = "reuse-lightbox-counter";
+    counter.className = "re-lightbox-counter";
     counter.setAttribute("aria-live", "polite");
     const caption = doc.createElement("p");
-    caption.className = "reuse-lightbox-caption";
+    caption.className = "re-lightbox-caption";
     footer.append(caption, counter);
     dialog.append(footer);
     const thumbs: HTMLButtonElement[] = [];
     if (options.thumbnails) {
       const strip = doc.createElement("div");
-      strip.className = "reuse-lightbox-thumbnails";
+      strip.className = "re-lightbox-thumbnails";
       strip.setAttribute("role", "group");
       strip.setAttribute("aria-label", "Choose image");
       items.forEach((item, i) => {

@@ -10,10 +10,10 @@ export function ShadowsDemo() {
   return (
     <div className="shadow-playground">
       <div className="shadow-surface">
-        <div className={`shadow-object reuse-shadow-ring-${level}`}>
+        <div className={`shadow-object re-shadow-ring-${level}`}>
           <Icon name="shadows" size={28} />
           <strong>Order a test print</strong>
-          <span>reuse-shadow-ring-{level}</span>
+          <span>re-shadow-ring-{level}</span>
         </div>
       </div>
       <fieldset className="shadow-levels">
@@ -38,14 +38,14 @@ const install = "npm install @reuse-sh/shadows";
 export function CardPatterns() {
   return (
     <div className="card-patterns">
-      <div className="reuse-card reuse-card-code reuse-shadow-ring-sm">
+      <div className="re-card re-card-code re-shadow-ring-sm">
         <pre>
           <code className="card-patterns-code">{install}</code>
         </pre>
         <CopyControl value={install} />
       </div>
-      <div className="reuse-card-frame">
-        <div className="reuse-card reuse-card-action reuse-shadow-ring-xs">
+      <div className="re-card-frame">
+        <div className="re-card re-card-action re-shadow-ring-xs">
           <div>
             <h3 className="card-patterns-title">Order a test print</h3>
             <p className="card-patterns-text">

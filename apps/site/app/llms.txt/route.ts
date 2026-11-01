@@ -7,6 +7,7 @@ export function GET() {
     "Every library guide opens with that library's principles, the rules its code keeps. An adaptation on any framework must keep them.",
     "- /agent.md: Integration agreement",
     "- /for-agents: Agent guides",
+    "- /tools: Tools we trust, the interface tools we use beside Reuse",
     ...libraries.map(
       (library) =>
         `- /${library.slug}/guide.md: ${library.name}. ${library.description}`,

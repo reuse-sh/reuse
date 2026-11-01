@@ -67,7 +67,7 @@ export function FileMenu() {
             }}
             type="button"
             role="menuitem"
-            data-reuse-row=""
+            data-re-row=""
             tabIndex={index === focus ? 0 : -1}
             className={
               index === menuItems.length - 1 ? "x-row x-menu-danger" : "x-row"
@@ -111,7 +111,7 @@ export function NavigationList() {
               key={name}
               href={`#x-nav-${index}`}
               className="x-row"
-              data-reuse-row=""
+              data-re-row=""
               data-current={index === current ? "" : undefined}
               aria-current={index === current ? "page" : undefined}
               onClick={(event) => {
@@ -164,7 +164,7 @@ export function HighlightTabs() {
     });
     const hover = createMovingHighlight(root, {
       rowSelector: '[role="tab"]',
-      selectedSelector: "[data-reuse-none]",
+      selectedSelector: "[data-re-none]",
       mode: "hover",
       className: "x-tab-hover",
     });

@@ -1,4 +1,9 @@
 export {
+  type CopyButtonOptions,
+  type CopyButtonState,
+  createCopyButton,
+} from "./copy.js";
+export {
   createMovingHighlight,
   type MovingHighlightOptions,
 } from "./highlight.js";

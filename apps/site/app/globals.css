@@ -9,8 +9,8 @@
   --side: rgb(18 18 18 / 40%);
   --hover: rgb(0 0 0 / 3%);
   --shadow-ring: 0 0 0 0.5px rgb(0 0 0 / 8%);
-  --shadow-control:
-    var(--shadow-ring), 0 1px 2px rgb(0 0 0 / 5%), 0 2px 4px rgb(0 0 0 / 2%);
+  --shadow-control-soft: 0 1px 2px rgb(0 0 0 / 5%), 0 2px 4px rgb(0 0 0 / 2%);
+  --shadow-control: var(--shadow-ring), var(--shadow-control-soft);
   --shadow-raised:
     var(--shadow-ring), 0 1px 2px rgb(0 0 0 / 5%), 0 4px 8px rgb(0 0 0 / 3.5%);
   --shadow-panel:

@@ -49,7 +49,7 @@ beforeEach(() => {
   }));
   vi.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockImplementation(
     function (this: HTMLElement) {
-      const index = this.classList.contains("reuse-lightbox-slide")
+      const index = this.classList.contains("re-lightbox-slide")
         ? [...(this.parentElement?.children ?? [])].indexOf(this)
         : 0;
       return new DOMRect(index * 1024, 0, 1024, 768);
@@ -59,14 +59,14 @@ beforeEach(() => {
   vi.spyOn(HTMLElement.prototype, "offsetWidth", "get").mockReturnValue(1024);
   vi.spyOn(HTMLElement.prototype, "offsetLeft", "get").mockImplementation(
     function (this: HTMLElement) {
-      return this.classList.contains("reuse-lightbox-slide")
+      return this.classList.contains("re-lightbox-slide")
         ? [...(this.parentElement?.children ?? [])].indexOf(this) * 1024
         : 0;
     },
   );
   vi.spyOn(HTMLElement.prototype, "scrollWidth", "get").mockImplementation(
     function (this: HTMLElement) {
-      return this.classList.contains("reuse-lightbox-viewport")
+      return this.classList.contains("re-lightbox-viewport")
         ? this.children.length * 1024
         : 1024;
     },
@@ -99,23 +99,22 @@ describe("lightbox lifecycle", () => {
       count: 6,
     });
     expect(dialog().querySelector("output")?.value).toBe("3 / 6");
-    expect(dialog().querySelector(".reuse-lightbox-caption")?.textContent).toBe(
+    expect(dialog().querySelector(".re-lightbox-caption")?.textContent).toBe(
       "Caption 2",
     );
-    expect(dialog().querySelectorAll(".reuse-lightbox-image")).toHaveLength(3);
+    expect(dialog().querySelectorAll(".re-lightbox-image")).toHaveLength(3);
     controller.next();
     expect(controller.getState().index).toBe(3);
     expect(dialog().querySelector("output")?.value).toBe("4 / 6");
     expect(
       [
-        ...dialog().querySelectorAll<HTMLImageElement>(".reuse-lightbox-image"),
+        ...dialog().querySelectorAll<HTMLImageElement>(".re-lightbox-image"),
       ].map((image) => image.alt),
     ).toEqual(["Synthetic image 2", "Synthetic image 3", "Synthetic image 4"]);
     controller.goTo(100);
     expect(controller.getState().index).toBe(5);
     expect(
-      dialog().querySelector<HTMLButtonElement>(".reuse-lightbox-next")
-        ?.disabled,
+      dialog().querySelector<HTMLButtonElement>(".re-lightbox-next")?.disabled,
     ).toBe(true);
     await controller.close();
     expect(document.querySelector("dialog")).toBeNull();
@@ -128,9 +127,9 @@ describe("lightbox lifecycle", () => {
     const controller = create();
     controller.open(gallery);
     const viewport = dialog().querySelector<HTMLElement>(
-      ".reuse-lightbox-viewport",
+      ".re-lightbox-viewport",
     );
-    const image = dialog().querySelector(".reuse-lightbox-image");
+    const image = dialog().querySelector(".re-lightbox-image");
     if (!viewport || !image) throw new Error("Missing image");
     const pointer = (target: EventTarget, type: string, x: number) => {
       const event = new MouseEvent(type, {
@@ -164,7 +163,7 @@ describe("lightbox lifecycle", () => {
     const controller = create();
     controller.open(gallery);
     const viewport = dialog().querySelector<HTMLElement>(
-      ".reuse-lightbox-viewport",
+      ".re-lightbox-viewport",
     );
     if (!viewport) throw new Error("Missing viewport");
     Object.defineProperty(viewport, "scrollTo", {
@@ -178,7 +177,7 @@ describe("lightbox lifecycle", () => {
     expect(dialog().querySelector("output")?.value).toBe("6 / 6");
     expect(
       [
-        ...dialog().querySelectorAll<HTMLImageElement>(".reuse-lightbox-image"),
+        ...dialog().querySelectorAll<HTMLImageElement>(".re-lightbox-image"),
       ].map((image) => image.alt),
     ).toEqual(["Synthetic image 4", "Synthetic image 5"]);
     controller.prev();
@@ -196,7 +195,7 @@ describe("lightbox lifecycle", () => {
     const controller = create();
     controller.open(gallery);
     const viewport = dialog().querySelector<HTMLElement>(
-      ".reuse-lightbox-viewport",
+      ".re-lightbox-viewport",
     );
     if (!viewport) throw new Error("Missing viewport");
     Object.defineProperty(viewport, "scrollTo", {
@@ -235,9 +234,9 @@ describe("lightbox lifecycle", () => {
     controller.open(gallery);
     controller.zoomTo(2);
     const viewport = dialog().querySelector<HTMLElement>(
-      ".reuse-lightbox-viewport",
+      ".re-lightbox-viewport",
     );
-    const frame = dialog().querySelector<HTMLElement>(".reuse-lightbox-frame");
+    const frame = dialog().querySelector<HTMLElement>(".re-lightbox-frame");
     if (!viewport || !frame) throw new Error("Missing image");
     viewport.dispatchEvent(
       new WheelEvent("wheel", {
@@ -265,7 +264,7 @@ describe("lightbox lifecycle", () => {
         return {
           finished: new Promise<void>(() => {}),
           commitStyles: () => {
-            if (this.classList.contains("reuse-lightbox-frame"))
+            if (this.classList.contains("re-lightbox-frame"))
               this.style.transform = "translate(42px, 30px) scale(0.8)";
           },
           cancel() {},
@@ -276,7 +275,7 @@ describe("lightbox lifecycle", () => {
     controller.open(gallery);
     const closing = controller.close();
     const imageFrames = frames.filter((value) =>
-      value.node.classList.contains("reuse-lightbox-frame"),
+      value.node.classList.contains("re-lightbox-frame"),
     );
     expect(imageFrames.at(-1)?.frames[0].transform).toBe(
       "translate(42px, 30px) scale(0.8)",
@@ -371,7 +370,7 @@ describe("lightbox lifecycle", () => {
     const controller = create();
     controller.open(gallery);
     dialog()
-      .querySelector(".reuse-lightbox-image")
+      .querySelector(".re-lightbox-image")
       ?.dispatchEvent(
         new MouseEvent("click", { bubbles: true, clientX: 512, clientY: 384 }),
       );
@@ -385,7 +384,7 @@ describe("lightbox lifecycle", () => {
     const fantasma = create({ imageClick: "close", doubleTapZoom: false });
     fantasma.open(gallery);
     dialog()
-      .querySelector(".reuse-lightbox-image")
+      .querySelector(".re-lightbox-image")
       ?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
     await fantasma.close();
     expect(fantasma.getState().isOpen).toBe(false);
@@ -417,7 +416,7 @@ describe("lightbox lifecycle", () => {
   it("zooms on ctrl-wheel and pans on an ordinary wheel at zoom", () => {
     const controller = create();
     controller.open(gallery);
-    const viewport = dialog().querySelector(".reuse-lightbox-viewport");
+    const viewport = dialog().querySelector(".re-lightbox-viewport");
     const wheel = new WheelEvent("wheel", {
       ctrlKey: true,
       deltaY: -100,
@@ -494,7 +493,7 @@ describe("lightbox lifecycle", () => {
     image.click();
     expect(controller.getState().count).toBe(1);
     expect(
-      dialog().querySelector<HTMLImageElement>(".reuse-lightbox-image")?.src,
+      dialog().querySelector<HTMLImageElement>(".re-lightbox-image")?.src,
     ).toBe(image.src);
     expect(window.location.href).toBe(href);
     controller.destroy();
@@ -523,9 +522,8 @@ describe("lightbox lifecycle", () => {
     });
     const controller = create({ preload: 0 });
     controller.open(gallery);
-    const image = dialog().querySelector<HTMLImageElement>(
-      ".reuse-lightbox-image",
-    );
+    const image =
+      dialog().querySelector<HTMLImageElement>(".re-lightbox-image");
     expect(image?.src).toBe(gallery[0].previewSrc);
     loaders[0].dispatchEvent(new Event("load"));
     expect(image?.src).toBe(gallery[0].previewSrc);
@@ -566,7 +564,7 @@ describe("lightbox lifecycle", () => {
     const controller = create();
     controller.open(gallery);
     const viewport = dialog().querySelector<HTMLElement>(
-      ".reuse-lightbox-viewport",
+      ".re-lightbox-viewport",
     );
     if (!viewport) throw new Error("Missing viewport");
     const pointer = (type: string, id: number, x: number, y: number) => {
@@ -607,7 +605,7 @@ describe("lightbox lifecycle", () => {
   it("honors disabled double-tap zoom", () => {
     const controller = create({ imageClick: "none", doubleTapZoom: false });
     controller.open(gallery);
-    const viewport = dialog().querySelector(".reuse-lightbox-viewport");
+    const viewport = dialog().querySelector(".re-lightbox-viewport");
     for (let tap = 0; tap < 2; tap++) {
       for (const type of ["pointerdown", "pointerup"]) {
         const event = new MouseEvent(type, {
@@ -690,10 +688,10 @@ describe("lightbox lifecycle", () => {
     controller.open(gallery);
     controller.zoomTo(2);
     const viewport = dialog().querySelector<HTMLElement>(
-      ".reuse-lightbox-viewport",
+      ".re-lightbox-viewport",
     );
     const frame = dialog().querySelector<HTMLElement>(
-      '.reuse-lightbox-slide[aria-hidden="false"] .reuse-lightbox-frame',
+      '.re-lightbox-slide[aria-hidden="false"] .re-lightbox-frame',
     );
     if (!viewport || !frame) throw new Error("Missing native image");
     const pointer = (type: string, x: number, y: number) => {
@@ -753,10 +751,10 @@ describe("lightbox lifecycle", () => {
     controller.open(gallery);
     controller.zoomTo(2);
     const viewport = dialog().querySelector<HTMLElement>(
-      ".reuse-lightbox-viewport",
+      ".re-lightbox-viewport",
     );
     const frame = dialog().querySelector<HTMLElement>(
-      '.reuse-lightbox-slide[aria-hidden="false"] .reuse-lightbox-frame',
+      '.re-lightbox-slide[aria-hidden="false"] .re-lightbox-frame',
     );
     if (!viewport || !frame) throw new Error("Missing native image");
     const discrete = [

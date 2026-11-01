@@ -5,7 +5,7 @@ import { Icon } from "../icons";
 import { basicCode } from "./basic-code";
 import { ExampleCode } from "./parts";
 
-const away = { "--reuse-avatar-status-color": "#d08a1c" } as CSSProperties;
+const away = { "--re-avatar-status-color": "#d08a1c" } as CSSProperties;
 
 const members: {
   name: string;
