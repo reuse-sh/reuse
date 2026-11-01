@@ -38,7 +38,7 @@ export function Gallery({ photos }) {
     native: `import { createCarousel } from "@reuse-sh/carousel";
 import "@reuse-sh/carousel/styles.css";
 
-const viewport = document.querySelector(".reuse-carousel");
+const viewport = document.querySelector(".re-carousel");
 const carousel = createCarousel(viewport, { loop: true, align: "start" });
 
 const render = (state) => {
@@ -56,7 +56,7 @@ export function Strip({ photos }) {
   const { ref, carousel } = useCarousel({ loop: true });
   return (
     <div>
-      <div ref={ref} className="reuse-carousel">
+      <div ref={ref} className="re-carousel">
         {photos.map((photo) => (
           <img key={photo.src} src={photo.src} alt={photo.alt} data-carousel-slide />
         ))}
@@ -82,7 +82,7 @@ export function Strip({ photos }) {
     native: `import "@reuse-sh/shadows/styles.css";
 import { createFadeEdge } from "@reuse-sh/shadows";
 
-// <div class="reuse-card reuse-shadow-ring-md">
+// <div class="re-card re-shadow-ring-md">
 //   <div class="strip">Your content</div>
 // </div>
 
@@ -103,7 +103,7 @@ export function Strip({ children }) {
     return () => fade.destroy();
   }, []);
   return (
-    <div className="reuse-card reuse-shadow-ring-md">
+    <div className="re-card re-shadow-ring-md">
       <div ref={ref} className="strip">
         {children}
       </div>
@@ -115,8 +115,8 @@ export function Strip({ children }) {
     native: `import { createFloatingTooltip } from "@reuse-sh/interactions";
 import "@reuse-sh/interactions/styles.css";
 
-// Any element inside the root with data-reuse-tooltip gets the hint.
-// <button aria-label="Share" data-reuse-tooltip="Share">…</button>
+// Any element inside the root with data-re-tooltip gets the hint.
+// <button aria-label="Share" data-re-tooltip="Share">…</button>
 const toolbar = document.querySelector(".toolbar");
 const tooltip = createFloatingTooltip(toolbar, { tilt: 5 });
 
@@ -128,8 +128,8 @@ import "@reuse-sh/interactions/styles.css";
 export function Toolbar() {
   return (
     <FloatingTooltipGroup className="toolbar" tilt={5}>
-      <button aria-label="Share" data-reuse-tooltip="Share"><ShareIcon /></button>
-      <button aria-label="Delete" data-reuse-tooltip="Delete"><TrashIcon /></button>
+      <button aria-label="Share" data-re-tooltip="Share"><ShareIcon /></button>
+      <button aria-label="Delete" data-re-tooltip="Delete"><TrashIcon /></button>
     </FloatingTooltipGroup>
   );
 }`,
@@ -139,8 +139,8 @@ export function Toolbar() {
 import "@reuse-sh/interactions/styles.css";
 
 // <nav class="menu">
-//   <a data-reuse-row data-current href="/">Overview</a>
-//   <a data-reuse-row href="/examples">Examples</a>
+//   <a data-re-row data-current href="/">Overview</a>
+//   <a data-re-row href="/examples">Examples</a>
 // </nav>
 const highlight = createMovingHighlight(document.querySelector(".menu"));
 
@@ -152,8 +152,8 @@ import "@reuse-sh/interactions/styles.css";
 export function Menu({ current }) {
   return (
     <MovingHighlight className="menu">
-      <a data-reuse-row data-current={current === "/" ? "" : undefined} href="/">Overview</a>
-      <a data-reuse-row data-current={current === "/examples" ? "" : undefined} href="/examples">Examples</a>
+      <a data-re-row data-current={current === "/" ? "" : undefined} href="/">Overview</a>
+      <a data-re-row data-current={current === "/examples" ? "" : undefined} href="/examples">Examples</a>
     </MovingHighlight>
   );
 }`,

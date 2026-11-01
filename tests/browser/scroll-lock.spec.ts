@@ -9,7 +9,7 @@ test("opening the lightbox keeps page content and right-anchored fixed elements 
   await mount(
     page,
     `<main id="content" style="max-width:600px;margin:0 auto;height:3000px">Page</main>
-<div id="fixed" style="position:fixed;top:0;right:0;padding-right:var(--reuse-scrollbar-gap, 0px)">Menu</div>`,
+<div id="fixed" style="position:fixed;top:0;right:0;padding-right:var(--re-scrollbar-gap, 0px)">Menu</div>`,
     ["lightbox/styles.css"],
   );
   const measure = () =>
@@ -42,7 +42,7 @@ test("opening the lightbox keeps page content and right-anchored fixed elements 
   );
   expect(
     await page.evaluate(() =>
-      document.documentElement.style.getPropertyValue("--reuse-scrollbar-gap"),
+      document.documentElement.style.getPropertyValue("--re-scrollbar-gap"),
     ),
   ).toBe("");
 });

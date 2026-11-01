@@ -39,7 +39,7 @@ function Toolbar({ tools, className }: { tools: Tool[]; className?: string }) {
             <button
               type="button"
               aria-label={label}
-              data-reuse-tooltip-template={`tt-${icon}`}
+              data-re-tooltip-template={`tt-${icon}`}
             >
               <DocIcon name={icon} size={18} />
             </button>
@@ -53,7 +53,7 @@ function Toolbar({ tools, className }: { tools: Tool[]; className?: string }) {
             key={label}
             type="button"
             aria-label={label}
-            data-reuse-tooltip={label}
+            data-re-tooltip={label}
           >
             <DocIcon name={icon} size={18} />
           </button>
@@ -104,8 +104,8 @@ export function TooltipStart({ library }: { library: Library }) {
       </Section>
       <Section title="Bind a toolbar">
         <Text>
-          Give each trigger a <C>data-reuse-tooltip</C> with its hint. Icon
-          buttons keep their own <C>aria-label</C>; the tooltip adds itself to{" "}
+          Give each trigger a <C>data-re-tooltip</C> with its hint. Icon buttons
+          keep their own <C>aria-label</C>; the tooltip adds itself to{" "}
           <C>aria-describedby</C> while it is open.
         </Text>
         <CodePair js={code.native} react={code.react} />
@@ -171,7 +171,7 @@ function PrintLink({ id, children }: { id: string; children: string }) {
     <a
       href="#links-note"
       className="c-link"
-      data-reuse-tooltip-template={`tt-print-${id}`}
+      data-re-tooltip-template={`tt-print-${id}`}
     >
       {children}
     </a>
@@ -238,7 +238,7 @@ export function TooltipPeople() {
               <button
                 type="button"
                 className="x-name"
-                data-reuse-tooltip-template={`tt-person-${index}`}
+                data-re-tooltip-template={`tt-person-${index}`}
               >
                 {people[index][0]}
               </button>{" "}

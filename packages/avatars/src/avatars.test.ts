@@ -38,7 +38,7 @@ function rect(
 function svgMask(node: HTMLElement, kind = "badge") {
   return decodeURIComponent(
     (
-      node.style.getPropertyValue(`--reuse-avatar-${kind}-mask`) ||
+      node.style.getPropertyValue(`--re-avatar-${kind}-mask`) ||
       node.style.maskImage
     )
       .replace(/^url\(["']?data:image\/svg\+xml,/, "")
@@ -94,9 +94,7 @@ describe("avatar", () => {
       }),
     );
     expect(root.getAttribute("aria-label")).toBe("Ada Lovelace, Online");
-    expect(root.querySelector("[data-reuse-avatar-face]")?.textContent).toBe(
-      "AL",
-    );
+    expect(root.querySelector("[data-re-avatar-face]")?.textContent).toBe("AL");
     const image = root.querySelector("img");
     if (!image) throw new Error("Image is missing");
     expect(image.style.visibility).toBe("hidden");
@@ -105,13 +103,11 @@ describe("avatar", () => {
     expect(image.style.visibility).toBe("visible");
     image.dispatchEvent(new Event("error"));
     expect(image.style.visibility).toBe("hidden");
-    expect(root.querySelector("[data-reuse-avatar-face]")?.textContent).toBe(
-      "AL",
-    );
+    expect(root.querySelector("[data-re-avatar-face]")?.textContent).toBe("AL");
   });
   it("cuts the full width of a three-digit pill with transparent SVG geometry", () => {
     document.body.innerHTML =
-      '<span><span data-reuse-avatar-face>AL</span><span data-reuse-avatar-badge="count">128</span></span>';
+      '<span><span data-re-avatar-face>AL</span><span data-re-avatar-badge="count">128</span></span>';
     const root = document.body.firstElementChild as HTMLElement;
     const face = root.children[0] as HTMLElement;
     const badge = root.children[1] as HTMLElement;
@@ -135,7 +131,7 @@ describe("avatar", () => {
   });
   it("keeps zero-clearance badge cutouts aligned inside scaled avatars", () => {
     document.body.innerHTML =
-      '<span style="--reuse-avatar-clearance: 0"><span data-reuse-avatar-face>AL</span><span data-reuse-avatar-badge="count">128</span></span>';
+      '<span style="--re-avatar-clearance: 0"><span data-re-avatar-face>AL</span><span data-re-avatar-badge="count">128</span></span>';
     const root = document.body.firstElementChild as HTMLElement;
     const face = root.children[0] as HTMLElement;
     const badge = root.children[1] as HTMLElement;
@@ -165,7 +161,7 @@ describe("avatar", () => {
     });
     controllers.push(controller);
     expect(
-      root.querySelector('[data-reuse-avatar-badge="count"]')?.textContent,
+      root.querySelector('[data-re-avatar-badge="count"]')?.textContent,
     ).toBe("128");
     const image = root.querySelector("img");
     controller.destroy();
@@ -196,7 +192,7 @@ describe("avatar", () => {
       }),
     );
     expect(first.querySelector("svg")).toBe(null);
-    expect(first.querySelector("[data-reuse-avatar-badge]")?.textContent).toBe(
+    expect(first.querySelector("[data-re-avatar-badge]")?.textContent).toBe(
       "<svg onload=alert(1)>",
     );
     expect(second.querySelector("svg")).toBe(icon);
@@ -224,7 +220,7 @@ describe("avatar", () => {
 describe("avatar group", () => {
   it("removes the next avatar's circle rather than drawing a background ring", async () => {
     document.body.innerHTML =
-      '<span style="color: red"><span data-reuse-avatar style="color: blue"></span><span data-reuse-avatar></span></span>';
+      '<span style="color: red"><span data-re-avatar style="color: blue"></span><span data-re-avatar></span></span>';
     const root = document.body.firstElementChild as HTMLElement;
     const first = root.children[0] as HTMLElement;
     const second = root.children[1] as HTMLElement;
@@ -233,7 +229,7 @@ describe("avatar group", () => {
     rect(second, 36, 0, 48, 48);
     const controller = createAvatarGroup(root, { overlap: 12, clearance: 2 });
     controllers.push(controller);
-    expect(root.style.getPropertyValue("--reuse-avatar-overlap")).toBe("12px");
+    expect(root.style.getPropertyValue("--re-avatar-overlap")).toBe("12px");
     expect(svgMask(first, "group")).toContain(
       '<rect x="34" y="-2" width="52" height="52" rx="26" fill="black"/>',
     );
@@ -251,7 +247,7 @@ describe("avatar group", () => {
   });
   it("supports RTL geometry and clears cutouts for dynamically removed children", () => {
     document.body.innerHTML =
-      '<span dir="rtl"><span data-reuse-avatar></span><span data-reuse-avatar></span></span>';
+      '<span dir="rtl"><span data-re-avatar></span><span data-re-avatar></span></span>';
     const root = document.body.firstElementChild as HTMLElement;
     const first = root.children[0] as HTMLElement;
     const second = root.children[1] as HTMLElement;
@@ -271,7 +267,7 @@ describe("avatar group", () => {
 describe("composed avatar cutouts", () => {
   it("keeps badges outside the group clipping surface", () => {
     document.body.innerHTML =
-      '<span><span data-reuse-avatar><span data-reuse-avatar-face>AL</span><span data-reuse-avatar-badge="count">128</span></span><span data-reuse-avatar><span data-reuse-avatar-face>SF</span></span></span>';
+      '<span><span data-re-avatar><span data-re-avatar-face>AL</span><span data-re-avatar-badge="count">128</span></span><span data-re-avatar><span data-re-avatar-face>SF</span></span></span>';
     const root = document.body.firstElementChild as HTMLElement;
     const first = root.children[0] as HTMLElement;
     const second = root.children[1] as HTMLElement;
@@ -285,10 +281,10 @@ describe("composed avatar cutouts", () => {
     controllers.push(enhanceAvatar(first));
     controllers.push(createAvatarGroup(root));
     expect(first.style.maskImage).toBe("");
-    expect(face.style.getPropertyValue("--reuse-avatar-badge-mask")).toContain(
+    expect(face.style.getPropertyValue("--re-avatar-badge-mask")).toContain(
       "data:image/svg+xml",
     );
-    expect(face.style.getPropertyValue("--reuse-avatar-group-mask")).toContain(
+    expect(face.style.getPropertyValue("--re-avatar-group-mask")).toContain(
       "data:image/svg+xml",
     );
     expect(svgMask(face, "group")).toContain(
@@ -300,7 +296,7 @@ describe("composed avatar cutouts", () => {
     "restores the %s mask without removing the other",
     (kind) => {
       document.body.innerHTML =
-        '<span><span data-reuse-avatar><span data-reuse-avatar-face>AL</span><span data-reuse-avatar-badge="dot"></span></span><span data-reuse-avatar><span data-reuse-avatar-face>SF</span></span></span>';
+        '<span><span data-re-avatar><span data-re-avatar-face>AL</span><span data-re-avatar-badge="dot"></span></span><span data-re-avatar><span data-re-avatar-face>SF</span></span></span>';
       const root = document.body.firstElementChild as HTMLElement;
       const first = root.children[0] as HTMLElement;
       const second = root.children[1] as HTMLElement;
@@ -318,11 +314,9 @@ describe("composed avatar cutouts", () => {
       const other = kind === "badge" ? "group" : "badge";
       firstController.destroy();
       expect(
-        face.style.getPropertyValue(`--reuse-avatar-${other}-mask`),
+        face.style.getPropertyValue(`--re-avatar-${other}-mask`),
       ).toContain("data:image/svg+xml");
-      expect(face.style.getPropertyValue(`--reuse-avatar-${kind}-mask`)).toBe(
-        "",
-      );
+      expect(face.style.getPropertyValue(`--re-avatar-${kind}-mask`)).toBe("");
       lastController.destroy();
       expect(face.hasAttribute("style")).toBe(false);
     },

@@ -290,8 +290,8 @@ kbd {
   align-items: center;
   gap: 2px;
   min-width: 0;
-  --reuse-highlight-background: var(--hover);
-  --reuse-highlight-radius: 8px;
+  --re-highlight-background: var(--hover);
+  --re-highlight-radius: 8px;
 }
 .c-logo {
   display: inline-flex;
@@ -394,8 +394,8 @@ kbd {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 0 6px;
-  --reuse-highlight-background: var(--hover);
-  --reuse-highlight-radius: 10px;
+  --re-highlight-background: var(--hover);
+  --re-highlight-radius: 10px;
 }
 .c-menu-h {
   padding: 8px 10px 6px;
@@ -685,7 +685,7 @@ kbd {
   background: #fff;
   box-shadow: inset 0 0 0 1px rgb(0 0 0 / 5%);
 }
-.f-peek-tip .pk-av .reuse-avatar-face {
+.f-peek-tip .pk-av .re-avatar-face {
   color: transparent;
 }
 .f-peek-tip .pk-av-group {
@@ -896,15 +896,15 @@ kbd {
 }
 
 /* Tooltips */
-.reuse-floating-tooltip.f-tip {
+.re-floating-tooltip.f-tip {
   font-family: var(--font-sans);
   letter-spacing: -0.003em;
 }
-.reuse-floating-tooltip.f-tip[data-rich]:has(.f-tip-keys) {
-  --reuse-tooltip-rich-background: #111;
-  --reuse-tooltip-rich-color: #fff;
-  --reuse-tooltip-rich-padding: 4px 4px 4px 10px;
-  --reuse-tooltip-rich-radius: 16px;
+.re-floating-tooltip.f-tip[data-rich]:has(.f-tip-keys) {
+  --re-tooltip-rich-background: #111;
+  --re-tooltip-rich-color: #fff;
+  --re-tooltip-rich-padding: 4px 4px 4px 10px;
+  --re-tooltip-rich-radius: 16px;
   font-size: 12px;
   line-height: 16px;
   box-shadow: var(--shadow-raised);
@@ -1142,7 +1142,7 @@ kbd {
 .c-hold:active {
   transform: scale(0.97);
 }
-.c-hold .reuse-hold-fill {
+.c-hold .re-hold-fill {
   opacity: 0.12;
 }
 .c-hold[data-done] {

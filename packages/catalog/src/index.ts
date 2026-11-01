@@ -74,7 +74,7 @@ export const collectionPrinciples: readonly Row[] = [
   ],
   [
     "Scope every style",
-    "Classes start with reuse- and values live in --reuse- custom properties, so nothing reaches the rest of your page.",
+    "Classes start with re- and values live in --re- custom properties, so nothing reaches the rest of your page.",
   ],
   [
     "Work from the keyboard",
@@ -561,7 +561,7 @@ export const libraries: Library[] = [
       ],
       [
         "Set color and strength once",
-        "--reuse-shadow-color and --reuse-shadow-strength drive all six levels, and a dark ancestor raises the strength and lightens the ring.",
+        "--re-shadow-color and --re-shadow-strength drive all six levels, and a dark ancestor raises the strength and lightens the ring.",
       ],
       [
         "Use a ring, not a border",
@@ -581,14 +581,14 @@ export const libraries: Library[] = [
       ],
     ],
     api: [
-      ["reuse-shadow-xs … reuse-shadow-2xl", "Six shadow levels."],
+      ["re-shadow-xs … re-shadow-2xl", "Six shadow levels."],
       [
-        "reuse-shadow-ring-xs … reuse-shadow-ring-2xl",
+        "re-shadow-ring-xs … re-shadow-ring-2xl",
         "The same levels with a hairline ring instead of a border.",
       ],
-      ["reuse-card, reuse-card-frame", "A card surface and its outer frame."],
+      ["re-card, re-card-frame", "A card surface and its outer frame."],
       [
-        "reuse-card-code, reuse-card-action",
+        "re-card-code, re-card-action",
         "Cards for code samples and for actions.",
       ],
       ["shadowLevels", 'The level names in order, from "xs" to "2xl".'],
@@ -609,7 +609,7 @@ export const libraries: Library[] = [
     notes: [
       "Import the stylesheet. The classes need no JavaScript and no Tailwind.",
       "Use the ring variant instead of adding a border on top of the shadow.",
-      'A data-reuse-theme="dark" ancestor switches to stronger shadows and a light ring.',
+      'A data-re-theme="dark" ancestor switches to stronger shadows and a light ring.',
       "createFadeEdge writes a mask to the scroller's inline style and puts the old style back on destroy. It follows right-to-left layouts.",
     ],
     agentPrompt: `Read ${guideUrl("shadows")} and move our cards to the shadow scale. Keep our radii.`,
@@ -690,7 +690,7 @@ export const libraries: Library[] = [
         "Binds every trigger inside root to one shared popup. Returns refresh, dismiss, update(options) and destroy.",
       ],
       [
-        "data-reuse-tooltip, data-reuse-tooltip-template",
+        "data-re-tooltip, data-re-tooltip-template",
         "Marks a trigger. The first holds the hint as text, the second names the id of a template to clone.",
       ],
       [
@@ -724,7 +724,7 @@ export const libraries: Library[] = [
       ],
     ],
     notes: [
-      "Mark triggers with data-reuse-tooltip, or with data-reuse-tooltip-template for rich content.",
+      "Mark triggers with data-re-tooltip, or with data-re-tooltip-template for rich content.",
       "A tooltip holds a short hint that nobody needs to click. Put controls and required instructions somewhere else.",
       "Keyboard focus shows an anchored hint. A touch is not treated as hover.",
     ],
@@ -806,7 +806,7 @@ export const libraries: Library[] = [
       ],
       [
         "rowSelector, selectedSelector",
-        "Which elements are rows, [data-reuse-row] by default, and which one is selected: data-current, aria-selected or data-highlighted.",
+        "Which elements are rows, [data-re-row] by default, and which one is selected: data-current, aria-selected or data-highlighted.",
       ],
       [
         "className",
@@ -818,7 +818,7 @@ export const libraries: Library[] = [
       ],
     ],
     notes: [
-      "Mark rows with data-reuse-row and the selected row with data-current.",
+      "Mark rows with data-re-row and the selected row with data-current.",
       'Two highlights can share a root: one with mode "selected" for the active row, one with mode "hover" for the pointer.',
       "The controller measures the real elements. It does not need a menu library.",
       "Destroy removes the background and restores the styles the controller set.",
@@ -900,7 +900,7 @@ export const libraries: Library[] = [
         "Stops a hold in progress, or removes the hold and restores the button.",
       ],
       [
-        "data-holding, reuse-hold-fill",
+        "data-holding, re-hold-fill",
         "The attribute set on the button while it is held, and the fill element that grows across it.",
       ],
       [

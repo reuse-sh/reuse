@@ -152,14 +152,14 @@ describe("hold to confirm", () => {
     controller.destroy();
     expect(button.innerHTML).toBe("Delete");
     expect(button.hasAttribute("style")).toBe(false);
-    expect(button.classList.contains("reuse-hold")).toBe(false);
+    expect(button.classList.contains("re-hold")).toBe(false);
   });
 });
 
 describe("floating tooltip", () => {
   function setup() {
     document.body.innerHTML =
-      '<div><button data-reuse-tooltip="First" aria-describedby="original">One</button><button data-reuse-tooltip="Second">Two</button></div>';
+      '<div><button data-re-tooltip="First" aria-describedby="original">One</button><button data-re-tooltip="Second">Two</button></div>';
     const root = document.body.firstElementChild as HTMLElement;
     const [first, second] = Array.from(root.querySelectorAll("button"));
     rect(first, 100, 100, 80, 32);
@@ -251,7 +251,7 @@ describe("floating tooltip", () => {
   it("renders a template as rich content and gives touch pointers nothing", () => {
     reduced = true;
     document.body.innerHTML =
-      '<div><button data-reuse-tooltip-template="tip-save">Save</button></div><template id="tip-save"><span class="keys">Save<kbd>S</kbd></span></template>';
+      '<div><button data-re-tooltip-template="tip-save">Save</button></div><template id="tip-save"><span class="keys">Save<kbd>S</kbd></span></template>';
     const root = document.body.firstElementChild as HTMLElement;
     const button = root.querySelector("button") as HTMLElement;
     rect(button, 100, 100, 80, 32);
@@ -313,7 +313,7 @@ describe("floating tooltip", () => {
       );
     };
     document.body.innerHTML =
-      '<div><button data-reuse-tooltip="First">One</button></div>';
+      '<div><button data-re-tooltip="First">One</button></div>';
     const root = document.body.firstElementChild as HTMLElement;
     const before = document.documentElement.outerHTML;
     track(root);
@@ -349,7 +349,7 @@ describe("floating tooltip", () => {
 describe("moving highlight", () => {
   function setup(options?: MovingHighlightOptions) {
     document.body.innerHTML =
-      '<div style="color: red"><button data-reuse-row data-current>One</button><button data-reuse-row>Two</button><button data-reuse-row disabled>Three</button></div>';
+      '<div style="color: red"><button data-re-row data-current>One</button><button data-re-row>Two</button><button data-re-row disabled>Three</button></div>';
     const root = document.body.firstElementChild as HTMLElement;
     const rows = Array.from(root.querySelectorAll("button"));
     rect(root, 0, 0, 200, 180);
@@ -361,7 +361,7 @@ describe("moving highlight", () => {
     return {
       root,
       rows,
-      fill: root.querySelector(".reuse-moving-highlight") as HTMLElement,
+      fill: root.querySelector(".re-moving-highlight") as HTMLElement,
       controller,
     };
   }
@@ -394,14 +394,14 @@ describe("moving highlight", () => {
     const hover = createMovingHighlight(root, { className: "hover" });
     controllers.push(hover);
     const hoverFill = root.querySelector(".hover") as HTMLElement;
-    expect(root.querySelectorAll(".reuse-moving-highlight")).toHaveLength(2);
+    expect(root.querySelectorAll(".re-moving-highlight")).toHaveLength(2);
     pointer(rows[1], "pointerover");
     expect(hoverFill.style.translate).toBe("4px 40px");
     expect(fill.style.translate).toBe("4px 0px");
     hover.destroy();
     expect(hoverFill.isConnected).toBe(false);
     expect(fill.isConnected).toBe(true);
-    expect(root.hasAttribute("data-reuse-highlight-root")).toBe(true);
+    expect(root.hasAttribute("data-re-highlight-root")).toBe(true);
     expect(root.style.isolation).toBe("isolate");
     rows[0].removeAttribute("data-current");
     rows[1].setAttribute("data-current", "");
@@ -409,8 +409,8 @@ describe("moving highlight", () => {
     expect(fill.style.translate).toBe("4px 40px");
     controller.destroy();
     expect(root.getAttribute("style")).toBe("color: red");
-    expect(root.hasAttribute("data-reuse-highlight-root")).toBe(false);
-    expect(root.querySelector(".reuse-moving-highlight")).toBe(null);
+    expect(root.hasAttribute("data-re-highlight-root")).toBe(false);
+    expect(root.querySelector(".re-moving-highlight")).toBe(null);
   });
   it("follows pointer and keyboard, ignores disabled rows, and returns to selection", () => {
     const { rows, fill } = setup();
@@ -435,9 +435,9 @@ describe("moving highlight", () => {
     expect(fill.dataset.move).toBe("instant");
     controller.destroy();
     expect(root.getAttribute("style")).toBe("color: red");
-    expect(root.querySelector(".reuse-moving-highlight")).toBe(null);
+    expect(root.querySelector(".re-moving-highlight")).toBe(null);
     pointer(rows[0], "pointerover");
-    expect(root.querySelector(".reuse-moving-highlight")).toBe(null);
+    expect(root.querySelector(".re-moving-highlight")).toBe(null);
   });
   it("updates changing selected data and cancels long-jump timers on teardown", async () => {
     const { root, rows, fill, controller } = setup();

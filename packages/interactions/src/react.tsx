@@ -111,8 +111,8 @@ export function FloatingTooltip({
   const grouped = useContext(TooltipGroup);
   useFloatingTooltip(ref, !grouped, settings);
   return (
-    <span ref={ref} className="reuse-tooltip-trigger">
-      {cloneElement(children, { "data-reuse-tooltip": content })}
+    <span ref={ref} className="re-tooltip-trigger">
+      {cloneElement(children, { "data-re-tooltip": content })}
     </span>
   );
 }
@@ -175,7 +175,7 @@ export function HoldToConfirmButton({
     <button
       type="button"
       {...props}
-      className={["reuse-hold", className].filter(Boolean).join(" ")}
+      className={["re-hold", className].filter(Boolean).join(" ")}
       ref={ref}
     >
       {children}

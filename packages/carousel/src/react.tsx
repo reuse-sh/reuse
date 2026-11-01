@@ -107,7 +107,7 @@ export function Carousel({
     <div
       {...props}
       ref={mergedRef}
-      className={["reuse-carousel", className].filter(Boolean).join(" ")}
+      className={["re-carousel", className].filter(Boolean).join(" ")}
     >
       {children}
     </div>

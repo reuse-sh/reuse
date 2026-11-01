@@ -9,7 +9,7 @@ A CSS shadow scale with six levels, from a small control to a floating surface. 
 These are the rules the code keeps. An adaptation on any framework keeps them too.
 
 - **Build each level from two layers.** Every level is a close shadow and a wide one, drawn from one color and one strength.
-- **Set color and strength once.** --reuse-shadow-color and --reuse-shadow-strength drive all six levels, and a dark ancestor raises the strength and lightens the ring.
+- **Set color and strength once.** --re-shadow-color and --re-shadow-strength drive all six levels, and a dark ancestor raises the strength and lightens the ring.
 - **Use a ring, not a border.** The ring variants add a hairline in the shadow itself, so the element's size never changes.
 - **Work without JavaScript.** The levels and cards are plain classes in one stylesheet.
 - **Fade only where there is more.** The fade edge masks a side only while there is content left to scroll toward it, and it follows right-to-left layouts.
@@ -32,7 +32,7 @@ import "@reuse-sh/shadows/styles.css";
 ```
 
 ```html
-<div class="reuse-card reuse-shadow-ring-md">
+<div class="re-card re-shadow-ring-md">
   Your content
 </div>
 ```

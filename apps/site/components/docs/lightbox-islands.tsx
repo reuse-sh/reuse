@@ -44,7 +44,7 @@ export function ProductOptions() {
           {sizes.map(([name], index) => (
             <label
               key={name}
-              data-reuse-row
+              data-re-row
               data-current={index === size ? "" : undefined}
             >
               <input
@@ -77,7 +77,7 @@ export function ProductOptions() {
 
 const marble = (index: number) =>
   ({
-    "--reuse-avatar-background": `url(${photos[index].src}) center / cover`,
+    "--re-avatar-background": `url(${photos[index].src}) center / cover`,
   }) as CSSProperties;
 
 const people = [
@@ -99,7 +99,7 @@ export function ChatList() {
             key={name}
             type="button"
             className="x-person"
-            data-reuse-row
+            data-re-row
             data-current={index === current ? "" : undefined}
             aria-current={index === current ? "true" : undefined}
             onClick={() => setCurrent(index)}

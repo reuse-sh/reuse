@@ -637,7 +637,7 @@ describe("native carousel", () => {
     expect(viewport.tabIndex).toBe(4);
     expect(viewport.style.overflowX).toBe("scroll");
     expect(slides[0].style.scrollSnapAlign).toBe("end");
-    expect(viewport.classList.contains("reuse-carousel")).toBe(false);
+    expect(viewport.classList.contains("re-carousel")).toBe(false);
     expect(vi.getTimerCount()).toBe(0);
   });
 

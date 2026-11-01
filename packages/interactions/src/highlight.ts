@@ -26,11 +26,11 @@ function claimRoot(root: HTMLElement, view: Window, fill: Element) {
     claim = {
       count: 0,
       style: root.getAttribute("style"),
-      marker: root.getAttribute("data-reuse-highlight-root"),
+      marker: root.getAttribute("data-re-highlight-root"),
       fills: new Set(),
     };
     claims.set(root, claim);
-    root.setAttribute("data-reuse-highlight-root", "");
+    root.setAttribute("data-re-highlight-root", "");
     const position = view.getComputedStyle(root).position;
     if (position === "static" || !position) root.style.position = "relative";
     root.style.isolation = "isolate";
@@ -48,8 +48,8 @@ function releaseRoot(root: HTMLElement, fill: Element) {
   claims.delete(root);
   if (claim.style === null) root.removeAttribute("style");
   else root.setAttribute("style", claim.style);
-  if (claim.marker === null) root.removeAttribute("data-reuse-highlight-root");
-  else root.setAttribute("data-reuse-highlight-root", claim.marker);
+  if (claim.marker === null) root.removeAttribute("data-re-highlight-root");
+  else root.setAttribute("data-re-highlight-root", claim.marker);
 }
 
 export function createMovingHighlight(
@@ -58,13 +58,13 @@ export function createMovingHighlight(
 ) {
   const view = root.ownerDocument.defaultView;
   if (!view) throw new Error("The root must belong to a window.");
-  const rowSelector = options.rowSelector ?? "[data-reuse-row]";
+  const rowSelector = options.rowSelector ?? "[data-re-row]";
   const selectedSelector =
     options.selectedSelector ??
     '[data-current], [aria-selected="true"], [data-highlighted]';
   const followsPointer = (options.mode ?? "hover") === "hover";
   const fill = root.ownerDocument.createElement("span");
-  fill.className = ["reuse-moving-highlight", options.className]
+  fill.className = ["re-moving-highlight", options.className]
     .filter(Boolean)
     .join(" ");
   fill.setAttribute("aria-hidden", "true");
@@ -85,7 +85,7 @@ export function createMovingHighlight(
     Boolean(
       row?.isConnected &&
         root.contains(row) &&
-        row.closest("[data-reuse-highlight-root]") === root &&
+        row.closest("[data-re-highlight-root]") === root &&
         !row.matches(
           ':disabled,[aria-disabled="true"],[data-disabled],[hidden]',
         ),

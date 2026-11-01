@@ -129,7 +129,7 @@ export function MemberRow({ member }) {
   groups: [
     `import { createAvatarGroup } from "@reuse-sh/avatars";
 
-// Children with data-reuse-avatar are overlapped and cut.
+// Children with data-re-avatar are overlapped and cut.
 // The last one carries a count badge for everyone not shown.
 const group = createAvatarGroup(document.querySelector(".project-people"), {
   overlap: 10,
@@ -196,19 +196,19 @@ export function Saving() {
   cards: [
     `import "@reuse-sh/shadows/styles.css";
 
-// <div class="reuse-card-frame">
-//   <div class="reuse-card reuse-card-action reuse-shadow-ring-xs">…</div>
+// <div class="re-card-frame">
+//   <div class="re-card re-card-action re-shadow-ring-xs">…</div>
 // </div>
 const frame = document.createElement("div");
-frame.className = "reuse-card-frame";
+frame.className = "re-card-frame";
 const card = frame.appendChild(document.createElement("div"));
-card.className = "reuse-card reuse-card-action reuse-shadow-ring-xs";`,
+card.className = "re-card re-card-action re-shadow-ring-xs";`,
     `import "@reuse-sh/shadows/styles.css";
 
 export function ActionCard({ title, text, action }) {
   return (
-    <div className="reuse-card-frame">
-      <div className="reuse-card reuse-card-action reuse-shadow-ring-xs">
+    <div className="re-card-frame">
+      <div className="re-card re-card-action re-shadow-ring-xs">
         <div>
           <h3>{title}</h3>
           <p>{text}</p>
@@ -225,12 +225,12 @@ import { shadowLevels } from "@reuse-sh/shadows";
 
 // shadowLevels is ["xs", "sm", "md", "lg", "xl", "2xl"]
 const level = shadowLevels[3];
-popover.classList.add(\`reuse-shadow-ring-\${level}\`);
-button.classList.add("reuse-shadow-xs");`,
+popover.classList.add(\`re-shadow-ring-\${level}\`);
+button.classList.add("re-shadow-xs");`,
     `import "@reuse-sh/shadows/styles.css";
 
 export function Panel({ level = "md", ring = true, children }) {
-  const name = ring ? \`reuse-shadow-ring-\${level}\` : \`reuse-shadow-\${level}\`;
+  const name = ring ? \`re-shadow-ring-\${level}\` : \`re-shadow-\${level}\`;
   return <div className={\`panel \${name}\`}>{children}</div>;
 }`,
   ],
@@ -260,7 +260,7 @@ export function Prints({ prints, mode = "scroll" }) {
 import "@reuse-sh/interactions/styles.css";
 
 // <div role="menu" class="file-menu">
-//   <button role="menuitem" data-reuse-row>New print</button> …
+//   <button role="menuitem" data-re-row>New print</button> …
 // </div>
 const highlight = createMovingHighlight(document.querySelector(".file-menu"));`,
     `import { MovingHighlight } from "@reuse-sh/interactions/react";
@@ -269,7 +269,7 @@ export function FileMenu({ items }) {
   return (
     <MovingHighlight role="menu" className="file-menu">
       {items.map((item) => (
-        <button key={item.label} role="menuitem" data-reuse-row onClick={item.run}>
+        <button key={item.label} role="menuitem" data-re-row onClick={item.run}>
           {item.label}
           <kbd>{item.shortcut}</kbd>
         </button>
@@ -294,7 +294,7 @@ export function Sidebar({ pages, current }) {
         <a
           key={page.href}
           href={page.href}
-          data-reuse-row
+          data-re-row
           data-current={page.href === current ? "" : undefined}
           aria-current={page.href === current ? "page" : undefined}
         >

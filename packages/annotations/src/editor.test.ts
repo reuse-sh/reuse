@@ -77,7 +77,7 @@ function setup(initial: Annotation[] = []) {
   });
   controllers.push(controller);
   const layer = () =>
-    root.querySelector(".reuse-annotation-edit-layer") as HTMLElement;
+    root.querySelector(".re-annotation-edit-layer") as HTMLElement;
   function gesture(
     tool: AnnotationTool,
     from: [number, number],
@@ -91,7 +91,7 @@ function setup(initial: Annotation[] = []) {
   }
   function mark(index: number) {
     return root.querySelector(
-      `[data-reuse-annotation-index="${index}"]`,
+      `[data-re-annotation-index="${index}"]`,
     ) as HTMLElement;
   }
   return { root, media, layer, controller, changes, tools, gesture, mark };
@@ -337,9 +337,9 @@ describe("annotation editing", () => {
       { kind: "marker", point: [10, 20], text: "Ignored" },
     ]);
     expect(changes).toEqual([]);
-    expect(root.querySelector(".reuse-annotation-edit-layer")).toBe(null);
+    expect(root.querySelector(".re-annotation-edit-layer")).toBe(null);
     expect(root.getAttribute("style")).toBe("color: red;");
     expect(root.hasAttribute("tabindex")).toBe(false);
-    expect(root.hasAttribute("data-reuse-annotation-tool")).toBe(false);
+    expect(root.hasAttribute("data-re-annotation-tool")).toBe(false);
   });
 });

@@ -37,15 +37,14 @@ export function buildFadeGradient(curve: FadeCurve, rtl = false): string {
   const points = ramp(curve);
   const color = (alpha: number) => `rgb(0 0 0 / ${round(alpha)})`;
   const start = points.map(
-    ([t, alpha]) =>
-      `${color(alpha)} calc(var(--reuse-fade-start) * ${round(t)})`,
+    ([t, alpha]) => `${color(alpha)} calc(var(--re-fade-start) * ${round(t)})`,
   );
   const end = points
     .slice()
     .reverse()
     .map(
       ([t, alpha]) =>
-        `${color(alpha)} calc(100% - var(--reuse-fade-end) * ${round(t)})`,
+        `${color(alpha)} calc(100% - var(--re-fade-end) * ${round(t)})`,
     );
   return `linear-gradient(to ${rtl ? "left" : "right"}, ${[...start, ...end].join(", ")})`;
 }
@@ -99,9 +98,8 @@ export function createFadeEdge(
     const end = max < THRESHOLD ? 0 : edge(max - scrolled);
     const next = { start: `${round(start)}px`, end: `${round(end)}px` };
     if (next.start !== written.start)
-      style.setProperty("--reuse-fade-start", next.start);
-    if (next.end !== written.end)
-      style.setProperty("--reuse-fade-end", next.end);
+      style.setProperty("--re-fade-start", next.start);
+    if (next.end !== written.end) style.setProperty("--re-fade-end", next.end);
     written = next;
   }
 

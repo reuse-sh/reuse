@@ -1,80 +1,80 @@
-.reuse-tooltip-trigger {
+.re-tooltip-trigger {
   display: contents;
 }
-.reuse-floating-tooltip {
+.re-floating-tooltip {
   position: fixed;
   inset: 0 auto auto 0;
-  z-index: var(--reuse-tooltip-z-index, 1000);
+  z-index: var(--re-tooltip-z-index, 1000);
   box-sizing: border-box;
   width: max-content;
   max-width: min(20rem, calc(100vw - 24px));
   overflow: hidden;
-  padding: var(--reuse-tooltip-padding, 4px 10px);
-  color: var(--reuse-tooltip-color, #fff);
-  background: var(--reuse-tooltip-background, #111);
-  border-radius: var(--reuse-tooltip-radius, 16px);
-  box-shadow: var(--reuse-tooltip-shadow, 0 4px 12px -2px rgb(0 0 0 / 18%));
+  padding: var(--re-tooltip-padding, 4px 10px);
+  color: var(--re-tooltip-color, #fff);
+  background: var(--re-tooltip-background, #111);
+  border-radius: var(--re-tooltip-radius, 16px);
+  box-shadow: var(--re-tooltip-shadow, 0 4px 12px -2px rgb(0 0 0 / 18%));
   font: inherit;
-  font-size: var(--reuse-tooltip-font-size, 12px);
+  font-size: var(--re-tooltip-font-size, 12px);
   line-height: 16px;
   overflow-wrap: anywhere;
   will-change: transform;
 }
-.reuse-floating-tooltip[hidden] {
+.re-floating-tooltip[hidden] {
   display: none;
 }
-.reuse-floating-tooltip[data-rich] {
+.re-floating-tooltip[data-rich] {
   max-width: none;
-  padding: var(--reuse-tooltip-rich-padding, 6px);
-  color: var(--reuse-tooltip-rich-color, #111);
-  background: var(--reuse-tooltip-rich-background, #fff);
-  border-radius: var(--reuse-tooltip-rich-radius, 16px);
+  padding: var(--re-tooltip-rich-padding, 6px);
+  color: var(--re-tooltip-rich-color, #111);
+  background: var(--re-tooltip-rich-background, #fff);
+  border-radius: var(--re-tooltip-rich-radius, 16px);
   box-shadow: var(
-    --reuse-tooltip-rich-shadow,
+    --re-tooltip-rich-shadow,
     0 0 0 1px rgb(0 0 0 / 6%),
     0 6px 12px -4px rgb(0 0 0 / 8%),
     0 20px 40px -12px rgb(0 0 0 / 14%)
   );
 }
-.reuse-floating-tooltip-content {
+.re-floating-tooltip-content {
   display: block;
 }
-.reuse-moving-highlight {
+.re-moving-highlight {
   pointer-events: none;
   position: absolute;
   inset: 0 auto auto 0;
   z-index: -1;
   opacity: 0;
   scale: 0.97;
-  background: var(--reuse-highlight-background, #8882);
-  border-radius: var(--reuse-highlight-radius, 0.4rem);
+  background: var(--re-highlight-background, #8882);
+  border-radius: var(--re-highlight-radius, 0.4rem);
   transition-timing-function: cubic-bezier(0, 0, 0.2, 1);
 }
-.reuse-moving-highlight[data-visible="true"] {
+.re-moving-highlight[data-visible="true"] {
   opacity: 1;
   scale: 1;
 }
-.reuse-moving-highlight[data-move="appear"] {
+.re-moving-highlight[data-move="appear"] {
   transition-property: opacity, scale;
   transition-duration: 150ms;
 }
-.reuse-moving-highlight[data-move="fade"] {
+.re-moving-highlight[data-move="fade"] {
   transition-property: opacity, scale;
   transition-duration: 100ms;
 }
-.reuse-moving-highlight[data-move="slide"] {
+.re-moving-highlight[data-move="slide"] {
   transition-property: translate, width, height, opacity;
   transition-duration: 150ms;
 }
-.reuse-moving-highlight[data-move="instant"] {
+.re-moving-highlight[data-move="instant"] {
   transition: none;
 }
-.reuse-hold {
+.re-hold {
   position: relative;
   overflow: hidden;
   touch-action: manipulation;
 }
-.reuse-hold-fill {
+.re-hold-fill {
   position: absolute;
   pointer-events: none;
   inset: 0;
@@ -86,10 +86,10 @@
   transition-timing-function: linear;
 }
 @media (prefers-reduced-motion: reduce) {
-  .reuse-moving-highlight {
+  .re-moving-highlight {
     scale: none;
   }
-  .reuse-moving-highlight[data-move="slide"] {
+  .re-moving-highlight[data-move="slide"] {
     transition-property: opacity;
   }
 }

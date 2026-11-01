@@ -82,11 +82,11 @@ function createMaskSlot(element: HTMLElement, property: string) {
 export function enhanceAvatar(root: HTMLElement) {
   const view = root.ownerDocument.defaultView;
   if (!view) throw new Error("The avatar must belong to a window.");
-  const face = root.querySelector<HTMLElement>("[data-reuse-avatar-face]");
-  const badge = root.querySelector<HTMLElement>("[data-reuse-avatar-badge]");
+  const face = root.querySelector<HTMLElement>("[data-re-avatar-face]");
+  const badge = root.querySelector<HTMLElement>("[data-re-avatar-badge]");
   const image = root.querySelector<HTMLImageElement>("img");
   const badgeMask = face
-    ? createMaskSlot(face, "--reuse-avatar-badge-mask")
+    ? createMaskSlot(face, "--re-avatar-badge-mask")
     : null;
   const originalImageStyle = image?.getAttribute("style") ?? null;
   let destroyed = false;
@@ -100,9 +100,7 @@ export function enhanceAvatar(root: HTMLElement) {
       const scaleX = box.width && width ? box.width / width : 1;
       const scaleY = box.height && height ? box.height / height : 1;
       const clearance = Number.parseFloat(
-        view
-          .getComputedStyle(root)
-          .getPropertyValue("--reuse-avatar-clearance"),
+        view.getComputedStyle(root).getPropertyValue("--re-avatar-clearance"),
       );
       const gap = Number.isFinite(clearance) && clearance >= 0 ? clearance : 2;
       const badgeWidth = indicator.width / scaleX;
@@ -172,21 +170,21 @@ export function createAvatar(root: HTMLElement, options: AvatarOptions) {
     class: root.getAttribute("class"),
     label: root.getAttribute("aria-label"),
     role: root.getAttribute("role"),
-    slot: root.getAttribute("data-reuse-avatar"),
+    slot: root.getAttribute("data-re-avatar"),
   };
   const children = Array.from(root.childNodes);
   root.replaceChildren();
-  root.classList.add("reuse-avatar");
-  root.setAttribute("data-reuse-avatar", "");
+  root.classList.add("re-avatar");
+  root.setAttribute("data-re-avatar", "");
   root.setAttribute("role", "img");
   root.setAttribute(
     "aria-label",
     [name || "Unknown person", badge?.label].filter(Boolean).join(", "),
   );
-  root.style.setProperty("--reuse-avatar-size", `${size}px`);
+  root.style.setProperty("--re-avatar-size", `${size}px`);
   const face = root.ownerDocument.createElement("span");
-  face.className = "reuse-avatar-face";
-  face.setAttribute("data-reuse-avatar-face", "");
+  face.className = "re-avatar-face";
+  face.setAttribute("data-re-avatar-face", "");
   face.setAttribute("aria-hidden", "true");
   face.textContent = getInitials(name);
   if (src) {
@@ -194,14 +192,14 @@ export function createAvatar(root: HTMLElement, options: AvatarOptions) {
     image.src = src;
     image.alt = "";
     image.decoding = "async";
-    image.className = "reuse-avatar-image";
+    image.className = "re-avatar-image";
     face.append(image);
   }
   root.append(face);
   if (badge) {
     const indicator = root.ownerDocument.createElement("span");
-    indicator.className = "reuse-avatar-badge";
-    indicator.setAttribute("data-reuse-avatar-badge", badge.type);
+    indicator.className = "re-avatar-badge";
+    indicator.setAttribute("data-re-avatar-badge", badge.type);
     indicator.setAttribute("data-corner", badge.corner ?? "bottom-right");
     indicator.setAttribute("aria-hidden", "true");
     if (badge.type === "count") indicator.textContent = String(badge.count);
@@ -225,7 +223,7 @@ export function createAvatar(root: HTMLElement, options: AvatarOptions) {
         ["class", previous.class],
         ["aria-label", previous.label],
         ["role", previous.role],
-        ["data-reuse-avatar", previous.slot],
+        ["data-re-avatar", previous.slot],
       ] as const) {
         if (value === null) root.removeAttribute(attribute);
         else root.setAttribute(attribute, value);
@@ -252,19 +250,19 @@ export function createAvatarGroup(
   )
     throw new RangeError("Group spacing must be nonnegative.");
   const previousStyle = root.getAttribute("style");
-  const hadClass = root.classList.contains("reuse-avatar-group");
+  const hadClass = root.classList.contains("re-avatar-group");
   const masks = new Map<HTMLElement, ReturnType<typeof createMaskSlot>>();
-  root.classList.add("reuse-avatar-group");
-  root.style.setProperty("--reuse-avatar-overlap", `${overlap}px`);
+  root.classList.add("re-avatar-group");
+  root.style.setProperty("--re-avatar-overlap", `${overlap}px`);
   let destroyed = false;
   const faceOf = (avatar: HTMLElement) =>
-    avatar.querySelector<HTMLElement>("[data-reuse-avatar-face]") ?? avatar;
+    avatar.querySelector<HTMLElement>("[data-re-avatar-face]") ?? avatar;
   const refresh = () => {
     if (destroyed) return;
     const avatars = Array.from(root.children).filter(
       (child): child is HTMLElement =>
         child instanceof view.HTMLElement &&
-        child.hasAttribute("data-reuse-avatar"),
+        child.hasAttribute("data-re-avatar"),
     );
     const faces = avatars.map(faceOf);
     for (const [face, mask] of masks)
@@ -277,8 +275,8 @@ export function createAvatarGroup(
       if (!slot) {
         slot = createMaskSlot(
           face,
-          face.hasAttribute("data-reuse-avatar-face")
-            ? "--reuse-avatar-group-mask"
+          face.hasAttribute("data-re-avatar-face")
+            ? "--re-avatar-group-mask"
             : "mask-image",
         );
         masks.set(face, slot);
@@ -335,7 +333,7 @@ export function createAvatarGroup(
       mutations.disconnect();
       view.removeEventListener("resize", refresh);
       for (const mask of masks.values()) mask.restore();
-      if (!hadClass) root.classList.remove("reuse-avatar-group");
+      if (!hadClass) root.classList.remove("re-avatar-group");
       if (previousStyle === null) root.removeAttribute("style");
       else root.setAttribute("style", previousStyle);
     },

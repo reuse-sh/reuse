@@ -53,24 +53,24 @@ export function Avatar({
     <span
       {...props}
       ref={ref}
-      className={["reuse-avatar", className].filter(Boolean).join(" ")}
+      className={["re-avatar", className].filter(Boolean).join(" ")}
       role="img"
       aria-label={[name || "Unknown person", badge?.label]
         .filter(Boolean)
         .join(", ")}
-      data-reuse-avatar=""
-      style={{ ...style, "--reuse-avatar-size": `${size}px` } as CSSProperties}
+      data-re-avatar=""
+      style={{ ...style, "--re-avatar-size": `${size}px` } as CSSProperties}
     >
       <span
-        className="reuse-avatar-face"
-        data-reuse-avatar-face=""
+        className="re-avatar-face"
+        data-re-avatar-face=""
         aria-hidden="true"
       >
         {getInitials(name)}
         {src && (
           <img
             key={src}
-            className="reuse-avatar-image"
+            className="re-avatar-image"
             src={src}
             alt=""
             decoding="async"
@@ -79,8 +79,8 @@ export function Avatar({
       </span>
       {badge && (
         <span
-          className="reuse-avatar-badge"
-          data-reuse-avatar-badge={badge.type}
+          className="re-avatar-badge"
+          data-re-avatar-badge={badge.type}
           data-corner={badge.corner ?? "bottom-right"}
           aria-hidden="true"
         >
@@ -115,7 +115,7 @@ export function AvatarGroup({
     <span
       {...props}
       ref={ref}
-      className={["reuse-avatar-group", className].filter(Boolean).join(" ")}
+      className={["re-avatar-group", className].filter(Boolean).join(" ")}
     >
       {children}
     </span>

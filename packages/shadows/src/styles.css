@@ -1,202 +1,202 @@
 :root {
-  --reuse-shadow-color: black;
-  --reuse-shadow-strength: 1;
-  --reuse-ring-color: rgb(0 0 0 / 8%);
-  --reuse-ring-width: 0.5px;
+  --re-shadow-color: black;
+  --re-shadow-strength: 1;
+  --re-ring-color: rgb(0 0 0 / 8%);
+  --re-ring-width: 0.5px;
 }
 
-[data-reuse-theme="dark"] {
-  --reuse-shadow-strength: 6;
-  --reuse-ring-color: rgb(255 255 255 / 12%);
+[data-re-theme="dark"] {
+  --re-shadow-strength: 6;
+  --re-ring-color: rgb(255 255 255 / 12%);
 }
 
-.reuse-shadow-xs,
-.reuse-shadow-ring-xs {
-  --reuse-shadow:
+.re-shadow-xs,
+.re-shadow-ring-xs {
+  --re-shadow:
     0 1px 2px 0
     color-mix(
       in srgb,
-      var(--reuse-shadow-color) calc(5% * var(--reuse-shadow-strength)),
+      var(--re-shadow-color) calc(5% * var(--re-shadow-strength)),
       transparent
     ),
     0 2px 4px 0
     color-mix(
       in srgb,
-      var(--reuse-shadow-color) calc(2% * var(--reuse-shadow-strength)),
+      var(--re-shadow-color) calc(2% * var(--re-shadow-strength)),
       transparent
     );
 }
-.reuse-shadow-xs {
-  box-shadow: var(--reuse-shadow);
+.re-shadow-xs {
+  box-shadow: var(--re-shadow);
 }
-.reuse-shadow-ring-xs {
+.re-shadow-ring-xs {
   box-shadow:
-    0 0 0 var(--reuse-ring-width) var(--reuse-ring-color),
-    var(--reuse-shadow);
+    0 0 0 var(--re-ring-width) var(--re-ring-color),
+    var(--re-shadow);
 }
 
-.reuse-shadow-sm,
-.reuse-shadow-ring-sm,
-.reuse-card-frame {
-  --reuse-shadow:
+.re-shadow-sm,
+.re-shadow-ring-sm,
+.re-card-frame {
+  --re-shadow:
     0 1px 2px 0
     color-mix(
       in srgb,
-      var(--reuse-shadow-color) calc(5% * var(--reuse-shadow-strength)),
+      var(--re-shadow-color) calc(5% * var(--re-shadow-strength)),
       transparent
     ),
     0 4px 8px 0
     color-mix(
       in srgb,
-      var(--reuse-shadow-color) calc(3.5% * var(--reuse-shadow-strength)),
+      var(--re-shadow-color) calc(3.5% * var(--re-shadow-strength)),
       transparent
     );
 }
-.reuse-shadow-sm {
-  box-shadow: var(--reuse-shadow);
+.re-shadow-sm {
+  box-shadow: var(--re-shadow);
 }
-.reuse-shadow-ring-sm {
+.re-shadow-ring-sm {
   box-shadow:
-    0 0 0 var(--reuse-ring-width) var(--reuse-ring-color),
-    var(--reuse-shadow);
+    0 0 0 var(--re-ring-width) var(--re-ring-color),
+    var(--re-shadow);
 }
 
-.reuse-shadow-md,
-.reuse-shadow-ring-md {
-  --reuse-shadow:
+.re-shadow-md,
+.re-shadow-ring-md {
+  --re-shadow:
     0 2px 4px 0
     color-mix(
       in srgb,
-      var(--reuse-shadow-color) calc(4% * var(--reuse-shadow-strength)),
+      var(--re-shadow-color) calc(4% * var(--re-shadow-strength)),
       transparent
     ),
     0 8px 16px 0
     color-mix(
       in srgb,
-      var(--reuse-shadow-color) calc(5% * var(--reuse-shadow-strength)),
+      var(--re-shadow-color) calc(5% * var(--re-shadow-strength)),
       transparent
     );
 }
-.reuse-shadow-md {
-  box-shadow: var(--reuse-shadow);
+.re-shadow-md {
+  box-shadow: var(--re-shadow);
 }
-.reuse-shadow-ring-md {
+.re-shadow-ring-md {
   box-shadow:
-    0 0 0 var(--reuse-ring-width) var(--reuse-ring-color),
-    var(--reuse-shadow);
+    0 0 0 var(--re-ring-width) var(--re-ring-color),
+    var(--re-shadow);
 }
 
-.reuse-shadow-lg,
-.reuse-shadow-ring-lg {
-  --reuse-shadow:
+.re-shadow-lg,
+.re-shadow-ring-lg {
+  --re-shadow:
     0 4px 8px 0
     color-mix(
       in srgb,
-      var(--reuse-shadow-color) calc(4% * var(--reuse-shadow-strength)),
+      var(--re-shadow-color) calc(4% * var(--re-shadow-strength)),
       transparent
     ),
     0 16px 32px 0
     color-mix(
       in srgb,
-      var(--reuse-shadow-color) calc(7% * var(--reuse-shadow-strength)),
+      var(--re-shadow-color) calc(7% * var(--re-shadow-strength)),
       transparent
     );
 }
-.reuse-shadow-lg {
-  box-shadow: var(--reuse-shadow);
+.re-shadow-lg {
+  box-shadow: var(--re-shadow);
 }
-.reuse-shadow-ring-lg {
+.re-shadow-ring-lg {
   box-shadow:
-    0 0 0 var(--reuse-ring-width) var(--reuse-ring-color),
-    var(--reuse-shadow);
+    0 0 0 var(--re-ring-width) var(--re-ring-color),
+    var(--re-shadow);
 }
 
-.reuse-shadow-xl,
-.reuse-shadow-ring-xl {
-  --reuse-shadow:
+.re-shadow-xl,
+.re-shadow-ring-xl {
+  --re-shadow:
     0 8px 16px 0
     color-mix(
       in srgb,
-      var(--reuse-shadow-color) calc(5% * var(--reuse-shadow-strength)),
+      var(--re-shadow-color) calc(5% * var(--re-shadow-strength)),
       transparent
     ),
     0 32px 64px 0
     color-mix(
       in srgb,
-      var(--reuse-shadow-color) calc(9% * var(--reuse-shadow-strength)),
+      var(--re-shadow-color) calc(9% * var(--re-shadow-strength)),
       transparent
     );
 }
-.reuse-shadow-xl {
-  box-shadow: var(--reuse-shadow);
+.re-shadow-xl {
+  box-shadow: var(--re-shadow);
 }
-.reuse-shadow-ring-xl {
+.re-shadow-ring-xl {
   box-shadow:
-    0 0 0 var(--reuse-ring-width) var(--reuse-ring-color),
-    var(--reuse-shadow);
+    0 0 0 var(--re-ring-width) var(--re-ring-color),
+    var(--re-shadow);
 }
 
-.reuse-shadow-2xl,
-.reuse-shadow-ring-2xl {
-  --reuse-shadow:
+.re-shadow-2xl,
+.re-shadow-ring-2xl {
+  --re-shadow:
     0 12px 24px 0
     color-mix(
       in srgb,
-      var(--reuse-shadow-color) calc(6% * var(--reuse-shadow-strength)),
+      var(--re-shadow-color) calc(6% * var(--re-shadow-strength)),
       transparent
     ),
     0 48px 96px 0
     color-mix(
       in srgb,
-      var(--reuse-shadow-color) calc(11% * var(--reuse-shadow-strength)),
+      var(--re-shadow-color) calc(11% * var(--re-shadow-strength)),
       transparent
     );
 }
-.reuse-shadow-2xl {
-  box-shadow: var(--reuse-shadow);
+.re-shadow-2xl {
+  box-shadow: var(--re-shadow);
 }
-.reuse-shadow-ring-2xl {
+.re-shadow-ring-2xl {
   box-shadow:
-    0 0 0 var(--reuse-ring-width) var(--reuse-ring-color),
-    var(--reuse-shadow);
+    0 0 0 var(--re-ring-width) var(--re-ring-color),
+    var(--re-shadow);
 }
 
-.reuse-card {
-  background: var(--reuse-surface, white);
+.re-card {
+  background: var(--re-surface, white);
   color: inherit;
-  border-radius: var(--reuse-card-radius, 16px);
-  padding: var(--reuse-card-padding, 24px);
+  border-radius: var(--re-card-radius, 16px);
+  padding: var(--re-card-padding, 24px);
 }
-.reuse-card-frame {
-  border-radius: calc(var(--reuse-card-radius, 16px) + 6px);
+.re-card-frame {
+  border-radius: calc(var(--re-card-radius, 16px) + 6px);
   padding: 6px;
   box-shadow:
-    0 0 0 0.5px var(--reuse-ring-color),
-    var(--reuse-shadow);
+    0 0 0 0.5px var(--re-ring-color),
+    var(--re-shadow);
 }
-.reuse-card-code {
+.re-card-code {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 20px;
   font: inherit;
 }
-.reuse-card-code pre {
+.re-card-code pre {
   overflow: auto;
   margin: 0;
   min-width: 0;
 }
-.reuse-card-action {
+.re-card-action {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 24px;
 }
-.reuse-card-action > :first-child {
+.re-card-action > :first-child {
   min-width: 0;
 }
 @media (max-width: 480px) {
-  .reuse-card-action {
+  .re-card-action {
     align-items: flex-start;
     flex-direction: column;
   }

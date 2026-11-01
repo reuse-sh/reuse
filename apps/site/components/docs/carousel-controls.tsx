@@ -34,7 +34,7 @@ export function CarouselControls() {
           <label
             key={entry.name}
             className="cc-seg-item"
-            data-reuse-row
+            data-re-row
             data-current={at === index ? "" : undefined}
           >
             <input

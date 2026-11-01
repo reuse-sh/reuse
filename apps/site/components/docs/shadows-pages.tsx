@@ -56,8 +56,8 @@ export function ShadowsScale() {
   return (
     <>
       {[
-        ["reuse-shadow-*", "reuse-shadow-"],
-        ["reuse-shadow-ring-*", "reuse-shadow-ring-"],
+        ["re-shadow-*", "re-shadow-"],
+        ["re-shadow-ring-*", "re-shadow-ring-"],
       ].map(([title, prefix]) => (
         <div key={title} className="x-scale">
           <h2 className="c-h3">

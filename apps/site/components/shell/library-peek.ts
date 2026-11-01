@@ -136,7 +136,7 @@ function stage(slug: MenuSlug, cleanups: (() => void)[]) {
         "div",
         "pk pk-sh",
         ...["sm", "md", "xl"].map((level) =>
-          el("span", `reuse-shadow-ring-${level}`),
+          el("span", `re-shadow-ring-${level}`),
         ),
       );
   }

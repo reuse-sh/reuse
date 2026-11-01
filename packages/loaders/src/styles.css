@@ -1,9 +1,9 @@
-.reuse-thinking-dots {
+.re-thinking-dots {
   display: inline-flex;
   flex: none;
   vertical-align: middle;
   color: inherit;
 }
-.reuse-thinking-dots canvas {
+.re-thinking-dots canvas {
   display: block;
 }

@@ -48,7 +48,7 @@ export function Tabs({
     });
     const hover = createMovingHighlight(root, {
       rowSelector: '[role="tab"]',
-      selectedSelector: "[data-reuse-none]",
+      selectedSelector: "[data-re-none]",
       mode: "hover",
       className: "c-tab-hover",
     });

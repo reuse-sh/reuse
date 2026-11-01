@@ -29,7 +29,7 @@ export function ThinkingDots({
   return (
     <span
       {...props}
-      className={`reuse-thinking-dots ${className}`}
+      className={`re-thinking-dots ${className}`}
       role="status"
       aria-label={label}
       aria-hidden={label ? undefined : true}

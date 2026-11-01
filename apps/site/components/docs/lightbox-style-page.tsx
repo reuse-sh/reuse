@@ -22,7 +22,7 @@ export function LightboxStylePage({ style }: { style: string }) {
       </Keys>
       <section className="d-ex-code" aria-label="Code">
         <CodePair js={code.js} react={code.react} />
-        <Section title={<C>lightbox-style.css</C>}>
+        <Section title={<C>re-lightbox-style.css</C>}>
           <CodeBlock tabs={{ code: code.css, lang: "text" }} />
         </Section>
         {code.chrome ? (

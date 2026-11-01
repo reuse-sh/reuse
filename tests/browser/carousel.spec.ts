@@ -10,7 +10,7 @@ const slides = Array.from(
 async function setup(page: Page) {
   await mount(
     page,
-    `<div id="strip" style="width:600px;--reuse-carousel-gap:0px">${slides}</div>`,
+    `<div id="strip" style="width:600px;--re-carousel-gap:0px">${slides}</div>`,
     ["carousel/styles.css"],
   );
   await page.evaluate(async () => {

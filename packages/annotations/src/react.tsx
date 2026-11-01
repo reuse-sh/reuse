@@ -44,7 +44,7 @@ export function AnnotatedImage({
       width,
       height,
       annotations,
-      id: `reuse-image-${id.replace(/[^\w-]/g, "")}`,
+      id: `re-image-${id.replace(/[^\w-]/g, "")}`,
     }),
   );
   useEffect(() => {
@@ -162,14 +162,9 @@ export function AnnotationEditor({
   return (
     <div
       {...props}
-      className={["reuse-annotation-editor", className]
-        .filter(Boolean)
-        .join(" ")}
+      className={["re-annotation-editor", className].filter(Boolean).join(" ")}
     >
-      <fieldset
-        className="reuse-annotation-toolbar"
-        aria-label="Annotation tools"
-      >
+      <fieldset className="re-annotation-toolbar" aria-label="Annotation tools">
         {(["select", ...ANNOTATION_KINDS] as const).map((kind) => (
           <button
             key={kind}
@@ -208,7 +203,7 @@ export function AnnotationEditor({
         (selected.kind === "marker" ||
           selected.kind === "pointer" ||
           selected.kind === "area") && (
-          <div className="reuse-annotation-fields">
+          <div className="re-annotation-fields">
             <label>
               {selected.kind === "marker" ? "Marker text" : "Label"}
               <input
@@ -249,7 +244,7 @@ export function AnnotationEditor({
             )}
           </div>
         )}
-      <p className="reuse-annotation-editor-hint">
+      <p className="re-annotation-editor-hint">
         Choose a tool, then click or drag on the image. Select a mark to move
         it. Arrow keys move the selection, Delete removes it, and Escape
         cancels.

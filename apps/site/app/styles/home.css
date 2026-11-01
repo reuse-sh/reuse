@@ -65,8 +65,8 @@
   border-radius: 13px;
   background: var(--surface);
   box-shadow: var(--shadow-raised);
-  --reuse-highlight-background: var(--hover);
-  --reuse-highlight-radius: 8px;
+  --re-highlight-background: var(--hover);
+  --re-highlight-radius: 8px;
 }
 .h-tools {
   display: flex;
@@ -147,8 +147,8 @@
 }
 .h-strip-vp {
   --h-off: max(var(--gutter), (100cqi - var(--col)) / 2);
-  --reuse-carousel-slide-width: min(288px, 72vw);
-  --reuse-carousel-gap: 12px;
+  --re-carousel-slide-width: min(288px, 72vw);
+  --re-carousel-gap: 12px;
   padding-inline: var(--h-off);
   scroll-padding-inline: var(--h-off);
 }
@@ -323,8 +323,8 @@
 .h-guides {
   display: grid;
   margin: 14px -12px 0;
-  --reuse-highlight-background: var(--hover);
-  --reuse-highlight-radius: 10px;
+  --re-highlight-background: var(--hover);
+  --re-highlight-radius: 10px;
 }
 .h-guide {
   display: grid;

@@ -36,15 +36,15 @@ const EASE = "cubic-bezier(0.33, 1, 0.68, 1)";
 let tooltipId = 0;
 
 function defaultContent(trigger: HTMLElement): Content {
-  const id = trigger.getAttribute("data-reuse-tooltip-template");
+  const id = trigger.getAttribute("data-re-tooltip-template");
   const template = id ? trigger.ownerDocument.getElementById(id) : null;
   if (template && "content" in template)
     return (template as HTMLTemplateElement).content.cloneNode(true);
-  return trigger.getAttribute("data-reuse-tooltip") ?? "";
+  return trigger.getAttribute("data-re-tooltip") ?? "";
 }
 
 const DEFAULTS: Settings = {
-  selector: "[data-reuse-tooltip], [data-reuse-tooltip-template]",
+  selector: "[data-re-tooltip], [data-re-tooltip-template]",
   side: "bottom-right",
   sideOffset: 10,
   delay: 150,
@@ -94,12 +94,12 @@ export function createFloatingTooltip(
   let given = { ...options };
   let opts = settle(given);
   const popup = document.createElement("div");
-  popup.className = "reuse-floating-tooltip";
-  popup.id = `reuse-tooltip-${++tooltipId}`;
+  popup.className = "re-floating-tooltip";
+  popup.id = `re-tooltip-${++tooltipId}`;
   popup.setAttribute("role", "tooltip");
   popup.hidden = true;
   const body = document.createElement("span");
-  body.className = "reuse-floating-tooltip-content";
+  body.className = "re-floating-tooltip-content";
   popup.append(body);
   document.body.append(popup);
   let extraClasses: string[] = [];

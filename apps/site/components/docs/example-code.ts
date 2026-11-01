@@ -82,7 +82,7 @@ export function Journal({ photos, children }) {
   strip: [
     `import { createCarousel } from "@reuse-sh/carousel";
 
-const strip = document.querySelector(".related .reuse-carousel");
+const strip = document.querySelector(".related .re-carousel");
 const carousel = createCarousel(strip, { group: "page" });
 
 prevButton.onclick = () => carousel.prev();
@@ -101,7 +101,7 @@ export function Related({ prints }) {
     <section className="related">
       <button disabled={!state.canPrev} onClick={() => carousel?.prev()}>Previous</button>
       <button disabled={!state.canNext} onClick={() => carousel?.next()}>Next</button>
-      <div ref={ref} className="reuse-carousel">
+      <div ref={ref} className="re-carousel">
         {prints.map((print) => <PrintCard key={print.id} print={print} data-carousel-slide />)}
       </div>
     </section>
@@ -113,7 +113,7 @@ export function Related({ prints }) {
 
 // The strip starts at the text column and runs off the page.
 // Set padding-inline and scroll-padding-inline to the column offset.
-const story = document.querySelector(".story .reuse-carousel");
+const story = document.querySelector(".story .re-carousel");
 const carousel = createCarousel(story, { loop: true });`,
     `import { Carousel } from "@reuse-sh/carousel/react";
 
@@ -136,7 +136,7 @@ export const tooltipCode: Record<string, readonly [string, string]> = {
     `import { createFloatingTooltip } from "@reuse-sh/interactions";
 
 // The hint comes from a template next to the button.
-// <button aria-label="Duplicate" data-reuse-tooltip-template="tip-duplicate">…</button>
+// <button aria-label="Duplicate" data-re-tooltip-template="tip-duplicate">…</button>
 // <template id="tip-duplicate">Duplicate <kbd>⌘D</kbd></template>
 createFloatingTooltip(document.querySelector(".editor-toolbar"), { tilt: 5 });`,
     `import { FloatingTooltipGroup } from "@reuse-sh/interactions/react";
@@ -144,7 +144,7 @@ createFloatingTooltip(document.querySelector(".editor-toolbar"), { tilt: 5 });`,
 export function EditorToolbar() {
   return (
     <FloatingTooltipGroup className="editor-toolbar" tilt={5}>
-      <button aria-label="Duplicate" data-reuse-tooltip-template="tip-duplicate"><LayersIcon /></button>
+      <button aria-label="Duplicate" data-re-tooltip-template="tip-duplicate"><LayersIcon /></button>
       <template
         id="tip-duplicate"
         dangerouslySetInnerHTML={{ __html: "Duplicate <kbd>⌘D</kbd>" }}

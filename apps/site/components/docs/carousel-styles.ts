@@ -608,7 +608,7 @@ const builders: Record<CarouselStyleName, (demo: HTMLElement) => Cleanup> = {
       <div class="cc-row cc-row-center"><div class="cc-tabs" role="group" aria-label="Slides">${photos
         .map(
           (photo, index) =>
-            `<button type="button" class="cc-tab" data-reuse-row data-index="${index}">${attr(photo.caption)}</button>`,
+            `<button type="button" class="cc-tab" data-re-row data-index="${index}">${attr(photo.caption)}</button>`,
         )
         .join("")}</div></div>`,
       { loop: true },

@@ -12,8 +12,8 @@ export interface CodeTab {
   lang?: CodeLang;
 }
 
-const KEY = "reuse-code-tab";
-const EVENT = "reuse-code-tab";
+const KEY = "re-code-tab";
+const EVENT = "re-code-tab";
 
 function readTab() {
   try {

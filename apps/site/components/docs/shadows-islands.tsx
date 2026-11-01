@@ -40,7 +40,7 @@ function Choice<T extends string>({
         <label
           key={value}
           className="cc-seg-item"
-          data-reuse-row
+          data-re-row
           data-current={value === selected ? "" : undefined}
         >
           <input

@@ -46,7 +46,7 @@ function MenuDemo() {
         <button
           type="button"
           aria-pressed={current === label}
-          data-reuse-row=""
+          data-re-row=""
           data-current={current === label ? "" : undefined}
           key={label}
           onClick={() => setCurrent(label)}
@@ -99,8 +99,8 @@ export function SmallDemos() {
               type="button"
               key={label}
               aria-label={label}
-              data-reuse-row=""
-              data-reuse-tooltip={label}
+              data-re-row=""
+              data-re-tooltip={label}
             >
               <Icon name={icon} size={18} />
             </button>

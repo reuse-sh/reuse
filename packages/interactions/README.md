@@ -64,7 +64,7 @@ const hold = createHoldToConfirm(button, {
 });
 ```
 
-Tooltip triggers use `data-reuse-tooltip="Description"`. Highlight rows use `data-reuse-row`, and the selected row has `data-current`.
+Tooltip triggers use `data-re-tooltip="Description"`. Highlight rows use `data-re-row`, and the selected row has `data-current`.
 
 ## React
 
@@ -84,8 +84,8 @@ import "@reuse-sh/interactions/styles.css";
 </FloatingTooltipGroup>
 
 <MovingHighlight>
-  <button data-reuse-row data-current>Overview</button>
-  <button data-reuse-row>Examples</button>
+  <button data-re-row data-current>Overview</button>
+  <button data-re-row>Examples</button>
 </MovingHighlight>
 
 <HoldToConfirmButton holdMs={1200} onConfirm={removeDraft}>

@@ -20,7 +20,7 @@ export function HighlightDemo() {
         ].map((item) => (
           <button
             type="button"
-            data-reuse-row=""
+            data-re-row=""
             aria-pressed={selected === item.label}
             data-current={selected === item.label ? "" : undefined}
             key={item.label}
