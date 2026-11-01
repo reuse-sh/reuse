@@ -25,11 +25,11 @@ const fraunces = Fraunces({
 export const metadata: Metadata = {
   metadataBase: new URL("https://reuse.sh"),
   title: {
-    default: "Reuse · Good components, ready to reuse",
+    default: "Reuse · Interface parts for any stack",
     template: "%s · Reuse",
   },
   description:
-    "Native web libraries for the things you use in every project. Lightbox, carousel, annotations, and considered interactions, with React adapters and guides for your agent.",
+    "A lightbox, a carousel, tooltips, loaders and more, as plain browser modules with React wrappers and guides your coding agent can follow on any stack.",
 };
 
 export default function RootLayout({ children }: { children: ReactNode }) {
