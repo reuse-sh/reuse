@@ -45,6 +45,21 @@ function offsetLeft(element: HTMLElement): number {
   return position;
 }
 
+// Computed scroll padding keeps percentages and calc() unresolved, so a probe lays it out against the scrollport width.
+function scrollPadding(viewport: HTMLElement, value: string): number {
+  if (/^[\d.]+px$/.test(value)) return Number.parseFloat(value);
+  if (!/\d/.test(value)) return 0;
+  const box = document.createElement("div");
+  const probe = document.createElement("div");
+  box.style.cssText = `position: absolute; visibility: hidden; width: ${viewport.clientWidth}px; height: 0; overflow: hidden;`;
+  probe.style.width = value;
+  box.append(probe);
+  viewport.append(box);
+  const padding = probe.offsetWidth;
+  box.remove();
+  return padding;
+}
+
 function clamp(value: number, max: number): number {
   return Math.max(0, Math.min(value, max));
 }
@@ -551,7 +566,7 @@ export function createCarousel(
     max = Math.max(0, viewport.scrollWidth - viewportWidth);
     const origin = offsetLeft(viewport) + viewport.clientLeft;
     const styles = window.getComputedStyle(viewport);
-    const padding = Number.parseFloat(styles.scrollPaddingInlineStart) || 0;
+    const padding = scrollPadding(viewport, styles.scrollPaddingInlineStart);
     targets = slides.map((slide) => {
       if (!slide.classList.contains("re-carousel__slide")) {
         slide.classList.add("re-carousel__slide");
