@@ -286,6 +286,35 @@ describe("lightbox lifecycle", () => {
     delete (HTMLElement.prototype as { animate?: unknown }).animate;
   });
 
+  it("tears down fully when the browser closes the dialog during an animation", () => {
+    Object.defineProperty(HTMLElement.prototype, "animate", {
+      configurable: true,
+      value() {
+        return {
+          finished: new Promise<void>(() => {}),
+          commitStyles() {
+            throw new DOMException(
+              "Target element is not rendered.",
+              "InvalidStateError",
+            );
+          },
+          cancel() {},
+        };
+      },
+    });
+    const trigger = document.createElement("button");
+    document.body.append(trigger);
+    const controller = create({ duration: 280 });
+    controller.open([{ ...gallery[0], origin: trigger }]);
+    expect(trigger.style.visibility).toBe("hidden");
+    dialog().close();
+    expect(document.querySelector("dialog")).toBeNull();
+    expect(document.body.style.overflow).toBe("");
+    expect(trigger.style.visibility).toBe("");
+    expect(controller.getState().isOpen).toBe(false);
+    delete (HTMLElement.prototype as { animate?: unknown }).animate;
+  });
+
   it("locks and restores scroll styles, focus and source visibility", async () => {
     const trigger = document.createElement("button");
     trigger.style.visibility = "visible";
