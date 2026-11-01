@@ -61,15 +61,3 @@ export function CopyControl({
     </button>
   );
 }
-
-export function CodeCard({ code, label }: { code: string; label?: string }) {
-  return (
-    <div className="code-card reuse-card reuse-shadow-ring-sm">
-      {label ? <p className="code-card-label">{label}</p> : null}
-      <pre>
-        <code>{code}</code>
-      </pre>
-      <CopyControl value={code} />
-    </div>
-  );
-}
