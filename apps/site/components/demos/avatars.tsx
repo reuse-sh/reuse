@@ -15,7 +15,6 @@ export function AvatarsDemo() {
             size={64}
             badge={{ type: "dot", label: "Available" }}
           />
-          <span>Status</span>
         </div>
         <div>
           <Avatar
@@ -23,7 +22,6 @@ export function AvatarsDemo() {
             size={64}
             badge={{ type: "count", count: 128, label: "128 unread messages" }}
           />
-          <span>Count</span>
         </div>
         <div>
           <Avatar
@@ -35,7 +33,6 @@ export function AvatarsDemo() {
               label: "Verified",
             }}
           />
-          <span>Icon</span>
         </div>
       </div>
       <div className="avatar-group-example">
@@ -45,7 +42,6 @@ export function AvatarsDemo() {
           <Avatar name="Robin Park" size={52} />
           <Avatar name="Taylor Reed" size={52} />
         </AvatarGroup>
-        <p>Cut out, not painted over, so they sit on any background.</p>
       </div>
     </div>
   );

@@ -4,7 +4,7 @@ import {
   HoldToConfirmButton,
   MovingHighlight,
 } from "@reuse-sh/interactions/react";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { HoldLabel } from "../hold-label";
 import { Icon, type IconName } from "../icons";
 
@@ -29,50 +29,33 @@ export function HighlightDemo() {
           >
             <Icon name={item.icon as IconName} />
             <span>{item.label}</span>
-            <Icon name="arrow" size={14} />
           </button>
         ))}
       </MovingHighlight>
-      <p className="demo-hint">
-        Point at a row or press Tab. Click to select one.
-      </p>
     </div>
   );
 }
 
 export function HoldDemo() {
-  const [confirmed, setConfirmed] = useState(false);
+  const [done, setDone] = useState(false);
+  const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  useEffect(() => () => clearTimeout(timer.current), []);
   return (
     <div className="interaction-stage">
-      <div className="hold-example">
-        <div className="small-document">
-          <Icon name={confirmed ? "check" : "shadows"} size={28} />
-        </div>
-        <p>{confirmed ? "Draft removed." : "Remove this draft?"}</p>
-        <HoldToConfirmButton
-          holdMs={1200}
-          onConfirm={() => setConfirmed(true)}
-          disabled={confirmed}
-          className="c-hold"
-        >
-          <HoldLabel
-            labels={["Hold to remove", "Confirmed"]}
-            shown={confirmed ? "Confirmed" : "Hold to remove"}
-          />
-        </HoldToConfirmButton>
-        <span className="hold-feedback" role="status">
-          {confirmed ? "Removed" : "Release early to cancel"}
-        </span>
-        {confirmed ? (
-          <button
-            type="button"
-            className="text-button"
-            onClick={() => setConfirmed(false)}
-          >
-            Try again
-          </button>
-        ) : null}
-      </div>
+      <HoldToConfirmButton
+        className="c-hold"
+        onConfirm={() => {
+          setDone(true);
+          clearTimeout(timer.current);
+          timer.current = setTimeout(() => setDone(false), 2400);
+        }}
+      >
+        <Icon name="trash" size={16} />
+        <HoldLabel
+          labels={["Hold to delete", "Deleted"]}
+          shown={done ? "Deleted" : "Hold to delete"}
+        />
+      </HoldToConfirmButton>
     </div>
   );
 }
