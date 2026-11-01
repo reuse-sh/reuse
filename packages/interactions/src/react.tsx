@@ -6,6 +6,7 @@ import {
   createContext,
   type HTMLAttributes,
   type ReactElement,
+  type RefObject,
   useContext,
   useEffect,
   useRef,
@@ -21,9 +22,44 @@ import {
 
 const TooltipGroup = createContext(false);
 
+interface TooltipSettings extends Omit<FloatingTooltipOptions, "className"> {
+  tooltipClassName?: string;
+}
+
+function useFloatingTooltip(
+  ref: RefObject<HTMLElement | null>,
+  enabled: boolean,
+  { tooltipClassName, content, ...options }: TooltipSettings,
+) {
+  const controller = useRef<ReturnType<typeof createFloatingTooltip> | null>(
+    null,
+  );
+  const contentRef = useRef(content);
+  contentRef.current = content;
+  const settings: FloatingTooltipOptions = {
+    ...options,
+    className: tooltipClassName,
+    content: content && ((trigger) => contentRef.current?.(trigger) ?? null),
+  };
+  const settingsRef = useRef(settings);
+  settingsRef.current = settings;
+  useEffect(() => {
+    if (!enabled || !ref.current) return;
+    const created = createFloatingTooltip(ref.current, settingsRef.current);
+    controller.current = created;
+    return () => {
+      created.destroy();
+      controller.current = null;
+    };
+  }, [enabled, ref]);
+  useEffect(() => {
+    controller.current?.update(settingsRef.current);
+  });
+}
+
 export interface FloatingTooltipGroupProps
-  extends HTMLAttributes<HTMLDivElement>,
-    FloatingTooltipOptions {}
+  extends Omit<HTMLAttributes<HTMLDivElement>, "content">,
+    TooltipSettings {}
 
 export function FloatingTooltipGroup({
   children,
@@ -34,33 +70,24 @@ export function FloatingTooltipGroup({
   closeDelay,
   viewportPadding,
   track,
+  tilt,
+  tooltipClassName,
+  content,
   ...props
 }: FloatingTooltipGroupProps) {
   const ref = useRef<HTMLDivElement>(null);
-  const trackX = track?.x;
-  const trackY = track?.y;
-  useEffect(() => {
-    if (!ref.current) return;
-    const controller = createFloatingTooltip(ref.current, {
-      selector,
-      side,
-      sideOffset,
-      delay,
-      closeDelay,
-      viewportPadding,
-      track: { x: trackX, y: trackY },
-    });
-    return () => controller.destroy();
-  }, [
+  useFloatingTooltip(ref, true, {
     selector,
     side,
     sideOffset,
     delay,
     closeDelay,
     viewportPadding,
-    trackX,
-    trackY,
-  ]);
+    track,
+    tilt,
+    tooltipClassName,
+    content,
+  });
   return (
     <TooltipGroup.Provider value={true}>
       <div {...props} ref={ref}>
@@ -70,7 +97,7 @@ export function FloatingTooltipGroup({
   );
 }
 
-export interface FloatingTooltipProps extends FloatingTooltipOptions {
+export interface FloatingTooltipProps extends Omit<TooltipSettings, "content"> {
   content: string;
   children: ReactElement<Record<string, unknown>>;
 }
@@ -78,41 +105,11 @@ export interface FloatingTooltipProps extends FloatingTooltipOptions {
 export function FloatingTooltip({
   content,
   children,
-  selector,
-  side,
-  sideOffset,
-  delay,
-  closeDelay,
-  viewportPadding,
-  track,
+  ...settings
 }: FloatingTooltipProps) {
   const ref = useRef<HTMLSpanElement>(null);
   const grouped = useContext(TooltipGroup);
-  const trackX = track?.x;
-  const trackY = track?.y;
-  useEffect(() => {
-    if (!ref.current || grouped) return;
-    const controller = createFloatingTooltip(ref.current, {
-      selector,
-      side,
-      sideOffset,
-      delay,
-      closeDelay,
-      viewportPadding,
-      track: { x: trackX, y: trackY },
-    });
-    return () => controller.destroy();
-  }, [
-    grouped,
-    selector,
-    side,
-    sideOffset,
-    delay,
-    closeDelay,
-    viewportPadding,
-    trackX,
-    trackY,
-  ]);
+  useFloatingTooltip(ref, !grouped, settings);
   return (
     <span ref={ref} className="reuse-tooltip-trigger">
       {cloneElement(children, { "data-reuse-tooltip": content })}
@@ -122,12 +119,16 @@ export function FloatingTooltip({
 
 export interface MovingHighlightProps
   extends HTMLAttributes<HTMLDivElement>,
-    MovingHighlightOptions {}
+    Omit<MovingHighlightOptions, "className"> {
+  highlightClassName?: string;
+}
 
 export function MovingHighlight({
   children,
   rowSelector,
   selectedSelector,
+  mode,
+  highlightClassName,
   ...props
 }: MovingHighlightProps) {
   const ref = useRef<HTMLDivElement>(null);
@@ -136,9 +137,11 @@ export function MovingHighlight({
     const controller = createMovingHighlight(ref.current, {
       rowSelector,
       selectedSelector,
+      mode,
+      className: highlightClassName,
     });
     return () => controller.destroy();
-  }, [rowSelector, selectedSelector]);
+  }, [rowSelector, selectedSelector, mode, highlightClassName]);
   return (
     <div {...props} ref={ref}>
       {children}

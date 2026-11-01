@@ -86,6 +86,7 @@ afterEach(() => {
   document.body.removeAttribute("style");
   vi.restoreAllMocks();
   vi.unstubAllGlobals();
+  vi.useRealTimers();
 });
 
 describe("lightbox lifecycle", () => {
@@ -121,6 +122,9 @@ describe("lightbox lifecycle", () => {
   });
 
   it("pages with mouse drag over an image without turning the drag into zoom", () => {
+    vi.useFakeTimers({
+      toFake: ["requestAnimationFrame", "cancelAnimationFrame", "performance"],
+    });
     const controller = create();
     controller.open(gallery);
     const viewport = dialog().querySelector<HTMLElement>(
@@ -146,6 +150,8 @@ describe("lightbox lifecycle", () => {
     pointer(window, "pointermove", 150);
     pointer(window, "pointerup", 150);
     viewport.dispatchEvent(new Event("scrollend"));
+    vi.advanceTimersByTime(1000);
+    vi.useRealTimers();
     expect(controller.getState()).toMatchObject({
       index: 1,
       zoom: { scale: 1, x: 0, y: 0 },

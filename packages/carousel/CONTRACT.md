@@ -11,6 +11,8 @@ CarouselOptions:
 - drag?: boolean, default true
 - group?: number | "page", default 1
 - autoplay?: number, milliseconds, off by default
+- releaseMotion?: "spring" | "native", default spring. A released mouse drag travels to its snap point with a critically damped spring that starts at the drag speed; native uses the browser smooth scroll. Reduced motion jumps.
+- releaseDuration?: number, milliseconds, default 260, the spring travel time
 - onChange?: (state: CarouselState) => void
 
 CarouselState: index, count, progress, canPrev, canNext, isPlaying, isDragging. index is zero-based; progress is 0..1. getState returns a stable snapshot until something actually changes.

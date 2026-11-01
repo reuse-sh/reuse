@@ -5,6 +5,8 @@ export interface CarouselOptions {
   drag?: boolean;
   group?: number | "page";
   autoplay?: number;
+  releaseMotion?: "spring" | "native";
+  releaseDuration?: number;
   onChange?: (state: CarouselState) => void;
 }
 
@@ -49,6 +51,8 @@ function clamp(value: number, max: number): number {
 
 // Scroll speed in px/ms above which a released mouse drag moves on to the next slide.
 const FLICK_VELOCITY = 0.4;
+const RELEASE_SAMPLE_WINDOW = 80;
+const MAX_SPRING_STEP = 64;
 
 export function createCarousel(
   viewport: HTMLElement,
@@ -70,6 +74,17 @@ export function createCarousel(
     (!Number.isFinite(options.autoplay) || options.autoplay <= 0)
   ) {
     throw new RangeError("Carousel autoplay must be a positive interval.");
+  }
+  if (
+    options.releaseMotion !== undefined &&
+    options.releaseMotion !== "spring" &&
+    options.releaseMotion !== "native"
+  ) {
+    throw new RangeError("Carousel releaseMotion must be spring or native.");
+  }
+  const releaseDuration = options.releaseDuration ?? 260;
+  if (!Number.isFinite(releaseDuration) || releaseDuration <= 0) {
+    throw new RangeError("Carousel releaseDuration must be a positive time.");
   }
 
   const initialTabIndex = viewport.getAttribute("tabindex");
@@ -114,6 +129,13 @@ export function createCarousel(
   let instantFrame = 0;
   let deferredSmooth: number | undefined;
   let smoothTarget: number | undefined;
+  let spring: {
+    frame: number;
+    value: number;
+    velocity: number;
+    target: number;
+    time: number;
+  } | null = null;
   let scrolling = false;
   let suppressClick = false;
   let state: CarouselState = Object.freeze({
@@ -287,8 +309,61 @@ export function createCarousel(
     return (last.position - first.position) / (last.time - first.time);
   }
 
+  function releaseVelocity(samples: { time: number; position: number }[]) {
+    const now = window.performance.now();
+    const recent = samples.filter(
+      (sample) => sample.time >= now - RELEASE_SAMPLE_WINDOW,
+    );
+    const first = recent[0];
+    const last = recent.at(-1);
+    if (!first || !last || last.time - first.time < 1) return 0;
+    return (last.position - first.position) / (last.time - first.time);
+  }
+
+  function stopSpring() {
+    if (!spring) return;
+    window.cancelAnimationFrame(spring.frame);
+    spring = null;
+  }
+
+  function springFrame(now: number) {
+    if (!spring) return;
+    const dt = Math.min(Math.max(now - spring.time, 0), MAX_SPRING_STEP);
+    const frequency = 6 / releaseDuration;
+    const offset = spring.value - spring.target;
+    const slope = spring.velocity + frequency * offset;
+    const decay = Math.exp(-frequency * dt);
+    spring.value = spring.target + (offset + slope * dt) * decay;
+    spring.velocity = (spring.velocity - frequency * slope * dt) * decay;
+    spring.time = now;
+    if (
+      Math.abs(spring.target - spring.value) < 0.5 &&
+      Math.abs(spring.velocity) < 0.02
+    ) {
+      const { target } = spring;
+      spring = null;
+      scrollTo(target, "instant");
+      renderLoop();
+      settle();
+      return;
+    }
+    scrollTo(spring.value, "instant");
+    renderLoop();
+    spring.frame = window.requestAnimationFrame(springFrame);
+  }
+
+  function startSpring(target: number, velocity: number) {
+    spring = {
+      frame: window.requestAnimationFrame(springFrame),
+      value: position(),
+      velocity,
+      target,
+      time: window.performance.now(),
+    };
+  }
+
   function settle() {
-    if (pointer?.moved) return;
+    if (pointer || grabbedTouch !== undefined) return;
     if (
       pendingPosition !== undefined &&
       Math.abs(position() - pendingPosition) > 1
@@ -306,7 +381,7 @@ export function createCarousel(
       previousSnap !== "none" &&
       Math.abs(position() - targetAt(index)) > 1
     ) {
-      goTo(index);
+      goTo(index, "smooth", undefined, 0);
       return;
     }
     scrolling = false;
@@ -321,6 +396,7 @@ export function createCarousel(
   }
 
   function interrupt(restoreSnap = true) {
+    stopSpring();
     clearTimeout(settleTimer);
     pendingIndex = undefined;
     pendingPosition = undefined;
@@ -365,9 +441,11 @@ export function createCarousel(
     index: number,
     behavior: ScrollBehavior = "smooth",
     direction?: 1 | -1,
+    releaseSpeed?: number,
   ) {
     if (destroyed || !enabled || !slides.length || !Number.isFinite(index))
       return;
+    stopSpring();
     const rounded = Math.round(index);
     const next =
       span > 0
@@ -387,7 +465,13 @@ export function createCarousel(
       pendingPosition = target;
     }
     viewport.style.scrollSnapType = "none";
-    scrollTo(target, behavior);
+    if (
+      releaseSpeed !== undefined &&
+      options.releaseMotion !== "native" &&
+      !reducedMotion?.matches
+    )
+      startSpring(target, releaseSpeed);
+    else scrollTo(target, behavior);
     renderLoop();
     publish(pendingIndex);
     clearTimeout(settleTimer);
@@ -575,6 +659,7 @@ export function createCarousel(
     if (!pointer) return;
     const { id, moved, samples } = pointer;
     const velocity = moved && snap ? dragVelocity(samples) : 0;
+    const speed = moved && snap ? releaseVelocity(samples) : 0;
     pointer = null;
     if (viewport.hasPointerCapture?.(id)) viewport.releasePointerCapture(id);
     viewport.style.userSelect = previousUserSelect;
@@ -582,8 +667,8 @@ export function createCarousel(
     internalHold("pointer", false);
     if (moved && snap && Math.abs(velocity) >= FLICK_VELOCITY) {
       const direction = velocity > 0 ? 1 : -1;
-      goTo(indexAhead(direction), "smooth", direction);
-    } else if (moved && snap) goTo(nearestIndex());
+      goTo(indexAhead(direction), "smooth", direction, speed);
+    } else if (moved && snap) goTo(nearestIndex(), "smooth", undefined, speed);
     else if (moved || snap) settle();
     else viewport.style.scrollSnapType = previousSnap;
     publish();
@@ -592,7 +677,7 @@ export function createCarousel(
   const controller: Carousel = {
     next: () => step(1),
     prev: () => step(-1),
-    goTo,
+    goTo: (index, behavior) => goTo(index, behavior),
     getState: () => state,
     subscribe(listener) {
       if (destroyed) return () => {};
@@ -628,6 +713,7 @@ export function createCarousel(
       clearTimeout(timer);
       clearTimeout(settleTimer);
       window.cancelAnimationFrame(instantFrame);
+      stopSpring();
       observer?.disconnect();
       mutation?.disconnect();
       intersection?.disconnect();
