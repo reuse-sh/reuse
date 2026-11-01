@@ -417,8 +417,9 @@ export function createFloatingTooltip(
   const over = (event: PointerEvent) => {
     if (event.pointerType === "touch") return;
     const next = find(event);
-    if (next && root.contains(next) && next !== trigger)
-      open(next, false, { x: event.clientX, y: event.clientY });
+    if (!next || !root.contains(next)) return;
+    if (next === trigger) view.clearTimeout(closeTimer);
+    else open(next, false, { x: event.clientX, y: event.clientY });
   };
   const move = (event: PointerEvent) => {
     if (event.pointerType === "touch" || keyboard || !trigger) return;

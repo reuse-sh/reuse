@@ -237,7 +237,7 @@ export const libraries: Library[] = [
       ],
       [
         "releaseMotion",
-        '"spring" glides to the nearest slide after a drag or a flick. "native" leaves the settle to the browser\'s scroll snap. "spring" by default.',
+        'How a released mouse drag travels to its slide. "spring" starts at the drag speed and eases in; "native" uses the browser\'s smooth scroll. Both pick the same slide. "spring" by default; reduced motion jumps.',
       ],
       [
         "releaseDuration",

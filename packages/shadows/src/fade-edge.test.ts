@@ -4,6 +4,7 @@ import { buildFadeGradient, createFadeEdge } from "./index.js";
 
 class FakeResizeObserver {
   observe() {}
+  unobserve() {}
   disconnect() {}
 }
 
@@ -45,6 +46,17 @@ describe("createFadeEdge", () => {
     layout(1000, 400, 0);
     const controller = createFadeEdge(scroller);
     expect(fade("--reuse-fade-start")).toBe("0px");
+    expect(fade("--reuse-fade-end")).toBe("64px");
+    controller.destroy();
+  });
+
+  it("fades the end once added content starts to overflow", async () => {
+    layout(400, 400, 0);
+    const controller = createFadeEdge(scroller);
+    expect(fade("--reuse-fade-end")).toBe("0px");
+    layout(800, 400, 0);
+    scroller.append(document.createElement("img"));
+    await Promise.resolve();
     expect(fade("--reuse-fade-end")).toBe("64px");
     controller.destroy();
   });

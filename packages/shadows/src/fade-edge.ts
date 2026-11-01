@@ -127,6 +127,17 @@ export function createFadeEdge(
     schedule();
   });
   observer.observe(scroller);
+  for (const child of scroller.children) observer.observe(child);
+  const children = new MutationObserver((records) => {
+    for (const record of records) {
+      for (const node of record.addedNodes)
+        if (node.nodeType === 1) observer.observe(node as Element);
+      for (const node of record.removedNodes)
+        if (node.nodeType === 1) observer.unobserve(node as Element);
+    }
+    schedule();
+  });
+  children.observe(scroller, { childList: true });
 
   return {
     update(partial = {}) {
@@ -145,6 +156,7 @@ export function createFadeEdge(
       cancelAnimationFrame(frame);
       frame = 0;
       observer.disconnect();
+      children.disconnect();
       scroller.removeEventListener("scroll", schedule);
       if (originalStyle === null) scroller.removeAttribute("style");
       else scroller.setAttribute("style", originalStyle);

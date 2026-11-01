@@ -198,6 +198,19 @@ describe("floating tooltip", () => {
     expect(second.hasAttribute("aria-describedby")).toBe(false);
     expect(document.querySelector('[role="tooltip"]')).toBe(null);
   });
+  it("stays open when the pointer returns to the trigger within the close delay", () => {
+    reduced = true;
+    const { first, popup } = setup();
+    pointer(first, "pointerover", 160, 80);
+    vi.advanceTimersByTime(40);
+    expect(popup.hidden).toBe(false);
+    pointer(first, "pointerout", 160, 80);
+    vi.advanceTimersByTime(40);
+    pointer(first, "pointerover", 160, 80);
+    vi.advanceTimersByTime(200);
+    expect(popup.hidden).toBe(false);
+    expect(popup.textContent).toBe("First");
+  });
   it("anchors keyboard focus, clamps viewport edges, and dismisses on Escape", () => {
     reduced = true;
     const { first, popup } = setup();
