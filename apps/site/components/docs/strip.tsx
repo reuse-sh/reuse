@@ -53,10 +53,9 @@ export function CarouselMount({
       if (dots) {
         dots.style.setProperty("--d-dot", String(state.index));
         for (const button of dots.querySelectorAll<HTMLElement>("[data-index]"))
-          button.toggleAttribute(
-            "aria-current",
-            Number(button.dataset.index) === state.index,
-          );
+          if (Number(button.dataset.index) === state.index)
+            button.setAttribute("aria-current", "true");
+          else button.removeAttribute("aria-current");
       }
       if (counter)
         counter.textContent = `${pad(state.index + 1)} / ${pad(state.count)}`;

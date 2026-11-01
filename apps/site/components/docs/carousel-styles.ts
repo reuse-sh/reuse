@@ -257,7 +257,8 @@ const builders: Record<CarouselStyleName, (demo: HTMLElement) => Cleanup> = {
     const unsubscribe = follow(carousel, (state) => {
       dots.style.setProperty("--d-dot", String(state.index));
       buttons.forEach((button, index) => {
-        button.toggleAttribute("aria-current", index === state.index);
+        if (index === state.index) button.setAttribute("aria-current", "true");
+        else button.removeAttribute("aria-current");
       });
     });
     const off = listen(dots, "click", (event) => {
@@ -290,7 +291,8 @@ const builders: Record<CarouselStyleName, (demo: HTMLElement) => Cleanup> = {
     const pills = [...box.querySelectorAll<HTMLElement>(".cc-pill")];
     const unsubscribe = follow(carousel, (state) => {
       pills.forEach((pill, index) => {
-        pill.toggleAttribute("aria-current", index === state.index);
+        if (index === state.index) pill.setAttribute("aria-current", "true");
+        else pill.removeAttribute("aria-current");
       });
     });
     const offFill = autoplayFill(
@@ -332,7 +334,8 @@ const builders: Record<CarouselStyleName, (demo: HTMLElement) => Cleanup> = {
     const unsubscribe = follow(carousel, (state) => {
       segments.forEach((segment, index) => {
         segment.toggleAttribute("data-past", index < state.index);
-        segment.toggleAttribute("aria-current", index === state.index);
+        if (index === state.index) segment.setAttribute("aria-current", "true");
+        else segment.removeAttribute("aria-current");
       });
       live.textContent = `Slide ${state.index + 1} of ${state.count}`;
     });
@@ -423,7 +426,8 @@ const builders: Record<CarouselStyleName, (demo: HTMLElement) => Cleanup> = {
     let shown = -1;
     const unsubscribe = follow(carousel, (state) => {
       thumbs.forEach((thumb, index) => {
-        thumb.toggleAttribute("aria-current", index === state.index);
+        if (index === state.index) thumb.setAttribute("aria-current", "true");
+        else thumb.removeAttribute("aria-current");
       });
       if (state.index === shown) return;
       centerChild(strip, thumbs[state.index], shown < 0);
