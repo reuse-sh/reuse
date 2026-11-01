@@ -379,8 +379,12 @@ describe("native carousel", () => {
     pull(viewport);
     vi.advanceTimersByTime(16);
     const wheeled = shift(slides[1]);
-    viewport.dispatchEvent(new Event("wheel"));
-    expect(shift(slides[1])).toBe(wheeled);
+    for (let frame = 0; frame < 10; frame++) {
+      viewport.dispatchEvent(new Event("wheel"));
+      vi.advanceTimersByTime(16);
+    }
+    expect(shift(slides[1])).toBeGreaterThan(0);
+    expect(shift(slides[1])).toBeLessThan(wheeled / 2);
     vi.advanceTimersByTime(1000);
     expect(slides[1].style.translate).toBe("");
     pull(viewport);
@@ -416,20 +420,46 @@ describe("native carousel", () => {
     expect(still.slides[1].style.translate).toBe("");
   });
 
-  it("stops a flick at the next slide when the slides ask for a snap stop", () => {
-    const { viewport, slides } = fixture([100, 100, 100, 100, 100, 100]);
-    for (const slide of slides) slide.style.scrollSnapStop = "always";
+  it("stops a flick at the first slide on its way that asks for a snap stop", () => {
+    for (const [stopping, landing] of [
+      [[0, 1, 2, 3, 4, 5], 1],
+      [[3], 3],
+      [[], 5],
+    ] as const) {
+      const { viewport, slides } = fixture([100, 100, 100, 100, 100, 100]);
+      for (const index of stopping)
+        slides[index].style.scrollSnapStop = "always";
+      const carousel = createCarousel(viewport);
+      cleanups.push(carousel.destroy);
+      pointer(viewport, "pointerdown", 300);
+      for (const x of [290, 260, 230]) {
+        vi.advanceTimersByTime(16);
+        pointer(window, "pointermove", x);
+      }
+      pointer(window, "pointerup", 230);
+      vi.advanceTimersByTime(2000);
+      expect(carousel.getState().index).toBe(landing);
+      expect(viewport.scrollLeft).toBe(landing * 100);
+      carousel.destroy();
+      viewport.remove();
+    }
+  });
+
+  it("keeps the click after a programmatic move that leaves the strip still", () => {
+    const { viewport, slides } = fixture();
+    const button = document.createElement("button");
+    slides[0].append(button);
+    let clicks = 0;
+    button.addEventListener("click", () => clicks++);
     const carousel = createCarousel(viewport);
     cleanups.push(carousel.destroy);
-    pointer(viewport, "pointerdown", 300);
-    for (const x of [280, 250, 220]) {
-      vi.advanceTimersByTime(16);
-      pointer(window, "pointermove", x);
-    }
-    pointer(window, "pointerup", 220);
-    vi.advanceTimersByTime(2000);
-    expect(viewport.scrollLeft).toBe(100);
-    expect(carousel.getState().index).toBe(1);
+    vi.advanceTimersByTime(200);
+    carousel.goTo(0, "instant");
+    vi.advanceTimersByTime(50);
+    pointer(button, "pointerdown", 20);
+    pointer(window, "pointerup", 20);
+    button.click();
+    expect(clicks).toBe(1);
   });
 
   it("shows a grab cursor while a mouse drag can move the strip", () => {

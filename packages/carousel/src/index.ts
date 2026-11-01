@@ -140,6 +140,7 @@ export function createCarousel(
   let pendingPosition: number | undefined;
   let disabledPosition = 0;
   let stretch = 0;
+  let lastScroll = Number.NEGATIVE_INFINITY;
   let pointer: {
     id: number;
     x: number;
@@ -370,6 +371,29 @@ export function createCarousel(
     return best < 0 ? nearestIndex() : best;
   }
 
+  function firstStop(from: number, to: number, direction: 1 | -1) {
+    let first = -1;
+    let nearest = Number.POSITIVE_INFINITY;
+    targets.forEach((_target, index) => {
+      if (!stops[index]) return;
+      const base = targetAt(index, from);
+      for (const candidate of span
+        ? [base - span, base, base + span]
+        : [base]) {
+        const distance = (candidate - from) * direction;
+        if (
+          distance > 1 &&
+          distance < nearest &&
+          (candidate - to) * direction < 0.5
+        ) {
+          first = index;
+          nearest = distance;
+        }
+      }
+    });
+    return first;
+  }
+
   function dragVelocity(samples: { time: number; position: number }[]) {
     const last = samples.at(-1);
     if (!last || window.performance.now() - last.time > 80) return 0;
@@ -546,7 +570,7 @@ export function createCarousel(
         : targets.findIndex((value) => Math.abs(value - target) < 0.5);
     const glide =
       !reducedMotion?.matches &&
-      behavior !== "instant" &&
+      behavior === "smooth" &&
       (stretch !== 0 ||
         (releaseSpeed !== undefined && options.releaseMotion !== "native"));
     if (span && !glide && (target < 0 || target > max)) {
@@ -766,13 +790,14 @@ export function createCarousel(
     const projected = nearestIndex(stop);
     const direction = velocity > 0 ? 1 : -1;
     if (moved && snap && Math.abs(velocity) >= FLICK_VELOCITY) {
-      const ahead = indexAhead(direction);
-      if (
-        !stops[ahead] &&
-        (targetAt(projected, stop) - current) * direction > 1
-      )
+      const end = targetAt(projected, stop);
+      const blocked = firstStop(current, end, direction);
+      if (blocked >= 0)
+        goTo(blocked, "smooth", direction, speed, current, true);
+      else if ((end - current) * direction > 1)
         goTo(projected, "smooth", undefined, speed, stop, true);
-      else goTo(ahead, "smooth", direction, speed, current, true);
+      else
+        goTo(indexAhead(direction), "smooth", direction, speed, current, true);
     } else if (moved && snap)
       goTo(nearestIndex(current), "smooth", undefined, speed, current);
     else if (moved || snap || stretch) settle();
@@ -889,6 +914,7 @@ export function createCarousel(
     }
     if (pointer?.moved) recenterLoop();
     scrolling = true;
+    lastScroll = window.performance.now();
     renderLoop();
     publish(pendingIndex ?? nearestIndex());
     clearTimeout(settleTimer);
@@ -899,7 +925,7 @@ export function createCarousel(
     viewport,
     "wheel",
     () => {
-      if (pendingIndex !== undefined) interrupt();
+      if (pendingIndex !== undefined && !stretch) interrupt();
     },
     { passive: true },
   );
@@ -954,7 +980,8 @@ export function createCarousel(
       grabbedTouch = input.pointerId;
       return;
     }
-    const caught = spring !== null || pendingIndex !== undefined;
+    const caught =
+      spring !== null || window.performance.now() - lastScroll < 100;
     interrupt(false);
     suppressClick = false;
     pointer = {

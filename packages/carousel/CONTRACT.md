@@ -11,7 +11,7 @@ CarouselOptions:
 - drag?: boolean, default true
 - group?: number | "page", default 1
 - autoplay?: number, milliseconds, off by default
-- releaseMotion?: "spring" | "native", default spring. A released mouse drag projects its speed 260ms ahead and travels to the snap point nearest that stop, at least one slide ahead after a flick, and only the next slide when slides set scroll-snap-stop: always. Spring starts at the drag speed and slows down without overshooting a target it moves toward; native uses the browser smooth scroll. Reduced motion jumps.
+- releaseMotion?: "spring" | "native", default spring. A released mouse drag projects its speed 260ms ahead and travels to the snap point nearest that stop, at least one slide ahead after a flick, and never past the first slide on the way whose scroll-snap-stop is always. Spring starts at the drag speed and slows down without overshooting a target it moves toward; native uses the browser smooth scroll. Reduced motion jumps.
 - releaseDuration?: number, milliseconds, default 260, the spring time for a slow release and for the return from a stretched end
 - onChange?: (state: CarouselState) => void
 
@@ -27,7 +27,7 @@ Carousel methods:
 - play(), pause(), hold(reason: string, isHeld: boolean)
 - destroy(): void, idempotent, restore owned DOM/style/listeners and cancel all pending work
 
-A mouse drag past either end of a non-repeating strip stretches it with a rubber band curve through the slides' CSS translate, and a spring brings it back after release or any interruption, native release included; reduced motion and an instant goTo drop it at once. A mouse press that stops a moving strip does not click. While a mouse drag can move the strip, the viewport cursor is grab, and grabbing during a drag; destroy restores both the transforms and the cursor.
+A mouse drag past either end of a non-repeating strip stretches it with a rubber band curve through the slides' CSS translate, which replaces a slide's own translate while it lasts, and a spring brings it back after release or any interruption, native release included; reduced motion and an instant or auto goTo drop it at once. A wheel does not stop that return. A mouse press while the strip is visibly moving (a spring, or a scroll in the last 100ms) stops it and does not click. While a mouse drag can move the strip, the viewport cursor is grab, and grabbing during a drag; destroy restores both the transforms and the cursor.
 
 When disabled, the current viewport position stays stable. No global keyboard interception. Keyboard controls only handle events within the viewport and prevent their own handled event so modal owners do not act twice.
 
