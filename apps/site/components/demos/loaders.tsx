@@ -15,15 +15,15 @@ export function LoadersDemo({ gallery = false }: { gallery?: boolean }) {
         {presets.map(({ name, config }) => (
           <div key={name} className="loader-preset">
             <ThinkingDots size={38} config={config} />
-            <span>{name.replaceAll("-", " ")}</span>
+            <code className="loader-name">{name}</code>
           </div>
         ))}
       </div>
     );
   return (
     <div className="loader-stage">
-      <ThinkingDots size={72} label="Preparing the next detail" />
-      <p>One sequence. Sixteen ways to keep moving.</p>
+      <ThinkingDots size={72} label="Loading" />
+      <p>The default sequence, moving through all sixteen figures.</p>
     </div>
   );
 }

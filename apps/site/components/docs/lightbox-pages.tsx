@@ -34,7 +34,7 @@ export function LightboxOverview({ library }: { library: Library }) {
         ))}
       </PhotoLightbox>
       <Keys>
-        Click a photo, then <kbd>←</kbd>
+        Click an image, then <kbd>←</kbd>
         <kbd>→</kbd> to page, <kbd>+</kbd>
         <kbd>−</kbd> to zoom, <kbd>Esc</kbd> to close.
       </Keys>
@@ -89,9 +89,9 @@ export function LightboxProduct() {
         </PhotoLightbox>
         <div className="x-info">
           <p className="x-crumb">
-            Prints <span>/</span> Landscapes
+            Prints <span>/</span> Marble
           </p>
-          <h2 className="x-title">Braies cabin print</h2>
+          <h2 className="x-title">{lake.caption} print</h2>
           <ProductOptions />
           <p className="x-note">
             Ships flat between two boards in 3 to 5 days.
@@ -116,7 +116,7 @@ export function LightboxChat() {
           <ThreadHead />
           <PhotoLightbox className="x-msgs">
             <span className="x-day">Sunday 18:42</span>
-            <p className="x-msg">Photos from the weekend, finally</p>
+            <p className="x-msg">Proofs from the new series, finally</p>
             <div className="x-tiles" data-photo-group>
               {shown.map((photo, index) => (
                 <PhotoButton key={photo.id} photo={photo}>
@@ -129,12 +129,12 @@ export function LightboxChat() {
                 <PhotoButton key={photo.id} photo={photo} hidden />
               ))}
             </div>
-            <p className="x-msg x-me">The cabin one is unreal</p>
+            <p className="x-msg x-me">The coral one is my favorite</p>
             <span className="x-read">Read 18:44</span>
             <div className="x-single" data-photo-group>
               <PhotoButton photo={night} />
             </div>
-            <p className="x-msg">And the last night, from the ridge</p>
+            <p className="x-msg">And the last one, in blue and gold</p>
           </PhotoLightbox>
           <div className="x-compose">
             <input
@@ -174,12 +174,12 @@ export function LightboxJournal() {
     <>
       <PhotoLightbox>
         <article className="x-journal" data-photo-group>
-          <p className="x-date">October 2026 · 5 photographs</p>
-          <h2 className="x-j-title">Three days above the tree line</h2>
+          <p className="x-date">October 2026 · 5 prints</p>
+          <h2 className="x-j-title">Six colors in one tray of water</h2>
           <p className="x-j-text">
-            We left the car at the last switchback before sunrise and climbed
-            through the pines until the trail turned to granite. By noon the
-            forest was below us.
+            Every print in this series starts as a tray of water and a few drops
+            of ink. A comb pulls the colors into bands, and a sheet of paper
+            lifts them off in one pass.
           </p>
           <figure className="x-j-fig">
             <PhotoButton photo={hero} className="x-j-hero" />
@@ -190,9 +190,9 @@ export function LightboxJournal() {
             <PhotoButton photo={b} />
           </div>
           <p className="x-j-text">
-            The second night was clear enough to read the ridge by starlight. On
-            the last morning the lake held the whole ridge without a ripple, and
-            we stayed until the light went flat.
+            No two sheets come out alike. We kept the five where the colors
+            stayed apart, and printed them on matte cotton paper at the size
+            they were made.
           </p>
           <div className="x-j-wide">
             <PhotoButton photo={c} />
@@ -209,11 +209,11 @@ const plannedItem = `// Planned. Not in the current release, and the shape may c
 lightbox.open([
   {
     type: "video",
-    src: "/clips/lake.mp4",
-    poster: "/photos/lake-800.webp",
+    src: "/clips/marbling.mp4",
+    poster: "/prints/coral-sky-800.webp",
     width: 1920,
     height: 1080,
-    caption: "Morning on the lake",
+    caption: "Ink settling on the water",
   },
 ]);`;
 

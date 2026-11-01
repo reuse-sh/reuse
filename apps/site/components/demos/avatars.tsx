@@ -10,7 +10,7 @@ export function AvatarsDemo() {
       <div className="avatar-examples">
         <div>
           <Avatar
-            name="Field notes"
+            name="Mara Lind"
             src={photos[0].src}
             size={64}
             badge={{ type: "dot", label: "Available" }}
@@ -45,7 +45,7 @@ export function AvatarsDemo() {
           <Avatar name="Robin Park" size={52} />
           <Avatar name="Taylor Reed" size={52} />
         </AvatarGroup>
-        <p>Actual cutouts. Any background.</p>
+        <p>Cut out, not painted over, so they sit on any background.</p>
       </div>
     </div>
   );

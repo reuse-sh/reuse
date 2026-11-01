@@ -134,10 +134,10 @@ export function EditorToolbar() {
   links: [
     `import { createFloatingTooltip } from "@reuse-sh/interactions";
 
-// Each link names the place it points to; the card is built on hover.
+// Each link names the print it points to. The card is built on hover.
 createFloatingTooltip(document.querySelector("article"), {
   selector: "a[data-preview]",
-  content: (link) => previewCard(places[link.dataset.preview]),
+  content: (link) => previewCard(prints[link.dataset.preview]),
 });`,
     `import { FloatingTooltipGroup } from "@reuse-sh/interactions/react";
 
@@ -145,7 +145,7 @@ export function Article({ children }) {
   return (
     <FloatingTooltipGroup
       selector="a[data-preview]"
-      content={(link) => previewCard(places[link.dataset.preview])}
+      content={(link) => previewCard(prints[link.dataset.preview])}
     >
       <article>{children}</article>
     </FloatingTooltipGroup>

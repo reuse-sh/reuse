@@ -35,8 +35,8 @@ export function ProductOptions() {
         <span className="x-meta">Archival paper · {label} cm</span>
       </p>
       <p className="x-desc">
-        A wooden cabin on still water below the ridge, shot as the cloud lifted.
-        Printed to order on matte cotton paper with a 2 cm border.
+        Coral, sand and blue drift across the sheet like ink on water. Printed
+        to order on matte cotton paper with a 2 cm border.
       </p>
       <fieldset ref={group} className="x-field">
         <legend className="x-label">Size</legend>
@@ -81,7 +81,7 @@ const marble = (index: number) =>
   }) as CSSProperties;
 
 const people = [
-  ["Mara Lind", "Photos from the weekend, finally", "18:42"],
+  ["Mara Lind", "Proofs from the new series, finally", "18:42"],
   ["Jonas Weber", "Invoice is in the shared folder", "16:05"],
   ["Aiko Tanaka", "See you at ten", "Thu"],
   ["Lea Novak", "Thanks, that works", "Tue"],

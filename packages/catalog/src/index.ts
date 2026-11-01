@@ -43,34 +43,24 @@ function agentPage(name: string): DocPage {
   };
 }
 
-const startLead =
-  "Install the package, import the stylesheet once, then connect it to your markup.";
-
-function basicPages(name: string, description: string, api: string) {
-  return [
-    { path: "", title: "Overview", lead: description },
-    { path: "getting-started", title: "Getting started", lead: startLead },
-    { path: "api", title: "API", lead: api },
-    agentPage(name),
-  ];
-}
-
 const lightboxDescription =
-  "A native image viewer, from thumbnail to every little detail.";
+  "An image viewer that grows out of the thumbnail and zooms into the detail.";
 const carouselDescription =
-  "Native scrolling. Precise controls. A strip that belongs to your page.";
+  "A scroll-snap strip with drag, loop and autoplay, built on your own markup.";
 const tooltipDescription =
-  "One shared hint, following the pointer with a steady hand.";
+  "One shared hint that follows the pointer and slides between triggers.";
 const annotationsDescription =
-  "Point to what matters, with a format your tools can share.";
+  "Areas, arrows and notes on an image, kept in one format your tools can share.";
 const loadersDescription =
-  "Small signs of progress, with movement worth keeping.";
+  "A few dots that change shape while an answer is on its way.";
 const shadowsDescription =
-  "A little depth, with a clear edge and a soft falloff.";
-const highlightDescription = "A single surface that follows the item in focus.";
-const holdDescription = "An intentional press, with time to change your mind.";
+  "Six shadow levels, a hairline ring, and a fade for scrolling edges.";
+const highlightDescription =
+  "One background that slides to the row under the pointer, the focus or the selection.";
+const holdDescription =
+  "A button that acts only after a full press. Let go early and nothing happens.";
 const avatarsDescription =
-  "Images, initials, and the small details around them.";
+  "Photos and initials with badges and groups, cut out cleanly on any background.";
 
 export const libraries: Library[] = [
   {
@@ -80,8 +70,8 @@ export const libraries: Library[] = [
     packageName: "@reuse-sh/lightbox",
     features: [
       [
-        "Open from the thumbnail",
-        "The photo grows out of its cropped preview and returns to the same place on close.",
+        "Opens from the thumbnail",
+        "The image grows out of its cropped preview and goes back to the same place on close.",
       ],
       [
         "Native paging",
@@ -89,25 +79,25 @@ export const libraries: Library[] = [
       ],
       [
         "Pinch, wheel, double-tap",
-        "Zoom follows the pointer or fingers and pans within the photo's edges.",
+        "Zoom follows the pointer or fingers and pans within the image's edges.",
       ],
       [
         "Focus and scroll kept",
         "Focus returns to the trigger and the page behind never jumps.",
       ],
       [
-        "Only what is needed",
-        "The current and neighboring images load. Distant jumps skip the pages in between.",
+        "Loads what it shows",
+        "Only the current and neighboring images load. Long jumps skip the pages in between.",
       ],
       [
         "Your markup",
-        "Captions, thumbnails and controls are styled with your CSS, not ours.",
+        "Captions, thumbnails and controls take your CSS, not ours.",
       ],
     ],
     api: [
       [
         "createLightbox(options?)",
-        "Creates a viewer. Options: thumbnails, imageClick, maxZoom, padding, className and icons.",
+        "Creates a viewer. Options include thumbnails, imageClick, doubleTapZoom, maxZoom, padding, className and icons.",
       ],
       [
         "bindLightboxGallery(root, options?)",
@@ -119,7 +109,7 @@ export const libraries: Library[] = [
       ],
       [
         "close(), next(), prev(), goTo(index)",
-        "Programmatic navigation. Close returns to the origin thumbnail.",
+        "Moves through the set from code. Close returns to the origin thumbnail.",
       ],
       [
         "zoomTo(scale, focus?), toggleZoom(focus?)",
@@ -132,9 +122,9 @@ export const libraries: Library[] = [
       ["destroy()", "Removes listeners and restores the page."],
     ],
     notes: [
-      'Image click zooms by default. Use imageClick: "close" and doubleTapZoom: false for a publishing gallery.',
-      "Pages are driven by the shared native carousel. Only the current and neighboring images stay loaded, and pages still on screen while the strip travels are kept. Adjacent navigation scrolls smoothly; distant thumbnail jumps fade through the backdrop so unloaded pages never appear in between.",
-      "Captions and optional thumbnails are supported. Video, iframe, and product-specific annotation cloning are not media renderers in this release.",
+      'A click on the image zooms by default. For a publishing gallery, set imageClick: "close" and doubleTapZoom: false.',
+      "Paging runs on the carousel package. Only the current and neighboring images stay loaded. Next and previous scroll smoothly, and a jump from a distant thumbnail fades through the backdrop so unloaded pages never flash past.",
+      "Images and captions are supported, with optional thumbnails. Video and iframes are not supported yet.",
     ],
     agentPrompt: `Read ${guideUrl("lightbox")} and add the lightbox to the product gallery. Keep our button styles.`,
     pages: [
@@ -142,7 +132,7 @@ export const libraries: Library[] = [
       {
         path: "getting-started",
         title: "Getting started",
-        lead: "Install the package, import the stylesheet once, then bind the viewer to the element that holds your photos.",
+        lead: "Install the package, import the stylesheet once, then bind the viewer to the element that holds your images.",
       },
       {
         title: "Examples",
@@ -150,17 +140,17 @@ export const libraries: Library[] = [
           {
             path: "examples/product",
             title: "Product page",
-            lead: "A main photo and its thumbnails open as one set, each at its own place.",
+            lead: "A marble art print with its detail shots. The main image and the thumbnails open as one set.",
           },
           {
             path: "examples/chat",
             title: "Chat thread",
-            lead: "Photos inside a conversation. Each message pages through its own photos.",
+            lead: "Prints shared in a conversation. Each message pages through its own images.",
           },
           {
             path: "examples/journal",
-            title: "Photo journal",
-            lead: "Long-form photos in one sequence, shown whole in the viewer whatever their crop.",
+            title: "Journal",
+            lead: "A short essay about a print series. Every image opens in one sequence, shown whole whatever its crop.",
           },
         ],
       },
@@ -170,32 +160,32 @@ export const libraries: Library[] = [
           {
             path: "controls/minimal",
             title: "Minimal",
-            lead: "Only a close button. Swipe, drag, or press the arrow keys to move, and Escape to leave.",
+            lead: "Only a close button. Swipe, drag or press the arrow keys to move, and Escape to leave.",
           },
           {
             path: "controls/classic",
             title: "Classic",
-            lead: "Side arrows, a counter in the corner, and the caption under the photo.",
+            lead: "Side arrows, a counter in the corner, and the caption under the image.",
           },
           {
             path: "controls/filmstrip",
             title: "Filmstrip",
-            lead: "Thumbnails along the bottom edge. The active crop stays centered as you page.",
+            lead: "Thumbnails along the bottom edge. The active one stays centered as you page.",
           },
           {
             path: "controls/panel",
             title: "Panel",
-            lead: "Caption and details in a side panel, which moves under the photo on narrow screens.",
+            lead: "Caption and details in a side panel, which moves under the image on narrow screens.",
           },
           {
             path: "controls/immersive",
             title: "Immersive",
-            lead: "A dark room for the photo. The controls fade after two seconds and return on any movement.",
+            lead: "A dark room for the image. The controls fade after two seconds and return on any movement.",
           },
           {
             path: "controls/toolbar",
             title: "Toolbar",
-            lead: "Paging, the counter, and zoom gathered in one floating toolbar, as in a photos app.",
+            lead: "Paging, the counter and zoom in one floating toolbar, as in a photos app.",
           },
         ],
       },
@@ -205,7 +195,7 @@ export const libraries: Library[] = [
           {
             path: "guides/media",
             title: "Media",
-            lead: "Images are supported today. Video, YouTube, Vimeo and iframes are planned.",
+            lead: "Images work today. Video, YouTube, Vimeo and iframes are planned.",
           },
         ],
       },
@@ -223,9 +213,18 @@ export const libraries: Library[] = [
     description: carouselDescription,
     packageName: "@reuse-sh/carousel",
     features: [
-      ["Native scroll", "Touch and trackpad use CSS scroll snap."],
-      ["Mouse drag", "Drag with a mouse without opening links by accident."],
-      ["Repeat", "Endless loop without cloning interactive slides."],
+      [
+        "Native scroll",
+        "Touch and trackpads use CSS scroll snap and keep their momentum.",
+      ],
+      [
+        "Mouse drag",
+        "Drag with a mouse. A drag never opens the link under it.",
+      ],
+      [
+        "Endless loop",
+        "Slides repeat without cloning, so buttons and links inside stay unique.",
+      ],
       [
         "Autoplay that waits",
         "Pauses for hover, focus, drag, hidden tabs and reduced motion.",
@@ -234,10 +233,18 @@ export const libraries: Library[] = [
     api: [
       [
         "createCarousel(viewport, options?)",
-        "Binds a scroll-snap strip. Options: slides, align, loop, drag, group, autoplay, onChange.",
+        "Binds a scroll-snap strip. Options: slides, align, loop, drag, group, autoplay, releaseMotion, releaseDuration, onChange.",
       ],
       [
-        "next(), prev(), goTo(index)",
+        "releaseMotion",
+        '"spring" glides to the nearest slide after a drag or a flick. "native" leaves the settle to the browser\'s scroll snap. "spring" by default.',
+      ],
+      [
+        "releaseDuration",
+        "How long the spring glide takes, in milliseconds. 260 by default.",
+      ],
+      [
+        "next(), prev(), goTo(index, behavior?)",
         "Moves by one group or to a slide. goTo takes an optional scroll behavior.",
       ],
       [
@@ -248,6 +255,10 @@ export const libraries: Library[] = [
         "play(), pause()",
         "Starts and stops autoplay. It also waits for hover, focus, drag and hidden tabs on its own.",
       ],
+      [
+        "setEnabled(enabled)",
+        "Turns scrolling and dragging off and back on, keeping the current position.",
+      ],
       ["refresh()", "Measures again after slides are added or removed."],
       ["destroy()", "Removes listeners and restores the viewport."],
       [
@@ -256,9 +267,9 @@ export const libraries: Library[] = [
       ],
     ],
     notes: [
-      "Repeat needs enough content to cover the viewport and the largest slide. When there is not enough, isLooping is false and ordinary scrolling remains available.",
-      "The coverage condition is cycleWidth >= viewportWidth + largestSlideWidth. It is reevaluated after resize or content changes.",
-      "Autoplay pauses for hover, focus, dragging, hidden pages, offscreen content, and reduced motion.",
+      "The loop needs enough slides to cover the viewport plus the widest slide. With fewer, isLooping is false and the strip scrolls normally.",
+      "That check runs again after a resize or a content change.",
+      "Autoplay pauses for hover, focus, dragging, hidden pages, offscreen strips and reduced motion.",
     ],
     agentPrompt: `Read ${guideUrl("carousel")} and turn the related products row into a carousel. Keep our arrows.`,
     pages: [
@@ -274,12 +285,12 @@ export const libraries: Library[] = [
           {
             path: "examples/product-strip",
             title: "Product strip",
-            lead: "Related products a page at a time. The arrows know when there is nothing left to show.",
+            lead: "More prints from the series, a page at a time. The arrows know when there is nothing left to show.",
           },
           {
             path: "examples/editorial",
             title: "Editorial gallery",
-            lead: "A story's photos at a readable size, starting at the text column and running off the page.",
+            lead: "A series of prints at a readable size, starting at the text column and running off the page.",
           },
         ],
       },
@@ -307,54 +318,99 @@ export const libraries: Library[] = [
     description: annotationsDescription,
     packageName: "@reuse-sh/annotations",
     features: [
-      ["Six kinds", "Area, spotlight, arrow, line, pointer, and marker."],
       [
-        "Coordinates that follow",
-        "Percentages keep every mark on its place at any image size.",
+        "Six kinds",
+        "Area, spotlight, arrow, line, pointer and numbered marker.",
+      ],
+      [
+        "Marks that stay put",
+        "Coordinates are percentages, so every mark keeps its place at any image size.",
       ],
       [
         "One format",
-        "A validated document for storage, rendering, and editing.",
+        "A versioned JSON document you can store, render on the server and edit.",
       ],
-      ["An editor", "A controlled editor with keyboard, undo, and redo."],
+      [
+        "An editor",
+        "Draw, move and resize marks with a pointer or the keyboard, with undo and redo.",
+      ],
     ],
     api: [
       [
         "parseAnnotations(value)",
-        "Reads a version 1 document or the six-kind array. Invalid annotations are dropped, an unsupported version throws.",
+        "Reads a version 1 document, its JSON string, or a bare array. Invalid annotations are dropped. An unknown version throws.",
+      ],
+      ["serializeAnnotations(value)", "Writes the version 1 JSON document."],
+      [
+        "annotationsToHtml(value), annotationsFromHtml(element)",
+        "Writes the annotations as an ordered list in HTML, and reads them back from it.",
       ],
       [
-        "serializeAnnotations(value), annotationsToHtml(value)",
-        "Writes the version 1 JSON document, or the annotations as a list in HTML.",
-      ],
-      [
-        "annotationsFromHtml(element)",
-        "Reads annotations back from that HTML list.",
-      ],
-      [
-        "renderAnnotations(value, options)",
+        "renderAnnotations(value, { ratio, id })",
         "Returns the overlay markup for an image ratio and a unique id, for server rendering.",
       ],
       [
         "createAnnotatedImage(root, options)",
-        "Renders an image with its annotations and keeps them placed on resize.",
+        "Renders an image with its annotations and keeps them placed on resize. Returns update and destroy.",
       ],
       [
         "createAnnotationEditor(root, options)",
-        "A controlled editor. It reports every change and leaves storage to you.",
+        "A controlled editor. It reports every change through onChange and leaves storage to you.",
+      ],
+      [
+        "setAnnotations, setTool, updateSelection, removeSelection, undo, redo, destroy",
+        "The editor's methods. The keyboard reaches the same actions.",
+      ],
+      [
+        "AnnotatedImage, AnnotationEditor",
+        "The React components around the same code. The editor adds a toolbar and a label field.",
       ],
     ],
     notes: [
-      "The versioned JSON document is { version: 1, annotations: [...] }. The existing six-kind array is also accepted.",
-      "Marker text permits strong, em, and code only. Labels and attributes are escaped at the boundary.",
-      "Pointer labels move to a numbered list when the available width is narrow.",
+      "The stored document is { version: 1, annotations: [...] }. A bare array of annotations is also accepted.",
+      "Marker text may hold strong, em and code. Everything else is escaped when it is read.",
+      "On a narrow image, pointer labels turn into numbered markers with a list below.",
     ],
     agentPrompt: `Read ${guideUrl("annotations")} and show annotations on the screenshots in our help articles.`,
-    pages: basicPages(
-      "Annotations",
-      annotationsDescription,
-      "The browser module parses, renders and edits one annotation format. The React package wraps the image and the editor.",
-    ),
+    pages: [
+      { path: "", title: "Overview", lead: annotationsDescription },
+      {
+        path: "getting-started",
+        title: "Getting started",
+        lead: "Install the package, import the stylesheet once, then render an image with its marks or open it in the editor.",
+      },
+      {
+        title: "Examples",
+        pages: [
+          {
+            path: "examples/review-notes",
+            title: "Review notes",
+            lead: "Feedback on a print proof, with all six kinds of mark. Read-only, as a reviewer would send it.",
+          },
+          {
+            path: "examples/editor",
+            title: "Editor",
+            lead: "Draw a mark, move it, change your mind. The page holds the annotations and the editor reports each change.",
+          },
+        ],
+      },
+      {
+        title: "Guides",
+        pages: [
+          {
+            path: "guides/data-format",
+            title: "Data format",
+            lead: "One versioned JSON document, with coordinates in percent. It travels as HTML too, and bad input fails in a known way.",
+          },
+        ],
+      },
+      {
+        path: "api",
+        title: "API",
+        lead: "The browser module parses, renders and edits one annotation format. The React package wraps the image and the editor.",
+      },
+      agentPage("Annotations"),
+    ],
   },
   {
     slug: "loaders",
@@ -362,21 +418,27 @@ export const libraries: Library[] = [
     description: loadersDescription,
     packageName: "@reuse-sh/loaders",
     features: [
-      ["Sixteen figures", "Geometric dot figures from one native timeline."],
+      [
+        "Sixteen figures",
+        "Triangles, squares, circles, a spiral and rows, each drawn with three or four dots.",
+      ],
       [
         "Dots that travel",
-        "Dots move between figures rather than disappearing.",
+        "Between figures the dots move to their new places instead of popping.",
       ],
-      ["One engine", "The same engine runs a single preset or a sequence."],
       [
-        "Quiet when unseen",
-        "Animation stops when hidden and respects reduced motion.",
+        "One engine",
+        "The same timeline runs a single figure or the whole sequence.",
+      ],
+      [
+        "Still when unseen",
+        "It stops offscreen and in hidden tabs, and shows a still frame under reduced motion.",
       ],
     ],
     api: [
       [
         "createThinkingDots(canvas, options?)",
-        "Draws the dots on a canvas. Options: size and config.",
+        "Draws the dots on a canvas in its text color. Options: size, config and seed.",
       ],
       [
         "play(), pause(), setConfig(config), destroy()",
@@ -387,21 +449,53 @@ export const libraries: Library[] = [
         "A config that repeats one figure, and the list of figure names.",
       ],
       [
+        "THINKING_DOTS",
+        "The default config, which moves through every figure.",
+      ],
+      [
         "createTimeline(config, seed), sampleDot(timeline, dot, time)",
         "The timeline and sampler the canvas uses, for your own renderer.",
       ],
+      [
+        "ThinkingDots",
+        "The React component. Pass a label to announce it as a status.",
+      ],
     ],
     notes: [
-      "The default sequence morphs through the full collection. A figure preset repeats one figure.",
-      "ThinkingDots is decorative unless a label is provided by its React wrapper.",
-      "No visual configuration studio is required. Choose a preset or define the sequence in code.",
+      "The default sequence moves through every figure. figureConfig repeats one.",
+      "ThinkingDots is decorative unless you pass a label, which makes it a status for screen readers.",
+      "Pick a figure or write the sequence in code. There is nothing to configure elsewhere.",
     ],
     agentPrompt: `Read ${guideUrl("loaders")} and show ThinkingDots while the assistant prepares an answer.`,
-    pages: basicPages(
-      "Loaders",
-      loadersDescription,
-      "The browser module exports createThinkingDots and its timeline. The React package adds ThinkingDots.",
-    ),
+    pages: [
+      { path: "", title: "Overview", lead: loadersDescription },
+      {
+        path: "getting-started",
+        title: "Getting started",
+        lead: "Install the package, then draw the dots on a canvas, or drop in the React component.",
+      },
+      {
+        title: "Examples",
+        pages: [
+          {
+            path: "examples/chat-reply",
+            title: "Chat reply",
+            lead: "The dots hold the reply's place in the thread until its text arrives.",
+          },
+          {
+            path: "examples/figures",
+            title: "Figures",
+            lead: "All sixteen figures, each on repeat. Pass a name to figureConfig to use one.",
+          },
+        ],
+      },
+      {
+        path: "api",
+        title: "API",
+        lead: "The browser module exports createThinkingDots and its timeline. The React package adds ThinkingDots.",
+      },
+      agentPage("Loaders"),
+    ],
   },
   {
     slug: "shadows",
@@ -409,13 +503,19 @@ export const libraries: Library[] = [
     description: shadowsDescription,
     packageName: "@reuse-sh/shadows",
     features: [
-      ["Six levels", "From a small control to a floating surface."],
-      ["Two soft layers", "With an optional hairline ring."],
+      ["Six levels", "From a small control to a floating panel."],
       [
-        "Variables",
-        "Color and strength follow namespaced CSS custom properties.",
+        "Two soft layers",
+        "Each level is a close shadow and a wide one, with an optional hairline ring.",
       ],
-      ["Cards", "Code cards and action cards use the same scale."],
+      [
+        "Custom properties",
+        "Set the color and strength once with --reuse-shadow-color and --reuse-shadow-strength.",
+      ],
+      [
+        "Fade edge",
+        "Scrolling strips fade out at the side that has more to show.",
+      ],
     ],
     api: [
       ["reuse-shadow-xs … reuse-shadow-2xl", "Six shadow levels."],
@@ -428,18 +528,67 @@ export const libraries: Library[] = [
         "reuse-card-code, reuse-card-action",
         "Cards for code samples and for actions.",
       ],
+      ["shadowLevels", 'The level names in order, from "xs" to "2xl".'],
+      [
+        "createFadeEdge(scroller, { size, curve, mode })",
+        "Masks the edges of a horizontal scroller. Returns update(options) and destroy().",
+      ],
+      ["size", "The width of each fade in pixels. 64 by default."],
+      [
+        "curve, FADE_CURVES",
+        '"smooth" eases the fade in and out, "linear" is a straight ramp. "smooth" by default.',
+      ],
+      [
+        "mode, FADE_MODES",
+        '"scroll" grows each fade with the distance left to scroll. "fixed" keeps it at full size until that edge is reached. "scroll" by default.',
+      ],
     ],
     notes: [
-      "Import the stylesheet you need. No runtime JavaScript or Tailwind is required.",
-      "Use the ring variant instead of stacking a separate border over the shadow.",
-      'A data-reuse-theme="dark" ancestor opts into stronger shadows and a light ring.',
+      "Import the stylesheet. The classes need no JavaScript and no Tailwind.",
+      "Use the ring variant instead of adding a border on top of the shadow.",
+      'A data-reuse-theme="dark" ancestor switches to stronger shadows and a light ring.',
+      "createFadeEdge writes a mask to the scroller's inline style and puts the old style back on destroy. It follows right-to-left layouts.",
     ],
     agentPrompt: `Read ${guideUrl("shadows")} and move our cards to the shadow scale. Keep our radii.`,
-    pages: basicPages(
-      "Shadows",
-      shadowsDescription,
-      "Shadows is a stylesheet. These are its classes.",
-    ),
+    pages: [
+      { path: "", title: "Overview", lead: shadowsDescription },
+      {
+        path: "getting-started",
+        title: "Getting started",
+        lead: "Install the package and import the stylesheet. The shadows are classes, and the fade edge is one function.",
+      },
+      {
+        title: "Examples",
+        pages: [
+          {
+            path: "examples/cards",
+            title: "Card patterns",
+            lead: "A code card and an action card, both built from the same scale.",
+          },
+          {
+            path: "examples/scale",
+            title: "Scale",
+            lead: "The six levels side by side, with and without the hairline ring.",
+          },
+        ],
+      },
+      {
+        title: "Guides",
+        pages: [
+          {
+            path: "guides/fade-edge",
+            title: "Fade edge",
+            lead: "A strip that scrolls sideways fades out where there is more to see. Scroll it and compare the modes.",
+          },
+        ],
+      },
+      {
+        path: "api",
+        title: "API",
+        lead: "The stylesheet holds the shadow and card classes. The module exports createFadeEdge and the level names.",
+      },
+      agentPage("Shadows"),
+    ],
   },
   {
     slug: "floating-tooltip",
@@ -457,11 +606,11 @@ export const libraries: Library[] = [
       ],
       [
         "Leans as it moves",
-        "A tilt of a few degrees toward the direction of travel, which settles once the pointer stops.",
+        "It tilts a few degrees toward the direction of travel and settles when the pointer stops.",
       ],
       [
         "Rich content",
-        "Text by default. A template or a function can put a shortcut, a photo or a person's card inside.",
+        "Text by default. A template or a function can put a shortcut, an image or a person's card inside.",
       ],
       [
         "Keyboard focus",
@@ -475,30 +624,46 @@ export const libraries: Library[] = [
     api: [
       [
         "createFloatingTooltip(root, options?)",
-        "Binds every [data-reuse-tooltip] inside root to one shared popup. Returns refresh, dismiss, update and destroy.",
+        "Binds every trigger inside root to one shared popup. Returns refresh, dismiss, update(options) and destroy.",
+      ],
+      [
+        "data-reuse-tooltip, data-reuse-tooltip-template",
+        "Marks a trigger. The first holds the hint as text, the second names the id of a template to clone.",
+      ],
+      [
+        "selector",
+        "Which elements count as triggers. Both attributes above by default.",
       ],
       [
         "side, sideOffset",
-        "Where the popup sits from the pointer. Bottom right and 10 px by default.",
+        'Where the popup sits from the pointer, such as "bottom-right" or "top", and how far away. Bottom right and 10 px by default.',
       ],
       [
         "tilt",
         "Leans the popup by up to this many degrees while the pointer moves. 5 by default, 0 turns it off.",
       ],
       [
-        "content(trigger)",
-        "Returns text or a node for a trigger. A trigger with data-reuse-tooltip-template uses that template instead.",
+        "delay, closeDelay",
+        "The wait before the first hint shows, 150 ms, and before the last one hides, 80 ms. Moving between triggers swaps at once.",
       ],
       [
-        "delay, closeDelay",
-        "The wait before the first hint shows and before the last one hides. Moving between triggers swaps at once.",
+        "content(trigger)",
+        "Returns text or a node for a trigger, in place of the attributes.",
       ],
-      ["track", "Follow the pointer or stay on the trigger, per axis."],
+      ["className", "Added to the popup, for your own styles."],
+      [
+        "track, viewportPadding",
+        "Follow the pointer or stay on the trigger, per axis, and the margin kept from the window edges.",
+      ],
+      [
+        "FloatingTooltip, FloatingTooltipGroup",
+        "The React components: one trigger with a content string, or a group that takes the same options. tooltipClassName sets the popup's class.",
+      ],
     ],
     notes: [
-      "Native triggers use data-reuse-tooltip. The React wrapper accepts content and side.",
-      "A tooltip contains a short, non-interactive hint. Use a different surface for controls or required instructions.",
-      "Focus receives an anchored hint. Touch is not treated as hover.",
+      "Mark triggers with data-reuse-tooltip, or with data-reuse-tooltip-template for rich content.",
+      "A tooltip holds a short hint that nobody needs to click. Put controls and required instructions somewhere else.",
+      "Keyboard focus shows an anchored hint. A touch is not treated as hover.",
     ],
     agentPrompt: `Read ${guideUrl("floating-tooltip")} and give the editor toolbar buttons one shared tooltip. Use their aria-label text.`,
     pages: [
@@ -519,7 +684,7 @@ export const libraries: Library[] = [
           {
             path: "examples/links",
             title: "Link previews",
-            lead: "A card with a photo and a line of context for links in running text, so a reader can decide before leaving the page.",
+            lead: "A card with an image and a line of context for links in running text, so a reader can decide before leaving the page.",
           },
           {
             path: "examples/people",
@@ -543,36 +708,85 @@ export const libraries: Library[] = [
     packageName: "@reuse-sh/interactions",
     features: [
       [
-        "Hover and focus",
-        "Pointer and keyboard focus share the same geometry.",
+        "Pointer and keyboard",
+        "Hover and focus move the same background, measured from the real row.",
       ],
       [
         "Selection kept apart",
-        "The selected row stays distinct from a passing pointer.",
+        "A second highlight can hold the selected row while the first follows the pointer.",
       ],
-      ["Layout changes", "Resize and content changes update the position."],
-      ["Short and long moves", "Short moves slide, distant moves fade."],
+      [
+        "Keeps up with layout",
+        "Resizes and content changes move it to the row's new place.",
+      ],
+      [
+        "Short and long moves",
+        "Nearby rows slide in 150 ms. Distant ones fade out and back in.",
+      ],
     ],
     api: [
       [
         "createMovingHighlight(root, options?)",
-        "Adds one background that follows the rows inside root. Options: rowSelector, selectedSelector, mode, className.",
+        "Adds one background that moves between the rows inside root. Returns refresh and destroy.",
       ],
-      ["data-reuse-row", "Marks a row the highlight can move to."],
-      ["data-current", "Marks the selected row, where the highlight rests."],
-      ["MovingHighlight", "The React wrapper around the same controller."],
+      [
+        "mode",
+        '"hover" follows the pointer and focus and rests on the selected row. "selected" stays on the selected row and moves only when the selection changes. "hover" by default.',
+      ],
+      [
+        "rowSelector, selectedSelector",
+        "Which elements are rows, [data-reuse-row] by default, and which one is selected: data-current, aria-selected or data-highlighted.",
+      ],
+      [
+        "className",
+        "Added to the background element. Use it to tell two highlights on one root apart.",
+      ],
+      [
+        "MovingHighlight",
+        "The React wrapper around the same controller. highlightClassName sets the background's class.",
+      ],
     ],
     notes: [
-      "Mark rows with data-reuse-row and the persistent selection with data-current.",
-      "The controller measures the real element. It does not require a menu library.",
-      "Destroy removes the background and restores styles owned by the controller.",
+      "Mark rows with data-reuse-row and the selected row with data-current.",
+      'Two highlights can share a root: one with mode "selected" for the active row, one with mode "hover" for the pointer.',
+      "The controller measures the real elements. It does not need a menu library.",
+      "Destroy removes the background and restores the styles the controller set.",
     ],
     agentPrompt: `Read ${guideUrl("moving-highlight")} and add a moving highlight to the sidebar navigation.`,
-    pages: basicPages(
-      "Moving highlight",
-      highlightDescription,
-      "The browser module exports createMovingHighlight. The React package adds MovingHighlight.",
-    ),
+    pages: [
+      { path: "", title: "Overview", lead: highlightDescription },
+      {
+        path: "getting-started",
+        title: "Getting started",
+        lead: "Install the package, mark the rows, and bind the highlight to the element that holds them.",
+      },
+      {
+        title: "Examples",
+        pages: [
+          {
+            path: "examples/menu",
+            title: "Menu",
+            lead: "A file menu where the background follows the pointer and the arrow keys from item to item.",
+          },
+          {
+            path: "examples/navigation",
+            title: "Navigation list",
+            lead: "A sidebar with a current page. The background rests there and leaves only while you point elsewhere.",
+          },
+          {
+            path: "examples/tabs",
+            title: "Tabs",
+            lead: "Two highlights on one row of tabs. The selected fill moves on click, and a lighter one follows the pointer.",
+          },
+        ],
+      },
+      {
+        path: "api",
+        title: "API",
+        lead: "The browser module exports createMovingHighlight. The React package adds MovingHighlight.",
+      },
+      agentPage("Moving highlight"),
+    ],
   },
   {
     slug: "hold-to-confirm",
@@ -580,32 +794,70 @@ export const libraries: Library[] = [
     description: holdDescription,
     packageName: "@reuse-sh/interactions",
     features: [
-      ["Any input", "Hold with a pointer, Space, or Enter."],
-      ["Easy to cancel", "Release or Escape cancels before confirmation."],
-      ["Once per hold", "Confirmation fires once for each completed hold."],
+      ["Any input", "Hold with a pointer, Space or Enter."],
+      [
+        "Easy to cancel",
+        "Release early, move off the button or press Escape, and nothing happens.",
+      ],
+      ["Once per hold", "Each completed hold confirms exactly once."],
       [
         "Assistive activation",
-        "A click from assistive technology still confirms.",
+        "A click from assistive technology confirms without a physical hold.",
       ],
     ],
     api: [
       [
         "createHoldToConfirm(button, { onConfirm, holdMs? })",
-        "Turns a button into a hold. onConfirm runs once the hold completes.",
+        "Turns a button into a hold. onConfirm runs once the hold completes. holdMs is 1200 by default.",
       ],
-      ["HoldToConfirmButton", "The React button around the same controller."],
+      [
+        "cancel(), destroy()",
+        "Stops a hold in progress, or removes the hold and restores the button.",
+      ],
+      [
+        "data-holding, reuse-hold-fill",
+        "The attribute set on the button while it is held, and the fill element that grows across it.",
+      ],
+      [
+        "HoldToConfirmButton",
+        "The React button around the same controller. It takes onConfirm and holdMs.",
+      ],
     ],
     notes: [
-      "The controller owns the hold gesture. Your application owns the request, loading, success, and failure.",
-      "A click from assistive technology confirms without requiring an unavailable physical hold.",
-      "Leaving the button, pointer cancellation, blur, Escape, and destroy cancel pending work.",
+      "The controller owns the gesture. Your code owns the request, the loading state, success and failure.",
+      "A click from assistive technology confirms without a physical hold.",
+      "Leaving the button, a cancelled pointer, blur, Escape and destroy all cancel a hold in progress.",
     ],
     agentPrompt: `Read ${guideUrl("hold-to-confirm")} and make the Delete project button a hold to confirm.`,
-    pages: basicPages(
-      "Hold to confirm",
-      holdDescription,
-      "The browser module exports createHoldToConfirm. The React package adds HoldToConfirmButton.",
-    ),
+    pages: [
+      { path: "", title: "Overview", lead: holdDescription },
+      {
+        path: "getting-started",
+        title: "Getting started",
+        lead: "Install the package and turn any button into a hold. Your code decides what happens after.",
+      },
+      {
+        title: "Examples",
+        pages: [
+          {
+            path: "examples/delete-file",
+            title: "Delete file",
+            lead: "A file card where delete needs a full press. Let go early and the file stays.",
+          },
+          {
+            path: "examples/settings",
+            title: "Settings row",
+            lead: "A destructive action at the end of a settings list, held instead of confirmed in a dialog.",
+          },
+        ],
+      },
+      {
+        path: "api",
+        title: "API",
+        lead: "The browser module exports createHoldToConfirm. The React package adds HoldToConfirmButton.",
+      },
+      agentPage("Hold to confirm"),
+    ],
   },
   {
     slug: "avatars",
@@ -615,42 +867,70 @@ export const libraries: Library[] = [
     features: [
       [
         "Real cutouts",
-        "Transparent cutouts instead of painted background rings.",
+        "Badges and overlaps cut through the image, so no painted ring fights your background.",
       ],
-      ["Badges", "Dot, count, and icon badges with their own geometry."],
-      ["Groups", "Groups preserve the shape where images overlap."],
+      ["Badges", "A dot, a count or an icon, each with its own cutout."],
+      ["Groups", "Each avatar in a stack is cut where the next one covers it."],
       [
         "Fallbacks",
-        "Unicode initials and image failure have useful fallbacks.",
+        "Initials show until the image loads, and stay if it fails.",
       ],
     ],
     api: [
       [
         "enhanceAvatar(root)",
-        "Adds cutouts and fallbacks to avatar markup already on the page.",
+        "Adds cutouts and fallbacks to avatar markup already on the page. Returns refresh and destroy.",
       ],
       [
         "createAvatar(root, { name, src?, size?, badge? })",
-        "Builds an avatar with initials, an image and an optional badge.",
+        "Builds an avatar with initials, an image and an optional badge. Size is 40 by default.",
+      ],
+      [
+        "badge",
+        '{ type: "dot" | "count" | "icon", label, corner? }. The label joins the accessible name.',
       ],
       [
         "createAvatarGroup(root, options?)",
-        "Overlaps avatars and cuts each one where the next overlaps it. Options: overlap, clearance.",
+        "Overlaps avatars and cuts each one where the next covers it. Options: overlap, 12 by default, and clearance, 2.",
       ],
-      ["getInitials(name)", "Grapheme-aware initials for a name."],
+      ["getInitials(name)", "Initials for a name, safe for emoji and accents."],
       ["Avatar, AvatarGroup", "The React components around the same code."],
     ],
     notes: [
-      "The badge label is part of the accessible name. The badge drawing itself is decorative.",
-      "Multi-digit counts use a capsule cutout measured from the actual badge.",
-      "Initials use grapheme-aware segmentation. Generated marble images are not part of this package.",
+      "The badge label is part of the accessible name. The badge drawing is decorative.",
+      "Counts of two digits or more get a capsule cutout measured from the badge itself.",
+      "Initials split on whole characters, so accents and emoji stay intact.",
     ],
     agentPrompt: `Read ${guideUrl("avatars")} and use it for the avatars in the member list, with an online dot.`,
-    pages: basicPages(
-      "Avatars",
-      avatarsDescription,
-      "The browser module exports enhanceAvatar, createAvatar and createAvatarGroup. The React package adds Avatar and AvatarGroup.",
-    ),
+    pages: [
+      { path: "", title: "Overview", lead: avatarsDescription },
+      {
+        path: "getting-started",
+        title: "Getting started",
+        lead: "Install the package, import the stylesheet once, then build avatars or enhance the ones on the page.",
+      },
+      {
+        title: "Examples",
+        pages: [
+          {
+            path: "examples/team",
+            title: "Team list",
+            lead: "Members of a workspace with their status. The badge cuts into the photo, not a ring around it.",
+          },
+          {
+            path: "examples/groups",
+            title: "Groups",
+            lead: "Overlapping stacks for who is in a project, ending in a count of the rest.",
+          },
+        ],
+      },
+      {
+        path: "api",
+        title: "API",
+        lead: "The browser module exports enhanceAvatar, createAvatar and createAvatarGroup. The React package adds Avatar and AvatarGroup.",
+      },
+      agentPage("Avatars"),
+    ],
   },
 ];
 

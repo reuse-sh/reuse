@@ -1,7 +1,15 @@
 import type { Library } from "@reuse-sh/catalog";
 import type { ReactNode } from "react";
 import { snippets } from "../../lib/guides";
+import { LoadersDemo } from "../demos/loaders";
 import { LibraryDemo } from "../library-demo";
+import {
+  AnnotationsDataFormat,
+  AnnotationsEditor,
+  AnnotationsReviewNotes,
+} from "./annotations-pages";
+import { AvatarsGroups, AvatarsTeam } from "./avatars-pages";
+import { basicCode } from "./basic-code";
 import {
   CarouselControlsGuide,
   CarouselEditorial,
@@ -10,6 +18,8 @@ import {
   CarouselStart,
 } from "./carousel-pages";
 import type { DocIconName } from "./doc-icon";
+import { FileMenu, HighlightTabs, NavigationList } from "./highlight-islands";
+import { DeleteFile, SettingsRow } from "./hold-islands";
 import {
   LightboxChat,
   LightboxJournal,
@@ -19,16 +29,24 @@ import {
   LightboxStart,
 } from "./lightbox-pages";
 import { LightboxStylePage } from "./lightbox-style-page";
+import { ChatReply } from "./loaders-islands";
 import {
   AgentCard,
   ApiTable,
   CodePair,
+  ExampleCode,
   Features,
   Install,
   OverviewActions,
   Section,
   Text,
 } from "./parts";
+import {
+  ShadowsCards,
+  ShadowsFadeEdge,
+  ShadowsScale,
+  ShadowsStart,
+} from "./shadows-pages";
 import {
   TooltipLinks,
   TooltipOverview,
@@ -42,10 +60,10 @@ type Body = (library: Library) => ReactNode;
 const basicIcons: Record<string, DocIconName[]> = {
   annotations: ["layers", "resize", "doc", "keyboard"],
   loaders: ["layers", "chevrons", "code", "timer"],
-  shadows: ["layers", "feather", "code", "doc"],
-  "moving-highlight": ["cursor", "keyboard", "resize", "chevrons"],
-  "hold-to-confirm": ["touch", "keyboard", "timer", "cursor"],
-  avatars: ["layers", "doc", "touch", "feather"],
+  shadows: ["layers", "feather", "code", "chevrons"],
+  "moving-highlight": ["cursor", "layers", "resize", "chevrons"],
+  "hold-to-confirm": ["touch", "cursor", "timer", "keyboard"],
+  avatars: ["feather", "plus", "layers", "doc"],
 };
 
 function BasicOverview({ library }: { library: Library }) {
@@ -73,11 +91,23 @@ function BasicStart({ library }: { library: Library }) {
       </Section>
       <Section title="Use it">
         <Text>
-          The browser module works on its own. In React, the wrapper creates the
-          same controller on mount and destroys it on unmount.
+          The browser module works without a framework. In React, the component
+          creates the same controller when it mounts and destroys it when it
+          unmounts.
         </Text>
         <CodePair js={code.native} react={code.react} />
       </Section>
+    </>
+  );
+}
+
+/** A live example followed by its code. */
+function example(demo: ReactNode, code: keyof typeof basicCode) {
+  const [js, react] = basicCode[code];
+  return () => (
+    <>
+      {demo}
+      <ExampleCode js={js} react={react} />
     </>
   );
 }
@@ -109,6 +139,34 @@ const bodies: Record<string, Record<string, Body>> = {
     "examples/shortcuts": () => <TooltipShortcuts />,
     "examples/links": () => <TooltipLinks />,
     "examples/people": () => <TooltipPeople />,
+  },
+  annotations: {
+    "examples/review-notes": () => <AnnotationsReviewNotes />,
+    "examples/editor": () => <AnnotationsEditor />,
+    "guides/data-format": () => <AnnotationsDataFormat />,
+  },
+  avatars: {
+    "examples/team": () => <AvatarsTeam />,
+    "examples/groups": () => <AvatarsGroups />,
+  },
+  loaders: {
+    "examples/chat-reply": example(<ChatReply />, "chatReply"),
+    "examples/figures": example(<LoadersDemo gallery />, "figures"),
+  },
+  shadows: {
+    "getting-started": (library) => <ShadowsStart library={library} />,
+    "examples/cards": () => <ShadowsCards />,
+    "examples/scale": () => <ShadowsScale />,
+    "guides/fade-edge": () => <ShadowsFadeEdge />,
+  },
+  "moving-highlight": {
+    "examples/menu": example(<FileMenu />, "menu"),
+    "examples/navigation": example(<NavigationList />, "navigation"),
+    "examples/tabs": example(<HighlightTabs />, "tabs"),
+  },
+  "hold-to-confirm": {
+    "examples/delete-file": example(<DeleteFile />, "deleteFile"),
+    "examples/settings": example(<SettingsRow />, "settings"),
   },
 };
 

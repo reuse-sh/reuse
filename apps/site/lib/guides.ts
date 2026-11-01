@@ -56,21 +56,43 @@ export function Strip({ photos }) {
   },
   annotations: {
     native:
-      'import {\n  parseAnnotations,\n  createAnnotatedImage,\n} from "@reuse-sh/annotations";\nimport "@reuse-sh/annotations/styles.css";\n\nconst annotations = parseAnnotations([{\n  kind: "area",\n  box: [10, 20, 35, 25],\n  label: "The part to notice",\n}]);\nconst image = createAnnotatedImage(root, {\n  src: "/photo.jpg", alt: "A mountain lake",\n  width: 1600, height: 1200, annotations,\n});',
+      'import {\n  parseAnnotations,\n  createAnnotatedImage,\n} from "@reuse-sh/annotations";\nimport "@reuse-sh/annotations/styles.css";\n\nconst annotations = parseAnnotations([{\n  kind: "area",\n  box: [10, 20, 35, 25],\n  label: "Bands too tight",\n}]);\nconst image = createAnnotatedImage(root, {\n  src: "/prints/coral-sky.jpg",\n  alt: "A marble print in coral, sand and blue",\n  width: 1600, height: 1200, annotations,\n});\n\n// Later, when the image leaves the page\nimage.destroy();',
     react:
-      'import { AnnotationEditor } from "@reuse-sh/annotations/react";\nimport "@reuse-sh/annotations/styles.css";\n\n<AnnotationEditor\n  src="/photo.jpg"\n  alt="A mountain lake"\n  annotations={annotations}\n  onChange={setAnnotations}\n  width={1600}\n  height={1200}\n/>',
+      'import { AnnotationEditor } from "@reuse-sh/annotations/react";\nimport "@reuse-sh/annotations/styles.css";\n\n<AnnotationEditor\n  src="/prints/coral-sky.jpg"\n  alt="A marble print in coral, sand and blue"\n  annotations={annotations}\n  onChange={setAnnotations}\n  width={1600}\n  height={1200}\n/>',
   },
   loaders: {
     native:
-      'import {\n  createThinkingDots,\n  figureConfig,\n} from "@reuse-sh/loaders";\n\nconst loader = createThinkingDots(canvas, {\n  size: 32,\n  config: figureConfig("triangle-turn"),\n});\nloader.pause();\nloader.play();',
+      'import {\n  createThinkingDots,\n  figureConfig,\n} from "@reuse-sh/loaders";\n\nconst loader = createThinkingDots(canvas, {\n  size: 32,\n  config: figureConfig("triangle-turn"),\n});\n\n// Later, when the answer arrives\nloader.destroy();',
     react:
       'import { ThinkingDots } from "@reuse-sh/loaders/react";\nimport "@reuse-sh/loaders/styles.css";\n\n<ThinkingDots size={24} label="Preparing your answer" />',
   },
   shadows: {
-    native:
-      'import "@reuse-sh/shadows/styles.css";\n\n<div class="reuse-card reuse-shadow-ring-md">\n  Your content\n</div>',
-    react:
-      'import "@reuse-sh/shadows/styles.css";\n\n<div className="reuse-card reuse-shadow-ring-md">\n  Your content\n</div>',
+    native: `import "@reuse-sh/shadows/styles.css";
+import { createFadeEdge } from "@reuse-sh/shadows";
+
+// <div class="reuse-card reuse-shadow-ring-md">Your content</div>
+
+// Fade the sides of a horizontal scroller.
+const fade = createFadeEdge(strip, { size: 64, curve: "smooth", mode: "scroll" });
+
+// Later, when the strip leaves the page
+fade.destroy();`,
+    react: `import "@reuse-sh/shadows/styles.css";
+import { createFadeEdge } from "@reuse-sh/shadows";
+import { useEffect, useRef } from "react";
+
+export function Strip({ children }) {
+  const ref = useRef(null);
+  useEffect(() => {
+    const fade = createFadeEdge(ref.current, { mode: "fixed" });
+    return () => fade.destroy();
+  }, []);
+  return (
+    <div ref={ref} className="reuse-card reuse-shadow-ring-md strip">
+      {children}
+    </div>
+  );
+}`,
   },
   "floating-tooltip": {
     native: `import { createFloatingTooltip } from "@reuse-sh/interactions";
@@ -96,10 +118,28 @@ export function Toolbar() {
 }`,
   },
   "moving-highlight": {
-    native:
-      'import { createMovingHighlight } from "@reuse-sh/interactions";\nimport "@reuse-sh/interactions/styles.css";\n\nconst highlight = createMovingHighlight(menu);',
-    react:
-      'import { MovingHighlight } from "@reuse-sh/interactions/react";\nimport "@reuse-sh/interactions/styles.css";\n\n<MovingHighlight>\n  <button data-reuse-row data-current>Overview</button>\n  <button data-reuse-row>Examples</button>\n</MovingHighlight>',
+    native: `import { createMovingHighlight } from "@reuse-sh/interactions";
+import "@reuse-sh/interactions/styles.css";
+
+// <nav class="menu">
+//   <a data-reuse-row data-current href="/">Overview</a>
+//   <a data-reuse-row href="/examples">Examples</a>
+// </nav>
+const highlight = createMovingHighlight(document.querySelector(".menu"));
+
+// Later, when the menu leaves the page
+highlight.destroy();`,
+    react: `import { MovingHighlight } from "@reuse-sh/interactions/react";
+import "@reuse-sh/interactions/styles.css";
+
+export function Menu({ current }) {
+  return (
+    <MovingHighlight className="menu">
+      <a data-reuse-row data-current={current === "/" ? "" : undefined} href="/">Overview</a>
+      <a data-reuse-row data-current={current === "/examples" ? "" : undefined} href="/examples">Examples</a>
+    </MovingHighlight>
+  );
+}`,
   },
   "hold-to-confirm": {
     native:

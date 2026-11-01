@@ -75,7 +75,7 @@ export function CarouselOverview({ library }: { library: Library }) {
       />
       <Keys>
         Drag with a mouse, swipe, or focus the strip and use <kbd>←</kbd>
-        <kbd>→</kbd>. Photos open in the lightbox.
+        <kbd>→</kbd>. Images open in the lightbox.
       </Keys>
       <Features
         rows={library.features}
@@ -113,12 +113,12 @@ export function CarouselStart({ library }: { library: Library }) {
 }
 
 const prints = [
-  [lake, "Braies cabin", "$84"],
-  [mountains, "Kluane valley", "$72"],
-  [night, "After dark", "$96"],
-  [forest, "Forest path", "$64"],
-  [woods, "Granite wall", "$88"],
-  [coast, "Last light", "$72"],
+  [lake, "$84"],
+  [mountains, "$72"],
+  [night, "$96"],
+  [forest, "$64"],
+  [woods, "$88"],
+  [coast, "$72"],
 ] as const;
 
 export function CarouselProductStrip() {
@@ -132,9 +132,9 @@ export function CarouselProductStrip() {
             <Arrows ring label="prints" />
           </div>
           <section className="reuse-carousel" data-viewport aria-label="Prints">
-            {prints.map(([photo, name, price]) => (
+            {prints.map(([photo, price]) => (
               <a
-                key={name}
+                key={photo.id}
                 className="reuse-carousel__slide x-print"
                 href="#x-related-h"
                 data-carousel-slide
@@ -151,7 +151,7 @@ export function CarouselProductStrip() {
                     draggable={false}
                   />
                 </span>
-                <span className="x-print-name">{name}</span>
+                <span className="x-print-name">{photo.caption}</span>
                 <span className="x-print-price">From {price}</span>
               </a>
             ))}
@@ -168,11 +168,11 @@ export function CarouselEditorial() {
   return (
     <>
       <article className="x-story">
-        <p className="x-date">Field notes · October 2026</p>
-        <h2 className="x-j-title">Six places, one week of weather</h2>
+        <p className="x-date">Print series · October 2026</p>
+        <h2 className="x-j-title">Six sheets from one tray</h2>
         <p className="x-j-text">
-          We drove north with no plan beyond the forecast. These are the stops
-          where the light was worth waiting for, in the order we reached them.
+          The series started with one tray of water and six colors. These are
+          the sheets we kept, in the order they were pulled.
         </p>
       </article>
       <Strip

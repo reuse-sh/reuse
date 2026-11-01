@@ -145,33 +145,33 @@ export function TooltipShortcuts() {
   );
 }
 
-const places = [
+const prints = [
   [
-    "lake",
+    "coral",
     photos[0],
-    "Lago di Braies",
-    "A lake below the Seekofel, reached by a flat path from the car park.",
+    "Coral sky",
+    "The first sheet pulled from the tray. Coral and sand over a cool blue.",
   ],
   [
-    "valley",
+    "mint",
     photos[1],
-    "Kluane",
-    "A glacial valley in the Yukon, wider than the eye can measure.",
+    "Mint and ember",
+    "Pulled an hour later, after the orange had sunk to the bottom.",
   ],
   [
-    "ridge",
+    "lilac",
     photos[2],
-    "Smoky Mountains",
-    "Ridges that turn blue toward evening, one behind the other.",
+    "Lilac bloom",
+    "The last sheet of the day, once the colors had softened.",
   ],
 ] as const;
 
-function Place({ id, children }: { id: string; children: string }) {
+function PrintLink({ id, children }: { id: string; children: string }) {
   return (
     <a
       href="#links-note"
       className="c-link"
-      data-reuse-tooltip-template={`tt-place-${id}`}
+      data-reuse-tooltip-template={`tt-print-${id}`}
     >
       {children}
     </a>
@@ -183,24 +183,24 @@ export function TooltipLinks() {
   return (
     <>
       <article className="x-story">
-        <p className="x-date">Field notes · October 2026</p>
-        <h2 className="x-j-title">Three lakes and a valley</h2>
+        <p className="x-date">Print series · October 2026</p>
+        <h2 className="x-j-title">Three prints from one tray</h2>
         <p className="x-j-text">
-          We started at <Place id="lake">Lago di Braies</Place> before the buses
-          came, crossed the border by noon and slept two nights later at the
-          mouth of <Place id="valley">the Kluane valley</Place>. The last stop,{" "}
-          <Place id="ridge">the Smoky Mountains</Place>, was the only one with
-          rain.
+          The series opens with <PrintLink id="coral">Coral sky</PrintLink>, the
+          first sheet we pulled. <PrintLink id="mint">Mint and ember</PrintLink>{" "}
+          came from the same water an hour later.{" "}
+          <PrintLink id="lilac">Lilac bloom</PrintLink> was the last, once the
+          colors had softened.
         </p>
         <p className="x-j-text" id="links-note">
-          Point at a place name to see where it is.
+          Point at a print name to see it.
         </p>
       </article>
-      {places.map(([id, photo, name, text]) => (
+      {prints.map(([id, photo, name, text]) => (
         <Template
           key={id}
-          id={`tt-place-${id}`}
-          html={`<span class="f-card"><img src="${escapeHtml(photo.src)}" alt="" width="1600" height="1200"><span class="f-card-body"><b>${escapeHtml(name)}</b><span>${escapeHtml(text)}</span><small>maps.example.com</small></span></span>`}
+          id={`tt-print-${id}`}
+          html={`<span class="f-card"><img src="${escapeHtml(photo.src)}" alt="" width="1600" height="1200"><span class="f-card-body"><b>${escapeHtml(name)}</b><span>${escapeHtml(text)}</span><small>prints.example.com</small></span></span>`}
         />
       ))}
       <ExampleCode js={js} react={react} />
@@ -209,13 +209,13 @@ export function TooltipLinks() {
 }
 
 const people = [
-  ["Mara Lind", "Photo editor", "09:42 in Lisbon"],
+  ["Mara Lind", "Print editor", "09:42 in Lisbon"],
   ["Jonas Weber", "Producer", "10:42 in Berlin"],
   ["Aiko Tanaka", "Writer", "16:42 in Taipei"],
 ] as const;
 
 const comments = [
-  [0, "The second crop of the lake reads better. Can we try it as the cover?"],
+  [0, "The second crop of Coral sky reads better. Can we try it as the cover?"],
   [
     1,
     "Works for me. The print run closes on Friday, so we have until Thursday night.",

@@ -33,7 +33,7 @@ export function HighlightDemo() {
         ))}
       </MovingHighlight>
       <p className="demo-hint">
-        A single background follows focus and selection.
+        Point at a row or press Tab. Click to select one.
       </p>
     </div>
   );
@@ -47,17 +47,17 @@ export function HoldDemo() {
         <div className="small-document">
           <Icon name={confirmed ? "check" : "shadows"} size={28} />
         </div>
-        <p>{confirmed ? "The example was confirmed." : "Remove this draft?"}</p>
+        <p>{confirmed ? "Draft removed." : "Remove this draft?"}</p>
         <HoldToConfirmButton
           holdMs={1200}
           onConfirm={() => setConfirmed(true)}
           disabled={confirmed}
-          className="button button-dark"
+          className="c-hold"
         >
           {confirmed ? "Confirmed" : "Hold to remove"}
         </HoldToConfirmButton>
         <span className="hold-feedback" role="status">
-          {confirmed ? "Confirmation complete" : "Release to cancel"}
+          {confirmed ? "Removed" : "Release early to cancel"}
         </span>
         {confirmed ? (
           <button
