@@ -1,14 +1,30 @@
 {
   "name": "@reuse-sh/shadows",
-  "version": "0.1.0",
-  "private": true,
+  "version": "0.0.1",
+  "description": "A six-level CSS shadow scale with optional hairline rings.",
+  "keywords": [
+    "reuse",
+    "shadow",
+    "box-shadow",
+    "css",
+    "elevation"
+  ],
+  "homepage": "https://reuse.sh/shadows",
+  "bugs": "https://github.com/reuse-sh/reuse/issues",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/reuse-sh/reuse.git",
+    "directory": "packages/shadows"
+  },
   "license": "MIT",
+  "author": "nK <https://nkdev.info>",
   "type": "module",
   "sideEffects": [
     "**/*.css"
   ],
   "files": [
     "dist",
+    "README.md",
     "LICENSE"
   ],
   "exports": {
@@ -22,5 +38,8 @@
     "build": "node ../../scripts/clean-dist.mjs && tsc -p tsconfig.json && node ../../scripts/copy-styles.mjs",
     "type-check": "tsc -p tsconfig.json --noEmit",
     "test": "vitest run"
+  },
+  "publishConfig": {
+    "access": "public"
   }
 }
