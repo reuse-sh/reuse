@@ -52,27 +52,25 @@ export function AvatarsTeam() {
   return (
     <>
       <Stage>
-        <div className="c-card x-members">
-          <MovingHighlight className="c-card-in">
-            <ul className="x-member-list" aria-label="Members">
-              {members.map((member, index) => (
-                <li key={member.name} className="x-member" data-re-row="">
-                  <Avatar
-                    name={member.name}
-                    src={photos[index % photos.length].src}
-                    size={36}
-                    badge={member.badge}
-                    style={member.style}
-                  />
-                  <span className="x-member-text">
-                    <b className="x-member-name">{member.name}</b>
-                    <small className="x-member-meta">{member.role}</small>
-                  </span>
-                </li>
-              ))}
-            </ul>
-          </MovingHighlight>
-        </div>
+        <MovingHighlight className="x-members">
+          <ul className="x-member-list" aria-label="Members">
+            {members.map((member, index) => (
+              <li key={member.name} className="x-member" data-re-row="">
+                <Avatar
+                  name={member.name}
+                  src={photos[index % photos.length].src}
+                  size={36}
+                  badge={member.badge}
+                  style={member.style}
+                />
+                <span className="x-member-text">
+                  <b className="x-member-name">{member.name}</b>
+                  <small className="x-member-meta">{member.role}</small>
+                </span>
+              </li>
+            ))}
+          </ul>
+        </MovingHighlight>
       </Stage>
       <ExampleCode js={js} react={react} />
     </>

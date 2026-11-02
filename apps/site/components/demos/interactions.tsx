@@ -44,6 +44,8 @@ export function HoldDemo() {
     <div className="interaction-stage">
       <HoldToConfirmButton
         className="c-hold"
+        data-done={done ? "" : undefined}
+        aria-disabled={done || undefined}
         onConfirm={() => {
           setDone(true);
           clearTimeout(timer.current);

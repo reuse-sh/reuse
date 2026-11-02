@@ -287,9 +287,9 @@ kbd {
   padding: 0 8px;
   margin-left: -8px;
   border-radius: 8px;
-  font-size: 16px;
-  font-weight: 640;
-  letter-spacing: -0.03em;
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
   color: var(--ink);
 }
 .c-slash {
@@ -307,7 +307,7 @@ kbd {
   border: 0;
   border-radius: 8px;
   background: transparent;
-  font-size: 14.5px;
+  font-size: 14px;
   font-weight: 520;
   color: var(--ink);
 }
@@ -851,13 +851,10 @@ kbd {
   height: 34px;
   padding: 0 14px;
   border-radius: 10px;
-  background: #fff;
+  background: rgb(194 54 43 / 8%);
   color: #c2362b;
   font-size: 12.5px;
   font-weight: 550;
-  box-shadow:
-    inset 0 0 0 1px var(--ring-color),
-    var(--shadow-raised-soft);
 }
 .f-peek-tip .pk-hold-fill {
   position: absolute;
@@ -961,15 +958,15 @@ kbd {
   flex-wrap: wrap;
   align-items: baseline;
   gap: 6px 14px;
-  font-size: 13.5px;
+  font-size: 14px;
 }
 .c-foot-logo {
   display: inline-flex;
   align-items: center;
   gap: 6px;
   align-self: center;
-  font-weight: 640;
-  letter-spacing: -0.03em;
+  font-weight: 600;
+  letter-spacing: -0.02em;
 }
 .c-foot nav {
   display: flex;
@@ -1192,7 +1189,7 @@ kbd {
   padding: 0 17px 0 15px;
   border: 0;
   border-radius: 11px;
-  background: #fff;
+  background: rgb(194 54 43 / 8%);
   color: #c2362b;
   font: inherit;
   font-size: 14px;
@@ -1200,16 +1197,13 @@ kbd {
   cursor: pointer;
   user-select: none;
   -webkit-user-select: none;
-  box-shadow:
-    inset 0 0 0 1px var(--ring-color),
-    var(--shadow-raised-soft);
   transition:
     transform 160ms var(--ease),
     background-color 150ms ease;
 }
 @media (hover: hover) {
   .c-hold:hover {
-    background-image: linear-gradient(var(--hover), var(--hover));
+    background-color: rgb(194 54 43 / 12%);
   }
 }
 .c-hold:active {
@@ -1217,6 +1211,28 @@ kbd {
 }
 .c-hold .re-hold-fill {
   opacity: 0.12;
+}
+.c-hold::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: currentColor;
+  opacity: 0;
+  transition: opacity 200ms ease;
+  pointer-events: none;
+}
+.c-hold[data-done] {
+  background-color: rgb(194 54 43 / 8%);
+  transform: none;
+  cursor: default;
+}
+/* The controller empties its fill on release, so a finished press shows its own full fill. */
+.c-hold[data-done]::before {
+  opacity: 0.12;
+  transition: none;
+}
+.c-hold[data-done] .re-hold-fill {
+  opacity: 0;
 }
 .c-hold-label {
   display: grid;

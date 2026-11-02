@@ -127,20 +127,22 @@ export function TooltipShortcuts() {
   const [js, react] = tooltipCode.shortcuts;
   return (
     <>
-      <PhotoLightbox className="d-stage d-stage-editor">
-        <div className="x-editor">
-          <PhotoButton photo={photos[1]} className="x-editor-photo" />
-          <Toolbar
-            className="x-editor-bar"
-            tools={[
-              ["plus", "Zoom in", "⌘+"],
-              ["minus", "Zoom out", "⌘−"],
-              ["layers", "Duplicate", "⌘D"],
-              ["link", "Copy link", "⌘L"],
-              ["share", "Share", "⇧⌘S"],
-              ["trash", "Delete", "⌫"],
-            ]}
-          />
+      <PhotoLightbox className="c-card d-stage-card">
+        <div className="c-card-in d-stage d-stage-editor">
+          <div className="x-editor">
+            <PhotoButton photo={photos[1]} className="x-editor-photo" />
+            <Toolbar
+              className="x-editor-bar"
+              tools={[
+                ["plus", "Zoom in", "⌘+"],
+                ["minus", "Zoom out", "⌘−"],
+                ["layers", "Duplicate", "⌘D"],
+                ["link", "Copy link", "⌘L"],
+                ["share", "Share", "⇧⌘S"],
+                ["trash", "Delete", "⌫"],
+              ]}
+            />
+          </div>
         </div>
       </PhotoLightbox>
       <ExampleCode js={js} react={react} />

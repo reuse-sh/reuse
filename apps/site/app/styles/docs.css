@@ -502,17 +502,16 @@
   }
 }
 
-/* The gray stage under every live example */
+/* The double ring card under every live example */
+.d-stage-card {
+  margin-top: 44px;
+}
 .d-stage {
   display: grid;
   align-content: center;
   gap: 24px;
   min-height: 280px;
-  margin-top: 44px;
-  padding: 40px 24px;
-  border-radius: 18px;
-  background: #f4f4f2;
-  box-shadow: inset 0 0 0 1px rgb(0 0 0 / 4%);
+  padding: 32px;
 }
 .d-body .d-stage > * {
   min-width: 0;
@@ -1923,7 +1922,7 @@
   justify-self: center;
   width: min(100%, 400px);
 }
-.x-members .c-card-in {
+.x-members {
   --re-highlight-background: var(--hover);
   --re-highlight-radius: 12px;
 }
@@ -2160,7 +2159,7 @@
   line-height: 24px;
   font-weight: 600;
 }
-.d-stage + .c-text {
+.d-stage-card + .c-text {
   margin-top: 20px;
 }
 

@@ -12,9 +12,12 @@ export function SiteFooter() {
         <nav aria-label="Footer">
           <Link href="/for-agents">Agent guides</Link>
           <Link href="/tools">Tools</Link>
-          <a href="https://github.com/reuse-sh/reuse">GitHub</a>
-          <a href="https://github.com/reuse-sh/reuse/blob/main/LICENSE">
-            License
+          <a
+            href="https://github.com/reuse-sh/reuse"
+            target="_blank"
+            rel="noreferrer"
+          >
+            GitHub
           </a>
         </nav>
       </div>

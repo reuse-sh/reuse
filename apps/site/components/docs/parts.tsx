@@ -141,9 +141,13 @@ export function SingleCode({
   return <CodeBlock tabs={{ code, lang }} />;
 }
 
-/** The gray stage a live example sits on, apart from the page text. */
+/** The card a live example sits in, apart from the page text. */
 export function Stage({ children }: { children: ReactNode }) {
-  return <div className="d-stage">{children}</div>;
+  return (
+    <div className="c-card d-stage-card">
+      <div className="c-card-in d-stage">{children}</div>
+    </div>
+  );
 }
 
 export function ExampleCode({ js, react }: { js: string; react: string }) {

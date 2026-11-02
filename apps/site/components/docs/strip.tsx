@@ -105,10 +105,10 @@ export function Arrows({
   return (
     <span className={ring ? "d-arrows d-arrows-ring" : "d-arrows"}>
       <button type="button" data-prev aria-label={`Previous ${label}`}>
-        <Icon name="left" size={16} />
+        <Icon name="arrow-left" size={16} />
       </button>
       <button type="button" data-next aria-label={`Next ${label}`}>
-        <Icon name="right" size={16} />
+        <Icon name="arrow-right" size={16} />
       </button>
     </span>
   );

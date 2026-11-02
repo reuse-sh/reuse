@@ -36,7 +36,7 @@ export function PhotoStrip() {
     );
   };
   return (
-    <div className="h-strip">
+    <div className="h-strip" data-dragging={state.isDragging ? "" : undefined}>
       <section ref={ref} className="re-carousel h-strip-vp" aria-label="Photos">
         {strip.map((photo, index) => (
           <figure
@@ -85,7 +85,7 @@ export function PhotoStrip() {
             disabled={!state.canPrev}
             onClick={() => carousel?.prev()}
           >
-            <Icon name="left" size={16} />
+            <Icon name="arrow-left" size={16} />
           </button>
           <button
             type="button"
@@ -94,7 +94,7 @@ export function PhotoStrip() {
             disabled={!state.canNext}
             onClick={() => carousel?.next()}
           >
-            <Icon name="right" size={16} />
+            <Icon name="arrow-right" size={16} />
           </button>
         </span>
       </div>
