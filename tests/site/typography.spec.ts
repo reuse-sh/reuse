@@ -252,3 +252,29 @@ test("home and overview keep the same base hold color after confirmation", async
     await expect(button).toHaveCSS("border-width", "0px");
   }
 });
+
+test("confirmed hold label and fill share one reset clock", async ({
+  page,
+}) => {
+  await page.goto("/hold-to-confirm");
+  const button = page.locator("button.re-hold");
+  await expect(button).toBeEnabled();
+  await page.clock.install({ time: new Date("2026-01-01T00:00:00Z") });
+  await page.clock.pauseAt(new Date("2026-01-01T00:00:01Z"));
+  await button.focus();
+  await page.keyboard.down("Space");
+  await page.clock.fastForward(1200);
+  await expect(button).toHaveAttribute("data-confirmed", "");
+  await page.keyboard.up("Space");
+  await page.clock.fastForward(1600);
+  await expect(button).toHaveAccessibleName("Deleted");
+  await expect(button).toHaveAttribute("data-confirmed", "");
+  expect(
+    await button
+      .locator(".re-hold-fill")
+      .evaluate((element) => element.style.transform),
+  ).toBe("scaleX(1)");
+  await page.clock.fastForward(800);
+  await expect(button).toHaveAccessibleName("Hold to delete");
+  await expect(button).not.toHaveAttribute("data-confirmed", "");
+});

@@ -1,7 +1,7 @@
 "use client";
 
 import { MovingHighlight } from "@reuse-sh/interactions/react";
-import { useEffect, useRef, useState } from "react";
+import { useState } from "react";
 import { buttonVariants } from "@/components/ui/button";
 import { HoldButton } from "@/components/ui/hold-button";
 import { cn } from "@/lib/utils";
@@ -42,19 +42,15 @@ export function HighlightDemo() {
 
 export function HoldDemo() {
   const [done, setDone] = useState(false);
-  const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
-  useEffect(() => () => clearTimeout(timer.current), []);
   return (
     <div className="flex flex-col items-center justify-center">
       <HoldButton
         className="active:scale-97 data-done:scale-100"
         data-done={done ? "" : undefined}
         aria-disabled={done || undefined}
-        onConfirm={() => {
-          setDone(true);
-          clearTimeout(timer.current);
-          timer.current = setTimeout(() => setDone(false), 2400);
-        }}
+        resetMs={2400}
+        onConfirm={() => setDone(true)}
+        onReset={() => setDone(false)}
       >
         <Icon name="trash" size={16} />
         <HoldLabel
