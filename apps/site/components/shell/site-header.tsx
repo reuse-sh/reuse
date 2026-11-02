@@ -100,7 +100,7 @@ export function SiteHeader() {
     >
       <div className="relative flex h-header items-center px-gutter" ref={wrap}>
         <div
-          className="moving-highlight flex min-w-0 items-center gap-0.5"
+          className="moving-highlight flex min-w-0 items-center gap-0.5 max-sm:gap-0"
           ref={brand}
         >
           <Link
@@ -112,7 +112,7 @@ export function SiteHeader() {
             Reuse
           </Link>
           <span
-            className="mx-0.5 text-body text-foreground/15"
+            className="mx-0.5 text-body text-foreground/15 max-sm:mx-0"
             aria-hidden="true"
           >
             /
@@ -120,7 +120,7 @@ export function SiteHeader() {
           <button
             ref={button}
             type="button"
-            className="inline-flex h-8 min-w-0 items-center gap-1.5 rounded-lg bg-transparent px-2 text-ui font-medium text-foreground"
+            className="inline-flex h-8 min-w-0 items-center gap-1.5 rounded-lg bg-transparent px-2 text-ui font-medium text-foreground max-sm:min-w-8 max-sm:shrink-0 [&_svg]:shrink-0"
             data-re-row
             data-highlighted={open ? "" : undefined}
             aria-expanded={open}
@@ -137,15 +137,17 @@ export function SiteHeader() {
           >
             {library ? (
               <Icon name={library.slug as IconName} size={16} />
-            ) : null}
-            <span className="truncate">
+            ) : (
+              <Icon name="book" size={16} className="sm:hidden" />
+            )}
+            <span className="truncate max-sm:sr-only">
               {library ? library.name : "Libraries"}
             </span>
             <Icon
               name="down"
               size={14}
               className={cn(
-                "-ml-0.5 shrink-0 text-subtle-foreground transition-transform duration-200 ease-ui",
+                "-ml-0.5 shrink-0 text-subtle-foreground transition-transform duration-200 ease-ui max-sm:hidden",
                 open && "rotate-180",
               )}
             />
@@ -158,7 +160,7 @@ export function SiteHeader() {
         >
           <Link
             data-re-row
-            className="inline-flex h-8 items-center rounded-lg px-2 text-ui whitespace-nowrap text-muted-foreground transition-colors hover:text-foreground aria-[current=page]:text-foreground sm:px-2.5"
+            className="inline-flex h-8 items-center rounded-lg px-1 text-ui whitespace-nowrap text-muted-foreground transition-colors hover:text-foreground aria-[current=page]:text-foreground sm:px-2.5"
             href="/for-agents"
             aria-current={pathname === "/for-agents" ? "page" : undefined}
           >
@@ -166,7 +168,7 @@ export function SiteHeader() {
           </Link>
           <Link
             data-re-row
-            className="inline-flex h-8 items-center rounded-lg px-2 text-ui whitespace-nowrap text-muted-foreground transition-colors hover:text-foreground aria-[current=page]:text-foreground sm:px-2.5"
+            className="inline-flex h-8 items-center rounded-lg px-1 text-ui whitespace-nowrap text-muted-foreground transition-colors hover:text-foreground aria-[current=page]:text-foreground sm:px-2.5"
             href="/tools"
             aria-current={pathname === "/tools" ? "page" : undefined}
           >

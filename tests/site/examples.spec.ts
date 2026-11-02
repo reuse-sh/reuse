@@ -440,3 +440,34 @@ test("lightbox preview shows its reopen action only after closing", async ({
     frame.getByRole("button", { name: "Open again", exact: true }),
   ).toBeVisible();
 });
+
+test("the narrow header keeps a visible library icon and a usable keyboard switcher", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 320, height: 900 });
+  for (const [path, name] of [
+    ["/shadows", "Shadows"],
+    ["/", "Libraries"],
+  ]) {
+    await page.goto(path);
+    const button = page.getByRole("button", { name, exact: true });
+    const bounds = await button.boundingBox();
+    expect(bounds?.width).toBeGreaterThanOrEqual(32);
+    const icon = await button.locator("svg").first().boundingBox();
+    expect(icon?.width).toBe(16);
+    const nav = await page
+      .getByRole("navigation", { name: "Site", exact: true })
+      .boundingBox();
+    expect((bounds?.x ?? 0) + (bounds?.width ?? 0)).toBeLessThanOrEqual(
+      nav?.x ?? 0,
+    );
+    await button.press("ArrowDown");
+    await expect(
+      page
+        .getByRole("navigation", { name: "Libraries", exact: true })
+        .locator("a:focus"),
+    ).toHaveCount(1);
+    await page.keyboard.press("Escape");
+    await expect(button).toBeFocused();
+  }
+});
