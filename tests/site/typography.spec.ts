@@ -164,10 +164,23 @@ test("agent handoff copies the current example and platform without a bottom pro
   });
   await expect(prompt).toHaveCount(1);
   await prompt.click();
+  await expect
+    .poll(() => page.evaluate(() => navigator.clipboard.readText()))
+    .toContain("Use HTML, CSS and JavaScript.");
   const value = await page.evaluate(() => navigator.clipboard.readText());
   expect(value).toContain("https://reuse.sh/carousel/guide.md");
   expect(value).toContain("https://reuse.sh/carousel/examples/product-strip");
   expect(value).toContain("Use HTML, CSS and JavaScript.");
+  const chooser = page.locator('[data-slot="docs-sidebar"] .re-framework');
+  await chooser.locator("summary").click();
+  await chooser.getByRole("link", { name: "React", exact: true }).click();
+  await expect(chooser.locator("summary")).toContainText("React");
+  await page
+    .getByRole("button", { name: "Copy prompt for your agent", exact: true })
+    .click();
+  await expect
+    .poll(() => page.evaluate(() => navigator.clipboard.readText()))
+    .toContain("Use React with Tailwind CSS.");
   await expect(
     page.getByText("Hand this page to your coding agent.", { exact: true }),
   ).toHaveCount(0);
@@ -209,4 +222,33 @@ test.describe("agent entry without scripts", () => {
         .getByRole("button", { name: "Copy code", exact: true }),
     ).toBeDisabled();
   });
+});
+
+test("home and overview keep the same base hold color after confirmation", async ({
+  page,
+}) => {
+  for (const path of ["/", "/hold-to-confirm"]) {
+    await page.goto(path);
+    const button = page.locator("button.re-hold").first();
+    await expect(button).toBeEnabled();
+    await page.mouse.move(0, 0);
+    const background = await button.evaluate(
+      (element) => getComputedStyle(element).backgroundColor,
+    );
+    if (path === "/") {
+      await button.scrollIntoViewIfNeeded();
+      const box = await button.boundingBox();
+      if (!box) throw new Error("The home hold control is missing");
+      await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+      await page.mouse.down();
+    } else {
+      await button.focus();
+      await page.keyboard.down("Space");
+    }
+    await expect(button).toHaveAttribute("data-confirmed", "");
+    if (path === "/") await page.mouse.up();
+    else await page.keyboard.up("Space");
+    await expect(button).toHaveCSS("background-color", background);
+    await expect(button).toHaveCSS("border-width", "0px");
+  }
 });

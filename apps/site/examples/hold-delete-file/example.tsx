@@ -1,8 +1,7 @@
 "use client";
-import { HoldToConfirmButton } from "@reuse-sh/interactions/react";
+
 import { useEffect, useRef, useState } from "react";
-import { buttonVariants } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
+import { HoldButton } from "@/components/ui/hold-button";
 
 const iconPaths = {
   doc: (
@@ -163,17 +162,14 @@ export function DeleteFile() {
             </small>
           </span>
           <div className="grid justify-items-center gap-3 max-sm:w-full max-sm:justify-items-stretch max-sm:[&_.re-hold-delete-file-button]:justify-center">
-            <HoldToConfirmButton
-              className={cn(
-                buttonVariants({ variant: "destructive", size: "lg" }),
-                "re-hold-delete-file-button select-none transition duration-150 ease-ui data-confirmed:cursor-default data-confirmed:bg-destructive/8 [&_.re-hold-fill]:opacity-12",
-              )}
+            <HoldButton
+              className="re-hold-delete-file-button transition duration-150 ease-ui"
               disabled={!ready}
               onConfirm={() => change(true)}
             >
               <Icon name="trash" size={16} />
               <span>Hold to delete</span>
-            </HoldToConfirmButton>
+            </HoldButton>
           </div>
         </div>
       )}

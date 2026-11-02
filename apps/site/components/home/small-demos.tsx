@@ -1,14 +1,12 @@
 "use client";
 
 import { findLibrary } from "@reuse-sh/catalog";
-import {
-  HoldToConfirmButton,
-  MovingHighlight,
-} from "@reuse-sh/interactions/react";
+import { MovingHighlight } from "@reuse-sh/interactions/react";
 import { ThinkingDots } from "@reuse-sh/loaders/react";
 import { type ReactNode, useState } from "react";
 import { buttonVariants } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { HoldButton } from "@/components/ui/hold-button";
 import { MenuSurface, Toolbar } from "@/components/ui/surfaces";
 import { cn } from "@/lib/utils";
 import { HoldLabel } from "../hold-label";
@@ -84,11 +82,8 @@ function HoldDemo() {
   const [done, setDone] = useState(false);
   return (
     <div className="grid justify-items-center gap-3">
-      <HoldToConfirmButton
-        className={cn(
-          buttonVariants({ variant: "destructive", size: "lg" }),
-          "relative overflow-hidden px-4 font-medium select-none transition-transform ease-ui active:scale-97 data-confirmed:cursor-default data-confirmed:scale-100 data-confirmed:bg-destructive/10 [&_.re-hold-fill]:opacity-12",
-        )}
+      <HoldButton
+        className="transition-transform ease-ui active:scale-97 data-confirmed:scale-100"
         resetMs={2400}
         onConfirm={() => setDone(true)}
         onReset={() => setDone(false)}
@@ -98,7 +93,7 @@ function HoldDemo() {
           labels={["Hold to delete", "Deleted"]}
           shown={done ? "Deleted" : "Hold to delete"}
         />
-      </HoldToConfirmButton>
+      </HoldButton>
       <span className="sr-only" role="status">
         {done ? "Deleted" : ""}
       </span>

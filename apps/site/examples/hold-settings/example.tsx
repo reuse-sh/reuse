@@ -1,8 +1,7 @@
 "use client";
-import { HoldToConfirmButton } from "@reuse-sh/interactions/react";
+
 import { useEffect, useRef, useState } from "react";
-import { buttonVariants } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
+import { HoldButton } from "@/components/ui/hold-button";
 
 function useKeepFocus<E extends HTMLElement>(swap: unknown) {
   const root = useRef<E>(null);
@@ -100,17 +99,14 @@ export function SettingsRow() {
             Cancel deletion
           </button>
         ) : (
-          <HoldToConfirmButton
-            className={cn(
-              buttonVariants({ variant: "destructive", size: "lg" }),
-              "re-hold-settings-button select-none transition duration-150 ease-ui data-confirmed:cursor-default data-confirmed:bg-destructive/8 [&_.re-hold-fill]:opacity-12",
-            )}
+          <HoldButton
+            className="re-hold-settings-button transition duration-150 ease-ui"
             disabled={!ready}
             holdMs={2000}
             onConfirm={() => change(true)}
           >
             Hold to delete
-          </HoldToConfirmButton>
+          </HoldButton>
         )}
       </div>
     </section>

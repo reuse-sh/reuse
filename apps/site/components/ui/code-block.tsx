@@ -26,7 +26,7 @@ export function CodeSurface({
         {action ? (
           <div
             data-slot="code-copy"
-            className="shrink-0 transition-opacity duration-150 motion-reduce:transition-none [@media(hover:hover)]:opacity-0 group-hover/code:opacity-100 group-focus-within/code:opacity-100 has-[[data-state]:not([data-state=idle])]:opacity-100"
+            className="shrink-0 transition-opacity duration-150 motion-reduce:transition-none [@media(hover:hover)_and_(pointer:fine)_and_(not_(any-pointer:coarse))]:opacity-0 group-hover/code:opacity-100 group-focus-within/code:opacity-100 has-[[data-state]:not([data-state=idle])]:opacity-100"
           >
             {action}
           </div>

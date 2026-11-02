@@ -1,9 +1,8 @@
 "use client";
-import { HoldToConfirmButton } from "@reuse-sh/interactions/react";
+
 import { useEffect, useRef, useState } from "react";
 import { HoldLabel } from "@/components/hold-label";
-import { buttonVariants } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
+import { HoldButton } from "@/components/ui/hold-button";
 
 const iconPaths = {
   trash: (
@@ -62,11 +61,8 @@ export function Example() {
   useEffect(() => () => clearTimeout(timer.current), []);
   return (
     <div className="flex flex-col items-center justify-center">
-      <HoldToConfirmButton
-        className={cn(
-          buttonVariants({ variant: "destructive", size: "lg" }),
-          "re-hold-start-button select-none transition duration-150 ease-ui data-confirmed:cursor-default data-confirmed:bg-destructive/8 [&_.re-hold-fill]:opacity-12",
-        )}
+      <HoldButton
+        className="re-hold-start-button transition duration-150 ease-ui"
         disabled={!ready}
         data-done={done ? "" : undefined}
         aria-disabled={done || undefined}
@@ -81,7 +77,7 @@ export function Example() {
           labels={["Hold to delete", "Deleted"]}
           shown={done ? "Deleted" : "Hold to delete"}
         />
-      </HoldToConfirmButton>
+      </HoldButton>
       <span className="sr-only" role="status">
         {done ? "Deleted" : ""}
       </span>
