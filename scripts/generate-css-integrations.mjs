@@ -44,9 +44,18 @@ if (name === "shadows") {
   }
   if (utilities.size !== 12 || !defaults)
     throw new Error("The shadow stylesheet no longer has the expected rules.");
+  const cardStart = source.search(/^\.re-card\s*\{/m);
+  const frame = rules.find(
+    ([_, selectors]) =>
+      selectors.includes(".re-shadow-sm") &&
+      selectors.includes(".re-card-frame"),
+  );
+  if (cardStart < 0 || !frame)
+    throw new Error("The shadow card rules are missing.");
+  const cards = rule(".re-card-frame", frame[2]) + source.slice(cardStart);
   await write(
     "tailwind.css",
-    `@layer base {\n${defaults}}\n\n${Array.from(utilities, ([name, body]) => rule(`@utility ${name}`, body)).join("\n")}`,
+    `@layer base {\n${defaults}}\n\n@layer components {\n${cards}}\n\n${Array.from(utilities, ([name, body]) => rule(`@utility ${name}`, body)).join("\n")}`,
   );
 } else if (name === "gradients") {
   const { EASINGS, easingGradient } = await import(

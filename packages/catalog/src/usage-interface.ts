@@ -1008,7 +1008,7 @@ const highlight = createMovingHighlight(document.querySelector("#navigation"));`
         blocks: [
           {
             kind: "prose",
-            text: "Keep selected and hovered backgrounds independent by nesting two MovingHighlight wrappers around the same tab rows. Use mode selected for the committed tab and hover mode for the lighter preview.",
+            text: "Attach two controllers to the same tab root so selection and hover keep separate backgrounds. The React effect owns both controllers and releases them on unmount.",
           },
           {
             kind: "code",
@@ -1016,15 +1016,21 @@ const highlight = createMovingHighlight(document.querySelector("#navigation"));`
             language: "tsx",
             code: `"use client";
 
-import { useState } from "react";
-import { MovingHighlight } from "@reuse-sh/interactions/react";
+import { useEffect, useRef, useState } from "react";
+import { createMovingHighlight } from "@reuse-sh/interactions";
 import "./tabs.css";
 
 export function ProjectTabs() {
   const [tab, setTab] = useState("files");
+  const root = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!root.current) return;
+    const selected = createMovingHighlight(root.current, { mode: "selected", className: "re-tab-selected" });
+    const hover = createMovingHighlight(root.current, { mode: "hover", className: "re-tab-hover" });
+    return () => { hover.destroy(); selected.destroy(); };
+  }, []);
   return <>
-    <MovingHighlight mode="selected" highlightClassName="re-tab-selected">
-      <MovingHighlight mode="hover" highlightClassName="re-tab-hover" role="tablist" aria-label="Project" className="flex gap-2">
+    <div ref={root} role="tablist" aria-label="Project" className="flex gap-2">
         {(["files", "activity"] as const).map((name, index) => (
           <button key={name} id={\`tab-\${name}\`} type="button" role="tab" data-re-row aria-selected={tab === name} aria-controls={\`panel-\${name}\`} tabIndex={tab === name ? 0 : -1} className="rounded-lg px-3 py-2" onClick={() => setTab(name)} onKeyDown={(event) => {
             if (!["ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key)) return;
@@ -1034,8 +1040,7 @@ export function ProjectTabs() {
             document.getElementById(\`tab-\${next}\`)?.focus();
           }}>{name === "files" ? "Files" : "Activity"}</button>
         ))}
-      </MovingHighlight>
-    </MovingHighlight>
+    </div>
     <section id="panel-files" role="tabpanel" aria-labelledby="tab-files" hidden={tab !== "files"} tabIndex={0}>Project files</section>
     <section id="panel-activity" role="tabpanel" aria-labelledby="tab-activity" hidden={tab !== "activity"} tabIndex={0}>Recent activity</section>
   </>;
@@ -1109,7 +1114,7 @@ export function ProjectTabs() {
 .re-tab-selected { --re-highlight-background: rgb(0 0 0 / 8%); }
 .re-tab-hover { --re-highlight-background: rgb(0 0 0 / 3%); }
 #project-tabs:not([hidden]) { display: flex; gap: 0.5rem; }
-#project-tabs a { padding: 0.5rem 0.75rem; }`,
+#project-tabs button { padding: 0.5rem 0.75rem; }`,
             role: "usage",
           },
         ],

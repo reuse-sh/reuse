@@ -64,6 +64,7 @@ test("framework menu has one moving background after repeated selection and clos
     await expect(page.locator(`${chooser} summary`)).toBeFocused();
     await page.locator(`${chooser} summary`).click();
     await options.getByRole("link", { name, exact: true }).click();
+    await expect(page.locator(`${chooser} summary`)).toContainText(name);
   }
 });
 
@@ -405,4 +406,37 @@ test("platform menu survives every short sequence of selection, closing and reop
   }, 3);
   expect(result).toMatchObject({ ok: true });
   console.log("Platform menu model", result);
+});
+
+test("the shadow card stays inside its narrow showcase", async ({ page }) => {
+  await page.setViewportSize({ width: 320, height: 900 });
+  await page.goto("/shadows");
+  const bounds = await page
+    .locator('[data-slot="example-stage"]')
+    .evaluate((stage) => {
+      const card = stage.querySelector('[class*="re-shadow-ring-"]');
+      if (!card) throw new Error("Missing shadow card");
+      const area = stage.getBoundingClientRect();
+      const box = card.getBoundingClientRect();
+      return { left: box.left - area.left, right: area.right - box.right };
+    });
+  expect(bounds.left).toBeGreaterThanOrEqual(32);
+  expect(bounds.right).toBeGreaterThanOrEqual(32);
+});
+
+test("lightbox preview shows its reopen action only after closing", async ({
+  page,
+}) => {
+  await page.goto("/lightbox/controls/classic");
+  const frame = page.frameLocator("iframe");
+  await expect(frame.locator("dialog[open]")).toHaveCount(1);
+  await expect(
+    frame.getByRole("button", { name: "Open again", exact: true }),
+  ).toBeHidden();
+  await frame
+    .getByRole("button", { name: "Close gallery", exact: true })
+    .click();
+  await expect(
+    frame.getByRole("button", { name: "Open again", exact: true }),
+  ).toBeVisible();
 });

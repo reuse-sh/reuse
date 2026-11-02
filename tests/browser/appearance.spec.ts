@@ -65,12 +65,19 @@ test.beforeAll(async () => {
 test("Tailwind shadows match the plain stylesheet with local variables and dark ancestors", async ({
   page,
 }) => {
+  const cardNames = [
+    "re-card",
+    "re-card-frame",
+    "re-card-code",
+    "re-card-action",
+  ];
   const samples = shadows
     .map((name) => `<div class="sample ${name}"></div>`)
     .join("");
   await mount(
     page,
     `<section>${samples}</section>
+${cardNames.map((name) => `<article class="${name}" data-card><pre>Command</pre><button>Action</button></article>`).join("")}
 <section data-re-theme="dark">${samples}</section>
 <section data-re-theme="dark" style="--re-shadow-strength:2;--re-shadow-color:rebeccapurple;--re-ring-color:orange;--re-ring-width:3px">${samples}</section>`,
     ["shadows/styles.css"],
@@ -81,6 +88,22 @@ test("Tailwind shadows match the plain stylesheet with local variables and dark 
       .evaluateAll((elements) =>
         elements.map((element) => getComputedStyle(element).boxShadow),
       );
+  const cards = () =>
+    page.locator("[data-card]").evaluateAll((elements) =>
+      elements.map((element) => {
+        const style = getComputedStyle(element);
+        return [
+          style.padding,
+          style.borderRadius,
+          style.backgroundColor,
+          style.display,
+          style.gap,
+          style.boxShadow,
+          style.flexDirection,
+        ];
+      }),
+    );
+  const plainCards = await cards();
   const plain = await read();
   expect(plain.every((shadow) => shadow !== "none")).toBe(true);
   expect(plain[0]).not.toBe(plain[12]);
@@ -94,6 +117,12 @@ test("Tailwind shadows match the plain stylesheet with local variables and dark 
     document.head.append(style);
   }, css);
   expect(await read()).toEqual(plain);
+  expect(await cards()).toEqual(plainCards);
+  await page.setViewportSize({ width: 320, height: 700 });
+  await expect(page.locator(".re-card-action")).toHaveCSS(
+    "flex-direction",
+    "column",
+  );
 });
 
 test("Tailwind shadow variants and apply override the base utility", async ({

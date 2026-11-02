@@ -112,6 +112,7 @@ for (const [path, recipe] of Object.entries(usageRecipes)) {
         .not.toBe("");
     }
     if (path === "moving-highlight/examples/tabs") {
+      await expect(page.locator("#tab-files")).toHaveCSS("padding", "8px 12px");
       await page.locator("#tab-activity").click();
       await expect(page.locator("#panel-activity")).toBeVisible();
       await expect(page.locator("#panel-files")).toBeHidden();

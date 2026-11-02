@@ -8,7 +8,7 @@ export function Example() {
   useEffect(() => setEnhanced(true), []);
   return (
     <div>
-      <div className="grid min-h-60 place-items-center pb-8">
+      <div className="grid grid-cols-1 min-h-60 place-items-center pb-8">
         <div
           className={`re-shadow-ring-${level} flex w-64 max-w-full flex-col items-center gap-3 rounded-xl bg-card px-5 py-8 transition-shadow duration-200 ease-ui motion-reduce:transition-none`}
         >
