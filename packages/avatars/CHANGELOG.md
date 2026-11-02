@@ -1,5 +1,11 @@
 # @reuse-sh/avatars
 
+## 0.0.5
+
+### Patch Changes
+
+- 19f0180: Show avatar photos before enhancement and render static loader dots until the animated canvas is ready. Preserve visible content on server-rendered and scriptless pages.
+
 ## 0.0.4
 
 ### Patch Changes

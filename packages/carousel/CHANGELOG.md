@@ -1,5 +1,11 @@
 # @reuse-sh/carousel
 
+## 0.1.1
+
+### Patch Changes
+
+- c7d7331: `goTo` to one of the last slides, which share the end scroll position, now keeps that slide as the active index after the scroll settles. Before, it reported the first slide at that position, so a lightbox on its last photo lit the wrong dot.
+
 ## 0.1.0
 
 ### Minor Changes
