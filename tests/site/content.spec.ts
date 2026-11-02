@@ -3,14 +3,16 @@ import { expect, test } from "@playwright/test";
 test.use({ viewport: { width: 1280, height: 1000 } });
 
 test("agent handoff uses the white secondary surface", async ({ page }) => {
-  await page.goto("/lightbox");
-  const button = page.getByRole("button", {
-    name: "Copy prompt for your agent",
-    exact: true,
-  });
-  await expect(button).toBeEnabled();
-  await expect(button).toHaveCSS("background-color", "rgb(255, 255, 255)");
-  await expect(button).toHaveCSS("color", "rgb(17, 17, 17)");
+  for (const path of ["/lightbox", "/", "/for-agents"]) {
+    await page.goto(path);
+    const button = page.getByRole("button", {
+      name: "Copy prompt for your agent",
+      exact: true,
+    });
+    await expect(button).toBeEnabled();
+    await expect(button).toHaveCSS("background-color", "rgb(255, 255, 255)");
+    await expect(button).toHaveCSS("color", "rgb(17, 17, 17)");
+  }
 });
 
 test("copy press and release retain scale transitions and respect reduced motion", async ({
@@ -119,5 +121,25 @@ test("reference prompts keep the exact page and selected platform", async ({
     expect(await page.evaluate(() => navigator.clipboard.readText())).toContain(
       "Use HTML, CSS and JavaScript.",
     );
+  }
+});
+
+test("general agent prompts stay independent of the documentation platform", async ({
+  page,
+  context,
+}) => {
+  await context.grantPermissions(["clipboard-read", "clipboard-write"]);
+  for (const path of ["/?framework=html", "/for-agents?framework=react"]) {
+    await page.goto(path);
+    const button = page.getByRole("button", {
+      name: "Copy prompt for your agent",
+      exact: true,
+    });
+    await button.click();
+    await expect(button).toHaveAttribute("data-state", "copied");
+    const value = await page.evaluate(() => navigator.clipboard.readText());
+    expect(value).toContain("https://reuse.sh/llms.txt");
+    expect(value).not.toContain("Use React with Tailwind CSS.");
+    expect(value).not.toContain("Use HTML, CSS and JavaScript.");
   }
 });

@@ -4,7 +4,7 @@ import { CopyButton } from "@reuse-sh/interactions/react";
 import { useEffect, useState } from "react";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { useDocFramework } from "../lib/framework-context";
+import type { Framework } from "../lib/framework";
 
 function useCopyReady() {
   const [ready, setReady] = useState(false);
@@ -48,12 +48,13 @@ export function CopyControl({
 export function PromptButton({
   prompt,
   className,
+  framework,
 }: {
   prompt: string;
   className?: string;
+  framework?: Framework;
 }) {
   const ready = useCopyReady();
-  const framework = useDocFramework();
   const value = framework
     ? `${prompt} Use ${framework === "react" ? "React with Tailwind CSS" : "HTML, CSS and JavaScript"}.`
     : prompt;

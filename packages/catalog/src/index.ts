@@ -657,7 +657,7 @@ export const libraries: Library[] = [
       ],
       [
         "Mix in oklab",
-        "Each stop is a color-mix() in oklab, so a fade to transparent keeps its hue instead of passing through gray.",
+        "Interior stops use color-mix() in oklab, so a fade to transparent keeps its hue instead of passing through gray.",
       ],
       [
         "Take any CSS color",
@@ -669,7 +669,7 @@ export const libraries: Library[] = [
       ],
       [
         "Refuse broken input",
-        "An unknown easing, a bezier outside 0 to 1 or fewer than two stops throws a RangeError instead of writing a gradient the browser drops.",
+        "Unknown easings, nonfinite bezier coordinates, X coordinates outside 0 to 1 and stop counts other than integers of at least two throw RangeError.",
       ],
       [
         "Restore what it touched",

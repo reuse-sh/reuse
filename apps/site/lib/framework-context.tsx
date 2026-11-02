@@ -46,10 +46,6 @@ export function useFramework() {
   return context ?? browser;
 }
 
-export function useDocFramework() {
-  return useContext(Context);
-}
-
 export function FrameworkOnly({
   value,
   children,

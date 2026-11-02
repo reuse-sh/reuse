@@ -24,6 +24,7 @@ export function DocActions({
       className="mt-6 flex flex-wrap items-center gap-2"
     >
       <PromptButton
+        framework={framework}
         prompt={pagePrompt(library, path, framework) ?? libraryPrompt(library)}
       />
       {path === "" ? (
