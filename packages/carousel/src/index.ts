@@ -346,16 +346,16 @@ export function createCarousel(
   }
 
   function nearestIndex(current = position()) {
+    const distance = (index: number) =>
+      Math.abs(targetAt(index, current) - current);
     let nearest = 0;
     for (let index = 1; index < targets.length; index++) {
-      if (
-        Math.abs(targetAt(index, current) - current) <
-        Math.abs(targetAt(nearest, current) - current) - 0.5
-      ) {
-        nearest = index;
-      }
+      if (distance(index) < distance(nearest) - 0.5) nearest = index;
     }
-    return nearest;
+    const shown = state.index;
+    return shown < targets.length && distance(shown) <= distance(nearest) + 0.5
+      ? shown
+      : nearest;
   }
 
   function indexAhead(direction: 1 | -1) {
@@ -570,10 +570,7 @@ export function createCarousel(
     if (span && direction === 1 && target <= reference + 0.5) target += span;
     if (span && direction === -1 && target >= reference - 0.5) target -= span;
     pendingPosition = target;
-    pendingIndex =
-      span > 0
-        ? next
-        : targets.findIndex((value) => Math.abs(value - target) < 0.5);
+    pendingIndex = next;
     const glide =
       !reducedMotion?.matches &&
       behavior === "smooth" &&

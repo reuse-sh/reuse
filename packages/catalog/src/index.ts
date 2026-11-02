@@ -253,6 +253,10 @@ export const libraries: Library[] = [
         "A released mouse drag keeps its speed and glides to the slide nearest where it would stop, never past a slide that asks to stop. Past either end it stretches and springs back.",
       ],
       [
+        "Keep the slide it was sent to",
+        "When the last slides share one scroll position, the active index stays the slide that goTo, a dot or a lightbox chose.",
+      ],
+      [
         "Repeat without clones",
         "The loop moves the original slides, so ids, links and buttons stay unique, and it turns on only when the slides can cover the viewport.",
       ],
