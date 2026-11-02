@@ -33,6 +33,8 @@ The footer is the "Reuse" wordmark with its icon, then Agent guides, Tools and G
 
 ## Tabs, code and highlight
 
+Documentation changes preserve the existing sidebar typography, spacing and nested page groups. The framework choice is an unboxed row with an icon, separated from the page links by spacing. Do not turn it into a raised button or add a separate navigation structure. Example controls stay quiet and omit a separate Open example action.
+
 Tabs are a segmented control with two moving highlights on one root. The selected highlight marks the active tab and moves only when another tab is chosen by click or arrow keys. A lighter hover fill follows the pointer separately. Code blocks use the Pills look of the same control: a 5.5% gray pill for the active language and a 3% hover fill, with JavaScript and React tabs. CSS-only libraries show single CSS and HTML blocks with no tabs. The chosen language is remembered in localStorage under re-code-tab and every code block opens on it. The copy button is the @reuse-sh/interactions copy button. In code blocks it appears on hover and focus and its icon morphs to a check.
 
 ## Motion

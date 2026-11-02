@@ -15,3 +15,7 @@ playwright-report/
 apps/site/public/modules/
 apps/site/public/fonts/
 apps/site/AGENTS.md
+
+.claude/worktrees/
+
+.claude/launch.json

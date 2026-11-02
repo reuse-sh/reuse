@@ -1,0 +1,17 @@
+{
+  "install": "pnpm install --frozen-lockfile",
+  "servers": [
+    {
+      "name": "site",
+      "command": "pnpm --filter @reuse-sh/site exec next dev --hostname 127.0.0.1 --port {port}",
+      "portRange": [4301, 4399]
+    }
+  ],
+  "checks": [
+    "pnpm lint",
+    "pnpm type-check",
+    "pnpm test",
+    "pnpm build",
+    "pnpm test:browser"
+  ]
+}
