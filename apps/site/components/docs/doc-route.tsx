@@ -79,9 +79,11 @@ export async function DocRoute({
         {path.startsWith("examples/") || path.startsWith("guides/")
           ? example
           : null}
-        <Section title="Install">
-          <Install library={found.library} />
-        </Section>
+        {path.startsWith("examples/") ? (
+          <Section title="Install">
+            <Install library={found.library} />
+          </Section>
+        ) : null}
         <UsageContent sections={sections} />
       </>
     ) : (
@@ -97,7 +99,11 @@ export async function DocRoute({
           title={path ? found.page.title : found.library.name}
           lead={found.page.lead}
         >
-          <DocActions library={found.library} path={path} />
+          <DocActions
+            library={found.library}
+            path={path}
+            framework={framework}
+          />
         </PageTitle>
         <article className="space-y-10" data-slot="doc-content">
           {body}

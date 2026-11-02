@@ -41,6 +41,8 @@ test.beforeAll(async () => {
       (direction) => `re-gradient-dir-${direction}`,
     ),
     "re-gradient-from-brand",
+    "re-gradient-from-transparent",
+    "re-gradient-to-transparent",
     "re-gradient-to-ink",
     "re-gradient-to-brand/60",
     "hover:re-gradient-to-ink/60",
@@ -264,4 +266,41 @@ test("Tailwind gradient colors, opacity, variants and apply render real gradient
   const wide = await image("responsive");
   expect(wide).not.toBe(narrow);
   expect(wide).toContain("to right");
+});
+
+test("documented transparent endpoint classes override inherited gradient colors", async ({
+  page,
+}) => {
+  const { easingGradient } = await import(
+    pathToFileURL(join(root, "packages/gradients/dist/easing.js")).href
+  );
+  await mount(
+    page,
+    `<section style="--re-gradient-from:#f06030;--re-gradient-to:#182438"><div id="from" class="re-gradient re-gradient-from-transparent re-gradient-to-ink"></div><div id="to" class="re-gradient re-gradient-from-brand re-gradient-to-transparent"></div></section>`,
+  );
+  await page.evaluate((content) => {
+    const style = document.createElement("style");
+    style.textContent = content;
+    document.head.append(style);
+  }, css);
+  const expected = await page.evaluate(
+    (values) =>
+      values.map((value) => {
+        const reference = document.createElement("div");
+        reference.style.backgroundImage = value;
+        document.body.append(reference);
+        const image = getComputedStyle(reference).backgroundImage;
+        reference.remove();
+        return image;
+      }),
+    [
+      easingGradient({ to: "#182438" }),
+      easingGradient({ from: "#f06030", to: "transparent" }),
+    ],
+  );
+  await expect(page.locator("#from")).toHaveCSS(
+    "background-image",
+    expected[0],
+  );
+  await expect(page.locator("#to")).toHaveCSS("background-image", expected[1]);
 });

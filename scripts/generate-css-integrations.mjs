@@ -73,6 +73,8 @@ if (name === "shadows") {
       "re-gradient",
       `--re-gradient-image: ${gradient(EASINGS[0])};\nbackground-image: var(--re-gradient-image);`,
     ],
+    ["re-gradient-from-transparent", "--re-gradient-from: transparent;"],
+    ["re-gradient-to-transparent", "--re-gradient-to: transparent;"],
     ...EASINGS.map((easing) => [
       `re-gradient-${easing}`,
       `--re-gradient-image: ${gradient(easing)};`,

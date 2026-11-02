@@ -212,7 +212,7 @@ export const styleUsage: Readonly<Record<string, UsageRecipe>> = {
         blocks: [
           {
             kind: "prose",
-            text: "Choose depth by the surface role. A control needs less separation than a floating menu. The six levels share one construction, and ring alone adds only the edge.",
+            text: "Choose depth by the surface role. A control needs less separation than a floating menu. The six levels share one construction. A ring variant adds its hairline edge to the same shadow level.",
           },
           {
             kind: "code",
@@ -245,7 +245,7 @@ export const styleUsage: Readonly<Record<string, UsageRecipe>> = {
         blocks: [
           {
             kind: "prose",
-            text: "Choose depth by the surface role. A control needs less separation than a floating menu. The six levels share one construction, and ring alone adds only the edge.",
+            text: "Choose depth by the surface role. A control needs less separation than a floating menu. The six levels share one construction. A ring variant adds its hairline edge to the same shadow level.",
           },
           {
             kind: "code",
@@ -1051,7 +1051,7 @@ try {
         blocks: [
           {
             kind: "prose",
-            text: 'Unmount the loader when pending becomes false. In native code, run cleanup before replacing the status with the reply text. The static dots remain until canvas initialization succeeds. Use role="status" and aria-label to name a standalone loader; hide a decorative loader from assistive technology beside existing status text. Motion pauses offscreen and in hidden tabs, and reduced motion shows a still figure.',
+            text: 'Destroy the loader before replacing the pending status with the reply text. The static dots remain until canvas initialization succeeds. Use role="status" and aria-label to name a standalone loader; hide a decorative loader from assistive technology beside existing status text. Motion pauses offscreen and in hidden tabs, and reduced motion shows a still figure.',
           },
         ],
       },

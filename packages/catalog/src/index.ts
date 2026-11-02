@@ -1,3 +1,4 @@
+import type { UsagePlatform } from "./usage-types.js";
 /** A name and its explanation: an API entry or a principle. */
 export type Row = readonly [name: string, text: string];
 
@@ -149,7 +150,7 @@ export const libraries: Library[] = [
     notes: [
       'A click on the image zooms by default. For a publishing gallery, set imageClick: "close" and doubleTapZoom: false.',
       "Paging runs on the carousel package. Only the current and neighboring images stay loaded. Next and previous scroll smoothly, and a jump from a distant thumbnail fades through the backdrop so unloaded pages never flash past.",
-      "Images and captions are supported, with optional thumbnails. Video and iframes are not supported yet.",
+      "Images and captions are supported, with optional thumbnails. Video and iframe players are outside this image viewer.",
     ],
     pages: [
       { path: "", title: "Overview", lead: lightboxDescription },
@@ -223,7 +224,7 @@ export const libraries: Library[] = [
           {
             path: "guides/media",
             title: "Media",
-            lead: "Images work today. Video, YouTube, Vimeo and iframes are planned.",
+            lead: "Supported images, full-size assets, previews, dimensions and captions.",
           },
         ],
       },
@@ -734,7 +735,7 @@ export const libraries: Library[] = [
     notes: [
       "Named linear curves are available as static CSS presets with a required end color. The optional Tailwind 4 entry resolves theme colors and variants without adding runtime JavaScript.",
       "easingGradient returns a string. Set it as background-image or mask-image wherever a gradient goes, in CSS-in-JS, a style attribute or a server template.",
-      "Every stop is a color-mix() in oklab, so the browser needs color-mix support.",
+      "Curved gradients use color-mix() in oklab for intermediate stops, so they require browser support for color-mix().",
       "createFadeEdge writes a mask and two custom properties to the scroller's inline style and puts the old style back on destroy. It follows right-to-left layouts.",
     ],
     pages: [
@@ -1316,12 +1317,19 @@ export function libraryPrompt(library: Library) {
 }
 
 /** The prompt for a documentation page, or null when the page has none. */
-export function pagePrompt(library: Library, path: string) {
+export function pagePrompt(
+  library: Library,
+  path: string,
+  platform: UsagePlatform,
+) {
   if (path === "getting-started")
     return `Read ${guideUrl(library.slug)}, install ${library.packageName} and add ${library.name} to <where>. ${keepPrinciples}`;
   const page = findDocPage(library, path);
-  if (!page?.build) return null;
-  return `Read ${guideUrl(library.slug)} and build ${page.build} like ${siteUrl}${docHref(library, path)}. ${keepPrinciples}`;
+  if (!page || !path) return null;
+  const reference = `${siteUrl}${docHref(library, path)}${platform === "html" ? "?framework=html" : ""}`;
+  if (!page.build)
+    return `Read ${guideUrl(library.slug)} and use ${reference} as the reference for adding ${library.name} to <where>. ${keepPrinciples}`;
+  return `Read ${guideUrl(library.slug)} and build ${page.build} like ${reference}. ${keepPrinciples}`;
 }
 
 export const toolGroups = [

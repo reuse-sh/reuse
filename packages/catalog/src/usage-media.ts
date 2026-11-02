@@ -38,7 +38,7 @@ export function Gallery() {
   const lightbox = useLightbox({});
   return (
     <a href="/images/print-large.jpg" onClick={(event) => {
-      if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+      if (event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
       event.preventDefault();
       lightbox.open([{
         src: event.currentTarget.href,
@@ -187,7 +187,7 @@ export function ProductGallery() {
   ];
   return <div className="flex gap-4">{items.map((item, index) => (
     <a key={item.src} href={item.src} onClick={(event) => {
-      if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+      if (event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
       event.preventDefault();
       lightbox.open(items.map((entry, position) => ({
         ...entry,
@@ -330,7 +330,7 @@ export function MessageAttachments({ sources }: { sources: string[] }) {
   const lightbox = useLightbox();
   return <div className="flex gap-2">{sources.map((src, index) => (
     <a key={src} href={src} onClick={(event) => {
-      if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+      if (event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
       event.preventDefault();
       lightbox.open(sources.map((source) => ({ src: source, alt: "Message attachment" })), index);
     }}>
@@ -474,7 +474,7 @@ export function Gallery() {
   const lightbox = useLightbox({ imageClick: "close", doubleTapZoom: false });
   return (
     <a href="/images/print-large.jpg" onClick={(event) => {
-      if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+      if (event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
       event.preventDefault();
       lightbox.open([{
         src: event.currentTarget.href,
@@ -585,6 +585,28 @@ const gallery = bindLightboxGallery(document.querySelector("#gallery"), { imageC
   "lightbox/guides/media": {
     react: [
       {
+        title: "Supported media",
+        blocks: [
+          {
+            kind: "prose",
+            text: "Lightbox renders image URLs through the browser image element. JPEG, PNG, SVG and other formats work when the browser can decode them. Video, YouTube, Vimeo and iframe players are outside this image viewer.",
+          },
+        ],
+      },
+      {
+        title: "Image metadata",
+        blocks: [
+          {
+            kind: "prose",
+            text: "`src` is the full-size image URL. `previewSrc` is an optional smaller image shown while that asset loads. `width` and `height` describe the full-size asset, not the thumbnail crop; omit unknown dimensions so the viewer can learn them after loading.",
+          },
+          {
+            kind: "prose",
+            text: "Use `alt` for the image description and `caption` for additional visible text. `origin` is the thumbnail element used for the opening and closing crop animation; it is not the full-size image source.",
+          },
+        ],
+      },
+      {
         title: "Package styles",
         blocks: [
           {
@@ -601,11 +623,11 @@ const gallery = bindLightboxGallery(document.querySelector("#gallery"), { imageC
         ],
       },
       {
-        title: "Usage",
+        title: "Full-size images and previews",
         blocks: [
           {
             kind: "prose",
-            text: "Lightbox currently accepts images. Keep full-size URLs, optional preview URLs and accessible descriptions in each LightboxItem. Video and iframe content need a separate player.",
+            text: "Open the full-size asset and pass the displayed thumbnail as `origin`. The link remains useful without JavaScript.",
           },
           {
             kind: "code",
@@ -617,41 +639,92 @@ import { useLightbox } from "@reuse-sh/lightbox/react";
 
 export function ImageLink() {
   const lightbox = useLightbox();
-  return <a href="/images/print-large.jpg" onClick={(event) => {
-    if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
-      event.preventDefault();
-    lightbox.open([{
-      src: event.currentTarget.href,
-      previewSrc: "/images/print.jpg",
-      width: 2400,
-      height: 1800,
-      alt: "Blue marble print",
-      caption: "Archival pigment on paper",
-      origin: event.currentTarget.querySelector("img"),
-    }]);
-  }}><img src="/images/print.jpg" alt="Blue marble print" width="640" height="480" /></a>;
+  return (
+    <a
+      href="/images/print-large.jpg"
+      onClick={(event) => {
+        if (event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+        event.preventDefault();
+        lightbox.open([{
+          src: event.currentTarget.href,
+          previewSrc: "/images/print.jpg",
+          width: 2400,
+          height: 1800,
+          alt: "Blue marble print",
+          caption: "Archival pigment on paper",
+          origin: event.currentTarget.querySelector("img"),
+        }]);
+      }}
+    >
+      <img src="/images/print.jpg" alt="Blue marble print" width="640" height="480" />
+    </a>
+  );
 }`,
             role: "usage",
           },
         ],
       },
       {
-        title: "Integration",
+        title: "Thumbnail strip",
         blocks: [
           {
             kind: "prose",
-            text: "Width and height describe the full-size asset. previewSrc can show the small image while the original loads. The viewer loads the current image and its neighbors; leave the real image URL on the link for no-JavaScript access.",
+            text: "Enable `thumbnails: true` to show the strip. Each item uses `thumbnailSrc`, then `previewSrc`. Without either, its button shows the image number instead of downloading the full-size asset as a thumbnail.",
+          },
+        ],
+      },
+      {
+        title: "Loading and failure",
+        blocks: [
+          {
+            kind: "prose",
+            text: "A successful image load and decode replaces the preview with `src`. If the full-size image fails, a loaded preview remains visible. Without `previewSrc`, the viewer shows “Image could not be loaded.” Navigation and closing remain available.",
+          },
+          {
+            kind: "prose",
+            text: "`preload` controls neighboring images. It defaults to one neighbor on each side. Choose zero, one or two neighboring images per side. The current image is always included. Keep the full-size URL on the anchor so ordinary navigation and modified clicks still work.",
+          },
+        ],
+      },
+      {
+        title: "Lifecycle",
+        blocks: [
+          {
+            kind: "prose",
+            text: "`useLightbox` destroys its controller when the component unmounts. Keep image links and meaningful alt text in the initial markup.",
           },
         ],
       },
     ],
     html: [
       {
-        title: "Usage",
+        title: "Supported media",
         blocks: [
           {
             kind: "prose",
-            text: "Lightbox currently accepts images. Keep full-size URLs, optional preview URLs and accessible descriptions in each LightboxItem. Video and iframe content need a separate player.",
+            text: "Lightbox renders image URLs through the browser image element. JPEG, PNG, SVG and other formats work when the browser can decode them. Video, YouTube, Vimeo and iframe players are outside this image viewer.",
+          },
+        ],
+      },
+      {
+        title: "Image metadata",
+        blocks: [
+          {
+            kind: "prose",
+            text: "`src` is the full-size image URL. `previewSrc` is an optional smaller image shown while that asset loads. `width` and `height` describe the full-size asset, not the thumbnail crop; omit unknown dimensions so the viewer can learn them after loading.",
+          },
+          {
+            kind: "prose",
+            text: "Use `alt` for the image description and `caption` for additional visible text. `origin` is the thumbnail element used for the opening and closing crop animation; it is not the full-size image source.",
+          },
+        ],
+      },
+      {
+        title: "Full-size images and previews",
+        blocks: [
+          {
+            kind: "prose",
+            text: "Keep the full-size URL on the anchor and repeat it in `data-lightbox-src` for gallery binding. The other data attributes below are application metadata, mapped by `getItem` during setup.",
           },
           {
             kind: "code",
@@ -659,7 +732,9 @@ export function ImageLink() {
             language: "html",
             code: `<div id="gallery">
   <a href="/images/print-large.jpg">
-    <img data-lightbox-src="/images/print-large.jpg" src="/images/print.jpg" alt="Blue marble print" width="640" height="480" data-caption="Archival pigment on paper" data-width="2400" data-height="1800" />
+    <img src="/images/print.jpg" data-lightbox-src="/images/print-large.jpg"
+      alt="Blue marble print" width="640" height="480"
+      data-caption="Archival pigment on paper" data-width="2400" data-height="1800" />
   </a>
 </div>`,
             role: "usage",
@@ -669,10 +744,6 @@ export function ImageLink() {
       {
         title: "Styles",
         blocks: [
-          {
-            kind: "prose",
-            text: "Import the package stylesheet once. Keep application layout styles scoped to this integration.",
-          },
           {
             kind: "code",
             id: "lightbox-guides-media-css",
@@ -687,7 +758,7 @@ export function ImageLink() {
         blocks: [
           {
             kind: "prose",
-            text: "Run this after the markup exists. Keep the returned controller for the lifetime of this content.",
+            text: "`lightboxItemFromImage` supplies the preview, alt text and origin. Override its dimensions with the full-size metadata, or leave them undefined when unknown; the helper otherwise reads the thumbnail dimensions.",
           },
           {
             kind: "code",
@@ -695,17 +766,37 @@ export function ImageLink() {
             language: "javascript",
             code: `import { bindLightboxGallery, lightboxItemFromImage } from "@reuse-sh/lightbox";
 
-const gallery = bindLightboxGallery(document.querySelector("#gallery"), { getItem: (image) => ({ ...lightboxItemFromImage(image), caption: image.dataset.caption, width: Number(image.dataset.width) || undefined, height: Number(image.dataset.height) || undefined }) });`,
+const gallery = bindLightboxGallery(document.querySelector("#gallery"), {
+  getItem: (image) => ({
+    ...lightboxItemFromImage(image),
+    caption: image.dataset.caption,
+    width: Number(image.dataset.width) || undefined,
+    height: Number(image.dataset.height) || undefined,
+  }),
+});`,
             role: "setup",
           },
         ],
       },
       {
-        title: "Integration",
+        title: "Thumbnail strip",
         blocks: [
           {
             kind: "prose",
-            text: "Width and height describe the full-size asset. previewSrc can show the small image while the original loads. The viewer loads the current image and its neighbors; leave the real image URL on the link for no-JavaScript access.",
+            text: "Enable `thumbnails: true` to show the strip. Each item uses `thumbnailSrc`, then `previewSrc`. Without either, its button shows the image number instead of downloading the full-size asset as a thumbnail.",
+          },
+        ],
+      },
+      {
+        title: "Loading and failure",
+        blocks: [
+          {
+            kind: "prose",
+            text: "A successful image load and decode replaces the preview with `src`. If the full-size image fails, a loaded preview remains visible. Without `previewSrc`, the viewer shows “Image could not be loaded.” Navigation and closing remain available.",
+          },
+          {
+            kind: "prose",
+            text: "`preload` controls neighboring images. It defaults to one neighbor on each side. Choose zero, one or two neighboring images per side. The current image is always included. Keep the full-size URL on the anchor so ordinary navigation and modified clicks still work.",
           },
         ],
       },
@@ -714,7 +805,7 @@ const gallery = bindLightboxGallery(document.querySelector("#gallery"), { getIte
         blocks: [
           {
             kind: "prose",
-            text: "Run this when the view is removed, before mounting another controller on the same element.",
+            text: "Destroy the gallery binding when this view is removed. It releases the click listener and its viewer.",
           },
           {
             kind: "code",
@@ -1231,7 +1322,7 @@ export function ControlledStrip() {
         blocks: [
           {
             kind: "prose",
-            text: "For a counter, render state.index + 1 and state.count. For dots, call carousel.goTo(index), name each button with its destination, and expose the selected one with aria-current. Subscribe once, render getState immediately, then unsubscribe before destroy.",
+            text: "For a counter, render state.index + 1 and state.count. For dots, call carousel.goTo(index), name each button with its destination, and expose the selected one with aria-current. useCarousel owns subscription, state updates and teardown; use the returned state directly.",
           },
         ],
       },
@@ -1401,7 +1492,7 @@ export function ReviewImage() {
         blocks: [
           {
             kind: "prose",
-            text: "Pass image dimensions and a typed annotation list to AnnotatedImage. Coordinates are percentages of the image, so a mark keeps its position when the image becomes narrower.",
+            text: "Read the annotation list from the markup and pass it with the image dimensions to createAnnotatedImage. Coordinates are percentages of the image, so a mark keeps its position when the image becomes narrower.",
           },
           {
             kind: "code",
@@ -1460,7 +1551,7 @@ const image = createAnnotatedImage(root, {
         blocks: [
           {
             kind: "prose",
-            text: "The HTML list preserves the note before enhancement and the controller restores it on destroy. React renders the image and notes on the server. Give every image useful alt text; annotation labels add detail rather than replacing it.",
+            text: "The HTML list preserves the note before enhancement and the controller restores it on destroy. Give every image useful alt text; annotation labels add detail rather than replacing it.",
           },
         ],
       },
@@ -1541,7 +1632,7 @@ export function ReviewImage() {
         blocks: [
           {
             kind: "prose",
-            text: "Publish read-only notes through AnnotatedImage. Choose the smallest annotation shape that describes the feedback, and keep review text in the stored document.",
+            text: "Publish read-only notes through createAnnotatedImage. Choose the smallest annotation shape that describes the feedback, and keep review text in the stored document.",
           },
           {
             kind: "code",
@@ -1674,7 +1765,7 @@ export function ProofEditor() {
         blocks: [
           {
             kind: "prose",
-            text: "The React wrapper includes tool buttons, label editing, undo and redo. The native example adds one marker tool; use setTool for other tools. Arrow keys move a selected mark, Delete removes it, and Escape cancels. Persist serializeAnnotations output at your application save boundary.",
+            text: "The React wrapper includes tool buttons, label editing, undo and redo. Arrow keys move a selected mark, Delete removes it, and Escape cancels. Persist serializeAnnotations output at your application save boundary.",
           },
         ],
       },
@@ -1753,7 +1844,7 @@ tool.hidden = false;`,
         blocks: [
           {
             kind: "prose",
-            text: "The React wrapper includes tool buttons, label editing, undo and redo. The native example adds one marker tool; use setTool for other tools. Arrow keys move a selected mark, Delete removes it, and Escape cancels. Persist serializeAnnotations output at your application save boundary.",
+            text: "The snippet adds a marker-tool button. createAnnotationEditor exposes setTool, undo and redo so the host can provide its own controls. Arrow keys move a selected mark, Delete removes it, and Escape cancels. Persist serializeAnnotations output at your application save boundary.",
           },
         ],
       },

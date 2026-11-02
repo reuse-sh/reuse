@@ -61,7 +61,11 @@ export function PromptButton({
     <CopyButton
       disabled={!ready}
       text={value}
-      className={cn(buttonVariants(), "copy-control", className)}
+      className={cn(
+        buttonVariants({ variant: "surface" }),
+        "copy-control",
+        className,
+      )}
     >
       Copy prompt for your agent
     </CopyButton>

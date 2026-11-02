@@ -52,7 +52,7 @@ export function Gallery() {
   const lightbox = useLightbox({});
   return (
     <a href="/images/print-large.jpg" onClick={(event) => {
-      if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+      if (event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
       event.preventDefault();
       lightbox.open([{
         src: event.currentTarget.href,

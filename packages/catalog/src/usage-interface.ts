@@ -601,7 +601,7 @@ export function Navigation() {
         blocks: [
           {
             kind: "prose",
-            text: "Mark each interactive row with data-re-row. MovingHighlight follows the pointer and keyboard focus and rests on the row marked data-current.",
+            text: "Mark each interactive row with data-re-row. createMovingHighlight follows the pointer and keyboard focus and rests on the row marked data-current.",
           },
           {
             kind: "code",
@@ -1393,7 +1393,7 @@ export function DeleteFile({ remove }: { remove: () => Promise<void> }) {
         blocks: [
           {
             kind: "prose",
-            text: "Pass your file service as remove in React. The native callback shows where to send the same request; replace its status update with your application action and keep the button disabled while awaiting it. A pointer, Space or Enter must stay held; leaving, Escape or an early release cancels. Assistive-technology clicks can confirm immediately. The controller confirms once and holds its fill until resetMs expires. Your application owns permission checks, requests and failure messages.",
+            text: "Pass your file service as remove in React. A pointer, Space or Enter must stay held; leaving, Escape or an early release cancels. Assistive-technology clicks can confirm immediately. The controller confirms once and holds its fill until resetMs expires. Your application owns permission checks, requests and failure messages.",
           },
         ],
       },
@@ -1461,7 +1461,7 @@ button.disabled = false;`,
         blocks: [
           {
             kind: "prose",
-            text: "Pass your file service as remove in React. The native callback shows where to send the same request; replace its status update with your application action and keep the button disabled while awaiting it. A pointer, Space or Enter must stay held; leaving, Escape or an early release cancels. Assistive-technology clicks can confirm immediately. The controller confirms once and holds its fill until resetMs expires. Your application owns permission checks, requests and failure messages.",
+            text: "Replace the confirmation status update with your application request, and keep the button disabled while awaiting its result. A pointer, Space or Enter must stay held; leaving, Escape or an early release cancels. Assistive-technology clicks can confirm immediately. The controller confirms once and holds its fill until resetMs expires. Your application owns permission checks, requests and failure messages.",
           },
         ],
       },
@@ -1532,7 +1532,7 @@ export function ResetSettings({ onResetSettings }: { onResetSettings: () => void
         blocks: [
           {
             kind: "prose",
-            text: "Use an explicit label that names the setting being changed. A successful request may call hold.reset() when the application intentionally wants to end the confirmed state early. A pointer, Space or Enter must stay held; leaving, Escape or an early release cancels. Assistive-technology clicks can confirm immediately. The controller confirms once and holds its fill until resetMs expires. Your application owns permission checks, requests and failure messages.",
+            text: "Use an explicit label that names the setting being changed. Use onReset when application feedback should return to its idle state with the controller. The React button does not expose the native reset() method. A pointer, Space or Enter must stay held; leaving, Escape or an early release cancels. Assistive-technology clicks can confirm immediately. The controller confirms once and holds its fill until resetMs expires. Your application owns permission checks, requests and failure messages.",
           },
         ],
       },

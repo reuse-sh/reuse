@@ -172,7 +172,7 @@ Moving highlight adds a background and measures existing rows. It does not imple
 
 #### Usage
 
-Mark each interactive row with data-re-row. MovingHighlight follows the pointer and keyboard focus and rests on the row marked data-current.
+Mark each interactive row with data-re-row. createMovingHighlight follows the pointer and keyboard focus and rests on the row marked data-current.
 
 ```html
 <nav id="navigation" aria-label="Workspace">

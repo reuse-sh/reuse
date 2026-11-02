@@ -63,7 +63,7 @@ The HTML list preserves the note before enhancement and the controller restores 
 
 #### Usage
 
-Pass image dimensions and a typed annotation list to AnnotatedImage. Coordinates are percentages of the image, so a mark keeps its position when the image becomes narrower.
+Read the annotation list from the markup and pass it with the image dimensions to createAnnotatedImage. Coordinates are percentages of the image, so a mark keeps its position when the image becomes narrower.
 
 ```html
 <div id="review-image">
@@ -98,7 +98,7 @@ const image = createAnnotatedImage(root, {
 
 #### Integration
 
-The HTML list preserves the note before enhancement and the controller restores it on destroy. React renders the image and notes on the server. Give every image useful alt text; annotation labels add detail rather than replacing it.
+The HTML list preserves the note before enhancement and the controller restores it on destroy. Give every image useful alt text; annotation labels add detail rather than replacing it.
 
 #### Cleanup
 
