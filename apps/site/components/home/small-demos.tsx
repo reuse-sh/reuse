@@ -6,7 +6,7 @@ import {
   MovingHighlight,
 } from "@reuse-sh/interactions/react";
 import { ThinkingDots } from "@reuse-sh/loaders/react";
-import { type ReactNode, useEffect, useRef, useState } from "react";
+import { type ReactNode, useState } from "react";
 import { HoldLabel } from "../hold-label";
 import { Icon, type IconName } from "../icons";
 
@@ -63,19 +63,13 @@ function MenuDemo() {
 
 function HoldDemo() {
   const [done, setDone] = useState(false);
-  const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
-  useEffect(() => () => clearTimeout(timer.current), []);
   return (
     <div className="c-hold-wrap">
       <HoldToConfirmButton
         className="c-hold"
-        data-done={done ? "" : undefined}
-        aria-disabled={done || undefined}
-        onConfirm={() => {
-          setDone(true);
-          clearTimeout(timer.current);
-          timer.current = setTimeout(() => setDone(false), 2400);
-        }}
+        resetMs={2400}
+        onConfirm={() => setDone(true)}
+        onReset={() => setDone(false)}
       >
         <Icon name="trash" size={16} />
         <HoldLabel

@@ -152,27 +152,31 @@ export function MovingHighlight({
 }
 
 export interface HoldToConfirmButtonProps
-  extends Omit<ButtonHTMLAttributes<HTMLButtonElement>, "onClick">,
+  extends Omit<ButtonHTMLAttributes<HTMLButtonElement>, "onClick" | "onReset">,
     HoldToConfirmOptions {}
 
 export function HoldToConfirmButton({
   onConfirm,
+  onReset,
   holdMs = 1200,
+  resetMs = 1600,
   children,
   className,
   ...props
 }: HoldToConfirmButtonProps) {
   const ref = useRef<HTMLButtonElement>(null);
-  const callback = useRef(onConfirm);
-  callback.current = onConfirm;
+  const latest = useRef({ onConfirm, onReset });
+  latest.current = { onConfirm, onReset };
   useEffect(() => {
     if (!ref.current) return;
     const controller = createHoldToConfirm(ref.current, {
       holdMs,
-      onConfirm: () => callback.current(),
+      resetMs,
+      onConfirm: () => latest.current.onConfirm(),
+      onReset: () => latest.current.onReset?.(),
     });
     return () => controller.destroy();
-  }, [holdMs]);
+  }, [holdMs, resetMs]);
   return (
     <button
       type="button"

@@ -29,6 +29,7 @@ These are the rules the code keeps. An adaptation on any framework keeps them to
 ### Hold to confirm
 
 - **Confirm once per hold.** A completed hold calls onConfirm exactly once, and the next action needs a new press.
+- **Hold the result.** A confirmed button keeps its fill and ignores presses until resetMs ends it. Releasing, blur or disabling it does not empty the fill early.
 - **Cancel on any doubt.** Letting go early, leaving the button, blur, Escape or disabling the button cancels the hold.
 - **Accept pointer and keys.** A pointer, Space or Enter can hold, and keyboard auto-repeat never starts a new hold.
 - **Let assistive technology click.** A click without a physical press, as from a screen reader, confirms at once.
