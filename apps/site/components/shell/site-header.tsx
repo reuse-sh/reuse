@@ -97,7 +97,7 @@ export function SiteHeader() {
       <div className="c-head-in" ref={wrap}>
         <div className="c-brand" ref={brand}>
           <Link className="c-logo" data-re-row href="/">
-            <Icon name="logo" size={18} />
+            <Icon name="logo" size={16} />
             Reuse
           </Link>
           <span className="c-slash" aria-hidden="true">
@@ -147,6 +147,8 @@ export function SiteHeader() {
             data-re-row
             className="c-nav-icon"
             href="https://github.com/reuse-sh/reuse"
+            target="_blank"
+            rel="noreferrer"
             aria-label="GitHub"
             data-re-tooltip="GitHub"
           >

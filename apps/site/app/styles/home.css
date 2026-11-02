@@ -35,7 +35,7 @@
   display: grid;
   place-items: center;
   min-height: 184px;
-  padding: 24px 20px 12px;
+  padding: 24px;
 }
 .h-card-cap {
   padding: 0 20px 18px;
@@ -83,7 +83,7 @@
   overflow: hidden;
   border-radius: calc(10px * var(--r));
   background: #ececec;
-  cursor: inherit;
+  cursor: zoom-in;
 }
 .h-slide button:focus-visible {
   outline-offset: -2px;
@@ -171,6 +171,15 @@
   opacity: 0.3;
   cursor: default;
   background: transparent;
+}
+.h-arrows button:last-child:not(:disabled) {
+  background: var(--hover);
+}
+.h-arrows button:last-child:not(:disabled):hover {
+  background: rgb(0 0 0 / 6%);
+}
+.h-strip[data-dragging] .h-slide button {
+  cursor: grabbing;
 }
 
 /* Features */

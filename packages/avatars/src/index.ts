@@ -60,6 +60,22 @@ export function getCutoutMask(
   return `url("data:image/svg+xml,${encodeURIComponent(svg)}")`;
 }
 
+const round = (value: number) => Math.round(value * 1000) / 1000;
+
+// A vector clip stays sharp at every zoom level, where WebKit rasterizes mask images.
+function cutoutClip(cutout: Cutout): string {
+  const { x, y, width, height } = cutout;
+  if (![x, y, width, height, cutout.radius ?? 0].every(Number.isFinite))
+    throw new RangeError("Cutout geometry must be finite and positive.");
+  if (width <= 0 || height <= 0)
+    throw new RangeError("Cutout geometry must be finite and positive.");
+  const r = round(Math.min(cutout.radius ?? height / 2, width / 2, height / 2));
+  const [left, top, right, bottom] = [x, y, x + width, y + height].map(round);
+  const arc = `A${r} ${r} 0 0 1`;
+  const hole = `M${round(left + r)} ${top}H${round(right - r)}${arc} ${right} ${round(top + r)}V${round(bottom - r)}${arc} ${round(right - r)} ${bottom}H${round(left + r)}${arc} ${left} ${round(bottom - r)}V${round(top + r)}${arc} ${round(left + r)} ${top}Z`;
+  return `path(evenodd, "M-10000 -10000H10000V10000H-10000Z${hole}")`;
+}
+
 function createMaskSlot(element: HTMLElement, property: string) {
   const value = element.style.getPropertyValue(property);
   const priority = element.style.getPropertyPriority(property);
@@ -85,9 +101,7 @@ export function enhanceAvatar(root: HTMLElement) {
   const face = root.querySelector<HTMLElement>("[data-re-avatar-face]");
   const badge = root.querySelector<HTMLElement>("[data-re-avatar-badge]");
   const image = root.querySelector<HTMLImageElement>("img");
-  const badgeMask = face
-    ? createMaskSlot(face, "--re-avatar-badge-mask")
-    : null;
+  const badgeMask = face ? createMaskSlot(face, "clip-path") : null;
   const originalImageStyle = image?.getAttribute("style") ?? null;
   let destroyed = false;
   const refresh = () => {
@@ -105,16 +119,15 @@ export function enhanceAvatar(root: HTMLElement) {
       const gap = Number.isFinite(clearance) && clearance >= 0 ? clearance : 2;
       const badgeWidth = indicator.width / scaleX;
       const badgeHeight = indicator.height / scaleY;
-      const mask = getCutoutMask(width, height, [
-        {
+      badgeMask?.set(
+        cutoutClip({
           x: (indicator.left - box.left) / scaleX - gap,
           y: (indicator.top - box.top) / scaleY - gap,
           width: badgeWidth + gap * 2,
           height: badgeHeight + gap * 2,
           radius: badgeHeight / 2 + gap,
-        },
-      ]);
-      badgeMask?.set(mask);
+        }),
+      );
     }
   };
   const load = () => {
@@ -251,7 +264,7 @@ export function createAvatarGroup(
     throw new RangeError("Group spacing must be nonnegative.");
   const previousStyle = root.getAttribute("style");
   const hadClass = root.classList.contains("re-avatar-group");
-  const masks = new Map<HTMLElement, ReturnType<typeof createMaskSlot>>();
+  const clips = new Map<HTMLElement, ReturnType<typeof createMaskSlot>>();
   root.classList.add("re-avatar-group");
   root.style.setProperty("--re-avatar-overlap", `${overlap}px`);
   let destroyed = false;
@@ -265,33 +278,30 @@ export function createAvatarGroup(
         child.hasAttribute("data-re-avatar"),
     );
     const faces = avatars.map(faceOf);
-    for (const [face, mask] of masks)
-      if (!faces.includes(face)) {
-        mask.restore();
-        masks.delete(face);
+    for (const [avatar, clip] of clips)
+      if (!avatars.includes(avatar)) {
+        clip.restore();
+        clips.delete(avatar);
       }
-    faces.forEach((face, index) => {
-      let slot = masks.get(face);
+    avatars.forEach((avatar, index) => {
+      let slot = clips.get(avatar);
       if (!slot) {
-        slot = createMaskSlot(
-          face,
-          face.hasAttribute("data-re-avatar-face")
-            ? "--re-avatar-group-mask"
-            : "mask-image",
-        );
-        masks.set(face, slot);
+        slot = createMaskSlot(avatar, "clip-path");
+        clips.set(avatar, slot);
       }
-      slot.set("linear-gradient(black, black)");
       const next = faces[index + 1];
-      if (!next) return;
-      const box = face.getBoundingClientRect();
+      if (!next) {
+        slot.set("");
+        return;
+      }
+      const box = avatar.getBoundingClientRect();
       const nextBox = next.getBoundingClientRect();
-      const width = face.offsetWidth || box.width;
-      const height = face.offsetHeight || box.height;
+      const width = avatar.offsetWidth || box.width;
+      const height = avatar.offsetHeight || box.height;
       const scaleX = box.width && width ? box.width / width : 1;
       const scaleY = box.height && height ? box.height / height : 1;
-      const mask = getCutoutMask(width, height, [
-        {
+      slot.set(
+        cutoutClip({
           x: (nextBox.left - box.left) / scaleX - clearance,
           y: (nextBox.top - box.top) / scaleY - clearance,
           width: nextBox.width / scaleX + 2 * clearance,
@@ -299,9 +309,8 @@ export function createAvatarGroup(
           radius:
             Math.min(nextBox.width / scaleX, nextBox.height / scaleY) / 2 +
             clearance,
-        },
-      ]);
-      slot.set(mask);
+        }),
+      );
     });
     for (const avatar of observed)
       if (!avatars.includes(avatar)) {
@@ -332,7 +341,7 @@ export function createAvatarGroup(
       resizeObserver?.disconnect();
       mutations.disconnect();
       view.removeEventListener("resize", refresh);
-      for (const mask of masks.values()) mask.restore();
+      for (const clip of clips.values()) clip.restore();
       if (!hadClass) root.classList.remove("re-avatar-group");
       if (previousStyle === null) root.removeAttribute("style");
       else root.setAttribute("style", previousStyle);

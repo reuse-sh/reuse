@@ -70,6 +70,8 @@ const FLICK_VELOCITY = 0.4;
 const GLIDE = 260;
 // Rubber band constant for a mouse drag past either end.
 const STRETCH = 0.55;
+// The furthest a strip stretches past an end, in px, close to trackpad overscroll.
+const STRETCH_LIMIT = 120;
 const RELEASE_SAMPLE_WINDOW = 80;
 const MAX_SPRING_STEP = 64;
 
@@ -222,17 +224,21 @@ export function createCarousel(
     setStretch(virtual - edge);
   }
 
+  function stretchLimit() {
+    return Math.min(STRETCH_LIMIT, viewport.clientWidth * 0.3) || 1;
+  }
+
   function rubberBand(overflow: number) {
-    const width = viewport.clientWidth || 1;
+    const limit = stretchLimit();
     const damped =
-      (1 - 1 / ((Math.abs(overflow) * STRETCH) / width + 1)) * width;
+      (1 - 1 / ((Math.abs(overflow) * STRETCH) / limit + 1)) * limit;
     return Math.sign(overflow) * damped;
   }
 
   function undoRubberBand(shown: number) {
-    const width = viewport.clientWidth || 1;
-    const size = Math.min(Math.abs(shown), width * 0.95);
-    return (Math.sign(shown) * size * width) / ((width - size) * STRETCH);
+    const limit = stretchLimit();
+    const size = Math.min(Math.abs(shown), limit * 0.95);
+    return (Math.sign(shown) * size * limit) / ((limit - size) * STRETCH);
   }
 
   function updateCursor() {

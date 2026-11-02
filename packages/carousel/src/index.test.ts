@@ -336,6 +336,8 @@ describe("native carousel", () => {
     expect(slides[0].style.transform).toBe("rotate(1deg)");
     pointer(window, "pointermove", 300);
     expect(shift(slides[1]) - pulled).toBeLessThan(pulled);
+    pointer(window, "pointermove", 5000);
+    expect(shift(slides[1])).toBeLessThan(30);
     pointer(window, "pointerup", 300);
     vi.advanceTimersByTime(1000);
     expect(slides[0].style.transform).toBe("rotate(1deg)");

@@ -22,12 +22,6 @@
   font-size: calc(var(--re-avatar-size, 40px) * 0.32);
   font-weight: 600;
   line-height: 1;
-  mask-image:
-    var(--re-avatar-badge-mask, linear-gradient(black, black)),
-    var(--re-avatar-group-mask, linear-gradient(black, black));
-  mask-composite: intersect;
-  -webkit-mask-composite: source-in;
-  mask-repeat: no-repeat;
 }
 .re-avatar-image {
   position: absolute;

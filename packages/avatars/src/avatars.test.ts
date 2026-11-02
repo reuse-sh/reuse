@@ -35,15 +35,13 @@ function rect(
     configurable: true,
   });
 }
-function svgMask(node: HTMLElement, kind = "badge") {
-  return decodeURIComponent(
-    (
-      node.style.getPropertyValue(`--re-avatar-${kind}-mask`) ||
-      node.style.maskImage
-    )
-      .replace(/^url\(["']?data:image\/svg\+xml,/, "")
-      .replace(/["']?\)$/, ""),
-  );
+function cutout(node: HTMLElement) {
+  const clip = node.style.clipPath;
+  const hole = clip.slice(clip.indexOf("Z") + 1);
+  const n = hole.match(/-?[\d.]+/g)?.map(Number);
+  if (!clip.startsWith("path(evenodd") || !n) return null;
+  const x = n[0] - n[3];
+  return { x, y: n[1], width: n[8] - x, height: n[17] - n[1], radius: n[3] };
 }
 beforeEach(() => {
   vi.stubGlobal(
@@ -115,16 +113,22 @@ describe("avatar", () => {
     rect(badge, 116, 130, 32, 18);
     const controller = enhanceAvatar(root);
     controllers.push(controller);
-    const svg = svgMask(face);
-    expect(svg).toContain(
-      '<rect x="14" y="28" width="36" height="22" rx="11" fill="black"/>',
-    );
-    expect(svg).toContain('mask="url(#cutout)"');
+    expect(cutout(face)).toEqual({
+      x: 14,
+      y: 28,
+      width: 36,
+      height: 22,
+      radius: 11,
+    });
     rect(badge, 108, 130, 40, 18);
     controller.refresh();
-    expect(svgMask(face)).toContain(
-      '<rect x="6" y="28" width="44" height="22"',
-    );
+    expect(cutout(face)).toEqual({
+      x: 6,
+      y: 28,
+      width: 44,
+      height: 22,
+      radius: 11,
+    });
     expect(face.style.backgroundColor).toBe("");
     controller.destroy();
     expect(face.hasAttribute("style")).toBe(false);
@@ -140,9 +144,13 @@ describe("avatar", () => {
     Object.defineProperty(face, "offsetHeight", { value: 48 });
     rect(badge, 150, 160, 64, 36);
     controllers.push(enhanceAvatar(root));
-    expect(svgMask(face)).toContain(
-      '<rect x="25" y="30" width="32" height="18" rx="9" fill="black"/>',
-    );
+    expect(cutout(face)).toEqual({
+      x: 25,
+      y: 30,
+      width: 32,
+      height: 18,
+      radius: 9,
+    });
   });
   it("uses scaled geometry and restores native content, styles and listeners", () => {
     document.body.innerHTML =
@@ -230,13 +238,17 @@ describe("avatar group", () => {
     const controller = createAvatarGroup(root, { overlap: 12, clearance: 2 });
     controllers.push(controller);
     expect(root.style.getPropertyValue("--re-avatar-overlap")).toBe("12px");
-    expect(svgMask(first, "group")).toContain(
-      '<rect x="34" y="-2" width="52" height="52" rx="26" fill="black"/>',
-    );
-    expect(second.style.maskImage).toBe("linear-gradient(black, black)");
+    expect(cutout(first)).toEqual({
+      x: 34,
+      y: -2,
+      width: 52,
+      height: 52,
+      radius: 26,
+    });
+    expect(second.style.clipPath).toBe("");
     second.remove();
     await Promise.resolve();
-    expect(first.style.maskImage).toBe("linear-gradient(black, black)");
+    expect(first.style.clipPath).toBe("");
     expect(second.hasAttribute("style")).toBe(false);
     controller.destroy();
     expect(root.getAttribute("style")).toBe("color: red");
@@ -255,9 +267,12 @@ describe("avatar group", () => {
     rect(second, 0, 0, 48, 48);
     const controller = createAvatarGroup(root);
     controllers.push(controller);
-    expect(svgMask(first, "group")).toContain(
-      '<rect x="-38" y="-2" width="52" height="52"',
-    );
+    expect(cutout(first)).toMatchObject({
+      x: -38,
+      y: -2,
+      width: 52,
+      height: 52,
+    });
     controller.destroy();
     expect(first.hasAttribute("style")).toBe(false);
     expect(second.hasAttribute("style")).toBe(false);
@@ -265,7 +280,7 @@ describe("avatar group", () => {
 });
 
 describe("composed avatar cutouts", () => {
-  it("keeps badges outside the group clipping surface", () => {
+  it("cuts the badge from the face and the whole avatar, badge included, around the next one", () => {
     document.body.innerHTML =
       '<span><span data-re-avatar><span data-re-avatar-face>AL</span><span data-re-avatar-badge="count">128</span></span><span data-re-avatar><span data-re-avatar-face>SF</span></span></span>';
     const root = document.body.firstElementChild as HTMLElement;
@@ -280,20 +295,24 @@ describe("composed avatar cutouts", () => {
     rect(badge, 25, 32, 32, 18);
     controllers.push(enhanceAvatar(first));
     controllers.push(createAvatarGroup(root));
-    expect(first.style.maskImage).toBe("");
-    expect(face.style.getPropertyValue("--re-avatar-badge-mask")).toContain(
-      "data:image/svg+xml",
-    );
-    expect(face.style.getPropertyValue("--re-avatar-group-mask")).toContain(
-      "data:image/svg+xml",
-    );
-    expect(svgMask(face, "group")).toContain(
-      '<rect x="34" y="-2" width="52" height="52" rx="26" fill="black"/>',
-    );
-    expect(badge.style.maskImage).toBe("");
+    expect(cutout(face)).toEqual({
+      x: 23,
+      y: 30,
+      width: 36,
+      height: 22,
+      radius: 11,
+    });
+    expect(cutout(first)).toEqual({
+      x: 34,
+      y: -2,
+      width: 52,
+      height: 52,
+      radius: 26,
+    });
+    expect(badge.style.clipPath).toBe("");
   });
   it.each(["badge", "group"] as const)(
-    "restores the %s mask without removing the other",
+    "restores the %s cutout without removing the other",
     (kind) => {
       document.body.innerHTML =
         '<span><span data-re-avatar><span data-re-avatar-face>AL</span><span data-re-avatar-badge="dot"></span></span><span data-re-avatar><span data-re-avatar-face>SF</span></span></span>';
@@ -311,14 +330,13 @@ describe("composed avatar cutouts", () => {
       controllers.push(avatar, group);
       const firstController = kind === "badge" ? avatar : group;
       const lastController = kind === "badge" ? group : avatar;
-      const other = kind === "badge" ? "group" : "badge";
+      const [removed, kept] = kind === "badge" ? [face, first] : [first, face];
       firstController.destroy();
-      expect(
-        face.style.getPropertyValue(`--re-avatar-${other}-mask`),
-      ).toContain("data:image/svg+xml");
-      expect(face.style.getPropertyValue(`--re-avatar-${kind}-mask`)).toBe("");
+      expect(cutout(kept)).not.toBeNull();
+      expect(removed.style.clipPath).toBe("");
       lastController.destroy();
       expect(face.hasAttribute("style")).toBe(false);
+      expect(first.hasAttribute("style")).toBe(false);
     },
   );
 });

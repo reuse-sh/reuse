@@ -8,7 +8,7 @@ Avatars with images, Unicode-aware initials, and badges cut out of the image ins
 
 These are the rules the code keeps. An adaptation on any framework keeps them too.
 
-- **Cut, never paint.** Badges and overlaps are masks through the image, so no painted ring fights the background.
+- **Cut, never paint.** Badges and overlaps are vector clips through the avatar, so no painted ring fights the background and the edge stays sharp at any zoom.
 - **Keep initials underneath.** Initials show until the image loads and stay if it fails.
 - **Name badges in words.** The badge label joins the accessible name, and the drawing stays decorative.
 - **Treat text as text.** Names, labels and icons go in as text or nodes and are never parsed as HTML.

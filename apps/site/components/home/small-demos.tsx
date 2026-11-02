@@ -70,6 +70,7 @@ function HoldDemo() {
       <HoldToConfirmButton
         className="c-hold"
         data-done={done ? "" : undefined}
+        aria-disabled={done || undefined}
         onConfirm={() => {
           setDone(true);
           clearTimeout(timer.current);
@@ -82,9 +83,9 @@ function HoldDemo() {
           shown={done ? "Deleted" : "Hold to delete"}
         />
       </HoldToConfirmButton>
-      <p className="c-hold-hint" aria-live="polite">
-        {done ? "Restoring in a moment" : "Release early to cancel"}
-      </p>
+      <span className="sr-only" role="status">
+        {done ? "Deleted" : ""}
+      </span>
     </div>
   );
 }
