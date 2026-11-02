@@ -1,6 +1,6 @@
 {
   "name": "@reuse-sh/gradients",
-  "version": "0.0.1",
+  "version": "0.1.0",
   "description": "Eased CSS gradients without banding, and a fade edge for horizontal scrollers.",
   "keywords": [
     "reuse",
