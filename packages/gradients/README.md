@@ -25,13 +25,72 @@ npm install @reuse-sh/gradients
 
 <!-- examples:start -->
 
-## Complete examples
+## Usage
 
-The [React example](https://reuse.sh/easing-gradients/getting-started?view=code) includes its data, Tailwind styling and package CSS imports. Copy every file from the Code tab into a React 19 project with Tailwind CSS 4, then render `<Example />`.
+[Documentation](https://reuse.sh/easing-gradients/getting-started)
 
-The [HTML + JavaScript example](https://reuse.sh/easing-gradients/getting-started?framework=html&view=code) contains its HTML, stylesheet and any required browser module. Copy every file into an ES module project such as Vite. Its initial markup stays useful before JavaScript.
+### React
 
-Runnable browser example: [gradients-start](https://reuse.sh/examples/gradients-start/index.html).
+#### Tailwind 4
+
+If your app uses Tailwind 4, import the adapter in the stylesheet processed by Tailwind. Use this import instead of @reuse-sh/gradients/styles.css. The utilities read your theme colors and accept opacity modifiers.
+
+```css
+@import "tailwindcss";
+@import "@reuse-sh/gradients/tailwind.css";
+```
+
+#### Usage
+
+Use re-gradient for the default sine fade and supply the required end color with re-gradient-to-*. This example uses the background color from your theme at 85% opacity. Replace background with any color token from your theme. A direction modifier chooses the fade direction.
+
+```tsx
+import "./app.css";
+
+<div className="re-gradient re-gradient-dir-b re-gradient-from-transparent re-gradient-to-background/85 rounded-xl p-6">
+  Print collection
+</div>
+```
+
+#### Integration
+
+The default curve is ease-in-out-sine with twelve stops. re-gradient-ease-in, re-gradient-ease-out and re-gradient-linear choose the other built-in curves; re-gradient-ease-in-out-sine states the default explicitly. CSS presets are linear gradients and need no JavaScript. Use easingGradient from @reuse-sh/gradients for custom bezier curves, radial gradients or a custom stop count.
+
+### HTML + JavaScript
+
+#### Usage
+
+Import the stylesheet, add re-gradient and set --re-gradient-to to the required end color. The start defaults to transparent. A re-gradient-dir-* class chooses the direction; --re-gradient-direction accepts a custom CSS direction.
+
+```html
+<div class="re-gradient re-gradient-dir-b re-caption-fade">Print collection</div>
+```
+
+#### Styles
+
+Import the package stylesheet once and set the colors on your element or an ancestor. Without an end color, the gradient cannot render.
+
+```css
+@import "@reuse-sh/gradients/styles.css";
+
+.re-caption-fade {
+  --re-gradient-from: transparent;
+  --re-gradient-to: rgb(0 0 0 / 85%);
+}
+```
+
+#### Integration
+
+The default curve is ease-in-out-sine with twelve stops. re-gradient-ease-in, re-gradient-ease-out and re-gradient-linear choose the other built-in curves; re-gradient-ease-in-out-sine states the default explicitly. CSS presets are linear gradients and need no JavaScript. Use easingGradient from @reuse-sh/gradients for custom bezier curves, radial gradients or a custom stop count.
+
+#### Tailwind 4
+
+For Tailwind 4, replace the plain styles.css import with the adapter in your Tailwind stylesheet. Replace re-caption-fade with color utilities such as re-gradient-from-transparent re-gradient-to-black/85. These utilities read your theme colors and accept opacity modifiers. The destination color is still required.
+
+```css
+@import "tailwindcss";
+@import "@reuse-sh/gradients/tailwind.css";
+```
 
 <!-- examples:end -->
 

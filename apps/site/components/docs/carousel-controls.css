@@ -1,0 +1,460 @@
+@reference "../../app/globals.css";
+@layer components {
+  .cc {
+    @apply min-w-0 text-foreground;
+  }
+  .cc [hidden] {
+    @apply hidden;
+  }
+  .cc-seg {
+    --re-highlight-radius: calc(infinity * 1px);
+    @apply flex w-fit max-w-full gap-0.5;
+    @apply p-1;
+    @apply overflow-x-auto;
+    scrollbar-width: none;
+    @apply min-w-0;
+    margin: 0;
+    @apply border-0 rounded-full;
+    background: color-mix(in srgb, var(--foreground) 4.5%, transparent);
+  }
+  .cc-seg::-webkit-scrollbar {
+    @apply hidden;
+  }
+
+  .cc-seg-item {
+    @apply relative inline-flex items-center flex-none h-7.5;
+    @apply px-3 py-0;
+    @apply border-0 rounded-full bg-transparent text-muted-foreground text-label font-medium whitespace-nowrap cursor-pointer;
+    transition: color 150ms ease;
+  }
+  .cc-seg-item:hover,
+  .cc-seg-item:has(:checked) {
+    @apply text-foreground;
+  }
+  .cc-seg-item:has(:focus-visible) {
+    outline: 2px solid var(--foreground);
+    @apply -outline-offset-2;
+  }
+  .cc-demo {
+    @apply mt-5;
+  }
+  .cc-note {
+    @apply max-w-prose;
+    @apply mt-4 text-muted-foreground text-ui leading-6 text-pretty;
+  }
+  .cc-note b {
+    @apply text-foreground font-semibold;
+  }
+  .cc-c {
+    @apply relative;
+  }
+  .cc-view {
+    --re-carousel-gap: calc(var(--spacing) * 3);
+    @apply cursor-grab;
+  }
+  .cc-view:active {
+    @apply cursor-grabbing;
+  }
+  .cc-slide {
+    margin: 0;
+    @apply aspect-landscape overflow-hidden rounded-xl bg-media;
+  }
+  .cc-slide img {
+    @apply w-full h-full object-cover select-none;
+    -webkit-user-drag: none;
+  }
+  .cc-row {
+    @apply flex items-center gap-2.5 min-w-0 mt-3.5;
+  }
+  .cc-row-center {
+    @apply justify-center;
+  }
+  .cc-row-between {
+    @apply justify-between gap-4;
+  }
+  .cc-round {
+    @apply grid flex-none w-8.5 h-8.5 p-0 place-items-center border-0 rounded-full bg-card shadow-control text-inherit cursor-pointer;
+    transition:
+      transform 160ms var(--ease-ui),
+      background-color 150ms ease,
+      opacity 200ms ease;
+  }
+  .cc-round:hover {
+    @apply bg-secondary;
+  }
+  .cc-round:active {
+    transform: scale(0.95);
+  }
+  .cc-round:disabled {
+    opacity: 0.35;
+    @apply cursor-default;
+    transform: none;
+    @apply bg-card;
+  }
+  .cc-swap {
+    @apply relative grid w-3 h-3;
+  }
+  .cc-swap svg {
+    grid-area: 1 / 1;
+    transition:
+      opacity 200ms var(--ease-ui),
+      transform 200ms var(--ease-ui),
+      filter 200ms var(--ease-ui);
+  }
+  .cc-swap svg:last-child,
+  [data-paused] .cc-swap svg:first-child {
+    opacity: 0;
+    transform: scale(0.4);
+    filter: blur(3px);
+  }
+  [data-paused] .cc-swap svg:last-child {
+    opacity: 1;
+    transform: none;
+    filter: none;
+  }
+  .cc-c-dots .cc-view {
+    --re-carousel-gap: calc(var(--spacing) * 2.5);
+  }
+  .cc-c-dots .cc-row {
+    @apply mt-2;
+  }
+  .cc-c-pills .cc-view {
+    --re-carousel-slide-width: 84%;
+  }
+  .cc-c-pills .cc-slide {
+    aspect-ratio: 16 / 10;
+    @apply rounded-2xl;
+  }
+  .cc-c-pills .cc-row {
+    @apply mt-4.5 gap-2;
+  }
+  .cc-pills {
+    @apply flex items-center h-8.5;
+    padding: 0 9px;
+    @apply rounded-full;
+    background: color-mix(in srgb, var(--foreground) 5%, transparent);
+  }
+  .cc-pill {
+    @apply grid h-8.5 pt-0 pr-1 pb-0 pl-1 place-items-center border-0 bg-transparent cursor-pointer;
+  }
+  .cc-pill-mark {
+    @apply relative block;
+    width: 7px;
+    height: 7px;
+    @apply overflow-hidden rounded-full;
+    background: color-mix(in srgb, var(--foreground) 22%, transparent);
+    transition:
+      width 420ms var(--ease-ui),
+      background-color 200ms ease;
+  }
+  .cc-pill:hover .cc-pill-mark {
+    background: color-mix(in srgb, var(--foreground) 38%, transparent);
+  }
+  .cc-pill[aria-current] .cc-pill-mark {
+    @apply w-7.5;
+    background: color-mix(in srgb, var(--foreground) 16%, transparent);
+  }
+  .cc-pill-fill {
+    @apply absolute inset-0;
+    border-radius: inherit;
+    @apply bg-foreground;
+    transform: translateX(-100%);
+  }
+  .cc-pill[aria-current] .cc-pill-fill {
+    transform: none;
+  }
+  [data-playing] .cc-pill[aria-current] .cc-pill-fill {
+    transform: translateX(-100%);
+  }
+  .cc-pill:focus-visible {
+    outline: none;
+  }
+  .cc-pill:focus-visible .cc-pill-mark {
+    @apply overflow-visible;
+    outline: 2px solid var(--foreground);
+    @apply outline-offset-2;
+  }
+  .cc-play {
+    background: color-mix(in srgb, var(--foreground) 5%, transparent);
+    box-shadow: none;
+  }
+  .cc-play:hover {
+    background: color-mix(in srgb, var(--foreground) 8%, transparent);
+  }
+  .cc-story {
+    @apply relative;
+    @apply w-full max-w-85;
+    margin-inline: auto;
+  }
+  .cc-c-stories .cc-view {
+    --re-carousel-gap: 0;
+    @apply rounded-2xl;
+  }
+  .cc-c-stories .cc-slide {
+    aspect-ratio: 9 / 14;
+    @apply rounded-none;
+  }
+  .cc-story-top {
+    @apply absolute;
+    inset: 0 0 auto;
+    @apply grid;
+    grid-template-columns: 1fr auto;
+    @apply items-start gap-2.5 pt-3 pr-3 pb-9 pl-3 rounded-t-2xl;
+    background: linear-gradient(
+      color-mix(in srgb, var(--foreground) 28%, transparent),
+      transparent
+    );
+    @apply pointer-events-none;
+  }
+  .cc-segments {
+    @apply flex gap-1 pt-1;
+  }
+  .cc-segment {
+    @apply relative flex-1;
+    height: 2.5px;
+    @apply overflow-hidden rounded-sm;
+    background: color-mix(in srgb, var(--overlay-foreground) 38%, transparent);
+  }
+  .cc-segment-fill {
+    @apply absolute inset-0 bg-card;
+    transform: translateX(-100%);
+  }
+  .cc-segment[data-past] .cc-segment-fill,
+  .cc-segment[aria-current] .cc-segment-fill {
+    transform: none;
+  }
+  [data-playing] .cc-segment[aria-current] .cc-segment-fill {
+    transform: translateX(-100%);
+  }
+  .cc-story-play {
+    @apply grid w-7 h-7;
+    margin: -9px -6px 0 0;
+    @apply p-0 place-items-center border-0 rounded-full bg-transparent text-primary-foreground pointer-events-auto cursor-pointer;
+  }
+  .cc-story-play:hover {
+    background: color-mix(in srgb, var(--overlay-foreground) 16%, transparent);
+  }
+  .cc-story-play:focus-visible {
+    outline: 2px solid var(--card);
+    @apply outline-offset-0;
+  }
+  .cc-c-counter .cc-slide {
+    aspect-ratio: 16 / 10;
+    @apply rounded;
+  }
+  .cc-c-counter .cc-view {
+    --re-carousel-gap: calc(var(--spacing) * 4);
+  }
+  .cc-c-counter .cc-row {
+    @apply items-start mt-4;
+  }
+  .cc-caption {
+    @apply grid gap-0.5 min-w-0 text-ui leading-5;
+  }
+  .cc-caption b {
+    @apply font-semibold;
+  }
+  .cc-caption span {
+    @apply text-subtle-foreground;
+  }
+  .cc-counter-group {
+    @apply flex flex-none items-center gap-1.5;
+  }
+  .cc-counter {
+    @apply flex items-baseline;
+    gap: 5px;
+    @apply mr-2 font-mono text-label leading-5 tabular-nums;
+  }
+  .cc-roll {
+    @apply inline-grid h-5 overflow-hidden text-foreground;
+  }
+  .cc-roll > span {
+    grid-area: 1 / 1;
+  }
+  .cc-total {
+    @apply text-subtle-foreground;
+  }
+  .cc-c-thumbs .cc-slide {
+    @apply rounded-xl;
+  }
+  .cc-thumbs {
+    @apply relative flex gap-2 mt-2.5 -mr-1 mb-0 -ml-1 p-1 overflow-x-auto;
+    scrollbar-width: none;
+  }
+  .cc-thumbs::-webkit-scrollbar {
+    @apply hidden;
+  }
+  .cc-thumb {
+    @apply flex-none w-17 h-12 p-0 overflow-hidden border-0 rounded-lg bg-media;
+    opacity: 0.5;
+    @apply cursor-pointer;
+    transition:
+      opacity 200ms ease,
+      box-shadow 200ms ease;
+  }
+  .cc-thumb img {
+    @apply w-full h-full object-cover;
+  }
+  .cc-thumb[aria-current] {
+    opacity: 1;
+    box-shadow:
+      0 0 0 2px var(--background),
+      0 0 0 3.5px var(--foreground);
+  }
+  .cc-thumb:focus-visible {
+    outline: 2px solid var(--foreground);
+    @apply outline-offset-2;
+  }
+  .cc-edge {
+    @apply relative;
+  }
+  .cc-c-edge .cc-view {
+    --re-carousel-slide-width: calc((100% - 24px) / 3);
+  }
+  .cc-c-edge .cc-slide {
+    @apply aspect-portrait rounded-xl;
+  }
+  .cc-edge:where([data-more-end]) .cc-view {
+    mask-image: linear-gradient(
+      to right,
+      var(--scrim) calc(100% - 56px),
+      transparent
+    );
+  }
+  .cc-edge:where([data-more-start]) .cc-view {
+    mask-image: linear-gradient(
+      to left,
+      var(--scrim) calc(100% - 56px),
+      transparent
+    );
+  }
+  .cc-edge:where([data-more-start][data-more-end]) .cc-view {
+    mask-image: linear-gradient(
+      to right,
+      transparent,
+      var(--scrim) 56px,
+      var(--scrim) calc(100% - 56px),
+      transparent
+    );
+  }
+  .cc-edge .cc-view:where(:focus-visible) {
+    outline: none;
+  }
+  .cc-edge:has(> .cc-view:focus-visible)::after {
+    content: "";
+    @apply absolute -inset-1 rounded-2xl;
+    outline: 2px solid var(--foreground);
+    @apply pointer-events-none;
+  }
+  .cc-edge .cc-round {
+    @apply absolute;
+    top: calc(50% - 18px);
+    @apply w-9 h-9;
+    opacity: 0;
+    transition:
+      opacity 200ms ease,
+      transform 260ms var(--ease-ui),
+      background-color 150ms ease;
+  }
+  .cc-edge-prev {
+    @apply left-3;
+    transform: translateX(6px);
+  }
+  .cc-edge-next {
+    @apply right-3;
+    transform: translateX(-6px);
+  }
+  .cc-edge:hover .cc-round:not(:disabled),
+  .cc-edge:focus-within .cc-round:not(:disabled) {
+    opacity: 1;
+    transform: none;
+  }
+  .cc-edge .cc-round:active:not(:disabled) {
+    transform: scale(0.95);
+  }
+  .cc-edge .cc-round:disabled {
+    opacity: 0;
+    @apply pointer-events-none;
+  }
+  .cc-c-scrub .cc-view {
+    --re-carousel-slide-width: calc((100% - 30px) / 3.4);
+    --re-carousel-gap: calc(var(--spacing) * 2.5);
+  }
+  .cc-c-scrub .cc-slide {
+    aspect-ratio: 3 / 4;
+    @apply rounded-control;
+  }
+  .cc-scrub {
+    --cc-p: 0;
+    @apply relative h-7 mt-3;
+    outline: none;
+    touch-action: none;
+    @apply cursor-pointer;
+  }
+  .cc-scrub-rail {
+    @apply absolute top-0 right-1.5 bottom-0 left-1.5;
+  }
+  .cc-scrub-track {
+    @apply absolute;
+    top: 13px;
+    @apply right-0 left-0 h-0.5 overflow-hidden rounded-sm;
+    background: color-mix(in srgb, var(--foreground) 10%, transparent);
+  }
+  .cc-scrub-fill {
+    @apply absolute inset-0 bg-foreground;
+    transform-origin: left;
+    transform: scaleX(var(--cc-p));
+  }
+  .cc-scrub-ticks span {
+    @apply absolute;
+    top: 17px;
+    width: 1px;
+    @apply h-1;
+    margin-left: -0.5px;
+    background: color-mix(in srgb, var(--foreground) 22%, transparent);
+  }
+  .cc-scrub-handle {
+    @apply absolute top-2;
+    left: calc(var(--cc-p) * 100%);
+    @apply w-3 h-3 -ml-1.5 rounded-full bg-foreground;
+    box-shadow: 0 0 0 3px var(--background);
+    transform: scale(0.75);
+    transition: transform 180ms var(--ease-ui);
+  }
+  .cc-scrub:hover .cc-scrub-handle,
+  .cc-scrub[data-dragging] .cc-scrub-handle,
+  .cc-scrub:focus-visible .cc-scrub-handle {
+    transform: scale(1);
+  }
+  .cc-scrub:focus-visible .cc-scrub-handle {
+    outline: 2px solid var(--foreground);
+    outline-offset: 3px;
+  }
+  .cc-c-labels .cc-slide {
+    @apply aspect-video rounded-2xl;
+  }
+  .cc-tabs {
+    --re-highlight-radius: calc(infinity * 1px);
+    @apply flex max-w-full gap-0.5;
+    @apply p-1;
+    @apply overflow-x-auto;
+    scrollbar-width: none;
+    @apply rounded-full;
+    background: color-mix(in srgb, var(--foreground) 4.5%, transparent);
+  }
+  .cc-tabs::-webkit-scrollbar {
+    @apply hidden;
+  }
+  .cc-tab {
+    @apply flex-none h-7 pt-0 pr-3 pb-0 pl-3 border-0 rounded-full bg-transparent text-muted-foreground text-label font-medium whitespace-nowrap cursor-pointer;
+    transition: color 150ms ease;
+  }
+  .cc-tab:hover,
+  .cc-tab[data-current] {
+    @apply text-foreground;
+  }
+  .cc-tab:focus-visible {
+    outline: 2px solid var(--foreground);
+    @apply -outline-offset-2;
+  }
+}

@@ -11,26 +11,26 @@
   },
   {
     "path": "/lightbox/examples/chat",
-    "height": 756.765625,
+    "height": 763.1875,
     "images": [
       [36, 36],
       [36, 36],
       [36, 36],
       [36, 36],
       [32, 32],
-      [178.953125, 180.953125],
-      [89.46875, 88.96875],
-      [89.46875, 88.984375],
+      [182.921875, 185.59375],
+      [91.453125, 90.796875],
+      [91.453125, 90.796875],
       [0, 0],
       [0, 0],
       [0, 0],
-      [215.75, 161.8125]
+      [208.796875, 156.59375]
     ]
   },
   {
     "path": "/lightbox/examples/journal",
-    "height": 1430,
-    "images": [[608, 342], [300, 375], [300, 375], [400, 250], [200, 250]]
+    "height": 1405,
+    "images": [[608, 342], [300, 375], [300, 375], [400, 256], [200, 256]]
   },
   {
     "path": "/carousel",
@@ -58,7 +58,7 @@
   },
   {
     "path": "/carousel/examples/editorial",
-    "height": 652.65625,
+    "height": 650.65625,
     "images": [
       [520, 346.65625],
       [520, 346.65625],
@@ -75,12 +75,12 @@
   },
   {
     "path": "/annotations/examples/review-notes",
-    "height": 517.5,
+    "height": 515.5,
     "images": [[32, 32], [458, 343.5]]
   },
   {
     "path": "/annotations/examples/editor",
-    "height": 806,
+    "height": 798,
     "images": [[608, 456]]
   },
   {
@@ -98,7 +98,7 @@
   },
   {
     "path": "/avatars/examples/team",
-    "height": 420,
+    "height": 408,
     "images": [[36, 36], [36, 36], [36, 36], [36, 36], [36, 36], [36, 36]]
   },
   {
@@ -133,7 +133,7 @@
   },
   {
     "path": "/moving-highlight/examples/menu",
-    "height": 344,
+    "height": 337,
     "images": []
   },
   {
@@ -158,7 +158,7 @@
   },
   {
     "path": "/hold-to-confirm/examples/settings",
-    "height": 379,
+    "height": 376,
     "images": []
   },
   {
@@ -188,7 +188,7 @@
   },
   {
     "path": "/shadows",
-    "height": 354,
+    "height": 352,
     "images": []
   },
   {
@@ -203,12 +203,12 @@
   },
   {
     "path": "/easing-gradients/examples/image-caption",
-    "height": 531.328125,
+    "height": 533.328125,
     "images": [[608, 405.328125]]
   },
   {
     "path": "/easing-gradients/examples/fade-edge",
-    "height": 338,
+    "height": 336,
     "images": [
       [240, 180],
       [240, 180],

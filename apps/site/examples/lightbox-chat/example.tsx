@@ -3,9 +3,7 @@ import { Avatar } from "@reuse-sh/avatars/react";
 import { createMovingHighlight } from "@reuse-sh/interactions";
 import { createLightbox, type LightboxItem } from "@reuse-sh/lightbox";
 import { type ReactNode, useEffect, useRef, useState } from "react";
-import "@reuse-sh/avatars/styles.css";
-import "@reuse-sh/interactions/styles.css";
-import "@reuse-sh/lightbox/styles.css";
+import { cn } from "@/lib/utils";
 import "./mechanics.css";
 
 const photos = [
@@ -113,7 +111,7 @@ function PhotoButton({
   return (
     <a
       href={photo.src}
-      className={className ? `re-photo ${className}` : "re-photo"}
+      className={cn("re-photo", className)}
       data-photo={photo.id}
       aria-label={`Open ${photo.caption}`}
       hidden={hidden}
@@ -218,27 +216,24 @@ function ChatList() {
   const [ready, setReady] = useState(false);
   useEffect(() => setReady(true), []);
   return (
-    <div className="re-list [padding:14px_8px] [background:#fafaf9] [box-shadow:inset_-1px_0_rgb(0_0_0_/_6%)]">
-      <p className="re-list-title [padding:2px_8px_10px] [font-size:13px] [font-weight:600]">
+    <div className="re-list px-2 py-3.5 bg-secondary border-r border-border">
+      <p className="re-list-title px-2 pt-0.5 pb-2.5 text-label font-semibold">
         Messages
       </p>
-      <div
-        className="re-list-rows [--re-highlight-background:var(--re-demo-hover)] [--re-highlight-radius:10px] [display:grid] [gap:2px]"
-        ref={rows}
-      >
+      <div className="re-list-rows grid gap-0.5" ref={rows}>
         {people.map(([name, text, time], index) => (
           <button
             key={name}
             type="button"
             disabled={!ready}
-            className="re-person [display:grid] [grid-template-columns:36px_minmax(0,_1fr)_auto] [align-items:center] [gap:10px] [padding:8px] [border:0] [border-radius:10px] [background:transparent] [text-align:left] [cursor:pointer]"
+            className="re-person grid items-center gap-2.5 p-2 border-0 rounded-control bg-transparent text-left cursor-pointer"
             data-re-row
             data-current={index === current ? "" : undefined}
             aria-current={index === current ? "true" : undefined}
             onClick={() => setCurrent(index)}
           >
             <Avatar name={name} src={photos[index].src} size={36} />
-            <span className="re-person-text [display:grid] [min-width:0]">
+            <span className="re-person-text grid min-w-0">
               <b>{name}</b>
               <small>{text}</small>
             </span>
@@ -252,7 +247,7 @@ function ChatList() {
 
 function ThreadHead() {
   return (
-    <div className="re-thread-head [display:flex] [align-items:center] [gap:10px] [padding:12px_16px] [box-shadow:inset_0_-1px_rgb(0_0_0_/_6%)]">
+    <div className="re-thread-head flex items-center gap-2.5 px-4 py-3 border-b border-border">
       <Avatar
         name="Mara Lind"
         src={photos[0].src}
@@ -272,25 +267,23 @@ export function Example() {
   const hidden = all.slice(3);
   return (
     <div className="re-example w-full min-w-0">
-      <div className="re-chat [display:grid] [grid-template-columns:228px_minmax(0,_1fr)] [overflow:hidden] [border-radius:16px] [background:var(--re-demo-surface)] [box-shadow:var(--re-demo-shadow-panel)]">
+      <div className="re-chat grid overflow-hidden rounded-2xl bg-card shadow-panel">
         <ChatList />
-        <div className="re-thread [grid-template-columns:minmax(0,1fr)] [display:grid] [grid-template-rows:auto_minmax(0,_1fr)_auto] [min-width:0]">
+        <div className="re-thread grid-cols-1 grid min-w-0">
           <ThreadHead />
-          <PhotoLightbox className="re-msgs [display:flex] [flex-direction:column] [gap:6px] [padding:16px] [overflow:hidden]">
-            <span className="re-day [align-self:center] [margin-bottom:6px]">
-              Sunday 18:42
-            </span>
-            <p className="re-msg [align-self:flex-start] [max-width:74%] [padding:8px_12px] [border-radius:18px_18px_18px_6px] [background:#efefee] [font-size:14px] [line-height:20px]">
+          <PhotoLightbox className="re-msgs flex flex-col gap-1.5 p-4 overflow-hidden max-sm:px-3 max-sm:py-3.5">
+            <span className="re-day self-center mb-1.5">Sunday 18:42</span>
+            <p className="re-msg self-start max-w-3/4 px-3 py-2 rounded-2xl rounded-bl-md bg-muted text-ui">
               Proofs from the new series, finally
             </p>
             <div
-              className="re-tiles [display:grid] [grid-template-columns:2fr_1fr] [grid-template-rows:1fr_1fr] [gap:3px] [width:min(320px,_78%)] [aspect-ratio:3_/_2] [overflow:hidden] [border-radius:18px]"
+              className="re-tiles grid grid-rows-2 gap-1 w-4/5 max-w-80 aspect-landscape overflow-hidden rounded-2xl"
               data-photo-group
             >
               {shown.map((photo, index) => (
                 <PhotoButton key={photo.id} photo={photo}>
                   {index === 2 ? (
-                    <span className="re-more [position:absolute] [inset:0] [display:grid] [place-items:center] [background:rgb(0_0_0_/_42%)] [color:#fff] [font-size:18px] [font-weight:560]">
+                    <span className="re-more absolute inset-0 grid place-items-center bg-scrim/40 text-primary-foreground text-lg font-semibold">
                       +{hidden.length}
                     </span>
                   ) : null}
@@ -300,23 +293,21 @@ export function Example() {
                 <PhotoButton key={photo.id} photo={photo} hidden />
               ))}
             </div>
-            <p className="re-msg [max-width:74%] [padding:8px_12px] [font-size:14px] [line-height:20px] re-me [align-self:flex-end] [margin-top:6px] [border-radius:18px_18px_6px_18px] [background:#1f6feb] [color:#fff]">
+            <p className="re-msg max-w-3/4 px-3 py-2 text-ui re-me self-end mt-1.5 rounded-2xl rounded-br-md bg-message text-message-foreground">
               The coral one is my favorite
             </p>
-            <span className="re-read [align-self:flex-end] [margin-top:-2px]">
-              Read 18:44
-            </span>
+            <span className="re-read self-end -mt-0.5">Read 18:44</span>
             <div
-              className="re-single [width:min(220px,_62%)] [overflow:hidden] [border-radius:18px]"
+              className="re-single w-3/5 max-w-56 overflow-hidden rounded-2xl"
               data-photo-group
             >
               <PhotoButton photo={night} />
             </div>
-            <p className="re-msg [align-self:flex-start] [max-width:74%] [padding:8px_12px] [border-radius:18px_18px_18px_6px] [background:#efefee] [font-size:14px] [line-height:20px]">
+            <p className="re-msg self-start max-w-3/4 px-3 py-2 rounded-2xl rounded-bl-md bg-muted text-ui">
               And the last one, in blue and gold
             </p>
           </PhotoLightbox>
-          <div className="re-compose [display:flex] [align-items:center] [gap:8px] [margin:0_12px_12px] [padding:4px_4px_4px_14px] [border-radius:20px] [box-shadow:inset_0_0_0_1px_rgb(0_0_0_/_10%)]">
+          <div className="re-compose flex items-center gap-2 mx-3 mb-3 p-1 pl-3.5 rounded-full border border-input">
             <input
               type="text"
               placeholder="Message Mara"

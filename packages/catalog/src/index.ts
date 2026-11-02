@@ -586,6 +586,10 @@ export const libraries: Library[] = [
     api: [
       ["re-shadow-xs … re-shadow-2xl", "Six shadow levels."],
       [
+        "@reuse-sh/shadows/tailwind.css",
+        "Optional Tailwind 4 utilities with hover, responsive variants and @apply. Import instead of the plain stylesheet.",
+      ],
+      [
         "re-shadow-ring-xs … re-shadow-ring-2xl",
         "The same levels with a hairline ring instead of a border.",
       ],
@@ -604,6 +608,7 @@ export const libraries: Library[] = [
       ],
     ],
     notes: [
+      "For Tailwind 4 variants, import @reuse-sh/shadows/tailwind.css in the consumer stylesheet instead of the unlayered plain stylesheet.",
       "Import the stylesheet. The classes need no JavaScript and no Tailwind.",
       "Use the ring variant instead of adding a border on top of the shadow.",
       'A data-re-theme="dark" ancestor switches to stronger shadows and a light ring.',
@@ -672,6 +677,22 @@ export const libraries: Library[] = [
     ],
     api: [
       [
+        "re-gradient",
+        "Static eased linear gradient from styles.css. Set --re-gradient-to; --re-gradient-from defaults to transparent.",
+      ],
+      [
+        "re-gradient-{ease-in-out-sine,ease-in,ease-out,linear}",
+        "Choose a named easing curve for a CSS gradient.",
+      ],
+      [
+        "re-gradient-dir-{t,tr,r,br,b,bl,l,tl}",
+        "Choose a gradient direction. Bottom is the default.",
+      ],
+      [
+        "@reuse-sh/gradients/tailwind.css",
+        "Tailwind 4 utilities, including re-gradient-from-* and re-gradient-to-* theme colors with opacity modifiers.",
+      ],
+      [
         "easingGradient({ from?, to, easing?, direction?, stops?, type? })",
         "Returns a CSS gradient string to use as a background or a mask.",
       ],
@@ -711,6 +732,7 @@ export const libraries: Library[] = [
       ],
     ],
     notes: [
+      "Named linear curves are available as static CSS presets with a required end color. The optional Tailwind 4 entry resolves theme colors and variants without adding runtime JavaScript.",
       "easingGradient returns a string. Set it as background-image or mask-image wherever a gradient goes, in CSS-in-JS, a style attribute or a server template.",
       "Every stop is a color-mix() in oklab, so the browser needs color-mix support.",
       "createFadeEdge writes a mask and two custom properties to the scroller's inline style and puts the old style back on destroy. It follows right-to-left layouts.",
@@ -720,7 +742,7 @@ export const libraries: Library[] = [
       {
         path: "getting-started",
         title: "Getting started",
-        lead: "Install the package, build a gradient string, and set it wherever CSS takes a gradient.",
+        lead: "Install the package and add an eased fade with CSS utilities. Use JavaScript for custom curves and scroll-aware masks.",
       },
       {
         title: "Examples",
@@ -1392,3 +1414,13 @@ export const tools: readonly Tool[] = [
     group: "Code",
   },
 ];
+
+export { getUsage, usageRecipes } from "./usage.js";
+export { usageMarkdown } from "./usage-markdown.js";
+export type {
+  UsageBlock,
+  UsageLanguage,
+  UsagePlatform,
+  UsageRecipe,
+  UsageSection,
+} from "./usage-types.js";

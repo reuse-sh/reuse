@@ -4,6 +4,7 @@ import { useCarousel } from "@reuse-sh/carousel/react";
 import { useLightbox } from "@reuse-sh/lightbox/react";
 import Image from "next/image";
 import type { CSSProperties } from "react";
+import { Container } from "@/components/ui/container";
 import { photos } from "../../lib/photos";
 import { Icon, lightboxIcons } from "../icons";
 
@@ -37,18 +38,19 @@ export function PhotoStrip() {
   };
   return (
     <div
-      className="h-strip mt-[28px]"
+      className="h-strip group mt-7"
       data-dragging={state.isDragging ? "" : undefined}
     >
       <section ref={ref} className="re-carousel h-strip-vp" aria-label="Photos">
         {strip.map((photo, index) => (
           <figure
             key={photo.id}
-            className="re-carousel__slide h-slide"
+            className="re-carousel__slide"
             data-carousel-slide=""
           >
             <button
               type="button"
+              className="block aspect-portrait w-full cursor-zoom-in overflow-hidden rounded-xl bg-media p-0 focus-visible:-outline-offset-2 group-data-dragging:cursor-grabbing"
               aria-label={`Open ${photo.caption}`}
               onClick={(event) => open(index, event.currentTarget)}
             >
@@ -58,16 +60,17 @@ export function PhotoStrip() {
                 width={photo.width}
                 height={photo.height}
                 draggable={false}
+                className="size-full object-cover select-none"
                 sizes="(max-width: 430px) 72vw, 310px"
               />
             </button>
-            <figcaption>{photo.caption}</figcaption>
+            <figcaption className="mt-2.5 text-ui">{photo.caption}</figcaption>
           </figure>
         ))}
       </section>
-      <div className="c-col h-strip-ctrl flex items-center gap-[14px] mt-[16px]">
+      <Container className="mt-4 flex items-center gap-3.5">
         <div
-          className="h-dots relative flex items-center h-[24px] ml-[-3px]"
+          className="h-dots relative -ml-1 flex h-6 items-center"
           style={{ "--h-dot": state.index } as CSSProperties}
         >
           {strip.map((photo, index) => (
@@ -80,9 +83,10 @@ export function PhotoStrip() {
             />
           ))}
         </div>
-        <span className="h-arrows flex gap-[2px] ml-[auto] mr-[-6px]">
+        <span className="-mr-1.5 ml-auto flex gap-0.5">
           <button
             type="button"
+            className="grid size-8 place-items-center rounded-full text-foreground transition ease-ui hover:bg-accent active:scale-95 disabled:cursor-default disabled:bg-transparent disabled:opacity-30"
             aria-label="Previous slide"
             data-re-tooltip="Previous"
             disabled={!state.canPrev}
@@ -92,6 +96,7 @@ export function PhotoStrip() {
           </button>
           <button
             type="button"
+            className="grid size-8 place-items-center rounded-full text-foreground transition ease-ui enabled:bg-accent enabled:hover:bg-foreground/5 active:scale-95 disabled:cursor-default disabled:opacity-30"
             aria-label="Next slide"
             data-re-tooltip="Next"
             disabled={!state.canNext}
@@ -100,7 +105,7 @@ export function PhotoStrip() {
             <Icon name="arrow-right" size={16} />
           </button>
         </span>
-      </div>
+      </Container>
     </div>
   );
 }

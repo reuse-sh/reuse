@@ -1,5 +1,5 @@
 import { execFileSync } from "node:child_process";
-import { readdir, writeFile } from "node:fs/promises";
+import { readdir, readFile, writeFile } from "node:fs/promises";
 
 const directory = new URL("../apps/site/examples/", import.meta.url);
 const ids = (await readdir(directory, { withFileTypes: true }))
@@ -21,5 +21,9 @@ const formatted = execFileSync(
   ["exec", "biome", "format", "--stdin-file-path=example-registry.tsx"],
   { input: source, encoding: "utf8" },
 );
-await writeFile(destination, formatted);
-process.stdout.write(`Registered ${ids.length} complete examples.\n`);
+const previous = await readFile(destination, "utf8").catch((error) => {
+  if (error.code !== "ENOENT") throw error;
+  return undefined;
+});
+if (previous !== formatted) await writeFile(destination, formatted);
+process.stdout.write(`Registered ${ids.length} showcases.\n`);

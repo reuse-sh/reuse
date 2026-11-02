@@ -5,6 +5,7 @@ import {
   createMovingHighlight,
 } from "@reuse-sh/interactions";
 import { type Ref, useEffect, useRef } from "react";
+import { MenuSurface } from "@/components/ui/surfaces";
 import {
   type MenuSlug,
   menuGroups,
@@ -99,32 +100,51 @@ export function LibraryMenu({
   }, []);
 
   return (
-    <div className="c-menu" id={id} ref={ref} hidden={!open}>
-      <nav className="c-menu-cols" aria-label="Libraries" ref={rows}>
+    <MenuSurface
+      className="library-menu absolute top-full left-gutter z-2 -mt-1 -ml-2 overflow-y-auto overscroll-contain"
+      id={id}
+      ref={ref}
+      hidden={!open}
+    >
+      <nav
+        className="moving-highlight grid grid-cols-1 gap-x-1.5 sm:grid-cols-2 md:grid-cols-3"
+        aria-label="Libraries"
+        ref={rows}
+      >
         {menuGroups.map(([title, slugs]) => (
-          <div key={title} className="c-menu-col" data-menu-col>
-            <p className="c-menu-h">{title}</p>
+          <div key={title} data-menu-col>
+            <p className="px-2.5 pt-2 pb-1.5 text-caption font-medium text-subtle-foreground">
+              {title}
+            </p>
             {slugs.map((slug) => (
               <DocLink
                 key={slug}
                 href={`/${slug}`}
-                className="c-menu-row"
+                className="group flex items-start gap-2.5 rounded-control px-2.5 py-2 text-foreground focus-visible:-outline-offset-2"
                 data-re-row
                 data-peek={slug}
                 data-current={slug === current ? "" : undefined}
                 aria-current={slug === current ? "true" : undefined}
                 onClick={onNavigate}
               >
-                <Icon name={slug} size={18} />
-                <span>
-                  <b>{menuLibrary(slug).name}</b>
-                  <small>{shortLines[slug]}</small>
+                <Icon
+                  name={slug}
+                  size={18}
+                  className="mt-0.5 shrink-0 text-muted-foreground group-data-current:text-foreground"
+                />
+                <span className="min-w-0">
+                  <b className="block text-ui font-medium">
+                    {menuLibrary(slug).name}
+                  </b>
+                  <small className="block text-caption text-subtle-foreground">
+                    {shortLines[slug]}
+                  </small>
                 </span>
               </DocLink>
             ))}
           </div>
         ))}
       </nav>
-    </div>
+    </MenuSurface>
   );
 }

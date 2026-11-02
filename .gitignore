@@ -19,3 +19,7 @@ apps/site/AGENTS.md
 .claude/worktrees/
 
 .claude/launch.json
+
+apps/site/.cn/
+
+apps/site/public/styles/

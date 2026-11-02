@@ -1,33 +1,43 @@
-import { easingGradient } from "@reuse-sh/gradients";
+import { Card, CardContent } from "@/components/ui/card";
+import { cn } from "@/lib/utils";
+
+const curves = [
+  ["linear", "re-gradient-linear"],
+  ["ease-in-out-sine", "re-gradient-ease-in-out-sine"],
+] as const;
+
 export function Example() {
   return (
-    <div className="grid gap-3 rounded-[18px] bg-white p-7 shadow-[0_0_0_0.5px_#00000014,0_1px_2px_#0000000d,0_4px_8px_#00000009] max-[600px]:px-4 max-[600px]:py-[18px]">
-      <div
-        className="grid grid-cols-[56px_minmax(0,1fr)_minmax(0,1fr)] items-center gap-3 text-[13px] text-[#858585] max-[600px]:grid-cols-[44px_minmax(0,1fr)_minmax(0,1fr)] max-[600px]:gap-2"
-        aria-hidden="true"
+    <Card variant="raised" className="rounded-2xl">
+      <CardContent
+        padding="none"
+        className="grid gap-3 p-7 max-sm:px-4 max-sm:py-4.5"
       >
-        <span />
-        <span>Linear</span>
-        <span>Eased</span>
-      </div>
-      <div className="grid grid-cols-[56px_minmax(0,1fr)_minmax(0,1fr)] items-center gap-3 max-[600px]:grid-cols-[44px_minmax(0,1fr)_minmax(0,1fr)] max-[600px]:gap-2">
-        <span className="text-[13px] text-[#5b5b5b]">Ink</span>
-        {(["linear", "ease-in-out-sine"] as const).map((easing) => (
-          <span
-            key={easing}
-            className="h-[72px] rounded-[10px]"
-            role="img"
-            aria-label={`Ink, ${easing === "linear" ? "linear" : "eased"} fade from transparent`}
-            style={{
-              backgroundImage: easingGradient({
-                to: "#111",
-                easing,
-                direction: "to right",
-              }),
-            }}
-          />
-        ))}
-      </div>
-    </div>
+        <div
+          className="flex items-center gap-3 text-label text-subtle-foreground max-sm:gap-2"
+          aria-hidden="true"
+        >
+          <span className="w-14 shrink-0 max-sm:w-11" />
+          <span className="flex-1">Linear</span>
+          <span className="flex-1">Eased</span>
+        </div>
+        <div className="flex items-center gap-3 max-sm:gap-2">
+          <span className="w-14 shrink-0 text-label text-muted-foreground max-sm:w-11">
+            Ink
+          </span>
+          {curves.map(([easing, className]) => (
+            <span
+              key={easing}
+              className={cn(
+                "re-gradient re-gradient-dir-r re-gradient-to-foreground h-18 min-w-0 flex-1 rounded-control",
+                className,
+              )}
+              role="img"
+              aria-label={`Ink, ${easing === "linear" ? "linear" : "eased"} fade from transparent`}
+            />
+          ))}
+        </div>
+      </CardContent>
+    </Card>
   );
 }

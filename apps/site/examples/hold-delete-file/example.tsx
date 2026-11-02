@@ -1,6 +1,8 @@
 "use client";
 import { HoldToConfirmButton } from "@reuse-sh/interactions/react";
 import { useEffect, useRef, useState } from "react";
+import { buttonVariants } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 
 const iconPaths = {
   doc: (
@@ -124,48 +126,48 @@ export function DeleteFile() {
   const [ready, setReady] = useState(false);
   useEffect(() => setReady(true), []);
   return (
-    <div
-      className="grid gap-3 [max-width:560px] [&_.re-hold-delete-file-c-hold-hint]:[padding-left:4px]"
-      ref={root}
-    >
+    <div className="grid gap-3 max-w-140" ref={root}>
       {deleted ? (
         <div
-          className="grid items-center gap-3.5 [min-height:72px] [padding:14px_14px_14px_16px] [border-radius:14px] bg-white [box-shadow:0_0_0_0.5px_rgb(0_0_0_/_8%),0_1px_2px_rgb(0_0_0_/_5%),0_4px_8px_rgb(0_0_0_/_3.5%)] max-[600px]:[grid-template-columns:40px_minmax(0,_1fr)] [grid-template-columns:minmax(0,_1fr)_auto] [font-size:14px] [color:#5b5b5b]"
+          className="flex items-center justify-between gap-3.5 min-h-18 py-3.5 pr-3.5 pl-4 rounded-xl bg-card shadow-raised text-ui text-muted-foreground"
           role="status"
         >
           <p>
-            <b className="[color:#111] [font-weight:540] [overflow-wrap:anywhere]">
+            <b className="text-foreground font-medium wrap-anywhere">
               coral-sky-proof-03.tif
             </b>{" "}
             was moved to the trash.
           </p>
           <button
             type="button"
-            className="[padding:4px_2px] border-0 [background:none] [color:#111] [font-size:13.5px] [font-weight:550] [text-decoration:underline] [text-decoration-color:rgb(0_0_0_/_25%)] [text-underline-offset:4px] cursor-pointer [&:hover]:[text-decoration-color:currentColor]"
+            className="py-1 px-0.5 border-0 bg-transparent text-foreground text-ui font-semibold underline decoration-foreground/25 underline-offset-4 cursor-pointer [&:hover]:decoration-current"
             onClick={() => change(false)}
           >
             Undo
           </button>
         </div>
       ) : (
-        <div className="grid [grid-template-columns:40px_minmax(0,_1fr)_auto] items-center gap-3.5 [min-height:72px] [padding:14px_14px_14px_16px] [border-radius:14px] bg-white [box-shadow:0_0_0_0.5px_rgb(0_0_0_/_8%),0_1px_2px_rgb(0_0_0_/_5%),0_4px_8px_rgb(0_0_0_/_3.5%)] max-[600px]:[grid-template-columns:40px_minmax(0,_1fr)]">
+        <div className="flex flex-wrap sm:flex-nowrap [&>span:nth-child(2)]:flex-1 items-center gap-3.5 min-h-18 py-3.5 pr-3.5 pl-4 rounded-xl bg-card shadow-raised">
           <span
-            className="grid place-items-center w-10 [height:44px] [border-radius:8px] [background:#f1f1ef] [color:#5b5b5b]"
+            className="grid place-items-center w-10 h-11 rounded-lg bg-muted text-muted-foreground"
             aria-hidden="true"
           >
             <Icon name="doc" size={20} />
           </span>
           <span className="grid min-w-0">
-            <b className="overflow-hidden [font-size:14px] [line-height:20px] [font-weight:540] whitespace-nowrap text-ellipsis">
+            <b className="overflow-hidden text-ui leading-5 font-medium whitespace-nowrap text-ellipsis">
               coral-sky-proof-03.tif
             </b>
-            <small className="[font-size:12.5px] [line-height:18px] [color:#858585]">
+            <small className="text-caption leading-4.5 text-subtle-foreground">
               48.2 MB · Edited 2 hours ago by Mara Lind
             </small>
           </span>
-          <div className="re-hold-delete-file-c-hold-wrap max-[600px]:[grid-column:1_/_-1] max-[600px]:justify-items-stretch max-[600px]:[&_.re-hold-delete-file-c-hold]:justify-center">
+          <div className="grid justify-items-center gap-3 max-sm:w-full max-sm:justify-items-stretch max-sm:[&_.re-hold-delete-file-button]:justify-center">
             <HoldToConfirmButton
-              className="re-hold-delete-file-c-hold"
+              className={cn(
+                buttonVariants({ variant: "destructive", size: "lg" }),
+                "re-hold-delete-file-button select-none transition duration-150 ease-ui data-confirmed:cursor-default data-confirmed:bg-destructive/10 [&_.re-hold-fill]:opacity-12",
+              )}
               disabled={!ready}
               onConfirm={() => change(true)}
             >
@@ -175,7 +177,7 @@ export function DeleteFile() {
           </div>
         </div>
       )}
-      <p className="re-hold-delete-file-c-hold-hint">
+      <p className="text-label leading-4.5 text-subtle-foreground">
         Release early, move off the button or press <kbd>Esc</kbd> to cancel.
       </p>
     </div>

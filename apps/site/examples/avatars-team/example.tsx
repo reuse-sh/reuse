@@ -2,8 +2,6 @@
 import { Avatar, type AvatarBadge } from "@reuse-sh/avatars/react";
 import { MovingHighlight } from "@reuse-sh/interactions/react";
 import type { CSSProperties } from "react";
-import "@reuse-sh/avatars/styles.css";
-import "@reuse-sh/interactions/styles.css";
 import "./mechanics.css";
 
 const photos = [
@@ -57,7 +55,9 @@ const photos = [
   },
 ];
 
-const away = { "--re-avatar-status-color": "#d08a1c" } as CSSProperties;
+const away = {
+  "--re-avatar-status-color": "var(--subtle-foreground)",
+} as CSSProperties;
 
 const members: {
   name: string;
@@ -119,15 +119,12 @@ const members: {
 export function Example() {
   return (
     <div className="re-example w-full min-w-0">
-      <MovingHighlight className="re-members mx-auto w-full max-w-[400px] [--re-highlight-background:var(--re-demo-hover)] [--re-highlight-radius:12px]">
-        <ul
-          className="re-member-list [display:grid] [padding:6px]"
-          aria-label="Members"
-        >
+      <MovingHighlight className="re-members mx-auto w-full max-w-100">
+        <ul className="re-member-list grid p-1.5" aria-label="Members">
           {members.map((member, index) => (
             <li
               key={member.name}
-              className="re-member [display:grid] [grid-template-columns:36px_minmax(0,_1fr)] [align-items:center] [gap:12px] [padding:9px_10px] [border-radius:12px]"
+              className="re-member grid items-center gap-3 px-2.5 py-2 rounded-control"
               data-re-row=""
             >
               <Avatar
@@ -137,11 +134,11 @@ export function Example() {
                 badge={member.badge}
                 style={member.style}
               />
-              <span className="re-member-text [display:grid] [min-width:0]">
-                <b className="re-member-name [font-size:14px] [line-height:20px] [font-weight:540]">
+              <span className="re-member-text grid min-w-0">
+                <b className="re-member-name text-ui font-medium">
                   {member.name}
                 </b>
-                <small className="re-member-meta [font-size:12.5px] [line-height:18px] [color:var(--re-demo-mute)]">
+                <small className="re-member-meta text-caption text-subtle-foreground">
                   {member.role}
                 </small>
               </span>

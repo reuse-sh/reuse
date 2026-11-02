@@ -1,5 +1,4 @@
 import "../styles/docs.css";
-import "../styles/examples.css";
 import { findLibrary } from "@reuse-sh/catalog";
 import { notFound } from "next/navigation";
 import type { ReactNode } from "react";

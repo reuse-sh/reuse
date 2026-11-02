@@ -23,13 +23,73 @@ npm install @reuse-sh/shadows
 
 <!-- examples:start -->
 
-## Complete examples
+## Usage
 
-The [React example](https://reuse.sh/shadows/getting-started?view=code) includes its data, Tailwind styling and package CSS imports. Copy every file from the Code tab into a React 19 project with Tailwind CSS 4, then render `<Example />`.
+[Documentation](https://reuse.sh/shadows/getting-started)
 
-The [HTML + JavaScript example](https://reuse.sh/shadows/getting-started?framework=html&view=code) contains its HTML, stylesheet and any required browser module. Copy every file into an ES module project such as Vite. Its initial markup stays useful before JavaScript.
+### React
 
-Runnable browser example: [shadows-start](https://reuse.sh/examples/shadows-start/index.html).
+#### Usage
+
+Import the stylesheet and add one shadow class to the element that needs depth. The ring variant combines its hairline outline and shadow in one box-shadow declaration.
+
+```tsx
+import "@reuse-sh/shadows/styles.css";
+
+<div className="re-shadow-ring-md">...</div>
+```
+
+#### Integration
+
+Use re-shadow-xs, sm, md, lg, xl or 2xl for depth only. Add ring in the class name to include the hairline edge. No controller, React state or JavaScript initialization is needed.
+
+#### Tailwind 4
+
+For Tailwind variants, remove the plain styles.css import and import the adapter in your Tailwind stylesheet instead. It registers the same shadow classes as utilities, so hover and responsive variants use your existing Tailwind build.
+
+```css
+@import "tailwindcss";
+@import "@reuse-sh/shadows/tailwind.css";
+```
+
+```tsx
+<article className="re-shadow-ring-sm hover:re-shadow-ring-md">Print details</article>
+```
+
+### HTML + JavaScript
+
+#### Usage
+
+Import the stylesheet and add one shadow class to the element that needs depth. The ring variant combines its hairline outline and shadow in one box-shadow declaration.
+
+```html
+<div class="re-shadow-ring-md">...</div>
+```
+
+#### Styles
+
+Import the package stylesheet once. Keep application layout styles scoped to this integration.
+
+```css
+@import "@reuse-sh/shadows/styles.css";
+```
+
+#### Integration
+
+Use re-shadow-xs, sm, md, lg, xl or 2xl for depth only. Add ring in the class name to include the hairline edge. No controller, React state or JavaScript initialization is needed.
+
+#### Tailwind 4
+
+For Tailwind variants, remove the plain styles.css import and import the adapter in your Tailwind stylesheet instead. It registers the same shadow classes as utilities, so hover and responsive variants use your existing Tailwind build.
+
+```css
+@import "tailwindcss";
+@import "@reuse-sh/shadows/tailwind.css";
+```
+
+```html
+<article class="re-shadow-ring-sm hover:re-shadow-ring-md">Print details</article>
+```
 
 <!-- examples:end -->
 

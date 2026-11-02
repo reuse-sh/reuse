@@ -1,8 +1,9 @@
 import { readFile, writeFile } from "node:fs/promises";
-import prefixes from "../apps/site/lib/example-prefixes.json" with {
-  type: "json",
-};
-import { libraries } from "../packages/catalog/dist/index.js";
+import {
+  getUsage,
+  libraries,
+  usageMarkdown,
+} from "../packages/catalog/dist/index.js";
 
 const groups = new Map();
 for (const library of libraries) {
@@ -16,22 +17,23 @@ for (const [name, owned] of groups) {
   const file = new URL(`../packages/${name}/README.md`, import.meta.url);
   const original = await readFile(file, "utf8");
   const entries = owned.map((library) => {
-    const id = `${prefixes[library.slug] ?? library.slug}-start`;
-    const page = `https://reuse.sh/${library.slug}/getting-started`;
+    const react = getUsage(library.slug, "getting-started", "react");
+    const html = getUsage(library.slug, "getting-started", "html");
+    if (!react || !html) throw new Error(`Missing usage for ${library.slug}`);
     return [
       ...(owned.length > 1 ? [`### ${library.name}`] : []),
-      `The [React example](${page}?view=code) includes its data, Tailwind styling and package CSS imports. Copy every file from the Code tab into a React 19 project with Tailwind CSS 4, then render \`<Example />\`.`,
-      `The [HTML + JavaScript example](${page}?framework=html&view=code) contains its HTML, stylesheet and any required browser module. Copy every file into an ES module project such as Vite. Its initial markup stays useful before JavaScript.`,
-      `Runnable browser example: [${id}](https://reuse.sh/examples/${id}/index.html).`,
+      `[Documentation](https://reuse.sh/${library.slug}/getting-started)`,
+      `${owned.length > 1 ? "####" : "###"} React`,
+      usageMarkdown(react, 4),
+      `${owned.length > 1 ? "####" : "###"} HTML + JavaScript`,
+      usageMarkdown(html, 4),
     ].join("\n\n");
   });
-  const section = `<!-- examples:start -->\n\n## Complete examples\n\n${entries.join("\n\n")}\n\n<!-- examples:end -->\n\n`;
-  const start = original.includes("<!-- examples:start -->")
-    ? original.indexOf("<!-- examples:start -->")
-    : original.search(/^## (Browser|CSS|Usage|React|Easing gradient)/m);
+  const section = `<!-- examples:start -->\n\n## Usage\n\n${entries.join("\n\n")}\n\n<!-- examples:end -->\n\n`;
+  const start = original.indexOf("<!-- examples:start -->");
   const end = original.indexOf("## Documentation", start);
   if (start < 0 || end < 0)
-    throw new Error(`Missing README example section in ${name}.`);
+    throw new Error(`Missing example marker in ${name}.`);
   const next = original.slice(0, start) + section + original.slice(end);
   if (next !== original) {
     if (check) {

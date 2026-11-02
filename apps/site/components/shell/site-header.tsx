@@ -3,12 +3,13 @@
 import { createMovingHighlight } from "@reuse-sh/interactions";
 import { usePathname } from "next/navigation";
 import { type MouseEvent, useEffect, useRef, useState } from "react";
+import { cn } from "@/lib/utils";
 import { libraryAt } from "../../lib/menu";
 import { DocLink as Link } from "../docs/doc-link";
 import { Icon, type IconName } from "../icons";
 import { focusMenuRow, LibraryMenu } from "./library-menu";
 
-const MENU_ID = "c-library-menu";
+const MENU_ID = "library-menu";
 
 export function SiteHeader() {
   const pathname = usePathname();
@@ -93,14 +94,17 @@ export function SiteHeader() {
   };
 
   return (
-    <header className="c-head" ref={header}>
-      <div
-        className="c-head-in relative flex items-center h-[56px] px-[var(--gutter)]"
-        ref={wrap}
-      >
-        <div className="c-brand" ref={brand}>
+    <header
+      className="site-header sticky top-0 z-30 bg-background/85 backdrop-blur-md transition-shadow duration-200 data-scrolled:shadow-ring"
+      ref={header}
+    >
+      <div className="relative flex h-header items-center px-gutter" ref={wrap}>
+        <div
+          className="moving-highlight flex min-w-0 items-center gap-0.5"
+          ref={brand}
+        >
           <Link
-            className="c-logo inline-flex items-center gap-[6px] h-[32px] [padding:0_8px] ml-[-8px] rounded-[8px] text-[14px] font-semibold tracking-[-0.02em] text-[color:var(--ink)]"
+            className="-ml-2 inline-flex h-8 items-center gap-1.5 rounded-lg px-2 text-ui font-semibold tracking-tight text-foreground"
             data-re-row
             href="/"
           >
@@ -108,7 +112,7 @@ export function SiteHeader() {
             Reuse
           </Link>
           <span
-            className="c-slash [margin:0_2px] text-[color:rgb(0_0_0_/_16%)] text-[15px]"
+            className="mx-0.5 text-body text-foreground/15"
             aria-hidden="true"
           >
             /
@@ -116,7 +120,7 @@ export function SiteHeader() {
           <button
             ref={button}
             type="button"
-            className="c-switch inline-flex items-center gap-[6px] min-w-[0] h-[32px] [padding:0_7px_0_9px] [border:0] rounded-[8px] [background:transparent] text-[14px] font-[520] text-[color:var(--ink)]"
+            className="inline-flex h-8 min-w-0 items-center gap-1.5 rounded-lg bg-transparent px-2 text-ui font-medium text-foreground"
             data-re-row
             data-highlighted={open ? "" : undefined}
             aria-expanded={open}
@@ -134,17 +138,27 @@ export function SiteHeader() {
             {library ? (
               <Icon name={library.slug as IconName} size={16} />
             ) : null}
-            <span>{library ? library.name : "Libraries"}</span>
+            <span className="truncate">
+              {library ? library.name : "Libraries"}
+            </span>
             <Icon
               name="down"
               size={14}
-              className="c-switch-chevron ml-[-2px] text-[color:var(--mute)] [transition:transform_220ms_var(--ease)]"
+              className={cn(
+                "-ml-0.5 shrink-0 text-subtle-foreground transition-transform duration-200 ease-ui",
+                open && "rotate-180",
+              )}
             />
           </button>
         </div>
-        <nav className="c-nav" aria-label="Site" ref={nav}>
+        <nav
+          className="moving-highlight -mr-2 ml-auto flex shrink-0 items-center gap-0.5"
+          aria-label="Site"
+          ref={nav}
+        >
           <Link
             data-re-row
+            className="inline-flex h-8 items-center rounded-lg px-2 text-ui whitespace-nowrap text-muted-foreground transition-colors hover:text-foreground aria-[current=page]:text-foreground sm:px-2.5"
             href="/for-agents"
             aria-current={pathname === "/for-agents" ? "page" : undefined}
           >
@@ -152,6 +166,7 @@ export function SiteHeader() {
           </Link>
           <Link
             data-re-row
+            className="inline-flex h-8 items-center rounded-lg px-2 text-ui whitespace-nowrap text-muted-foreground transition-colors hover:text-foreground aria-[current=page]:text-foreground sm:px-2.5"
             href="/tools"
             aria-current={pathname === "/tools" ? "page" : undefined}
           >
@@ -159,7 +174,7 @@ export function SiteHeader() {
           </Link>
           <a
             data-re-row
-            className="c-nav-icon"
+            className="inline-flex size-8 shrink-0 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:text-foreground"
             href="https://github.com/reuse-sh/reuse"
             target="_blank"
             rel="noreferrer"

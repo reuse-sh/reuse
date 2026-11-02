@@ -1,6 +1,9 @@
 "use client";
 import { HoldToConfirmButton } from "@reuse-sh/interactions/react";
 import { useEffect, useRef, useState } from "react";
+import { HoldLabel } from "@/components/hold-label";
+import { buttonVariants } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 
 const iconPaths = {
   trash: (
@@ -51,23 +54,6 @@ function Icon({
     </svg>
   );
 }
-function HoldLabel({
-  labels,
-  shown,
-}: {
-  labels: readonly string[];
-  shown: string;
-}) {
-  return (
-    <span className="re-hold-start-c-hold-label">
-      {labels.map((label) => (
-        <span key={label} aria-hidden={label === shown ? undefined : "true"}>
-          {label}
-        </span>
-      ))}
-    </span>
-  );
-}
 export function Example() {
   const [ready, setReady] = useState(false);
   useEffect(() => setReady(true), []);
@@ -77,7 +63,10 @@ export function Example() {
   return (
     <div className="flex flex-col items-center justify-center">
       <HoldToConfirmButton
-        className="re-hold-start-c-hold"
+        className={cn(
+          buttonVariants({ variant: "destructive", size: "lg" }),
+          "re-hold-start-button select-none transition duration-150 ease-ui data-confirmed:cursor-default data-confirmed:bg-destructive/10 [&_.re-hold-fill]:opacity-12",
+        )}
         disabled={!ready}
         data-done={done ? "" : undefined}
         aria-disabled={done || undefined}

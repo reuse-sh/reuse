@@ -42,12 +42,15 @@ export type DocIconName = keyof typeof icons;
 export function DocIcon({
   name,
   size = 20,
+  className,
 }: {
   name: DocIconName;
   size?: number;
+  className?: string;
 }) {
   return (
     <HugeiconsIcon
+      className={className}
       icon={icons[name]}
       size={size}
       strokeWidth={1.5}

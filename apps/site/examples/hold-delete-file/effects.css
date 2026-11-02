@@ -1,51 +1,8 @@
-@import "@reuse-sh/interactions/styles.css";
-.re-hold-delete-file-c-hold-wrap {
-  display: grid;
-  justify-items: center;
-  gap: 12px;
-}
-.re-hold-delete-file-c-hold {
-  position: relative;
-  overflow: hidden;
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  height: 40px;
-  padding: 0 17px 0 15px;
-  border: 0;
-  border-radius: 11px;
-  background: rgb(194 54 43 / 8%);
-  color: #c2362b;
-  font: inherit;
-  font-size: 14px;
-  font-weight: 550;
-  cursor: pointer;
-  user-select: none;
-  -webkit-user-select: none;
-  transition:
-    transform 160ms cubic-bezier(0.23, 1, 0.32, 1),
-    background-color 150ms ease;
-}
-@media (hover: hover) {
-  .re-hold-delete-file-c-hold:hover {
-    background-color: rgb(194 54 43 / 12%);
+@layer components {
+  .re-hold-delete-file-button:active {
+    transform: scale(0.97);
   }
-}
-.re-hold-delete-file-c-hold:active {
-  transform: scale(0.97);
-}
-.re-hold-delete-file-c-hold[data-confirmed] {
-  background-color: rgb(194 54 43 / 8%);
-  transform: none;
-  cursor: default;
-}
-.re-hold-delete-file-c-hold-hint {
-  margin: 0;
-  font-size: 13px;
-  line-height: 18px;
-  color: #858585;
-}
-
-.re-hold-delete-file-c-hold .re-hold-fill {
-  opacity: 0.12;
+  .re-hold-delete-file-button[data-confirmed] {
+    transform: none;
+  }
 }

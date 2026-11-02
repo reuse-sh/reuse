@@ -1,8 +1,6 @@
 "use client";
-import { Avatar, AvatarGroup } from "@reuse-sh/avatars/react";
-import "@reuse-sh/avatars/styles.css";
-import "@reuse-sh/interactions/styles.css";
 import "./mechanics.css";
+import { Avatar, AvatarGroup } from "@reuse-sh/avatars/react";
 
 const photos = [
   {
@@ -106,7 +104,7 @@ export function Example() {
           />
         </div>
       </div>
-      <div className="mt-8 flex flex-col items-center gap-[14px]">
+      <div className="mt-8 flex flex-col items-center gap-3.5">
         <AvatarGroup overlap={12}>
           <Avatar name="Alex Rivers" src={photos[3].src} size={52} />
           <Avatar name="Sam Field" src={photos[4].src} size={52} />

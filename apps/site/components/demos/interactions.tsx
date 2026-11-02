@@ -5,14 +5,16 @@ import {
   MovingHighlight,
 } from "@reuse-sh/interactions/react";
 import { useEffect, useRef, useState } from "react";
+import { buttonVariants } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 import { HoldLabel } from "../hold-label";
 import { Icon, type IconName } from "../icons";
 
 export function HighlightDemo() {
   const [selected, setSelected] = useState("Overview");
   return (
-    <div className="interaction-stage">
-      <MovingHighlight className="c-menu-card">
+    <div className="flex flex-col items-center justify-center">
+      <MovingHighlight className="grid w-58 max-w-full gap-px rounded-xl bg-card p-1.5 shadow-raised [&_.re-moving-highlight]:rounded-lg [&_.re-moving-highlight]:bg-accent">
         {[
           { label: "Overview", icon: "book" },
           { label: "Image library", icon: "lightbox" },
@@ -20,6 +22,10 @@ export function HighlightDemo() {
           { label: "Team", icon: "avatars" },
         ].map((item) => (
           <button
+            className={cn(
+              buttonVariants({ variant: "ghost", size: "sm" }),
+              "justify-start rounded-lg px-2.5 hover:bg-transparent [&_svg]:text-muted-foreground",
+            )}
             type="button"
             data-re-row=""
             aria-pressed={selected === item.label}
@@ -41,9 +47,12 @@ export function HoldDemo() {
   const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   useEffect(() => () => clearTimeout(timer.current), []);
   return (
-    <div className="interaction-stage">
+    <div className="flex flex-col items-center justify-center">
       <HoldToConfirmButton
-        className="c-hold"
+        className={cn(
+          buttonVariants({ variant: "destructive", size: "lg" }),
+          "select-none active:scale-97 data-done:scale-100 data-done:cursor-default data-done:bg-destructive/10 [&_.re-hold-fill]:opacity-12",
+        )}
         data-done={done ? "" : undefined}
         aria-disabled={done || undefined}
         onConfirm={() => {

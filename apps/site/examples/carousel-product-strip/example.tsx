@@ -1,6 +1,5 @@
 "use client";
 import { useCarousel } from "@reuse-sh/carousel/react";
-import "@reuse-sh/carousel/styles.css";
 import "./controls.css";
 
 const photos = [
@@ -58,10 +57,10 @@ export function Example() {
   const { ref, carousel, state } = useCarousel({ loop: false, group: "page" });
   return (
     <section className="w-full min-w-0">
-      <div className="mb-[14px] flex items-center">
+      <div className="mb-3.5 flex items-center">
         <h2
           id="series"
-          className="text-base leading-6 font-semibold tracking-[-0.012em]"
+          className="text-base leading-6 font-semibold tracking-tight"
         >
           More from the series
         </h2>
@@ -114,17 +113,17 @@ export function Example() {
       </div>
       <section
         ref={ref}
-        className="re-carousel [--re-carousel-gap:14px] [--re-carousel-slide-width:calc((100%_-_14px)/2)] min-[761px]:[--re-carousel-slide-width:calc((100%_-_28px)/3)]"
+        className="re-carousel re-c-products gap-3.5"
         aria-label="Prints"
       >
         {photos.map((photo, index) => (
           <a
             key={photo.id}
-            className="re-carousel__slide grid gap-[2px] text-[color:var(--ink,#111)]"
+            className="re-carousel__slide grid gap-0.5 text-foreground"
             href="#series"
             data-carousel-slide
           >
-            <span className="mb-[10px] block aspect-[4/5] overflow-hidden rounded-lg bg-[#efefed]">
+            <span className="mb-2.5 block aspect-portrait overflow-hidden rounded-lg bg-media">
               {/* biome-ignore lint/performance/noImgElement: standalone examples use native images. */}
               <img
                 className="h-full w-full object-cover"
@@ -135,10 +134,10 @@ export function Example() {
                 draggable={false}
               />
             </span>
-            <span className="text-sm leading-5 font-[540]">
+            <span className="text-sm leading-5 font-medium">
               {photo.caption}
             </span>
-            <span className="text-[13.5px] leading-5 text-[color:var(--prose,#5b5b5b)]">
+            <span className="text-label leading-5 text-muted-foreground">
               From {prices[index]}
             </span>
           </a>

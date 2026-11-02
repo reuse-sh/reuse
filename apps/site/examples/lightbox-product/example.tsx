@@ -2,9 +2,8 @@
 import { createMovingHighlight } from "@reuse-sh/interactions";
 import { createLightbox, type LightboxItem } from "@reuse-sh/lightbox";
 import { type ReactNode, useEffect, useRef, useState } from "react";
-import "@reuse-sh/avatars/styles.css";
-import "@reuse-sh/interactions/styles.css";
-import "@reuse-sh/lightbox/styles.css";
+import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 import "./mechanics.css";
 
 const photos = [
@@ -112,7 +111,7 @@ function PhotoButton({
   return (
     <a
       href={photo.src}
-      className={className ? `re-photo ${className}` : "re-photo"}
+      className={cn("re-photo", className)}
       data-photo={photo.id}
       aria-label={`Open ${photo.caption}`}
       hidden={hidden}
@@ -232,23 +231,23 @@ function ProductOptions() {
   useEffect(() => setReady(true), []);
   return (
     <>
-      <p className="re-price [display:flex] [flex-wrap:wrap] [align-items:baseline] [gap:4px_10px] [margin-top:8px] [font-size:18px] [line-height:26px] [font-variant-numeric:tabular-nums]">
+      <p className="re-price flex flex-wrap items-baseline gap-x-2.5 gap-y-1 mt-2 text-lg leading-7 tabular-nums">
         <span>{cost}</span>
-        <span className="re-meta [font-size:13px] [color:var(--re-demo-mute)]">
+        <span className="re-meta text-label text-subtle-foreground">
           Archival paper · {label} cm
         </span>
       </p>
-      <p className="re-desc [margin-top:16px] [font-size:14px] [line-height:22px] [color:var(--re-demo-prose)]">
+      <p className="re-desc mt-4 text-ui leading-6 text-muted-foreground">
         Coral, sand and blue drift across the sheet like ink on water. Printed
         to order on matte cotton paper with a 2 cm border.
       </p>
-      <fieldset className="re-field [min-width:0] [margin:22px_0_0] [padding:0] [border:0]">
-        <legend className="re-label [margin-bottom:8px] [padding:0] [font-size:12.5px] [font-weight:500] [color:var(--re-demo-ink-2)]">
+      <fieldset className="re-field min-w-0 mt-6 p-0 border-0">
+        <legend className="re-label mb-2 p-0 text-caption font-medium text-secondary-foreground">
           Size
         </legend>
         <div
           ref={group}
-          className="re-sizes [--re-highlight-radius:8px] [display:flex] [gap:2px] [padding:3px] [border-radius:11px] [background:rgb(0_0_0_/_4%)]"
+          className="re-sizes flex gap-0.5 p-1 rounded-control bg-accent"
         >
           {sizes.map(([name], index) => (
             <label
@@ -268,10 +267,13 @@ function ProductOptions() {
           ))}
         </div>
       </fieldset>
-      <button
+      <Button
         type="button"
         disabled={!ready}
-        className="re-buy [height:42px] [margin-top:22px] [border:0] [border-radius:11px] [background:var(--re-demo-ink)] [color:#fff] [font-size:14px] [font-weight:520] [cursor:pointer] [transition:transform_160ms_var(--re-demo-ease),_background-color_200ms_ease]"
+        className={cn(
+          "re-buy mt-6 h-10",
+          added && "bg-secondary-foreground hover:bg-secondary-foreground",
+        )}
         data-done={added ? "" : undefined}
         onClick={() => {
           setAdded(true);
@@ -280,7 +282,7 @@ function ProductOptions() {
         }}
       >
         {added ? "Added to bag" : "Add to bag"}
-      </button>
+      </Button>
     </>
   );
 }
@@ -288,29 +290,29 @@ function ProductOptions() {
 export function Example() {
   return (
     <div className="re-example w-full min-w-0">
-      <div className="re-product [display:grid] [grid-template-columns:minmax(0,_1.08fr)_minmax(0,_1fr)] [gap:36px]">
+      <div className="re-product grid gap-9 max-sm:gap-6">
         <PhotoLightbox className="re-shots">
           <div data-photo-group>
             <PhotoButton
               photo={lake}
-              className="re-shot-main [width:100%] [aspect-ratio:4_/_5]"
+              className="re-shot-main w-full aspect-portrait"
             />
-            <div className="re-thumbs [display:grid] [grid-template-columns:repeat(3,_minmax(0,_1fr))] [gap:6px] [margin-top:6px]">
+            <div className="re-thumbs grid grid-cols-3 gap-1.5 mt-1.5">
               {[mountains, woods, coast].map((photo) => (
                 <PhotoButton key={photo.id} photo={photo} />
               ))}
             </div>
           </div>
         </PhotoLightbox>
-        <div className="re-info [display:flex] [flex-direction:column] [padding-top:6px]">
-          <p className="re-crumb [font-size:12.5px] [color:var(--re-demo-mute)]">
+        <div className="re-info flex flex-col pt-1.5">
+          <p className="re-crumb text-caption text-subtle-foreground">
             Prints <span>/</span> Marble
           </p>
-          <h2 className="re-title [margin-top:8px] [font-size:24px] [line-height:30px] [font-weight:600] [letter-spacing:-0.025em]">
+          <h2 className="re-title mt-2 text-2xl leading-8 font-semibold tracking-tight">
             {lake.caption} print
           </h2>
           <ProductOptions />
-          <p className="re-note [margin-top:10px] [font-size:12.5px] [color:var(--re-demo-mute)] [text-align:center]">
+          <p className="re-note mt-2.5 text-caption text-subtle-foreground text-center">
             Ships flat between two boards in 3 to 5 days.
           </p>
         </div>

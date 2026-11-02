@@ -26,13 +26,78 @@ npm install @reuse-sh/avatars
 
 <!-- examples:start -->
 
-## Complete examples
+## Usage
 
-The [React example](https://reuse.sh/avatars/getting-started?view=code) includes its data, Tailwind styling and package CSS imports. Copy every file from the Code tab into a React 19 project with Tailwind CSS 4, then render `<Example />`.
+[Documentation](https://reuse.sh/avatars/getting-started)
 
-The [HTML + JavaScript example](https://reuse.sh/avatars/getting-started?framework=html&view=code) contains its HTML, stylesheet and any required browser module. Copy every file into an ES module project such as Vite. Its initial markup stays useful before JavaScript.
+### React
 
-Runnable browser example: [avatars-start](https://reuse.sh/examples/avatars-start/index.html).
+#### Package styles
+
+Import the package stylesheet once in your main CSS. The components layer lets Tailwind utilities adapt its presentation.
+
+```css
+@import "@reuse-sh/avatars/styles.css" layer(components);
+```
+
+#### Usage
+
+Render a name, optional photo and meaningful badge label. The component keeps initials underneath the photo and enhances badge cutouts after mounting.
+
+```tsx
+import { Avatar } from "@reuse-sh/avatars/react";
+
+export function Person() {
+  return <Avatar name="Alex Morgan" src="/images/alex.jpg" badge={{ type: "dot", label: "Available" }} />;
+}
+```
+
+#### Integration
+
+The badge label joins the accessible name. The image has empty alt because the avatar already names the person. Initials remain if the photo fails; without JavaScript the markup still shows the person and status. The React wrapper owns cleanup.
+
+### HTML + JavaScript
+
+#### Usage
+
+Render a name, optional photo and meaningful badge label. The component keeps initials underneath the photo and enhances badge cutouts after mounting.
+
+```html
+<span id="person" class="re-avatar" data-re-avatar role="img" aria-label="Alex Morgan, Available">
+  <span class="re-avatar-face" data-re-avatar-face aria-hidden="true">AM<img class="re-avatar-image" src="/images/alex.jpg" alt="" /></span>
+  <span class="re-avatar-badge" data-re-avatar-badge="dot" aria-hidden="true"></span>
+</span>
+```
+
+#### Styles
+
+Import the package stylesheet once. Keep application layout styles scoped to this integration.
+
+```css
+@import "@reuse-sh/avatars/styles.css";
+```
+
+#### Initialize
+
+Run this after the markup exists. Keep the returned controller for the lifetime of this content.
+
+```javascript
+import { enhanceAvatar } from "@reuse-sh/avatars";
+
+const avatar = enhanceAvatar(document.querySelector("#person"));
+```
+
+#### Integration
+
+The badge label joins the accessible name. The image has empty alt because the avatar already names the person. Initials remain if the photo fails; without JavaScript the markup still shows the person and status.
+
+#### Cleanup
+
+Run this when the view is removed, before mounting another controller on the same element.
+
+```javascript
+avatar.destroy();
+```
 
 <!-- examples:end -->
 

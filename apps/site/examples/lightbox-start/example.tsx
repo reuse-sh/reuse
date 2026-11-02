@@ -1,7 +1,7 @@
 "use client";
 import { createLightbox, type LightboxItem } from "@reuse-sh/lightbox";
 import { type ReactNode, useEffect, useRef } from "react";
-import "@reuse-sh/lightbox/styles.css";
+import { cn } from "@/lib/utils";
 import "./mechanics.css";
 
 const photos = [
@@ -109,7 +109,7 @@ function PhotoButton({
   return (
     <a
       href={photo.src}
-      className={className ? `re-photo ${className}` : "re-photo"}
+      className={cn("re-photo", className)}
       data-photo={photo.id}
       aria-label={`Open ${photo.caption}`}
       hidden={hidden}
@@ -194,16 +194,12 @@ function PhotoLightbox({
 export function Example() {
   return (
     <div className="re-example w-full min-w-0">
-      <PhotoLightbox className="re-gal [display:grid] [grid-template-columns:2fr_1fr_1fr] [grid-template-rows:172px_172px] [gap:6px]">
+      <PhotoLightbox className="re-gal grid gap-1.5">
         {[lake, mountains, coast, forest, night].map((photo, index) => (
           <PhotoButton
             key={photo.id}
             photo={photo}
-            className={
-              index === 0
-                ? "re-gal-main row-span-2 max-[600px]:row-auto max-[600px]:col-span-2"
-                : undefined
-            }
+            className={index === 0 ? "re-gal-main row-span-2" : undefined}
           />
         ))}
       </PhotoLightbox>

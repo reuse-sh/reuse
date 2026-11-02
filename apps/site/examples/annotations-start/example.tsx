@@ -1,9 +1,7 @@
 "use client";
+import "./mechanics.css";
 import type { Annotation } from "@reuse-sh/annotations";
 import { AnnotatedImage } from "@reuse-sh/annotations/react";
-import "@reuse-sh/annotations/styles.css";
-import "@reuse-sh/avatars/styles.css";
-import "./mechanics.css";
 
 const photos = [
   {
@@ -68,8 +66,9 @@ const initial: Annotation[] = [
 
 export function Example() {
   return (
-    <div className="re-example w-full min-w-0 [--re-annotation-color:#d95746] [--re-annotation-radius:12px] text-[13px]">
+    <div className="re-example w-full min-w-0 text-label">
       <AnnotatedImage
+        className="re-annot"
         src={photos[0].src}
         alt={`${photos[0].alt}, with three annotations`}
         width={1600}

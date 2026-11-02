@@ -3,11 +3,17 @@ import {
   docPages,
   installCommand,
   type Library,
-  libraryPrompt,
   type Row,
 } from "@reuse-sh/catalog";
 import type { ReactNode } from "react";
-import { CopyControl, PromptButton } from "../copy-control";
+import { Card, CardContent } from "@/components/ui/card";
+import {
+  ContentFlow,
+  Heading,
+  InlineCode,
+  Text as Paragraph,
+} from "@/components/ui/typography";
+import { cn } from "@/lib/utils";
 import { Icon } from "../icons";
 import { CodeBlock } from "../shell/code-block";
 import { DocIcon, type DocIconName } from "./doc-icon";
@@ -15,60 +21,73 @@ import { DocLink } from "./doc-link";
 
 export function PageTitle({ title, lead }: { title: string; lead?: string }) {
   return (
-    <header className="d-head">
-      <h1 className="c-h1">{title}</h1>
-      {lead ? <p className="d-lead">{lead}</p> : null}
+    <header className="mb-10 space-y-2.5">
+      <Heading variant="page">{title}</Heading>
+      {lead ? (
+        <Paragraph variant="lead" className="max-w-prose">
+          {lead}
+        </Paragraph>
+      ) : null}
     </header>
   );
 }
-
 export function Pager({ library, path }: { library: Library; path: string }) {
   const pages = docPages(library);
   const index = pages.findIndex((page) => page.path === path);
-  const prev = pages[index - 1];
+  const previous = pages[index - 1];
   const next = pages[index + 1];
   return (
-    <nav className="d-pager" aria-label="Previous and next page">
-      {prev ? (
-        <DocLink className="d-pager-prev" href={docHref(library, prev.path)}>
-          <small>
-            <Icon name="left" size={13} className="d-pager-icon" />
+    <nav
+      aria-label="Previous and next page"
+      className="mt-20 grid grid-cols-2 overflow-hidden rounded-panel bg-card shadow-raised"
+    >
+      {previous ? (
+        <DocLink
+          href={docHref(library, previous.path)}
+          className="group flex min-w-0 flex-col gap-1 p-4 transition-colors hover:bg-accent"
+        >
+          <span className="flex items-center gap-1 text-caption text-subtle-foreground">
+            <Icon
+              name="left"
+              className="size-3.5 transition-transform group-hover:-translate-x-0.5"
+            />
             Previous
-          </small>
-          <span className="d-pager-title">{prev.title}</span>
+          </span>
+          <span className="text-ui font-medium text-foreground">
+            {previous.title}
+          </span>
         </DocLink>
       ) : null}
       {next ? (
-        <DocLink className="d-pager-next" href={docHref(library, next.path)}>
-          <small>
+        <DocLink
+          href={docHref(library, next.path)}
+          className={cn(
+            "group flex min-w-0 flex-col items-end gap-1 p-4 text-right transition-colors hover:bg-accent",
+            previous ? "border-l border-border" : "col-span-2",
+          )}
+        >
+          <span className="flex items-center gap-1 text-caption text-subtle-foreground">
             Next
-            <Icon name="right" size={13} className="d-pager-icon" />
-          </small>
-          <span className="d-pager-title">{next.title}</span>
+            <Icon
+              name="right"
+              className="size-3.5 transition-transform group-hover:translate-x-0.5"
+            />
+          </span>
+          <span className="text-ui font-medium text-foreground">
+            {next.title}
+          </span>
         </DocLink>
       ) : null}
     </nav>
   );
 }
-
-export function OverviewActions({ library }: { library: Library }) {
+export function Keys({ children }: { children: ReactNode }) {
   return (
-    <div className="d-actions">
-      <PromptButton prompt={libraryPrompt(library)} />
-      <DocLink
-        className="c-btn-quiet"
-        href={docHref(library, "getting-started")}
-      >
-        Get started
-      </DocLink>
-    </div>
+    <Paragraph variant="label" className="text-subtle-foreground">
+      {children}
+    </Paragraph>
   );
 }
-
-export function Keys({ children }: { children: ReactNode }) {
-  return <p className="d-keys">{children}</p>;
-}
-
 export function Principles({
   rows,
   icons,
@@ -77,24 +96,29 @@ export function Principles({
   icons: readonly DocIconName[];
 }) {
   return (
-    <>
-      <h2 className="c-h3 d-principles">Principles</h2>
+    <section className="space-y-6">
+      <Heading>Principles</Heading>
       <ul
-        className={`c-feats ${rows.length === 4 ? "d-feats-4" : "c-feats-3"}`}
+        className={cn(
+          "grid gap-6 sm:grid-cols-2",
+          rows.length === 4 ? "lg:grid-cols-2" : "lg:grid-cols-3",
+        )}
       >
         {rows.map(([name, text], index) => (
-          <li key={name}>
-            <DocIcon name={icons[index] ?? "code"} />
-            <p>
-              <b>{name}.</b> {text}
-            </p>
+          <li key={name} className="min-w-0 space-y-4">
+            <DocIcon
+              name={icons[index] ?? "code"}
+              className="text-foreground"
+            />
+            <Paragraph variant="ui" className="text-muted-foreground">
+              <strong className="text-foreground">{name}.</strong> {text}
+            </Paragraph>
           </li>
         ))}
       </ul>
-    </>
+    </section>
   );
 }
-
 export function Section({
   title,
   children,
@@ -103,28 +127,42 @@ export function Section({
   children: ReactNode;
 }) {
   return (
-    <>
-      <h2 className="c-h3">{title}</h2>
-      {children}
-    </>
+    <section className="space-y-4">
+      <Heading>{title}</Heading>
+      <ContentFlow>{children}</ContentFlow>
+    </section>
   );
 }
-
 export function Text({ children }: { children: ReactNode }) {
-  return <p className="c-text">{children}</p>;
+  return <Paragraph className="max-w-prose">{children}</Paragraph>;
 }
-
 export function C({ children }: { children: ReactNode }) {
-  return <code className="d-inline">{children}</code>;
+  return <InlineCode>{children}</InlineCode>;
 }
-
 export function Install({ library }: { library: Library }) {
-  return <CodeBlock tabs={{ code: installCommand(library), lang: "bash" }} />;
-}
-
-export function CodePair({ js, react }: { js: string; react: string }) {
   return (
     <CodeBlock
+      tabs={{ code: installCommand(library), lang: "bash" }}
+      caption="Install"
+      snippetId="install"
+    />
+  );
+}
+export function CodePair({
+  js,
+  react,
+  snippetId,
+  codeRole,
+}: {
+  js: string;
+  react: string;
+  snippetId?: string;
+  codeRole?: string;
+}) {
+  return (
+    <CodeBlock
+      snippetId={snippetId}
+      codeRole={codeRole}
       tabs={[
         { label: "JavaScript", code: js, lang: "ts" },
         { label: "React", code: react, lang: "tsx" },
@@ -132,77 +170,49 @@ export function CodePair({ js, react }: { js: string; react: string }) {
     />
   );
 }
-
-/** Code in one language with no tabs, such as the HTML of a CSS-only example. */
-export function SingleCode({
-  code,
-  lang,
-}: {
-  code: string;
-  lang: "css" | "html";
-}) {
-  return <CodeBlock tabs={{ code, lang }} />;
-}
-
-/** The card a live example sits in, apart from the page text. */
 export function Stage({
   children,
-  className = "",
+  className,
 }: {
   children: ReactNode;
   className?: string;
 }) {
   return (
-    <div className="c-card d-stage-card">
-      <div className={`c-card-in d-stage ${className}`}>{children}</div>
-    </div>
+    <Card>
+      <CardContent
+        padding="roomy"
+        data-slot="example-stage"
+        className={cn(
+          "grid grid-cols-1 min-h-demo content-center gap-6",
+          className,
+        )}
+      >
+        {children}
+      </CardContent>
+    </Card>
   );
 }
-
-export function ExampleCode({ js, react }: { js: string; react: string }) {
-  return (
-    <section className="d-ex-code" aria-label="Code">
-      <CodePair js={js} react={react} />
-    </section>
-  );
-}
-
 export function ApiTable({ rows }: { rows: readonly Row[] }) {
   return (
-    <div className="d-api">
-      <table>
+    <div className="overflow-x-auto rounded-panel bg-card p-4 shadow-raised">
+      <table className="w-full text-left text-ui">
         <thead>
-          <tr>
-            <th scope="col">Name</th>
-            <th scope="col">Description</th>
+          <tr className="border-b border-border text-subtle-foreground">
+            <th className="p-3 font-medium">Name</th>
+            <th className="p-3 font-medium">Description</th>
           </tr>
         </thead>
         <tbody>
           {rows.map(([name, text]) => (
-            <tr key={name}>
-              <th scope="row">
+            <tr key={name} className="border-b border-border last:border-0">
+              <th className="p-3 align-top font-mono text-caption font-normal text-foreground">
                 <code>{name}</code>
               </th>
-              <td>{text}</td>
+              <td className="p-3 text-muted-foreground">{text}</td>
             </tr>
           ))}
         </tbody>
       </table>
     </div>
-  );
-}
-
-/** A compact card at the end of a page with the prompt that builds it. */
-export function AgentPrompt({ prompt }: { prompt: string }) {
-  return (
-    <section className="c-card d-agent" aria-label="Prompt for your agent">
-      <div className="c-card-in">
-        <div className="d-agent-bar">
-          <p>Hand this page to your coding agent.</p>
-          <CopyControl value={prompt} label="Copy" text />
-        </div>
-        <pre className="d-prompt">{prompt}</pre>
-      </div>
-    </section>
   );
 }

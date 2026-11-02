@@ -2,8 +2,6 @@ export type Framework = "react" | "html";
 
 export type DocSearch = {
   framework?: string | string[];
-  view?: string | string[];
-  file?: string | string[];
 };
 
 export function frameworkFrom(value: unknown): Framework {

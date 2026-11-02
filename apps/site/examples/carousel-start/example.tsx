@@ -1,10 +1,8 @@
 "use client";
 import { useCarousel } from "@reuse-sh/carousel/react";
-import "@reuse-sh/carousel/styles.css";
 import "./controls.css";
 import { useLightbox } from "@reuse-sh/lightbox/react";
 import type { CSSProperties } from "react";
-import "@reuse-sh/lightbox/styles.css";
 
 const photos = [
   {
@@ -64,17 +62,17 @@ export function Example() {
       <div>
         <section
           ref={ref}
-          className="re-carousel [--re-carousel-gap:12px] [--re-carousel-slide-width:min(288px,72vw)] pr-4 [scroll-padding-inline:0]"
+          className="re-carousel gap-3 pr-4 scroll-p-0"
           aria-label="Photos"
         >
           {photos.map((photo, index) => (
             <figure
               key={photo.id}
-              className="re-carousel__slide m-0 min-w-0"
+              className="re-carousel__slide m-0 min-w-0 basis-carousel-card"
               data-carousel-slide
             >
               <a
-                className="re-c-photo aspect-[4/5]"
+                className="re-c-photo aspect-portrait"
                 href={photo.src}
                 onClick={(event) => {
                   if (
@@ -108,15 +106,15 @@ export function Example() {
                   draggable={false}
                 />
               </a>
-              <figcaption className="mt-[10px] text-sm leading-5">
+              <figcaption className="mt-2.5 text-sm leading-5">
                 {photo.caption}
               </figcaption>
             </figure>
           ))}
         </section>
-        <div className="mt-4 flex items-center gap-[14px] text-[color:var(--ink,#111)]">
+        <div className="mt-4 flex items-center gap-3.5 text-foreground">
           <div
-            className="re-c-dots -ml-[3px]"
+            className="re-c-dots -ml-1"
             data-dots
             style={{ "--re-c-dot": state.index } as CSSProperties}
           >

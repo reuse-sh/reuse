@@ -1,276 +1,164 @@
-import { readdir, readFile } from "node:fs/promises";
-import { resolve } from "node:path";
 import { expect, test } from "@playwright/test";
-import { JSDOM } from "jsdom";
-import { mount } from "../browser/harness";
 import originalGeometry from "./fixtures/demo-geometry.json" with {
   type: "json",
 };
 
 test.use({ viewport: { width: 1280, height: 800 } });
+const preview = '[data-slot="example-preview"]';
+const chooser = '[data-slot="docs-sidebar"] .re-framework';
 
-const root = resolve("apps/site/examples");
-const recipes = (await readdir(root, { withFileTypes: true }))
-  .filter((entry) => entry.isDirectory())
-  .map((entry) => entry.name);
-
-for (const width of [216, 1280]) {
-  test.describe(`${width}px recipe container`, () => {
-    test.use({ viewport: { width, height: 800 } });
-    for (const id of recipes) {
-      test(`${id} runs without the site shell`, async ({ page }) => {
-        const errors: string[] = [];
-        page.on("pageerror", (error) => errors.push(error.message));
-        await page.goto(`/examples/${id}/index.html`);
-        if (id === "loaders-start" || id === "loaders-figures") {
-          const canvas = page.locator("canvas").first();
-          await expect(canvas).toBeVisible();
-          const painted = await canvas.evaluate((element) => {
-            const context = element.getContext("2d");
-            return (
-              context &&
-              Array.from(
-                context.getImageData(0, 0, element.width, element.height).data,
-              ).some((value, index) => index % 4 === 3 && value > 0)
-            );
-          });
-          expect(painted).toBe(true);
-        } else {
-          const content = page.locator(".re-example, .re-cc").first();
-          await expect(content).toBeVisible();
-          expect((await content.boundingBox())?.height).toBeGreaterThan(0);
-        }
-        expect(
-          await page.evaluate(
-            () =>
-              document.documentElement.scrollWidth <=
-              document.documentElement.clientWidth,
-          ),
-        ).toBe(true);
-        expect(errors).toEqual([]);
-      });
-    }
-  });
-}
-
-test("framework navigation and source files follow the selected platform", async ({
+test("framework links change inline usage and keep the running showcase", async ({
   page,
 }) => {
-  await page.goto(
-    "/carousel/getting-started?framework=html&view=code&file=main.js",
-  );
-  await expect(page.locator(".re-example-source code")).toHaveText(
-    await readFile(resolve(root, "carousel-start/main.js"), "utf8"),
-  );
-  await page.getByRole("link", { name: "Product strip", exact: true }).click();
+  await page.goto("/carousel/examples/product-strip");
+  const next = page.getByRole("button", { name: "Next prints", exact: true });
+  await next.click();
+  const previous = page.getByRole("button", {
+    name: "Previous prints",
+    exact: true,
+  });
+  await expect(previous).toBeEnabled();
+  await page.locator(`${chooser} summary`).click();
+  await page
+    .locator(chooser)
+    .getByRole("link", { name: "HTML + JavaScript", exact: true })
+    .click();
   await expect(page).toHaveURL(/framework=html/);
-  await expect(page.getByTitle("HTML and JavaScript example")).toBeVisible();
-  await page.getByRole("link", { name: "Code", exact: true }).click();
-  await page.getByRole("link", { name: "styles.css", exact: true }).click();
-  await expect(page.locator(".re-example-source code")).toHaveText(
-    await readFile(resolve(root, "carousel-product-strip/styles.css"), "utf8"),
+  await expect(previous).toBeEnabled();
+  await expect(page.locator('[data-code-role="setup"]')).toContainText(
+    "createCarousel",
   );
-  await page.reload();
-  await expect(page.locator(".re-source-files a[aria-current]")).toHaveText(
-    "styles.css",
-  );
-  await page.goBack();
-  await expect(page.locator(".re-source-files a[aria-current]")).toHaveText(
-    "index.html",
-  );
+  await expect(
+    page.locator("a", { hasText: /^Preview$|^Code$|^Open example$/ }),
+  ).toHaveCount(0);
+  await page
+    .getByRole("link", { name: "Getting started", exact: true })
+    .click();
+  await expect(page).toHaveURL(/framework=html/);
+  await expect(
+    page.locator('[data-snippet-id="carousel-getting-started-markup"]'),
+  ).toContainText("<div");
   await page.getByRole("link", { name: "Reuse", exact: true }).click();
   await expect(page).toHaveURL(/framework=html/);
   await page
     .getByRole("link", { name: "Start with Lightbox", exact: true })
     .click();
   await expect(page).toHaveURL(/framework=html/);
-  await expect(page.getByTitle("HTML and JavaScript example")).toBeVisible();
+  await expect(page.locator(preview)).toBeVisible();
 });
 
-test("framework menu uses one moving background and only the active view is underlined", async ({
+test("framework menu has one moving background after repeated selection and closes with Escape", async ({
   page,
 }) => {
   await page.goto("/carousel");
-  await page.locator(".d-side .re-framework summary").click();
-  const options = page.locator(".d-side .re-framework-options");
-  await expect(options.locator(".re-moving-highlight")).toHaveCount(1);
-  await options
-    .getByRole("link", { name: "HTML + JavaScript", exact: true })
-    .focus();
-  await expect(options.locator(".re-moving-highlight")).toHaveAttribute(
-    "data-visible",
-    "true",
-  );
-  await page.keyboard.press("Escape");
-  await expect(page.locator(".d-side .re-framework summary")).toBeFocused();
-  await page.locator(".d-side .re-framework summary").click();
-  await options
-    .getByRole("link", { name: "HTML + JavaScript", exact: true })
-    .click();
-  await page.locator(".d-side .re-framework summary").click();
-  await expect(options.locator(".re-moving-highlight")).toHaveCount(1);
-  const borders = await page
-    .locator(".re-example-tabs")
-    .evaluate((element) => ({
-      root: getComputedStyle(element).borderBottomWidth,
-      selected: getComputedStyle(
-        element.querySelector('[aria-current="page"]') as Element,
-      ).borderBottomColor,
-      selectedWidth: getComputedStyle(
-        element.querySelector('[aria-current="page"]') as Element,
-      ).borderBottomWidth,
-    }));
-  expect(borders.root).toBe("0px");
-  expect(borders.selectedWidth).toBe("1px");
-  expect(borders.selected).not.toBe("rgba(0, 0, 0, 0)");
+  for (const name of ["HTML + JavaScript", "React"]) {
+    await page.locator(`${chooser} summary`).click();
+    const options = page.locator(chooser);
+    await expect(options.locator(".re-moving-highlight")).toHaveCount(1);
+    await options.getByRole("link", { name, exact: true }).focus();
+    await expect(options.locator(".re-moving-highlight")).toHaveAttribute(
+      "data-visible",
+      "true",
+    );
+    await page.keyboard.press("Escape");
+    await expect(page.locator(`${chooser} summary`)).toBeFocused();
+    await page.locator(`${chooser} summary`).click();
+    await options.getByRole("link", { name, exact: true }).click();
+  }
 });
 
-test.describe("server HTML without JavaScript", () => {
+test("overview has only the showcase and principles while usage is ordered below example demos", async ({
+  page,
+}) => {
+  await page.goto("/shadows");
+  await expect(page.locator(preview)).toBeVisible();
+  await expect(page.locator('[data-slot="code-block"]')).toHaveCount(0);
+  await page.goto("/shadows/getting-started");
+  await expect(page.locator(preview)).toHaveCount(0);
+  const code = page.locator('[data-slot="code-block"]');
+  await expect(code.first()).toContainText("install @reuse-sh/shadows");
+  await expect(code.nth(1)).toContainText("@reuse-sh/shadows/styles.css");
+  await expect(code.nth(1)).toContainText('className="re-shadow-ring-md"');
+  await page.goto("/carousel/examples/editorial");
+  const position = await page.evaluate(() => {
+    const demo = document.querySelector('[data-slot="example-preview"]');
+    const code = document.querySelector('[data-slot="code-block"]');
+    return Boolean(
+      demo &&
+        code &&
+        demo.compareDocumentPosition(code) & Node.DOCUMENT_POSITION_FOLLOWING,
+    );
+  });
+  expect(position).toBe(true);
+});
+
+test("code blocks leave the standard content gap before a following paragraph", async ({
+  page,
+}) => {
+  await page.goto("/shadows/getting-started");
+  const gap = await page.evaluate(() => {
+    const code = document.querySelector('[data-slot="code-block"]');
+    const paragraph = code?.nextElementSibling;
+    if (paragraph?.tagName !== "P")
+      throw new Error("Missing adjacent installation guidance");
+    return (
+      paragraph.getBoundingClientRect().top -
+      code.getBoundingClientRect().bottom
+    );
+  });
+  expect(gap).toBe(16);
+});
+
+test.describe("server content without JavaScript", () => {
   test.use({ javaScriptEnabled: false });
-  test("carousel content and platform links survive without hydration", async ({
+  test("carousel images and platform navigation survive without hydration", async ({
     page,
   }) => {
-    await page.goto("/carousel/getting-started");
-    await expect(page.locator(".re-example-panel img")).toHaveCount(6);
-    await expect(page.locator(".re-example-panel img").first()).toBeVisible();
+    await page.goto("/carousel");
+    await expect(page.locator(`${preview} img`)).toHaveCount(6);
+    await expect(page.locator(`${preview} img`).first()).toBeVisible();
     await expect(
       page.getByRole("button", { name: "Next slide", exact: true }),
     ).toBeDisabled();
-    await page.locator(".d-side .re-framework summary").click();
+    await page.locator(`${chooser} summary`).click();
     await page
-      .locator(".d-side .re-framework-options")
+      .locator(chooser)
       .getByRole("link", { name: "HTML + JavaScript", exact: true })
       .click();
     await expect(page).toHaveURL(/framework=html/);
-    await page.getByRole("link", { name: "Code", exact: true }).click();
-    await expect(page.locator(".re-example-source code")).toContainText(
+    await page
+      .getByRole("link", { name: "Getting started", exact: true })
+      .click();
+    await expect(page.locator('[data-code-role="setup"]')).toContainText(
+      "createCarousel",
+    );
+    await expect(page.locator('[data-slot="doc-content"]')).not.toContainText(
       "<!doctype html>",
     );
   });
-  test("avatar photos and static loader figures survive without hydration", async ({
+  test("avatar photos and static loader figures remain visible", async ({
     page,
   }) => {
-    await page.goto("/avatars/getting-started");
+    await page.goto("/avatars");
+    await expect(page.locator(`${preview} .re-avatar-image`)).toHaveCount(7);
     await expect(
-      page.locator(".re-example-panel .re-avatar-image"),
-    ).toHaveCount(7);
-    await expect(
-      page.locator(".re-example-panel .re-avatar-image").first(),
+      page.locator(`${preview} .re-avatar-image`).first(),
     ).toBeVisible();
-    await page.goto("/loaders/getting-started");
+    await page.goto("/loaders");
     await expect(
       page.locator(".re-thinking-dots__fallback").first(),
     ).toBeVisible();
     await expect(page.locator(".re-thinking-dots canvas").first()).toBeHidden();
   });
-});
-
-test("a persisted pagehide keeps the native copy controller alive", async ({
-  page,
-  context,
-}) => {
-  await context.grantPermissions(["clipboard-read", "clipboard-write"]);
-  await page.goto("/examples/copy-start/index.html");
-  await page.evaluate(() =>
-    window.dispatchEvent(
-      new PageTransitionEvent("pagehide", { persisted: true }),
-    ),
-  );
-  await page
-    .getByRole("button", { name: "Copy install command", exact: true })
-    .click();
-  expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(
-    "npm install @reuse-sh/interactions",
-  );
-});
-
-test.describe("review regressions without scripts", () => {
-  test.use({ javaScriptEnabled: false });
-  test("HTML framework survives the global shell and home page", async ({
-    page,
-  }) => {
-    await page.goto("/carousel/getting-started?framework=html");
-    await expect(
-      page.getByRole("link", { name: "Reuse", exact: true }),
-    ).toHaveAttribute("href", "/?framework=html");
-    await page.getByRole("link", { name: "Reuse", exact: true }).click();
-    await expect(
-      page.getByRole("link", { name: "Start with Lightbox", exact: true }),
-    ).toHaveAttribute("href", "/lightbox?framework=html");
-    await page
-      .getByRole("link", { name: "Start with Lightbox", exact: true })
-      .click();
-    await expect(page).toHaveURL(/framework=html/);
-    await expect(page.getByTitle("HTML and JavaScript example")).toBeVisible();
-  });
-  test("React copy actions start disabled before enhancement", async ({
-    page,
-  }) => {
-    await page.goto("/copy-button/getting-started");
+  test("copy actions stay disabled until enhancement", async ({ page }) => {
+    await page.goto("/copy-button");
     await expect(
       page.getByRole("button", { name: "Copy install command", exact: true }),
     ).toBeDisabled();
     await expect(
       page.getByRole("button", { name: "Copy link", exact: true }),
     ).toBeDisabled();
-    await page.goto("/copy-button/examples/code-block");
-    await expect(
-      page.getByRole("button", { name: "Copy command", exact: true }),
-    ).toBeDisabled();
-    await expect(page.locator(".re-example-panel code")).toHaveText(
-      "$ npm install @reuse-sh/interactions",
-    );
-    await page.goto("/copy-button/examples/share-link");
-    await expect(
-      page.getByRole("button", { name: "Copy link", exact: true }),
-    ).toBeDisabled();
-    await expect(
-      page.getByRole("textbox", { name: "Link to the print" }),
-    ).toHaveValue("https://prints.example/coral-sky");
   });
-});
-
-test("review regression: exported lightbox HTML opens the viewer after closing it", async ({
-  page,
-  request,
-}) => {
-  const response = await request.get(
-    "/lightbox/controls/classic?framework=html",
-  );
-  const document = new JSDOM(await response.text()).window.document;
-  const code = [...document.querySelectorAll(".d-ex-code .c-code pre")].map(
-    (element) => element.textContent ?? "",
-  );
-  expect(code).toHaveLength(3);
-  const gallery = new JSDOM(code[0]).window.document;
-  gallery.querySelectorAll("script").forEach((script) => {
-    script.remove();
-  });
-  await page.route("https://reuse.sh/images/**", async (route) => {
-    const name =
-      new URL(route.request().url()).pathname.split("/").at(-1) ?? "";
-    await route.fulfill({
-      contentType: "image/svg+xml",
-      body: await readFile(resolve("apps/site/public/images", name)),
-    });
-  });
-  await mount(page, gallery.body.innerHTML, ["lightbox/styles.css"]);
-  await page.addStyleTag({ content: code[2] });
-  await page.addScriptTag({
-    type: "module",
-    content: code[1].replace(/^import ["'][^"']+\.css["'];\n?/gm, ""),
-  });
-  const viewer = page.locator("dialog[open]");
-  if (await viewer.count()) {
-    await page.keyboard.press("Escape");
-    await expect(viewer).toHaveCount(0);
-  }
-  await page.getByRole("link").first().click();
-  await expect(viewer).toHaveCount(1);
-  await page.keyboard.press("Escape");
-  await expect(viewer).toHaveCount(0);
-  await page.getByRole("link").nth(1).click();
-  await expect(viewer).toHaveCount(1);
 });
 
 for (const framework of ["react", "html"]) {
@@ -278,10 +166,7 @@ for (const framework of ["react", "html"]) {
     page,
   }) => {
     await page.goto(`/carousel?framework=${framework}`);
-    const demo =
-      framework === "html"
-        ? page.frameLocator('iframe[title="HTML and JavaScript example"]')
-        : page.locator(".re-example-panel");
+    const demo = page.locator('[data-slot="example-preview"]');
     const dots = demo.locator(".re-c-dots");
     await expect(dots.locator("button")).toHaveCount(6);
     const geometry = await dots.evaluate((element) => {
@@ -345,13 +230,15 @@ test("React copy enables after enhancement and writes the original payload", asy
     .toBe("npm install @reuse-sh/interactions");
 });
 
-test("existing demos keep their measured composition after the styling migration", async ({
+test("showcases keep their measured token-based composition", async ({
   page,
 }) => {
   for (const original of originalGeometry) {
     await page.goto(original.path);
     await page.evaluate(() => document.fonts.ready);
-    const stage = page.locator(".re-example-panel .d-stage-card");
+    const stage = page.locator(
+      '[data-slot="example-preview"] > [data-slot="card"]',
+    );
     const actual = await stage.evaluate((element) => ({
       height: element.getBoundingClientRect().height,
       images: [...element.querySelectorAll("img")].map((image) => [
@@ -378,46 +265,13 @@ test("chat colors and file-menu shortcuts preserve the original hierarchy", asyn
   expect(keyBounds?.x).toBeGreaterThan((rowBounds?.x ?? 0) + 200);
 });
 
-for (const width of [320, 768, 1280]) {
-  test(`HTML preview keeps the page breakpoints at ${width}px`, async ({
-    page,
-  }) => {
-    await page.setViewportSize({ width, height: 800 });
-    await page.goto("/carousel/examples/product-strip");
-    const sizes = await page
-      .locator(".re-example-panel img")
-      .evaluateAll((images) =>
-        images.map((image) => ({
-          width: image.getBoundingClientRect().width,
-          height: image.getBoundingClientRect().height,
-        })),
-      );
-    await page.goto("/carousel/examples/product-strip?framework=html");
-    const images = page
-      .frameLocator('iframe[title="HTML and JavaScript example"]')
-      .locator("img");
-    await expect(images).toHaveCount(6);
-    await expect
-      .poll(() =>
-        images.evaluateAll((images) =>
-          images.map((image) => ({
-            width: image.getBoundingClientRect().width,
-            height: image.getBoundingClientRect().height,
-          })),
-        ),
-      )
-      .toEqual(sizes);
-  });
-}
-
 test("image captions keep their title white over the scrim", async ({
   page,
 }) => {
   await page.goto("/easing-gradients/examples/image-caption");
-  await expect(page.locator(".re-example-panel figcaption b")).toHaveCSS(
-    "color",
-    "rgb(255, 255, 255)",
-  );
+  await expect(
+    page.locator('[data-slot="example-preview"] figcaption b'),
+  ).toHaveCSS("color", "rgb(255, 255, 255)");
 });
 test("chat composers fit inside narrow panels", async ({ page }) => {
   await page.setViewportSize({ width: 320, height: 900 });
@@ -427,11 +281,11 @@ test("chat composers fit inside narrow panels", async ({ page }) => {
   ]) {
     await page.goto(path);
     const form = page.locator(
-      ".re-example-panel .re-compose, .re-example-panel form",
+      '[data-slot="example-preview"] .re-compose, [data-slot="example-preview"] form',
     );
     const bounds = await form.boundingBox();
     const panel = await page
-      .locator(".re-example-panel .d-stage")
+      .locator('[data-slot="example-stage"]')
       .boundingBox();
     expect((bounds?.x ?? 0) + (bounds?.width ?? 0)).toBeLessThanOrEqual(
       (panel?.x ?? 0) + (panel?.width ?? 0) - 31,
@@ -440,43 +294,6 @@ test("chat composers fit inside narrow panels", async ({ page }) => {
       form.getByRole("button", { name: "Send", exact: true }),
     ).toBeVisible();
   }
-});
-
-test("changing the platform preserves Code view", async ({ page }) => {
-  await page.goto("/carousel?framework=html&view=code&file=main.js");
-  await page.locator(".d-side .re-framework summary").click();
-  await page
-    .locator(".d-side .re-framework-options")
-    .getByRole("link", { name: "React", exact: true })
-    .click();
-  await expect(page).toHaveURL(
-    (url) =>
-      url.searchParams.get("framework") === "react" &&
-      url.searchParams.get("view") === "code",
-  );
-  await expect(page.locator(".re-example-source")).toBeVisible();
-});
-
-test("HTML lightbox controls stay inside the visible preview", async ({
-  page,
-}) => {
-  await page.goto("/lightbox?framework=html");
-  const frame = page.frameLocator(
-    'iframe[title="HTML and JavaScript example"]',
-  );
-  await frame.locator("a[data-photo]").first().click();
-  const close = frame.getByRole("button", {
-    name: "Close gallery",
-    exact: true,
-  });
-  await expect(close).toBeVisible();
-  const button = await close.boundingBox();
-  const stage = await page.locator(".re-example-panel .d-stage").boundingBox();
-  expect((button?.x ?? 0) + (button?.width ?? 0)).toBeLessThanOrEqual(
-    (stage?.x ?? 0) + (stage?.width ?? 0) - 31,
-  );
-  await close.click();
-  await expect(frame.locator("dialog[open]")).toHaveCount(0);
 });
 
 test("404 navigation retains the framework after hydration", async ({
@@ -526,42 +343,66 @@ test("rich shortcut tooltips preserve their original dark pill", async ({
   await expect(tooltip).toHaveCount(0);
 });
 
-test("resizing an HTML preview updates its layout without resetting the carousel", async ({
+test("platform menu survives every short sequence of selection, closing and reopening", async ({
   page,
 }) => {
-  await page.goto("/carousel/examples/product-strip?framework=html");
-  const frame = page.frameLocator(
-    'iframe[title="HTML and JavaScript example"]',
-  );
-  const image = frame.locator("img").first();
-  const originalWidth = await image.evaluate(
-    (element) => element.getBoundingClientRect().width,
-  );
-  await frame.getByRole("button", { name: "Next prints", exact: true }).click();
-  const previous = frame.getByRole("button", {
-    name: "Previous prints",
-    exact: true,
-  });
-  await expect(previous).toBeEnabled();
-  await page.setViewportSize({ width: 320, height: 800 });
-  await expect(image).toHaveCSS("width", "101px");
-  await expect(previous).toBeEnabled();
-  await page.setViewportSize({ width: 1280, height: 800 });
-  await expect
-    .poll(() =>
-      image.evaluate((element) => element.getBoundingClientRect().width),
-    )
-    .toBe(originalWidth);
-  await expect(previous).toBeEnabled();
-});
-
-test("HTML shadow cards use the page's layout breakpoint", async ({ page }) => {
-  await page.setViewportSize({ width: 540, height: 900 });
-  await page.goto("/shadows/examples/cards?framework=html");
-  const card = page
-    .frameLocator('iframe[title="HTML and JavaScript example"]')
-    .locator(".re-card-action");
-  await expect(card).toHaveCSS("flex-direction", "row");
-  await page.setViewportSize({ width: 320, height: 900 });
-  await expect(card).toHaveCSS("flex-direction", "column");
+  const { explore } = await import("../model/explore");
+  const result = await explore(async () => {
+    await page.goto("/shadows/getting-started");
+    const menu = page.locator(chooser);
+    let state = {
+      open: false,
+      selected: "React",
+      current: 0,
+      highlights: 0,
+      agrees: false,
+    };
+    const read = async () => {
+      await expect(menu.locator(".re-moving-highlight")).toHaveCount(1);
+      state = await menu.evaluate((element) => ({
+        open: (element as HTMLDetailsElement).open,
+        selected:
+          element.querySelector('a[aria-current="true"] span')?.textContent ??
+          "",
+        current: element.querySelectorAll('a[aria-current="true"]').length,
+        highlights: element.querySelectorAll(".re-moving-highlight").length,
+        agrees:
+          (new URL(location.href).searchParams.get("framework") === "html") ===
+          element
+            .querySelector('a[aria-current="true"]')
+            ?.textContent?.includes("HTML"),
+      }));
+    };
+    await read();
+    const select = async (name: string) => {
+      if (!state.open) await menu.locator("summary").click();
+      await menu.getByRole("link", { name, exact: true }).click();
+      await expect(menu.locator('a[aria-current="true"]')).toContainText(name);
+      await read();
+    };
+    return {
+      steps: {
+        toggle: async () => {
+          await menu.locator("summary").click();
+          await read();
+        },
+        escape: async () => {
+          await page.keyboard.press("Escape");
+          await read();
+        },
+        react: () => select("React"),
+        html: () => select("HTML + JavaScript"),
+      },
+      checks: {
+        "one background remains after repeated selection": () =>
+          state.highlights === 1,
+        "one selected platform agrees with the URL": () =>
+          state.current === 1 && state.agrees,
+      },
+      fingerprint: () => JSON.stringify(state),
+      home: () => !state.open && state.selected === "React",
+    };
+  }, 3);
+  expect(result).toMatchObject({ ok: true });
+  console.log("Platform menu model", result);
 });

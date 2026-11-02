@@ -1,19 +1,25 @@
 import type { Library } from "@reuse-sh/catalog";
 import type { ReactNode } from "react";
-import { AnnotationsDataFormat } from "./annotations-pages";
-import { CarouselOverview } from "./carousel-pages";
+import { Kbd } from "@/components/ui/typography";
 import type { DocIconName } from "./doc-icon";
-import { GradientsCurves } from "./gradients-pages";
-import { LightboxMedia, LightboxOverview } from "./lightbox-pages";
 import { LightboxStylePage } from "./lightbox-style-page";
-import { ApiTable, OverviewActions, Principles } from "./parts";
-import { TooltipOverview } from "./tooltip-pages";
+import { ApiTable, Keys, Principles } from "./parts";
 
 const icons: Record<string, DocIconName[]> = {
+  lightbox: ["touch", "resize", "layers", "zoom", "keyboard", "code"],
+  carousel: ["touch", "cursor", "chevrons", "timer", "keyboard", "code"],
   annotations: ["doc", "resize", "code", "layers", "share", "keyboard"],
   loaders: ["chevrons", "layers", "feather", "timer", "doc", "code"],
   shadows: ["layers", "feather", "resize", "code"],
   "easing-gradients": ["feather", "layers", "code", "chevrons", "minus", "doc"],
+  "floating-tooltip": [
+    "layers",
+    "cursor",
+    "keyboard",
+    "touch",
+    "doc",
+    "resize",
+  ],
   "copy-button": ["timer", "resize", "doc", "share", "keyboard", "layers"],
   "moving-highlight": [
     "resize",
@@ -26,7 +32,30 @@ const icons: Record<string, DocIconName[]> = {
   "hold-to-confirm": ["timer", "minus", "keyboard", "cursor", "code", "layers"],
   avatars: ["feather", "doc", "plus", "code", "resize", "layers"],
 };
-
+function Hint({ slug }: { slug: string }) {
+  if (slug === "carousel")
+    return (
+      <Keys>
+        Drag with a mouse, swipe, or focus the strip and use <Kbd>←</Kbd>{" "}
+        <Kbd>→</Kbd>. Images open in the lightbox.
+      </Keys>
+    );
+  if (slug === "lightbox")
+    return (
+      <Keys>
+        Click an image, then <Kbd>←</Kbd> <Kbd>→</Kbd> to page, <Kbd>+</Kbd>{" "}
+        <Kbd>−</Kbd> to zoom, <Kbd>Esc</Kbd> to close.
+      </Keys>
+    );
+  if (slug === "floating-tooltip")
+    return (
+      <Keys>
+        Move along the toolbar, or use <Kbd>Tab</Kbd> to reach it and{" "}
+        <Kbd>Esc</Kbd> to hide the hint.
+      </Keys>
+    );
+  return null;
+}
 export function docBody(
   library: Library,
   path: string,
@@ -35,29 +64,18 @@ export function docBody(
   if (path === "api") return <ApiTable rows={library.api} />;
   if (path.startsWith("controls/") && library.slug === "lightbox")
     return <LightboxStylePage style={path.slice(9)} />;
-  if (!path) {
-    if (library.slug === "lightbox")
-      return <LightboxOverview library={library} example={example} />;
-    if (library.slug === "carousel")
-      return <CarouselOverview library={library} example={example} />;
-    if (library.slug === "floating-tooltip")
-      return <TooltipOverview library={library} example={example} />;
+  if (!path)
     return (
       <>
-        <OverviewActions library={library} />
-        {example}
+        <div className="space-y-3">
+          {example}
+          <Hint slug={library.slug} />
+        </div>
         <Principles
           rows={library.principles}
           icons={icons[library.slug] ?? []}
         />
       </>
     );
-  }
-  if (library.slug === "lightbox" && path === "guides/media")
-    return <LightboxMedia />;
-  if (library.slug === "annotations" && path === "guides/data-format")
-    return <AnnotationsDataFormat />;
-  if (library.slug === "easing-gradients" && path === "guides/easing-curves")
-    return <GradientsCurves example={example} />;
   return null;
 }

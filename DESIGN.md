@@ -4,24 +4,17 @@
 
 Show reusable, tested web building blocks through real interactions, and give coding agents what they need to install them. The home page presents the parts at work. Each library has its own pages at /{library}. Agent guides live at /for-agents.
 
-## Tokens
+## Semantic design system
 
-Tokens are fixed on :root in apps/site/app/globals.css. There are no runtime settings or data attributes that switch them.
+The site uses Tailwind 4 with semantic @theme mappings in apps/site/app/globals.css and reusable React primitives in components/ui. The neutral palette, Geist/Fraunces typography and double-ring surfaces remain the brand. Small spacing/type adjustments use standard Tailwind scales.
 
-- Color: --bg #fcfcfc off-white page, --surface #fff, --ink #111, --ink-2 #2e2e2e for leads, --prose #5b5b5b for body copy, --mute #858585 for secondary text. The site has no accent color. Media and status colors belong only to their examples.
-- Hover: --hover is black at 3%. Every quiet hover and moving highlight uses it.
-- Shape: --r 1.35 multiplies base radii, so a 16px card corner becomes about 22px. Code blocks use 12px times --r.
-- Layout: --col 840px content column with a 16px gutter (80px from 1100px), --sec 120px between sections (88px at 760px and below).
-- Depth: shadow tokens built from the @reuse-sh/shadows levels with its 0.5px ring in --ring-color (black at 8%): --shadow-ring alone, --shadow-control (xs) for buttons, pills and keys, --shadow-raised (sm, --shadow-ring plus --shadow-raised-soft) for cards, code blocks and small floating surfaces, --shadow-panel (md) for example app windows, --shadow-pop (lg) for menus, popovers and dialogs. 
-- Motion: --ease cubic-bezier(0.23, 1, 0.32, 1).
+Colors use background/foreground, card, popover, primary, secondary, muted, accent, border, ring and destructive roles. Body prose uses muted-foreground; captions use subtle-foreground. Message and overlay roles belong to their actual demonstrations. Do not add raw palette or arbitrary color classes to site components.
 
-## Type
+Typography uses text-display, text-page-title, text-section, text-subsection, text-lead, text-body, text-ui, text-label, text-caption and text-code. Radii and shadows have control/panel/frame/code and control/raised/panel/pop roles. Layout uses content/docs containers and gutter/section tokens. Do not recreate c-* aliases or add a token for each old magic number.
 
-Geist Sans for interface and body text at 15px/24px, Geist Mono for code, and Fraunces (next/font/google, opsz axis) as the display face at weight 300 with -0.02em tracking. Page titles (c-h1, 34px) and the home display line (c-display, 50px) use Fraunces. Section titles (c-h2, 21px/600) and subsection titles (c-h3, 17px/600) stay in Geist. Body copy is --prose, never lighter.
+Button variants, Card/CardContent, Heading/Text, Kbd, Badge, Toolbar/MenuSurface and CodeSurface own repeated presentation. Callers compose them and use utility classes for layout. cn is compiled from the Tailwind theme so named font sizes, colors and radii merge correctly. Package CSS lives in the components layer on the site; Tailwind utilities can adapt presentation without !important.
 
-## Surfaces
-
-Cards are a double ring: a 4px outer frame of white at 55% with --shadow-ring, around a white inner card with --shadow-raised (c-card > c-card-in). Most features are an icon and text in open space (c-feats, three columns, two at 760px, one at 600px). Do not wrap every sentence in a card. The hold-to-confirm button has no shadow: a red tint (#c2362b at 8%, 12% on hover with a 150ms transition) under a red hold fill. Once confirmed it keeps the fill and ignores presses until it resets. Toolbars (c-toolbar) and menu cards (c-menu-card) are white surfaces with --shadow-raised and a moving highlight, shared by the home cards and the library pages. Every live example on a library page sits in the same double ring card with 32px padding, apart from the page text. Previous and next links are one joined card split by a 1px line.
+Raw geometry is allowed for actual SVG paths, annotation coordinates, canvas data, measured highlights, gestures and syntax-highlighter output. Those are content or runtime mechanics, not alternative design tokens. Compound effects may use scoped CSS with semantic theme values.
 
 ## Header and Libraries menu
 
@@ -31,13 +24,15 @@ The switcher opens a three-column menu grouped as Media, Interface, and Motion a
 
 The footer is the "Reuse" wordmark with its icon, then Agent guides, Tools and GitHub, at 14px like the header. GitHub links open in a new tab.
 
-## Tabs, code and highlight
+## Documentation and usage
 
-Documentation changes preserve the existing sidebar typography, spacing and nested page groups. The framework choice is an unboxed row with an icon, separated from the page links by spacing. Do not turn it into a raised button or add a separate navigation structure. Example controls stay quiet and omit a separate Open example action.
+Preserve the quiet existing sidebar and nested groups. Framework selection is an unboxed row with an icon and spacing; its options use Moving highlight. React is the default. The selected platform travels in URLs and changes instructions/code while the shared showcase keeps its state.
 
-Runnable examples preserve the existing demo composition, fixture data, SVG icons, controls, spacing and image crops. A platform or styling migration does not replace their design. Carousel overview dots remain a compact group with one moving active dot on the left and quiet SVG arrows on the right. Product-strip arrows stay beside its heading.
+Overview contains a description, live showcase, basic interaction hints and principles/features. It contains no install/code/prompt panel. Getting started starts with Install and proceeds through concise usage. Named examples show the result, installation and authored explanations/code in order. Preview/Code and source-file tabs are absent.
 
-Example views use plain Preview and Code links. Only the active item has a bottom line; there is no full-width divider, pill or raised surface. The sidebar chooses React or HTML + JavaScript for the whole documentation page. React is the default and examples use Tailwind. Framework options use the package Moving highlight for pointer and keyboard focus. The selected framework travels in documentation URLs. Code view shows the actual runnable files with filename links and the package copy control. CSS-only packages keep their stylesheet mechanics independent of the chosen framework.
+Published examples teach the library interface, not the showcase implementation. HTML is a fragment, not a whole page. Include only styling and lifecycle that the feature needs. Shadows starts with its stylesheet import and a literal re-shadow class. Do not publish fixture dumps, a private theme/reset, SVG icon inventories or an import Example/return Example tutorial. The catalog owns authored usage shared by website, README and agent guide.
+
+Code blocks and following paragraphs use shared content-flow spacing. Code remains readable/selectable without JS, copying is an enhancement. The actual showcase composition, photo crops, SVG icons, control order and motion stay intact. Carousel overview keeps compact moving dots on the left and quiet SVG arrows on the right; product arrows stay beside the heading.
 
 ## Motion
 

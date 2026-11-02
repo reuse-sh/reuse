@@ -1,5 +1,4 @@
 "use client";
-import "@reuse-sh/shadows/styles.css";
 import { type ShadowLevel, shadowLevels } from "@reuse-sh/shadows";
 import { useEffect, useState } from "react";
 
@@ -9,9 +8,9 @@ export function Example() {
   useEffect(() => setEnhanced(true), []);
   return (
     <div>
-      <div className="grid min-h-[240px] place-items-center pb-8">
+      <div className="grid min-h-60 place-items-center pb-8">
         <div
-          className={`re-shadow-ring-${level} flex w-[min(260px,100%)] flex-col items-center gap-3 rounded-[14px] bg-white px-5 py-8 transition-[box-shadow] duration-[220ms] ease-[ease] motion-reduce:transition-none`}
+          className={`re-shadow-ring-${level} flex w-64 max-w-full flex-col items-center gap-3 rounded-xl bg-card px-5 py-8 transition-shadow duration-200 ease-ui motion-reduce:transition-none`}
         >
           <svg
             width="28"
@@ -42,13 +41,15 @@ export function Example() {
               strokeLinejoin="round"
             />
           </svg>
-          <strong className="font-[560] text-[#111]">Order a test print</strong>
-          <span className="text-[13px] text-[#858585]">
+          <strong className="font-semibold text-foreground">
+            Order a test print
+          </strong>
+          <span className="text-label text-subtle-foreground">
             re-shadow-ring-{level}
           </span>
         </div>
       </div>
-      <fieldset className="mx-auto my-0 min-w-0 flex w-fit max-w-full gap-0.5 overflow-x-auto rounded-[10px] border-0 bg-black/5 p-[3px]">
+      <fieldset className="mx-auto my-0 min-w-0 flex w-fit max-w-full gap-0.5 overflow-x-auto rounded-control border-0 bg-accent p-1">
         <legend className="sr-only">Shadow size</legend>
         {shadowLevels.map((size) => (
           <button
@@ -57,7 +58,7 @@ export function Example() {
             aria-pressed={level === size}
             onClick={() => setLevel(size)}
             disabled={!enhanced}
-            className="cursor-pointer rounded-lg border-0 bg-transparent px-[11px] py-1.5 text-[13px] aria-pressed:bg-white aria-pressed:shadow-[0_0_0_0.5px_#00000014,0_1px_2px_#0000000d,0_2px_4px_#00000005]"
+            className="cursor-pointer rounded-lg border-0 bg-transparent px-3 py-1.5 text-label aria-pressed:bg-card aria-pressed:shadow-control"
           >
             {size}
           </button>

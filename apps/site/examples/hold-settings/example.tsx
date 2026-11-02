@@ -1,6 +1,8 @@
 "use client";
 import { HoldToConfirmButton } from "@reuse-sh/interactions/react";
 import { useEffect, useRef, useState } from "react";
+import { buttonVariants } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 
 function useKeepFocus<E extends HTMLElement>(swap: unknown) {
   const root = useRef<E>(null);
@@ -56,13 +58,13 @@ export function SettingsRow() {
   useEffect(() => setReady(true), []);
   return (
     <section
-      className="[max-width:600px]"
+      className="max-w-150"
       aria-labelledby="re-hold-settings-x-settings-h"
       ref={root}
     >
       <h2
         id="re-hold-settings-x-settings-h"
-        className="[padding-bottom:10px] [font-size:15px] font-semibold"
+        className="pb-2.5 text-body font-semibold"
       >
         Workspace
       </h2>
@@ -70,18 +72,18 @@ export function SettingsRow() {
         {rows.map(([name, value]) => (
           <div
             key={name}
-            className="flex items-center justify-between gap-4 [min-height:56px] [padding:12px_0] [box-shadow:inset_0_1px_rgb(0_0_0_/_7%)] [font-size:14px]"
+            className="flex items-center justify-between gap-4 min-h-14 py-3 border-t border-border text-ui"
           >
-            <dt className="[color:#5b5b5b]">{name}</dt>
-            <dd className="[color:#111] text-right">{value}</dd>
+            <dt className="text-muted-foreground">{name}</dt>
+            <dd className="text-foreground text-right">{value}</dd>
           </div>
         ))}
       </dl>
-      <div className="flex items-center justify-between gap-4 [min-height:56px] [font-size:14px] [margin-top:28px] [padding:16px] [border-radius:14px] [background:#fdf5f4] [box-shadow:inset_0_0_0_1px_rgb(194_54_43_/_14%)] [&_.re-hold-settings-c-hold]:flex-none max-[600px]:flex-col max-[600px]:items-stretch max-[600px]:[&_.re-hold-settings-c-hold]:justify-center">
+      <div className="flex items-center justify-between gap-4 min-h-14 text-ui mt-7 p-4 rounded-xl bg-destructive/5 ring-1 ring-destructive/15 [&_.re-hold-settings-button]:flex-none max-sm:flex-col max-sm:items-stretch max-sm:[&_.re-hold-settings-button]:justify-center">
         <div>
-          <b className="[font-weight:560]">Delete workspace</b>
+          <b className="font-semibold">Delete workspace</b>
           <p
-            className="[margin-top:2px] [font-size:13px] [line-height:19px] [color:#5b5b5b]"
+            className="mt-0.5 text-label leading-5 text-muted-foreground"
             role="status"
           >
             {scheduled
@@ -92,14 +94,17 @@ export function SettingsRow() {
         {scheduled ? (
           <button
             type="button"
-            className="[padding:4px_2px] border-0 [background:none] [color:#111] [font-size:13.5px] [font-weight:550] [text-decoration:underline] [text-decoration-color:rgb(0_0_0_/_25%)] [text-underline-offset:4px] cursor-pointer [&:hover]:[text-decoration-color:currentColor]"
+            className="py-1 px-0.5 border-0 bg-transparent text-foreground text-ui font-semibold underline decoration-foreground/25 underline-offset-4 cursor-pointer [&:hover]:decoration-current"
             onClick={() => change(false)}
           >
             Cancel deletion
           </button>
         ) : (
           <HoldToConfirmButton
-            className="re-hold-settings-c-hold"
+            className={cn(
+              buttonVariants({ variant: "destructive", size: "lg" }),
+              "re-hold-settings-button select-none transition duration-150 ease-ui data-confirmed:cursor-default data-confirmed:bg-destructive/10 [&_.re-hold-fill]:opacity-12",
+            )}
             disabled={!ready}
             holdMs={2000}
             onConfirm={() => change(true)}

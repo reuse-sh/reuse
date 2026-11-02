@@ -1,10 +1,8 @@
 "use client";
 import { useCarousel } from "@reuse-sh/carousel/react";
-import "@reuse-sh/carousel/styles.css";
 import "./controls.css";
 import { useLightbox } from "@reuse-sh/lightbox/react";
 import type { CSSProperties } from "react";
-import "@reuse-sh/lightbox/styles.css";
 
 const photos = [
   {
@@ -62,13 +60,13 @@ export function Example() {
   return (
     <section className="w-full min-w-0 grid gap-6">
       <article>
-        <p className="text-[13px] text-[color:var(--mute,#858585)]">
+        <p className="text-label text-subtle-foreground">
           Print series · October 2026
         </p>
-        <h2 className="mt-[6px] text-[26px] leading-8 font-semibold tracking-[-0.028em] text-balance">
+        <h2 className="mt-1.5 text-2xl leading-8 font-semibold tracking-tight text-balance">
           Six sheets from one tray
         </h2>
-        <p className="mt-4 max-w-[560px] text-base leading-[27px] text-[color:var(--prose,#5b5b5b)] text-pretty">
+        <p className="mt-4 max-w-xl text-base leading-7 text-muted-foreground text-pretty">
           The series started with one tray of water and six colors. These are
           the sheets we kept, in the order they were pulled.
         </p>
@@ -76,17 +74,17 @@ export function Example() {
       <div className="min-w-0">
         <section
           ref={ref}
-          className="re-carousel [--re-carousel-gap:14px] [--re-carousel-slide-width:min(520px,84vw)] pr-4 [scroll-padding-inline:0]"
+          className="re-carousel gap-3.5 pr-4 scroll-p-0"
           aria-label="Photos"
         >
           {photos.map((photo, index) => (
             <figure
               key={photo.id}
-              className="re-carousel__slide m-0 min-w-0"
+              className="re-carousel__slide m-0 min-w-0 basis-carousel-story"
               data-carousel-slide
             >
               <a
-                className="re-c-photo aspect-[3/2]"
+                className="re-c-photo aspect-landscape"
                 href={photo.src}
                 onClick={(event) => {
                   if (
@@ -120,15 +118,15 @@ export function Example() {
                   draggable={false}
                 />
               </a>
-              <figcaption className="mt-[10px] text-sm leading-5">
+              <figcaption className="mt-2.5 text-sm leading-5">
                 {photo.caption}
               </figcaption>
             </figure>
           ))}
         </section>
-        <div className="mt-4 flex items-center gap-[14px] text-[color:var(--ink,#111)]">
+        <div className="mt-4 flex items-center gap-3.5 text-foreground">
           <div
-            className="re-c-dots -ml-[3px]"
+            className="re-c-dots -ml-1"
             data-dots
             style={{ "--re-c-dot": state.index } as CSSProperties}
           >

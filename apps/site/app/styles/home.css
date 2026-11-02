@@ -1,219 +1,42 @@
-/* Home page and Agent guides page. Shared classes come from shell.css. */
-
-/* Opening */
-.c-display + .h-prose {
-  margin-top: 28px;
-}
-
-/* Demo cards */
-.h-card-cap b,
-.h-card-cap span {
-  display: block;
-}
-.h-card-cap span {
-  color: var(--prose);
-  text-wrap: pretty;
-}
-.h-load > span:last-child {
-  font-size: 15px;
-  line-height: 24px;
-  color: var(--prose);
-}
-
-/* Carousel: starts at the column and runs off the right edge */
-.h-strip-vp {
-  --h-off: max(var(--gutter), (100% - var(--col)) / 2);
-  --re-carousel-slide-width: min(310px, 72vw);
-  --re-carousel-gap: 12px;
-  padding-inline: var(--h-off);
-  scroll-padding-inline: var(--h-off);
-}
-.h-slide button {
-  display: block;
-  width: 100%;
-  aspect-ratio: 4 / 5;
-  padding: 0;
-  border: 0;
-  overflow: hidden;
-  border-radius: calc(10px * var(--r));
-  background: #ececec;
-  cursor: zoom-in;
-}
-.h-slide button:focus-visible {
-  outline-offset: -2px;
-}
-.h-slide img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  user-select: none;
-  -webkit-user-select: none;
-}
-.h-slide figcaption {
-  margin-top: 10px;
-  font-size: 14px;
-  line-height: 20px;
-}
-.h-dots button {
-  position: relative;
-  width: 10px;
-  height: 24px;
-  padding: 0;
-  border: 0;
-  background: transparent;
-}
-.h-dots button::before,
-.h-dots::after {
-  content: "";
-  position: absolute;
-  top: calc(50% - 2px);
-  left: 3px;
-  width: 4px;
-  height: 4px;
-  border-radius: 50%;
-}
-.h-dots button::before {
-  background: rgb(0 0 0 / 18%);
-}
-.h-dots::after {
-  background: var(--ink);
-  pointer-events: none;
-  transform: translateX(calc(var(--h-dot, 0) * 10px));
-  transition: transform 300ms cubic-bezier(0.32, 0.72, 0, 1);
-}
-.h-arrows button {
-  display: grid;
-  place-items: center;
-  width: 32px;
-  height: 32px;
-  padding: 0;
-  border: 0;
-  border-radius: 50%;
-  background: transparent;
-  color: var(--ink);
-  transition:
-    background-color 150ms ease,
-    transform 160ms var(--ease),
-    opacity 150ms ease;
-}
-.h-arrows button:hover {
-  background: var(--hover);
-}
-.h-arrows button:active {
-  transform: scale(0.94);
-}
-.h-arrows button:disabled {
-  opacity: 0.3;
-  cursor: default;
-  background: transparent;
-}
-.h-arrows button:last-child:not(:disabled) {
-  background: var(--hover);
-}
-.h-arrows button:last-child:not(:disabled):hover {
-  background: rgb(0 0 0 / 6%);
-}
-.h-strip[data-dragging] .h-slide button {
-  cursor: grabbing;
-}
-
-/* Features */
-.h-feats {
-  margin-top: 40px;
-}
-
-/* Agent guides page */
-.h-steps .c-card-in {
-  padding: 18px 20px 20px;
-}
-.h-steps p {
-  color: var(--prose);
-  font-size: 14.5px;
-  line-height: 23px;
-  text-wrap: pretty;
-}
-.h-steps b {
-  display: block;
-}
-.h-guides {
-  display: grid;
-  margin: 14px -12px 0;
-  --re-highlight-background: var(--hover);
-  --re-highlight-radius: 10px;
-}
-.h-guide svg {
-  color: #707070;
-  transition: color 150ms ease;
-}
-.h-guide:hover svg {
-  color: var(--ink);
-}
-.h-guide code {
-  overflow: hidden;
-  font-family: var(--mono);
-  font-size: 12.75px;
-  color: var(--prose);
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.h-guide:focus-visible {
-  outline-offset: -2px;
-}
-.h-trust {
-  display: grid;
-  margin: 10px -12px 0;
-  --re-highlight-background: var(--hover);
-  --re-highlight-radius: 10px;
-}
-.h-trust-row:hover .h-trust-link {
-  color: var(--ink);
-}
-.h-trust-row:focus-visible {
-  outline-offset: -2px;
-}
-
-@media (max-width: 760px) {
-  .h-steps {
-    grid-template-columns: 1fr;
+@layer components {
+  .h-strip-vp {
+    --h-off: max(var(--spacing-gutter), (100% - var(--container-content)) / 2);
+    --re-carousel-slide-width: min(310px, 72vw);
+    --re-carousel-gap: 12px;
+    padding-inline: var(--h-off);
+    scroll-padding-inline: var(--h-off);
   }
-  .h-step-n {
-    margin-bottom: 14px;
+  .h-dots button {
+    position: relative;
+    width: 10px;
+    height: 24px;
+    padding: 0;
+    border: 0;
+    background: transparent;
   }
-}
-@media (max-width: 600px) {
-  .h-open {
-    padding-top: 64px;
-  }
-  .h-cards {
-    grid-template-columns: 1fr;
-  }
-  .h-card-demo {
-    min-height: 156px;
-  }
-  .h-page {
-    padding-top: 28px;
-  }
-  .h-lead {
-    font-size: 16px;
-    line-height: 25px;
-  }
-  .h-guide {
-    grid-template-columns: 18px minmax(0, 1fr);
-    row-gap: 0;
-  }
-  .h-guide code {
-    grid-column: 2;
-  }
-  .h-trust-row {
-    grid-template-columns: minmax(0, 1fr) auto;
-  }
-  .h-trust-reason {
-    grid-column: 1 / -1;
-    grid-row: 2;
-  }
-}
-@media (prefers-reduced-motion: reduce) {
+  .h-dots button::before,
   .h-dots::after {
-    transition-duration: 0ms;
+    content: "";
+    position: absolute;
+    top: calc(50% - 2px);
+    left: 3px;
+    width: 4px;
+    height: 4px;
+    border-radius: 50%;
+  }
+  .h-dots button::before {
+    background: color-mix(in srgb, var(--foreground) 18%, transparent);
+  }
+  .h-dots::after {
+    background: var(--foreground);
+    pointer-events: none;
+    transform: translateX(calc(var(--h-dot, 0) * 10px));
+    transition: transform 300ms cubic-bezier(0.32, 0.72, 0, 1);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .h-dots::after {
+      transition-duration: 0ms;
+    }
   }
 }

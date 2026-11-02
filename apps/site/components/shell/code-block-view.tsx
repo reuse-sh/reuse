@@ -1,5 +1,6 @@
 "use client";
 
+import { CodeContent, CodeSurface } from "@/components/ui/code-block";
 import { useFramework } from "../../lib/framework-context";
 import { CopyControl } from "../copy-control";
 import type { CodeRun } from "./highlight";
@@ -27,18 +28,32 @@ function Code({ runs }: { runs: CodeRun[] }) {
   );
 }
 
-export function CodeBlockView({ list }: { list: HighlightedTab[] }) {
+export function CodeBlockView({
+  list,
+  caption,
+  snippetId,
+  codeRole,
+}: {
+  list: HighlightedTab[];
+  caption?: string;
+  snippetId?: string;
+  codeRole?: string;
+}) {
   const framework = useFramework();
   const active =
     list.find(
       (tab) => tab.label === (framework === "react" ? "React" : "JavaScript"),
     ) ?? list[0];
   return (
-    <div className="c-code">
-      <pre>
+    <CodeSurface
+      label={caption}
+      data-snippet-id={snippetId}
+      data-code-role={codeRole}
+      action={<CopyControl value={active.code} />}
+    >
+      <CodeContent>
         <Code runs={active.runs} />
-      </pre>
-      <CopyControl value={active.code} className="c-code-float" />
-    </div>
+      </CodeContent>
+    </CodeSurface>
   );
 }

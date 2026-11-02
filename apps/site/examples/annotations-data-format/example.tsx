@@ -5,9 +5,6 @@ import {
   parseAnnotations,
   serializeAnnotations,
 } from "@reuse-sh/annotations";
-import "@reuse-sh/annotations/styles.css";
-import "@reuse-sh/avatars/styles.css";
-import "./mechanics.css";
 
 const initial: Annotation[] = [
   { kind: "area", box: [8, 12, 30, 34], label: "Bands too tight" },
@@ -18,16 +15,16 @@ export function Example() {
   const annotations = parseAnnotations(serializeAnnotations(initial));
   return (
     <div className="re-example w-full min-w-0">
-      <h2 className="mb-4 text-[21px] font-semibold">The document</h2>
+      <h2 className="mb-4 text-section font-semibold">The document</h2>
       <p className="mb-6">
         Coordinates are percentages of the image. Serialize the versioned
         document and parse it before rendering.
       </p>
-      <pre className="mt-4 overflow-auto rounded-xl bg-neutral-100 p-4 text-xs whitespace-pre-wrap break-all">
+      <pre className="mt-4 overflow-auto rounded-xl bg-muted p-4 text-caption whitespace-pre-wrap break-all">
         {serializeAnnotations(annotations)}
       </pre>
-      <h2 className="my-4 text-[21px] font-semibold">HTML transport</h2>
-      <pre className="overflow-auto rounded-xl bg-neutral-100 p-4 text-xs whitespace-pre-wrap break-all">
+      <h2 className="my-4 text-section font-semibold">HTML transport</h2>
+      <pre className="overflow-auto rounded-xl bg-muted p-4 text-caption whitespace-pre-wrap break-all">
         {annotationsToHtml(annotations)}
       </pre>
     </div>

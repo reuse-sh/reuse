@@ -60,20 +60,20 @@ export function TooltipPeople() {
   return (
     <>
       <FloatingTooltipGroup tooltipClassName="re-tooltip-people-popup">
-        <div className="grid [gap:18px]">
+        <div className="grid gap-4.5">
           {comments.map(([index, text]) => (
             <div
               key={text}
-              className="grid [grid-template-columns:28px_minmax(0,_1fr)] gap-3 items-start [&_p]:[color:#5b5b5b]"
+              className="flex [&>p]:min-w-0 [&>p]:flex-1 gap-3 items-start [&_p]:text-muted-foreground"
             >
               <span
-                className="re-tooltip-people-f-face re-tooltip-people-f-face-sm"
+                className="block shrink-0 size-7 rounded-full bg-center bg-cover shadow-ring"
                 style={face(index)}
               />
               <p>
                 <button
                   type="button"
-                  className="p-0 border-0 [border-radius:4px] [background:none] [color:#111] [font-weight:560] cursor-default [&:hover]:[text-decoration:underline] [&:hover]:[text-decoration-color:rgb(0_0_0_/_20%)] [&:hover]:[text-underline-offset:3px]"
+                  className="p-0 border-0 rounded-md bg-transparent text-foreground font-semibold cursor-default [&:hover]:underline [&:hover]:decoration-foreground/20 [&:hover]:underline-offset-4"
                   data-re-tooltip-template={`tt-person-${index}`}
                 >
                   {people[index][0]}
@@ -88,7 +88,7 @@ export function TooltipPeople() {
         <Template
           key={name}
           id={`tt-person-${index}`}
-          html={`<span class="re-tooltip-people-f-person"><span class="re-tooltip-people-f-face" style="background-image:url(${escapeHtml(photos[index].src)})"></span><span class="re-tooltip-people-f-person-body"><b>${escapeHtml(name)}</b><span>${escapeHtml(role)}</span><small>${escapeHtml(time)}</small></span></span>`}
+          html={`<span class="flex items-center gap-2.5 py-1 pl-1 pr-2.5 text-label leading-4.5"><span class="block shrink-0 size-10 rounded-full bg-center bg-cover shadow-ring" style="background-image:url(${escapeHtml(photos[index].src)})"></span><span class="grid [&>b]:font-semibold [&>span]:text-muted-foreground [&>small]:text-muted-foreground [&>small]:text-caption"><b>${escapeHtml(name)}</b><span>${escapeHtml(role)}</span><small>${escapeHtml(time)}</small></span></span>`}
         />
       ))}
     </>

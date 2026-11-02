@@ -159,7 +159,7 @@ function stage(slug: MenuSlug, cleanups: (() => void)[]) {
         ...(["linear", "ease-in-out-sine"] as const).map((easing) => {
           const bar = el("span");
           bar.style.backgroundImage = easingGradient({
-            to: "#111",
+            to: "var(--foreground)",
             easing,
             direction: "to right",
           });
@@ -212,13 +212,17 @@ export function createLibraryPeek() {
         const library = menuLibrary(slug);
         pane = el(
           "div",
-          "c-peek-pane",
+          "w-60 font-sans tracking-tight",
           stage(slug, cleanups),
           el(
             "p",
-            "c-peek-foot",
-            el("span", "", library.name),
-            el("code", "", library.packageName),
+            "flex items-baseline justify-between gap-2 px-1.5 pt-2 pb-1 text-caption",
+            el("span", "font-medium", library.name),
+            el(
+              "code",
+              "font-mono text-caption text-subtle-foreground",
+              library.packageName,
+            ),
           ),
         );
         pane.setAttribute("aria-hidden", "true");

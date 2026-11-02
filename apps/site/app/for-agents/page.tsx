@@ -1,11 +1,12 @@
-import { SiteFrame } from "../../components/site-frame";
-import { type DocSearch, frameworkFrom } from "../../lib/framework";
-import "../styles/home.css";
 import { libraries } from "@reuse-sh/catalog";
 import { MovingHighlight } from "@reuse-sh/interactions/react";
 import type { Metadata } from "next";
+import { Card, CardContent } from "@/components/ui/card";
+import { Heading, Text } from "@/components/ui/typography";
 import { PromptButton } from "../../components/copy-control";
 import { Icon, type IconName } from "../../components/icons";
+import { SiteFrame } from "../../components/site-frame";
+import { type DocSearch, frameworkFrom } from "../../lib/framework";
 import { agentPrompt } from "../../lib/prompt";
 
 export const metadata: Metadata = { title: "Agent guides" };
@@ -33,52 +34,68 @@ export default async function AgentGuidesPage({
   const framework = frameworkFrom((await searchParams).framework);
   return (
     <SiteFrame framework={framework}>
-      <main id="main" className="c-col h-page pt-[56px]">
-        <h1 className="c-h1">Agent guides</h1>
-        <p className="h-lead max-w-[600px] mt-[10px] text-[17px] leading-[27px] text-[color:var(--prose)] text-pretty">
+      <main id="main" className="mx-auto w-page pt-7 sm:pt-14">
+        <Heading variant="page">Agent guides</Heading>
+        <Text
+          variant="lead"
+          className="mt-2.5 max-w-prose text-muted-foreground"
+        >
           Every library has a guide written for coding agents. It opens with the
           library's principles, and your agent must keep them on any framework.
           Give it the link and say where the part should go.
-        </p>
-        <div className="h-actions flex flex-wrap items-center gap-[8px] mt-[36px]">
+        </Text>
+        <div className="mt-9 flex flex-wrap items-center gap-2">
           <PromptButton prompt={agentPrompt} />
         </div>
-        <ol className="h-steps grid [grid-template-columns:repeat(3,_minmax(0,_1fr))] gap-[12px] mt-[40px]">
+        <ol className="mt-10 grid gap-3 md:grid-cols-3">
           {steps.map(([title, text], index) => (
-            <li key={title} className="c-card">
-              <div className="c-card-in">
-                <span className="h-step-n grid place-items-center w-[24px] h-[24px] mb-[80px] rounded-[50%] [background:var(--surface)] shadow-[var(--shadow-control)] text-[12.5px] font-[560] tabular-nums">
-                  {index + 1}
-                </span>
-                <p>
-                  <b>{title}</b> {text}
-                </p>
-              </div>
+            <li key={title}>
+              <Card className="h-full">
+                <CardContent padding="compact" className="px-5 pt-4.5 pb-5">
+                  <span className="mb-3.5 grid size-6 place-items-center rounded-full bg-card text-caption font-medium tabular-nums shadow-control md:mb-20">
+                    {index + 1}
+                  </span>
+                  <Text className="text-ui leading-6">
+                    <b className="block">{title}</b> {text}
+                  </Text>
+                </CardContent>
+              </Card>
             </li>
           ))}
         </ol>
-        <h2 className="c-h2 h-guides-h mt-[64px]">Guides</h2>
-        <MovingHighlight className="h-guides">
+        <Heading className="mt-16">Guides</Heading>
+        <MovingHighlight className="moving-highlight -mx-3 mt-3.5 grid">
           {libraries.map((library) => (
             <a
               key={library.slug}
-              className="h-guide grid [grid-template-columns:18px_168px_minmax(0,_1fr)] items-center gap-[14px] min-h-[44px] [padding:10px_12px] rounded-[10px]"
+              className="group flex min-h-11 flex-wrap items-center gap-x-3.5 rounded-control px-3 py-2.5 focus-visible:-outline-offset-2"
               data-re-row=""
               href={`/${library.slug}/guide.md`}
             >
-              <Icon name={library.slug as IconName} size={18} />
-              <span className="h-guide-name font-[540]">{library.name}</span>
-              <code>/{library.slug}/guide.md</code>
+              <Icon
+                name={library.slug as IconName}
+                size={18}
+                className="shrink-0 text-muted-foreground transition-colors group-hover:text-foreground"
+              />
+              <span className="flex-1 font-medium sm:w-42 sm:flex-none">
+                {library.name}
+              </span>
+              <code className="w-full overflow-hidden pl-8 text-ellipsis whitespace-nowrap font-mono text-code text-muted-foreground sm:w-auto sm:flex-1 sm:pl-0">
+                /{library.slug}/guide.md
+              </code>
             </a>
           ))}
         </MovingHighlight>
-        <p className="h-index-note mt-[16px] text-[color:var(--prose)]">
+        <Text className="mt-4">
           The index of every guide is at{" "}
-          <a className="c-link" href="/llms.txt">
+          <a
+            className="text-foreground underline decoration-border underline-offset-4 hover:decoration-current"
+            href="/llms.txt"
+          >
             /llms.txt
           </a>
           .
-        </p>
+        </Text>
       </main>
     </SiteFrame>
   );

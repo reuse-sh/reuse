@@ -62,7 +62,7 @@ function PrintLink({ id, children }: { id: string; children: string }) {
   return (
     <a
       href="#links-note"
-      className="[color:#111] [text-decoration:underline] [text-underline-offset:3px] [transition:text-decoration-color_150ms_ease] [&:hover]:[text-decoration-color:currentColor] [text-decoration-color:rgb(0_0_0_/_25%)]"
+      className="text-foreground underline underline-offset-4 transition-colors duration-150 [&:hover]:decoration-current decoration-foreground/25"
       data-re-tooltip-template={`tt-print-${id}`}
     >
       {children}
@@ -75,13 +75,13 @@ export function TooltipLinks() {
     <>
       <FloatingTooltipGroup tooltipClassName="re-tooltip-links-popup">
         <article className="re-tooltip-links-x-story">
-          <p className="[font-size:13px] [color:#858585]">
+          <p className="text-label text-subtle-foreground">
             Print series · October 2026
           </p>
-          <h2 className="[margin-top:6px] [font-size:26px] [line-height:32px] font-semibold [letter-spacing:-0.028em] [text-wrap:balance]">
+          <h2 className="mt-1.5 text-2xl leading-8 font-semibold tracking-tight text-balance">
             Three prints from one tray
           </h2>
-          <p className="[max-width:560px] [margin-top:16px] [font-size:16px] [line-height:27px] [color:#5b5b5b] [text-wrap:pretty]">
+          <p className="max-w-140 mt-4 text-lead leading-7 text-muted-foreground text-pretty">
             The series opens with <PrintLink id="coral">Coral sky</PrintLink>,
             the first sheet we pulled.{" "}
             <PrintLink id="mint">Mint and ember</PrintLink> came from the same
@@ -89,7 +89,7 @@ export function TooltipLinks() {
             was the last, once the colors had softened.
           </p>
           <p
-            className="[max-width:560px] [margin-top:16px] [font-size:16px] [line-height:27px] [color:#5b5b5b] [text-wrap:pretty]"
+            className="max-w-140 mt-4 text-lead leading-7 text-muted-foreground text-pretty"
             id="links-note"
           >
             Point at a print name to see it.
@@ -100,7 +100,7 @@ export function TooltipLinks() {
         <Template
           key={id}
           id={`tt-print-${id}`}
-          html={`<span class="re-tooltip-links-f-card"><img src="${escapeHtml(photo.src)}" alt="" width="1600" height="1200"><span class="re-tooltip-links-f-card-body"><b>${escapeHtml(name)}</b><span>${escapeHtml(text)}</span><small>prints.example.com</small></span></span>`}
+          html={`<span class="grid grid-cols-3 gap-3 w-72 max-w-full text-label leading-4.5 [&>img]:w-21 [&>img]:h-21 [&>img]:rounded-control [&>img]:object-cover"><img src="${escapeHtml(photo.src)}" alt="" width="1600" height="1200"><span class="col-span-2 grid content-start gap-0.5 pt-0.5 pr-1.5 [&>b]:font-semibold [&>span]:text-muted-foreground [&>small]:mt-0.5 [&>small]:text-caption [&>small]:text-subtle-foreground"><b>${escapeHtml(name)}</b><span>${escapeHtml(text)}</span><small>prints.example.com</small></span></span>`}
         />
       ))}
     </>

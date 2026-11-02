@@ -160,21 +160,21 @@ export function FileMenu() {
     items.current[next]?.focus();
   };
   return (
-    <div className="overflow-hidden [border-radius:16px] bg-white [box-shadow:0_0_0_0.5px_rgb(0_0_0_/_8%),0_2px_4px_rgb(0_0_0_/_4%),0_8px_16px_rgb(0_0_0_/_5%)] [max-width:340px] [padding-bottom:6px]">
+    <div className="overflow-hidden rounded-2xl bg-card shadow-panel max-w-85 pb-1.5">
       <div
-        className="flex gap-0.5 p-1.5 [box-shadow:inset_0_-1px_rgb(0_0_0_/_6%)] [font-size:13px] [color:#5b5b5b] [&_[data-open]]:[background:rgb(0_0_0_/_6%)] [&_[data-open]]:[color:#111]"
+        className="flex gap-0.5 p-1.5 border-b border-border text-label text-muted-foreground [&_[data-open]]:bg-accent [&_[data-open]]:text-foreground"
         aria-hidden="true"
       >
-        <span className="[padding:3px_9px] [border-radius:7px]" data-open="">
+        <span className="px-2.5 py-1 rounded-md" data-open="">
           File
         </span>
-        <span className="[padding:3px_9px] [border-radius:7px]">Edit</span>
-        <span className="[padding:3px_9px] [border-radius:7px]">View</span>
+        <span className="px-2.5 py-1 rounded-md">Edit</span>
+        <span className="px-2.5 py-1 rounded-md">View</span>
       </div>
       <MovingHighlight
         role="menu"
         aria-label="File"
-        className="[--re-highlight-background:rgb(0_0_0_/_3%)] [--re-highlight-radius:8px] grid gap-px p-1.5"
+        className="[&_.re-moving-highlight]:bg-accent [&_.re-moving-highlight]:rounded-lg grid gap-px p-1.5"
         onKeyDown={onKeyDown}
       >
         {menuItems.map(([icon, label, shortcut], index) => (
@@ -189,24 +189,24 @@ export function FileMenu() {
             tabIndex={index === focus ? 0 : -1}
             className={
               index === menuItems.length - 1
-                ? "flex items-center gap-2.5 [height:34px] [padding:0_10px] border-0 [border-radius:8px] bg-transparent [font-size:13.5px] text-left cursor-pointer [&:focus-visible]:[outline:2px_solid_#111] [&:focus-visible]:[outline-offset:-2px] [&[aria-current=page]]:[font-weight:560] [margin-top:6px] [color:#c2362b] [box-shadow:0_-4px_0_-3px_rgb(0_0_0_/_7%)] [&_.re-highlight-menu-x-row-icon]:[color:currentColor]"
-                : "flex items-center gap-2.5 [height:34px] [padding:0_10px] border-0 [border-radius:8px] bg-transparent [color:#111] [font-size:13.5px] text-left cursor-pointer [&:focus-visible]:[outline:2px_solid_#111] [&:focus-visible]:[outline-offset:-2px] [&[aria-current=page]]:[font-weight:560]"
+                ? "flex items-center gap-2.5 h-8.5 px-2.5 border-0 rounded-lg bg-transparent text-ui text-left cursor-pointer [&:focus-visible]:outline-2 [&:focus-visible]:outline-ring [&:focus-visible]:-outline-offset-2 [&[aria-current=page]]:font-semibold mt-1.5 text-destructive border-t border-border [&_.re-highlight-menu-x-row-icon]:text-current"
+                : "flex items-center gap-2.5 h-8.5 px-2.5 border-0 rounded-lg bg-transparent text-foreground text-ui text-left cursor-pointer [&:focus-visible]:outline-2 [&:focus-visible]:outline-ring [&:focus-visible]:-outline-offset-2 [&[aria-current=page]]:font-semibold"
             }
             onFocus={() => setFocus(index)}
             onClick={() => setLast(label)}
           >
-            <span className="re-highlight-menu-x-row-icon inline-flex flex-none [color:#5b5b5b]">
+            <span className="re-highlight-menu-x-row-icon inline-flex flex-none text-muted-foreground">
               <Icon name={icon} size={16} />
             </span>
             <span>{label}</span>
-            <kbd className="ml-auto [font-family:inherit] [font-size:12px] [color:#858585]">
+            <kbd className="ml-auto font-sans text-caption text-subtle-foreground">
               {shortcut}
             </kbd>
           </button>
         ))}
       </MovingHighlight>
       <p
-        className="[padding:2px_16px_6px] [font-size:12.5px] [color:#858585]"
+        className="px-4 pt-0.5 pb-1.5 text-caption text-subtle-foreground"
         aria-live="polite"
       >
         {last ? `Chose ${last}` : " "}
@@ -216,5 +216,3 @@ export function FileMenu() {
 }
 
 export const Example = FileMenu;
-
-import "@reuse-sh/interactions/styles.css";

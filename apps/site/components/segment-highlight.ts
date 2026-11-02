@@ -8,12 +8,12 @@ export function createSegmentHighlights(
   const selected = createMovingHighlight(root, {
     selectedSelector,
     mode: "selected",
-    className: "c-seg-fill",
+    className: "rounded-full bg-card shadow-control",
   });
   const hover = createMovingHighlight(root, {
     selectedSelector: "[data-re-none]",
     mode: "hover",
-    className: "c-seg-hover",
+    className: "rounded-full bg-accent",
   });
   return () => {
     hover.destroy();

@@ -3,8 +3,8 @@ import {
   docParams,
   findDocPage,
   findLibrary,
+  getUsage,
   libraries,
-  pagePrompt,
 } from "@reuse-sh/catalog";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
@@ -15,8 +15,9 @@ import { ExamplePanel } from "./example-panel";
 import { FrameworkChooser } from "./framework-chooser";
 import { GettingStarted } from "./getting-started";
 import { LibraryFrame } from "./library-frame";
-import { AgentPrompt, Pager, PageTitle } from "./parts";
+import { Install, Pager, PageTitle, Section } from "./parts";
 import { docBody } from "./registry";
+import { UsageContent } from "./usage-content";
 
 export type DocParams = Promise<{ library: string; page?: string }>;
 
@@ -67,58 +68,37 @@ export async function DocRoute({
   const framework = frameworkFrom(query.framework);
   const pathname = docHref(found.library, path);
   const id = recipeId(slug, path || "getting-started");
-  const example = id ? (
-    <ExamplePanel
-      id={id}
-      framework={framework}
-      pathname={pathname}
-      view={query.view === "code" ? "code" : "preview"}
-      file={typeof query.file === "string" ? query.file : undefined}
-    />
-  ) : null;
+  const example = id ? <ExamplePanel id={id} /> : null;
+  const sections = path ? getUsage(slug, path, framework) : undefined;
   const body =
     path === "getting-started" ? (
-      <GettingStarted library={found.library} framework={framework}>
-        {example}
-      </GettingStarted>
-    ) : path.startsWith("examples/") ||
-      (slug === "carousel" && path === "guides/controls") ? (
-      example
-    ) : (
+      <GettingStarted library={found.library} framework={framework} />
+    ) : sections ? (
       <>
-        {docBody(
-          found.library,
-          path,
-          path === "" || slug === "easing-gradients" ? example : undefined,
-        )}
-        {path === "" || slug === "easing-gradients" ? null : example}
+        {path.startsWith("examples/") || path.startsWith("guides/")
+          ? example
+          : null}
+        <Section title="Install">
+          <Install library={found.library} />
+        </Section>
+        <UsageContent sections={sections} />
       </>
+    ) : (
+      docBody(found.library, path, path === "" ? example : undefined)
     );
-  const basePrompt = pagePrompt(found.library, path);
-  const prompt = basePrompt
-    ? `${basePrompt} Use ${framework === "react" ? "React with Tailwind CSS" : "HTML, CSS and JavaScript"}.`
-    : null;
   return (
     <SiteFrame framework={framework}>
       <LibraryFrame
         slug={slug}
-        before={
-          <FrameworkChooser
-            framework={framework}
-            pathname={pathname}
-            view={query.view === "code" ? "code" : undefined}
-            file={typeof query.file === "string" ? query.file : undefined}
-          />
-        }
+        before={<FrameworkChooser framework={framework} pathname={pathname} />}
       >
         <PageTitle
           title={path ? found.page.title : found.library.name}
           lead={found.page.lead}
         />
-        <div className="d-body">
+        <article className="space-y-10" data-slot="doc-content">
           {body}
-          {prompt ? <AgentPrompt prompt={prompt} /> : null}
-        </div>
+        </article>
         <Pager library={found.library} path={path} />
       </LibraryFrame>
     </SiteFrame>

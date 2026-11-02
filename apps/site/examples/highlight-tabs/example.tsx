@@ -62,16 +62,16 @@ export function HighlightTabs() {
     document.getElementById(`x-tab-${next}`)?.focus();
   };
   return (
-    <div className="overflow-hidden [border-radius:16px] bg-white [box-shadow:0_0_0_0.5px_rgb(0_0_0_/_8%),0_2px_4px_rgb(0_0_0_/_4%),0_8px_16px_rgb(0_0_0_/_5%)] re-highlight-tabs-x-app-tabs">
-      <header className="[padding:20px_20px_0] [box-shadow:inset_0_-1px_rgb(0_0_0_/_7%)]">
-        <h2 className="[font-size:18px] [line-height:26px] font-semibold [letter-spacing:-0.012em]">
+    <div className="overflow-hidden rounded-2xl bg-card shadow-panel re-highlight-tabs-x-app-tabs">
+      <header className="px-5 pt-5 border-b border-border">
+        <h2 className="text-subsection leading-6.5 font-semibold tracking-tight">
           Spring catalogue
         </h2>
         <div
           ref={list}
           role="tablist"
           aria-label="Project"
-          className="flex gap-0.5 [margin-top:14px] [padding-bottom:8px] overflow-x-auto [scrollbar-width:none] [&_.re-highlight-tabs-x-tab-fill]:[background:rgb(0_0_0_/_7%)] [&_.re-highlight-tabs-x-tab-hover]:[background:rgb(0_0_0_/_3%)]"
+          className="flex gap-0.5 mt-3.5 pb-2 overflow-x-auto [&_.re-highlight-tabs-x-tab-fill]:bg-border [&_.re-highlight-tabs-x-tab-hover]:bg-accent"
           onKeyDown={onKeyDown}
         >
           {tabs.map(([name], index) => (
@@ -80,7 +80,7 @@ export function HighlightTabs() {
               id={`x-tab-${index}`}
               type="button"
               role="tab"
-              className="[&:focus-visible]:[outline:2px_solid_#111] [&:focus-visible]:[outline-offset:-2px] flex-none h-8 [padding:0_12px] border-0 [border-radius:9px] bg-transparent [color:#5b5b5b] [font-size:13.5px] cursor-pointer [&[aria-selected=true]]:[color:#111] [&[aria-selected=true]]:[font-weight:540]"
+              className="[&:focus-visible]:outline-2 [&:focus-visible]:outline-ring [&:focus-visible]:-outline-offset-2 flex-none h-8 px-3 border-0 rounded-control bg-transparent text-muted-foreground text-ui cursor-pointer [&[aria-selected=true]]:text-foreground [&[aria-selected=true]]:font-medium"
               aria-selected={index === selected}
               aria-controls="re-highlight-tabs-x-tab-panel"
               tabIndex={index === selected ? 0 : -1}
@@ -95,7 +95,7 @@ export function HighlightTabs() {
         id="re-highlight-tabs-x-tab-panel"
         role="tabpanel"
         aria-labelledby={`x-tab-${selected}`}
-        className="[min-height:96px] [padding:18px_20px_22px] [font-size:14px] [line-height:22px] [color:#5b5b5b]"
+        className="min-h-24 px-5 pt-4.5 pb-5.5 text-ui leading-5.5 text-muted-foreground"
       >
         {tabs[selected][1]}
       </div>
@@ -104,5 +104,3 @@ export function HighlightTabs() {
 }
 
 export const Example = HighlightTabs;
-
-import "@reuse-sh/interactions/styles.css";

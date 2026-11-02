@@ -1,9 +1,5 @@
 "use client";
-import { createMovingHighlight } from "@reuse-sh/interactions";
-import { useEffect, useRef, useState } from "react";
-import "@reuse-sh/interactions/styles.css";
 import { createCarousel } from "@reuse-sh/carousel";
-import "@reuse-sh/carousel/styles.css";
 import {
   createFadeEdge,
   FADE_CURVES,
@@ -12,6 +8,8 @@ import {
   type FadeEdge,
   type FadeMode,
 } from "@reuse-sh/gradients";
+import { createMovingHighlight } from "@reuse-sh/interactions";
+import { useEffect, useRef, useState } from "react";
 
 const photos = [
   {
@@ -83,13 +81,12 @@ function Choice<T extends string>({
     setEnhanced(true);
     const selected = createMovingHighlight(root.current, {
       mode: "selected",
-      className:
-        "[background:white] [box-shadow:0_0_0_0.5px_#00000014,0_1px_2px_#0000000d,0_2px_4px_#00000005]",
+      className: "bg-card shadow-control",
     });
     const hover = createMovingHighlight(root.current, {
       mode: "hover",
       selectedSelector: "[data-none]",
-      className: "[background:rgb(0_0_0_/_0.03)]",
+      className: "bg-accent",
     });
     return () => {
       hover.destroy();
@@ -99,7 +96,7 @@ function Choice<T extends string>({
   return (
     <fieldset
       ref={root}
-      className="relative m-0 flex w-fit min-w-0 max-w-full gap-0.5 overflow-x-auto rounded-full border-0 bg-black/[0.045] p-[3px] [--re-highlight-radius:999px] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+      className="relative m-0 flex w-fit min-w-0 max-w-full gap-0.5 overflow-x-auto rounded-full border-0 bg-accent p-1 [&_.re-moving-highlight]:rounded-full [&::-webkit-scrollbar]:hidden"
     >
       <legend className="sr-only">{legend}</legend>
       {values.map((value) => (
@@ -107,7 +104,7 @@ function Choice<T extends string>({
           key={value}
           data-re-row=""
           data-current={value === selected ? "" : undefined}
-          className="relative inline-flex h-[30px] shrink-0 cursor-pointer items-center whitespace-nowrap rounded-full border-0 bg-transparent px-[13px] text-[13px] font-medium capitalize text-[#707070] transition-colors duration-150 hover:text-[#1f1f1f] has-checked:text-[#1f1f1f] has-focus-visible:outline-2 has-focus-visible:outline-offset-[-2px] has-focus-visible:outline-[#1f1f1f]"
+          className="relative inline-flex h-7.5 shrink-0 cursor-pointer items-center whitespace-nowrap rounded-full border-0 bg-transparent px-3 text-label font-medium capitalize text-muted-foreground transition-colors duration-150 hover:text-foreground has-checked:text-foreground has-focus-visible:outline-2 has-focus-visible:-outline-offset-2 has-focus-visible:outline-foreground"
         >
           <input
             className="sr-only"
@@ -144,7 +141,7 @@ export function Example() {
   }, [mode, curve]);
   return (
     <div>
-      <div className="mb-[18px] flex flex-wrap gap-2.5">
+      <div className="mb-4.5 flex flex-wrap gap-2.5">
         <Choice
           name="fade-mode"
           legend="Fade mode"
@@ -162,7 +159,7 @@ export function Example() {
       </div>
       <section
         ref={strip}
-        className="re-carousel [--re-carousel-gap:12px] [--re-carousel-slide-width:240px] max-[600px]:[--re-carousel-slide-width:200px] focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#111]"
+        className="re-carousel gap-3 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-foreground"
         aria-label="Prints in the series"
         // biome-ignore lint/a11y/noNoninteractiveTabindex: the scrolling region must support keyboard scrolling.
         tabIndex={0}
@@ -170,19 +167,19 @@ export function Example() {
         {photos.map((photo) => (
           <figure
             key={photo.id}
-            className="re-carousel__slide m-0"
+            className="re-carousel__slide m-0 basis-60 max-sm:basis-50"
             data-carousel-slide=""
           >
             {/* biome-ignore lint/performance/noImgElement: this standalone recipe uses native images. */}
             <img
-              className="block aspect-[4/3] h-auto w-full rounded-lg object-cover"
+              className="block aspect-4/3 h-auto w-full rounded-lg object-cover"
               src={photo.src}
               alt={photo.alt}
               width={1600}
               height={1200}
               draggable={false}
             />
-            <figcaption className="mt-2 text-[13px] text-[#858585]">
+            <figcaption className="mt-2 text-label text-subtle-foreground">
               {photo.caption}
             </figcaption>
           </figure>

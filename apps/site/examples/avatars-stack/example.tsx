@@ -1,8 +1,6 @@
 "use client";
-import { Avatar, AvatarGroup } from "@reuse-sh/avatars/react";
-import "@reuse-sh/avatars/styles.css";
-import "@reuse-sh/interactions/styles.css";
 import "./mechanics.css";
+import { Avatar, AvatarGroup } from "@reuse-sh/avatars/react";
 
 const photos = [
   {

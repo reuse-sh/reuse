@@ -2,6 +2,7 @@
 
 import { createMovingHighlight } from "@reuse-sh/interactions";
 import { type KeyboardEvent, type ReactNode, useEffect, useRef } from "react";
+import { cn } from "@/lib/utils";
 
 export interface TabItem {
   id: string;
@@ -44,13 +45,13 @@ export function Tabs({
       rowSelector: '[role="tab"]',
       selectedSelector: '[aria-selected="true"]',
       mode: "selected",
-      className: "c-tab-pill",
+      className: "bg-card shadow-control",
     });
     const hover = createMovingHighlight(root, {
       rowSelector: '[role="tab"]',
       selectedSelector: "[data-re-none]",
       mode: "hover",
-      className: "c-tab-hover",
+      className: "bg-accent",
     });
     return () => {
       hover.destroy();
@@ -78,7 +79,7 @@ export function Tabs({
       ref={list}
       role="tablist"
       aria-label={label}
-      className={["c-tabs", className].filter(Boolean).join(" ")}
+      className={cn("inline-flex gap-0.5 rounded-xl bg-accent p-1", className)}
       onKeyDown={onKeyDown}
     >
       {items.map((item) => (
@@ -86,6 +87,7 @@ export function Tabs({
           key={item.id}
           type="button"
           role="tab"
+          className="inline-flex h-8 items-center justify-center gap-1.5 rounded-lg px-3 text-label font-medium whitespace-nowrap text-muted-foreground hover:text-foreground aria-selected:text-foreground focus-visible:-outline-offset-2"
           id={tabId(idBase, item.id)}
           aria-selected={item.id === selected}
           aria-controls={panelId(idBase, item.id)}

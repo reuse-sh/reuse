@@ -1,14 +1,9 @@
 "use client";
 import { createMovingHighlight } from "@reuse-sh/interactions";
 import { useEffect, useRef, useState } from "react";
-import "@reuse-sh/interactions/styles.css";
-import { easingGradient } from "@reuse-sh/gradients";
+import { cn } from "@/lib/utils";
 
 const curves = ["eased", "linear"] as const;
-const scrims = {
-  eased: easingGradient({ to: "rgb(0 0 0 / 0.6)" }),
-  linear: easingGradient({ to: "rgb(0 0 0 / 0.6)", easing: "linear" }),
-};
 function Choice<T extends string>({
   name,
   legend,
@@ -29,13 +24,12 @@ function Choice<T extends string>({
     setEnhanced(true);
     const selected = createMovingHighlight(root.current, {
       mode: "selected",
-      className:
-        "[background:white] [box-shadow:0_0_0_0.5px_#00000014,0_1px_2px_#0000000d,0_2px_4px_#00000005]",
+      className: "bg-card shadow-control",
     });
     const hover = createMovingHighlight(root.current, {
       mode: "hover",
       selectedSelector: "[data-none]",
-      className: "[background:rgb(0_0_0_/_0.03)]",
+      className: "bg-accent",
     });
     return () => {
       hover.destroy();
@@ -45,7 +39,7 @@ function Choice<T extends string>({
   return (
     <fieldset
       ref={root}
-      className="relative m-0 flex w-fit min-w-0 max-w-full gap-0.5 overflow-x-auto rounded-full border-0 bg-black/[0.045] p-[3px] [--re-highlight-radius:999px] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+      className="relative m-0 flex w-fit min-w-0 max-w-full gap-0.5 overflow-x-auto rounded-full border-0 bg-accent p-1 [&_.re-moving-highlight]:rounded-full [&::-webkit-scrollbar]:hidden"
     >
       <legend className="sr-only">{legend}</legend>
       {values.map((value) => (
@@ -53,7 +47,7 @@ function Choice<T extends string>({
           key={value}
           data-re-row=""
           data-current={value === selected ? "" : undefined}
-          className="relative inline-flex h-[30px] shrink-0 cursor-pointer items-center whitespace-nowrap rounded-full border-0 bg-transparent px-[13px] text-[13px] font-medium capitalize text-[#707070] transition-colors duration-150 hover:text-[#1f1f1f] has-checked:text-[#1f1f1f] has-focus-visible:outline-2 has-focus-visible:outline-offset-[-2px] has-focus-visible:outline-[#1f1f1f]"
+          className="relative inline-flex h-7.5 shrink-0 cursor-pointer items-center whitespace-nowrap rounded-full border-0 bg-transparent px-3 text-label font-medium capitalize text-muted-foreground transition-colors duration-150 hover:text-foreground has-checked:text-foreground has-focus-visible:outline-2 has-focus-visible:-outline-offset-2 has-focus-visible:outline-foreground"
         >
           <input
             className="sr-only"
@@ -73,7 +67,7 @@ export function Example() {
   const [curve, setCurve] = useState<(typeof curves)[number]>("eased");
   return (
     <div>
-      <div className="mb-[18px] flex flex-wrap gap-2.5">
+      <div className="mb-4.5 flex flex-wrap gap-2.5">
         <Choice
           name="scrim-curve"
           legend="Scrim curve"
@@ -82,20 +76,24 @@ export function Example() {
           onSelect={setCurve}
         />
       </div>
-      <figure className="relative m-0 overflow-hidden rounded-[14px] shadow-[0_0_0_0.5px_#00000014,0_1px_2px_#0000000d,0_4px_8px_#00000009]">
+      <figure className="relative m-0 overflow-hidden rounded-xl shadow-raised">
         {/* biome-ignore lint/performance/noImgElement: this standalone recipe uses a native image. */}
         <img
-          className="block aspect-[3/2] h-auto w-full object-cover"
+          className="block aspect-landscape h-auto w-full object-cover"
           src="https://reuse.sh/images/marble-forest.svg"
           alt="A soft marble texture in sand, green and violet"
           width={1600}
           height={1200}
         />
         <figcaption
-          className="absolute inset-x-0 bottom-0 grid gap-0.5 px-6 pt-[120px] pb-[22px] text-[13.5px] leading-5 text-white max-[600px]:px-4 max-[600px]:pt-[72px] max-[600px]:pb-3.5"
-          style={{ backgroundImage: scrims[curve] }}
+          className={cn(
+            "re-gradient re-gradient-to-scrim/60 absolute inset-x-0 bottom-0 grid gap-0.5 px-6 pt-30 pb-5.5 text-ui leading-5 text-overlay-foreground max-sm:px-4 max-sm:pt-18 max-sm:pb-3.5",
+            curve === "linear"
+              ? "re-gradient-linear"
+              : "re-gradient-ease-in-out-sine",
+          )}
         >
-          <b className="text-[17px] leading-6 font-semibold text-inherit">
+          <b className="text-subsection leading-6 font-semibold text-inherit">
             Sand and fern
           </b>
           <span>Marble print on cotton paper, 50 × 70 cm, edition of 30</span>

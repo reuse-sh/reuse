@@ -152,46 +152,42 @@ type Tool = readonly [
 
 function Toolbar({ tools, className }: { tools: Tool[]; className?: string }) {
   return (
-    <MovingHighlight
-      className={[
-        "mx-auto w-fit",
-        "[border-radius:13px] bg-white [box-shadow:0_0_0_0.5px_rgb(0_0_0_/_8%),0_1px_2px_rgb(0_0_0_/_5%),0_4px_8px_rgb(0_0_0_/_3.5%)] [--re-highlight-background:rgb(0_0_0_/_3%)] [--re-highlight-radius:8px] flex gap-0.5 p-1 [&_button]:grid [&_button]:place-items-center [&_button]:w-8 [&_button]:h-8 [&_button]:p-0 [&_button]:border-0 [&_button]:[border-radius:8px] [&_button]:bg-transparent [&_button]:[color:#555] [&_button]:[transition:color_150ms_ease,_transform_160ms_cubic-bezier(0.23,_1,_0.32,_1)] [&_button:hover]:[color:#111] [&_button:active]:[transform:scale(0.94)] [&_button:focus-visible]:[outline-offset:-2px]",
-        className,
-      ]
-        .filter(Boolean)
-        .join(" ")}
-      role="toolbar"
-      aria-label="Photo actions"
-    >
-      {tools.map(([icon, label, shortcut]) =>
-        shortcut ? (
-          <span key={label} className="contents">
+    <ToolbarSurface className={className}>
+      <MovingHighlight
+        className="[&_.re-moving-highlight]:bg-accent [&_.re-moving-highlight]:rounded-lg flex gap-0.5 [&_button]:grid [&_button]:place-items-center [&_button]:size-8 [&_button]:p-0 [&_button]:border-0 [&_button]:rounded-lg [&_button]:bg-transparent [&_button]:text-muted-foreground [&_button]:transition [&_button]:duration-150 [&_button]:ease-ui [&_button:hover]:text-foreground [&_button:active]:scale-95 [&_button:focus-visible]:-outline-offset-2"
+        role="toolbar"
+        aria-label="Photo actions"
+      >
+        {tools.map(([icon, label, shortcut]) =>
+          shortcut ? (
+            <span key={label} className="contents">
+              <button
+                type="button"
+                aria-label={label}
+                data-re-row=""
+                data-re-tooltip-template={`tt-${icon}`}
+              >
+                <Icon name={icon} size={18} />
+              </button>
+              <Template
+                id={`tt-${icon}`}
+                html={`<span class="inline-flex items-center gap-2 whitespace-nowrap [&_kbd]:inline-grid [&_kbd]:place-items-center [&_kbd]:min-w-4.5 [&_kbd]:h-4 [&_kbd]:px-1 [&_kbd]:m-0 [&_kbd]:rounded-full [&_kbd]:bg-tooltip-foreground/15 [&_kbd]:text-tooltip-foreground/80 [&_kbd]:font-sans [&_kbd]:text-caption [&_kbd]:font-medium [&_kbd]:leading-none [&_kbd]:shadow-none">${escapeHtml(label)}<kbd>${escapeHtml(shortcut)}</kbd></span>`}
+              />
+            </span>
+          ) : (
             <button
+              key={label}
               type="button"
               aria-label={label}
               data-re-row=""
-              data-re-tooltip-template={`tt-${icon}`}
+              data-re-tooltip={label}
             >
               <Icon name={icon} size={18} />
             </button>
-            <Template
-              id={`tt-${icon}`}
-              html={`<span class="re-tooltip-start-f-tip-keys">${escapeHtml(label)}<kbd>${escapeHtml(shortcut)}</kbd></span>`}
-            />
-          </span>
-        ) : (
-          <button
-            key={label}
-            type="button"
-            aria-label={label}
-            data-re-row=""
-            data-re-tooltip={label}
-          >
-            <Icon name={icon} size={18} />
-          </button>
-        ),
-      )}
-    </MovingHighlight>
+          ),
+        )}
+      </MovingHighlight>
+    </ToolbarSurface>
   );
 }
 
@@ -212,3 +208,4 @@ export function Example() {
 }
 
 import "./effects.css";
+import { Toolbar as ToolbarSurface } from "@/components/ui/surfaces";

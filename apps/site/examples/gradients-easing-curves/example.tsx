@@ -1,9 +1,13 @@
-import {
-  EASINGS,
-  type EasingName,
-  easingGradient,
-  easingStops,
-} from "@reuse-sh/gradients";
+import { EASINGS, type EasingName, easingStops } from "@reuse-sh/gradients";
+import { InlineCode } from "@/components/ui/typography";
+import { cn } from "@/lib/utils";
+
+const gradientClasses: Record<EasingName, string> = {
+  "ease-in-out-sine": "re-gradient-ease-in-out-sine",
+  "ease-in": "re-gradient-ease-in",
+  "ease-out": "re-gradient-ease-out",
+  linear: "re-gradient-linear",
+};
 
 const notes: Record<EasingName, string> = {
   "ease-in-out-sine":
@@ -19,18 +23,18 @@ export function Example() {
   return (
     <ul className="m-0 grid list-none gap-7 p-0">
       {EASINGS.map((easing) => (
-        <li
-          key={easing}
-          className="grid grid-cols-[64px_minmax(0,1fr)] items-center gap-x-5 gap-y-2.5"
-        >
+        <li key={easing} className="flex items-center gap-5">
           <svg
-            className="row-span-2 size-16 overflow-visible rounded-[10px] bg-white shadow-[0_0_0_0.5px_#00000014]"
+            className="size-16 shrink-0 overflow-visible rounded-control bg-card shadow-ring"
             viewBox="-4 -4 108 108"
             aria-hidden="true"
             focusable="false"
           >
             <polyline
-              className="fill-none stroke-[#111] stroke-[3] [stroke-linejoin:round] [vector-effect:non-scaling-stroke]"
+              className="fill-none stroke-foreground"
+              strokeWidth={3}
+              strokeLinejoin="round"
+              vectorEffect="non-scaling-stroke"
               points={easingStops(easing, 24)
                 .map(
                   ({ position, progress }) =>
@@ -39,22 +43,17 @@ export function Example() {
                 .join(" ")}
             />
           </svg>
-          <span
-            className="h-9 rounded-lg shadow-[0_0_0_0.5px_#00000014]"
-            style={{
-              backgroundImage: easingGradient({
-                to: "#111",
-                easing,
-                direction: "to right",
-              }),
-            }}
-          />
-          <p className="m-0 text-sm leading-[22px] text-pretty text-[#5b5b5b]">
-            <code className="rounded-[5px] bg-black/[0.045] px-[5px] py-px font-mono text-[0.86em] tracking-normal text-[#111]">
-              {easing}
-            </code>{" "}
-            {notes[easing]}
-          </p>
+          <div className="min-w-0 flex-1 space-y-2.5">
+            <span
+              className={cn(
+                "re-gradient re-gradient-dir-r re-gradient-to-foreground block h-9 rounded-lg shadow-ring",
+                gradientClasses[easing],
+              )}
+            />
+            <p className="m-0 text-sm leading-5.5 text-pretty text-muted-foreground">
+              <InlineCode>{easing}</InlineCode> {notes[easing]}
+            </p>
+          </div>
         </li>
       ))}
     </ul>

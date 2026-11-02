@@ -1,41 +1,43 @@
 "use client";
-import "@reuse-sh/shadows/styles.css";
-import "@reuse-sh/interactions/styles.css";
 import { CopyButton } from "@reuse-sh/interactions/react";
-
 import { useEffect, useState } from "react";
+import { buttonVariants } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 
 const command = "npm install @reuse-sh/shadows";
 export function Example() {
   const [enhanced, setEnhanced] = useState(false);
   useEffect(() => setEnhanced(true), []);
   return (
-    <div className="mx-auto grid w-full min-w-0 max-w-[560px] grid-cols-1 gap-7">
-      <div className="re-card re-card-code re-shadow-ring-sm [--re-card-radius:12px] [--re-card-padding:6px_6px_6px_16px]">
-        <pre>
-          <code className="text-[13px]">{command}</code>
+    <div className="mx-auto grid w-full min-w-0 max-w-140 grid-cols-1 gap-7">
+      <div className="rounded-xl bg-card flex items-center justify-between gap-3 re-shadow-ring-sm py-1.5 pr-1.5 pl-4">
+        <pre className="m-0 min-w-0 overflow-x-auto font-mono text-code">
+          <code className="text-label">{command}</code>
         </pre>
         <CopyButton
           disabled={!enhanced}
           text={command}
           aria-label="Copy code"
-          className="relative inline-flex size-[30px] items-center justify-center gap-[7px] rounded-[9px] border-0 bg-transparent p-0 text-[13px] font-medium text-[#8a8a8a] shadow-none transition-[scale,background-color,color,opacity] hover:bg-black/4 hover:text-[#111] [--re-copy-icon-size:15px] [--re-copy-gap:7px]"
+          className={cn(
+            buttonVariants({ variant: "ghost", size: "icon" }),
+            "size-8 p-0 text-subtle-foreground hover:text-foreground",
+          )}
         />
       </div>
-      <div className="re-card-frame">
-        <div className="re-card re-card-action re-shadow-ring-xs">
+      <div className="rounded-frame bg-frame p-1 shadow-ring">
+        <div className="rounded-panel bg-card p-5 flex flex-col items-start gap-4 sm:flex-row sm:items-center re-shadow-ring-xs">
           <div>
-            <h3 className="m-0 text-[15px] font-semibold leading-[22px]">
+            <h3 className="m-0 text-body font-semibold leading-5.5">
               Order a test print
             </h3>
-            <p className="m-0 mt-0.5 text-[13.5px] leading-[21px] text-[#5b5b5b]">
+            <p className="m-0 mt-0.5 text-ui leading-5 text-muted-foreground">
               A 20 × 15 cm proof of Coral sky on the same cotton paper, shipped
               in two days.
             </p>
           </div>
           <button
             type="button"
-            className="inline-flex h-9 shrink-0 items-center gap-1.5 rounded-[10px] border-0 bg-white px-3.5 text-[13.5px] font-[540] text-[#111] hover:bg-[#fafafa] shadow-[inset_0_0_0_1px_#0000001f]"
+            className="inline-flex h-9 shrink-0 items-center gap-1.5 rounded-control border-0 bg-card px-3.5 text-ui font-medium text-foreground hover:bg-secondary shadow-ring"
           >
             Order a proof{" "}
             <svg

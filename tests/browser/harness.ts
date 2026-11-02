@@ -9,8 +9,13 @@ const types: Record<string, string> = {
 };
 
 // Serves the built packages at /modules/<package>/<file>, the way a plain page would load them.
-export async function mount(page: Page, body: string, styles: string[] = []) {
-  await page.route("http://reuse.test/**", async (route) => {
+export async function mount(
+  page: Page,
+  body: string,
+  styles: string[] = [],
+  origin = "http://reuse.test",
+) {
+  await page.route(`${origin}/**`, async (route) => {
     const { pathname } = new URL(route.request().url());
     if (pathname === "/") {
       await route.fulfill({
@@ -18,6 +23,11 @@ export async function mount(page: Page, body: string, styles: string[] = []) {
         body: `<!doctype html><html><head><meta charset="utf-8">
 <script type="importmap">{"imports":{
   "@reuse-sh/carousel":"/modules/carousel/index.js",
+  "@reuse-sh/annotations":"/modules/annotations/index.js",
+  "@reuse-sh/avatars":"/modules/avatars/index.js",
+  "@reuse-sh/interactions":"/modules/interactions/index.js",
+  "@reuse-sh/loaders":"/modules/loaders/index.js",
+  "@reuse-sh/gradients":"/modules/gradients/index.js",
   "@reuse-sh/lightbox":"/modules/lightbox/index.js",
   "@reuse-sh/core/escape-html":"/modules/core/escape-html.js"
 }}</script>
@@ -36,7 +46,7 @@ ${styles.map((href) => `<link rel="stylesheet" href="/modules/${href}">`).join("
       body: await readFile(file),
     });
   });
-  await page.goto("http://reuse.test/");
+  await page.goto(`${origin}/`);
 }
 
 // Samples a numeric expression on every animation frame until it stays unchanged for `idle` ms.

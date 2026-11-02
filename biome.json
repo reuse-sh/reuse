@@ -11,7 +11,9 @@
       "!**/playwright-report",
       "!**/node_modules",
       "!**/public/modules",
-      "!**/public/fonts"
+      "!**/public/fonts",
+      "!**/.cn",
+      "!**/public/styles"
     ]
   },
   "formatter": {

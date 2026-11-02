@@ -1,10 +1,3 @@
-import "@reuse-sh/shadows/styles.css";
-import "@reuse-sh/carousel/styles.css";
-import "@reuse-sh/lightbox/styles.css";
-import "@reuse-sh/annotations/styles.css";
-import "@reuse-sh/loaders/styles.css";
-import "@reuse-sh/interactions/styles.css";
-import "@reuse-sh/avatars/styles.css";
 import "./globals.css";
 import { GeistMono } from "geist/font/mono";
 import { GeistSans } from "geist/font/sans";
@@ -35,7 +28,10 @@ export default function RootLayout({ children }: { children: ReactNode }) {
       className={`${GeistSans.variable} ${GeistMono.variable} ${fraunces.variable}`}
     >
       <body>
-        <a className="skip-link" href="#main">
+        <a
+          className="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-50 focus:rounded-control focus:bg-card focus:px-3 focus:py-2 focus:shadow-raised"
+          href="#main"
+        >
           Skip to content
         </a>
         {children}

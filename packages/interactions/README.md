@@ -55,39 +55,328 @@ npm install @reuse-sh/interactions
 
 <!-- examples:start -->
 
-## Complete examples
+## Usage
 
 ### Floating tooltip
 
-The [React example](https://reuse.sh/floating-tooltip/getting-started?view=code) includes its data, Tailwind styling and package CSS imports. Copy every file from the Code tab into a React 19 project with Tailwind CSS 4, then render `<Example />`.
+[Documentation](https://reuse.sh/floating-tooltip/getting-started)
 
-The [HTML + JavaScript example](https://reuse.sh/floating-tooltip/getting-started?framework=html&view=code) contains its HTML, stylesheet and any required browser module. Copy every file into an ES module project such as Vite. Its initial markup stays useful before JavaScript.
+#### React
 
-Runnable browser example: [tooltip-start](https://reuse.sh/examples/tooltip-start/index.html).
+#### Package styles
+
+Import the package stylesheet once in your main CSS. The components layer lets Tailwind utilities adapt its presentation.
+
+```css
+@import "@reuse-sh/interactions/styles.css" layer(components);
+```
+
+#### Usage
+
+Wrap one focusable trigger with FloatingTooltip, or place several data-re-tooltip triggers inside one FloatingTooltipGroup. The group shares a single moving popup.
+
+```tsx
+"use client";
+
+import { FloatingTooltip } from "@reuse-sh/interactions/react";
+
+export function SaveAction() {
+  return <FloatingTooltip content="Save changes">
+    <button type="button">Save</button>
+  </FloatingTooltip>;
+}
+```
+
+#### Integration
+
+Use real buttons and links as triggers. Keyboard focus reveals the same hint and Escape dismisses it. Tooltips add descriptions, so essential names and actions must stay on the trigger. The React wrapper owns cleanup.
+
+#### HTML + JavaScript
+
+#### Usage
+
+Put data-re-tooltip on focusable triggers inside the bound root. One createFloatingTooltip controller shares a moving popup across them.
+
+```html
+<div id="actions">
+  <button type="button" data-re-tooltip="Save changes">Save</button>
+</div>
+```
+
+#### Styles
+
+Import the package stylesheet once. Keep application layout styles scoped to this integration.
+
+```css
+@import "@reuse-sh/interactions/styles.css";
+```
+
+#### Initialize
+
+Run this after the markup exists. Keep the returned controller for the lifetime of this content.
+
+```javascript
+import { createFloatingTooltip } from "@reuse-sh/interactions";
+
+const tooltip = createFloatingTooltip(document.querySelector("#actions"));
+```
+
+#### Integration
+
+Use real buttons and links as triggers. Keyboard focus reveals the same hint and Escape dismisses it. Tooltips add descriptions, so essential names and actions must stay on the trigger.
+
+#### Cleanup
+
+Run this when the view is removed, before mounting another controller on the same element.
+
+```javascript
+tooltip.destroy();
+```
 
 ### Moving highlight
 
-The [React example](https://reuse.sh/moving-highlight/getting-started?view=code) includes its data, Tailwind styling and package CSS imports. Copy every file from the Code tab into a React 19 project with Tailwind CSS 4, then render `<Example />`.
+[Documentation](https://reuse.sh/moving-highlight/getting-started)
 
-The [HTML + JavaScript example](https://reuse.sh/moving-highlight/getting-started?framework=html&view=code) contains its HTML, stylesheet and any required browser module. Copy every file into an ES module project such as Vite. Its initial markup stays useful before JavaScript.
+#### React
 
-Runnable browser example: [highlight-start](https://reuse.sh/examples/highlight-start/index.html).
+#### Package styles
+
+Import the package stylesheet once in your main CSS. The components layer lets Tailwind utilities adapt its presentation.
+
+```css
+@import "@reuse-sh/interactions/styles.css" layer(components);
+```
+
+#### Usage
+
+Mark each interactive row with data-re-row. MovingHighlight follows the pointer and keyboard focus and rests on the row marked data-current.
+
+```tsx
+"use client";
+
+import { MovingHighlight } from "@reuse-sh/interactions/react";
+
+export function Navigation() {
+  return <MovingHighlight className="flex flex-col gap-1">
+    <a className="rounded-lg p-2" data-re-row data-current href="/inbox" aria-current="page">Inbox</a>
+    <a className="rounded-lg p-2" data-re-row href="/archive">Archive</a>
+  </MovingHighlight>;
+}
+```
+
+#### Integration
+
+Moving highlight adds a background and measures existing rows. It does not implement menu or tab keyboard behavior. Keep native focusable elements, a visible focus outline and the correct interaction model for your navigation. Reduced motion snaps instead of sliding. The React wrapper destroys its background on unmount.
+
+#### HTML + JavaScript
+
+#### Usage
+
+Mark each interactive row with data-re-row. MovingHighlight follows the pointer and keyboard focus and rests on the row marked data-current.
+
+```html
+<nav id="navigation" aria-label="Workspace">
+  <a data-re-row data-current href="/inbox" aria-current="page">Inbox</a>
+  <a data-re-row href="/archive">Archive</a>
+</nav>
+```
+
+#### Styles
+
+Import the package stylesheet once. Keep application layout styles scoped to this integration.
+
+```css
+@import "@reuse-sh/interactions/styles.css";
+
+#navigation { display: grid; gap: 0.25rem; }
+#navigation a { padding: 0.5rem; border-radius: 0.5rem; }
+```
+
+#### Initialize
+
+Run this after the markup exists. Keep the returned controller for the lifetime of this content.
+
+```javascript
+import { createMovingHighlight } from "@reuse-sh/interactions";
+
+const highlight = createMovingHighlight(document.querySelector("#navigation"));
+```
+
+#### Integration
+
+Moving highlight adds a background and measures existing rows. It does not implement menu or tab keyboard behavior. Keep native focusable elements, a visible focus outline and the correct interaction model for your navigation. Reduced motion snaps instead of sliding.
+
+#### Cleanup
+
+Run this when the view is removed, before mounting another controller on the same element.
+
+```javascript
+highlight.destroy();
+```
 
 ### Hold to confirm
 
-The [React example](https://reuse.sh/hold-to-confirm/getting-started?view=code) includes its data, Tailwind styling and package CSS imports. Copy every file from the Code tab into a React 19 project with Tailwind CSS 4, then render `<Example />`.
+[Documentation](https://reuse.sh/hold-to-confirm/getting-started)
 
-The [HTML + JavaScript example](https://reuse.sh/hold-to-confirm/getting-started?framework=html&view=code) contains its HTML, stylesheet and any required browser module. Copy every file into an ES module project such as Vite. Its initial markup stays useful before JavaScript.
+#### React
 
-Runnable browser example: [hold-start](https://reuse.sh/examples/hold-start/index.html).
+#### Package styles
+
+Import the package stylesheet once in your main CSS. The components layer lets Tailwind utilities adapt its presentation.
+
+```css
+@import "@reuse-sh/interactions/styles.css" layer(components);
+```
+
+#### Usage
+
+Use a native button and let onConfirm perform the action. The package owns the hold gesture and confirmation fill, while your application owns the result.
+
+```tsx
+"use client";
+
+import { HoldToConfirmButton } from "@reuse-sh/interactions/react";
+
+export function DeleteAction({ onDelete }: { onDelete: () => void }) {
+  return <HoldToConfirmButton className="rounded-lg px-4 py-2" holdMs={1200} onConfirm={onDelete}>
+    Hold to delete
+  </HoldToConfirmButton>;
+}
+```
+
+#### Integration
+
+A pointer, Space or Enter must stay held; leaving, Escape or an early release cancels. Assistive-technology clicks can confirm immediately. The controller confirms once and holds its fill until resetMs expires. Your application owns permission checks, requests and failure messages. Without JavaScript the native example remains disabled rather than offering an unprotected action.
+
+#### HTML + JavaScript
+
+#### Usage
+
+Use a native button and let onConfirm perform the action. The package owns the hold gesture and confirmation fill, while your application owns the result.
+
+```html
+<button id="delete" type="button" disabled>Hold to delete</button>
+```
+
+#### Styles
+
+Import the package stylesheet once. Keep application layout styles scoped to this integration.
+
+```css
+@import "@reuse-sh/interactions/styles.css";
+```
+
+#### Initialize
+
+Run this after the markup exists. Keep the returned controller for the lifetime of this content.
+
+```javascript
+import { createHoldToConfirm } from "@reuse-sh/interactions";
+
+const button = document.querySelector("#delete");
+const result = document.createElement("p");
+result.setAttribute("role", "status");
+button.after(result);
+const hold = createHoldToConfirm(button, {
+  onConfirm: () => { result.textContent = "Deletion confirmed. Send your application request here."; },
+});
+button.disabled = false;
+```
+
+#### Integration
+
+A pointer, Space or Enter must stay held; leaving, Escape or an early release cancels. Assistive-technology clicks can confirm immediately. The controller confirms once and holds its fill until resetMs expires. Your application owns permission checks, requests and failure messages. Without JavaScript the native example remains disabled rather than offering an unprotected action.
+
+#### Cleanup
+
+Run this when the view is removed, before mounting another controller on the same element.
+
+```javascript
+hold.destroy();
+button.disabled = true;
+result.remove();
+```
 
 ### Copy button
 
-The [React example](https://reuse.sh/copy-button/getting-started?view=code) includes its data, Tailwind styling and package CSS imports. Copy every file from the Code tab into a React 19 project with Tailwind CSS 4, then render `<Example />`.
+[Documentation](https://reuse.sh/copy-button/getting-started)
 
-The [HTML + JavaScript example](https://reuse.sh/copy-button/getting-started?framework=html&view=code) contains its HTML, stylesheet and any required browser module. Copy every file into an ES module project such as Vite. Its initial markup stays useful before JavaScript.
+#### React
 
-Runnable browser example: [copy-start](https://reuse.sh/examples/copy-start/index.html).
+#### Package styles
+
+Import the package stylesheet once in your main CSS. The components layer lets Tailwind utilities adapt its presentation.
+
+```css
+@import "@reuse-sh/interactions/styles.css" layer(components);
+```
+
+#### Usage
+
+Pass text for a fixed value or getText for a value read at click time. The button keeps its label while the icon changes after success or failure.
+
+```tsx
+"use client";
+
+import { CopyButton } from "@reuse-sh/interactions/react";
+
+export function InstallCommand() {
+  return <div className="flex items-center gap-3">
+    <code>npm install @reuse-sh/interactions</code>
+    <CopyButton text="npm install @reuse-sh/interactions">Copy command</CopyButton>
+  </div>;
+}
+```
+
+#### Integration
+
+The package provides copy, success and error icons plus a polite status announcement. It falls back to a temporary selection if the Clipboard API is unavailable or refused. Keep the source text selectable for no-JavaScript use. React owns controller cleanup.
+
+#### HTML + JavaScript
+
+#### Usage
+
+Pass text for a fixed value or getText for a value read at click time. The button keeps its label while the icon changes after success or failure.
+
+```html
+<code id="command">npm install @reuse-sh/interactions</code>
+<button id="copy" type="button" hidden>Copy command</button>
+```
+
+#### Styles
+
+Import the package stylesheet once. Keep application layout styles scoped to this integration.
+
+```css
+@import "@reuse-sh/interactions/styles.css";
+```
+
+#### Initialize
+
+Run this after the markup exists. Keep the returned controller for the lifetime of this content.
+
+```javascript
+import { createCopyButton } from "@reuse-sh/interactions";
+
+const button = document.querySelector("#copy");
+const copy = createCopyButton(button, {
+  getText: () => document.querySelector("#command").textContent,
+});
+button.hidden = false;
+```
+
+#### Integration
+
+The package provides copy, success and error icons plus a polite status announcement. It falls back to a temporary selection if the Clipboard API is unavailable or refused. Keep the source text selectable for no-JavaScript use.
+
+#### Cleanup
+
+Run this when the view is removed, before mounting another controller on the same element.
+
+```javascript
+copy.destroy();
+button.hidden = true;
+```
 
 <!-- examples:end -->
 

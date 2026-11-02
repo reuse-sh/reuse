@@ -1,6 +1,5 @@
 "use client";
 
-import "@reuse-sh/loaders/styles.css";
 import { ThinkingDots } from "@reuse-sh/loaders/react";
 import { type FormEvent, useEffect, useRef, useState } from "react";
 
@@ -46,17 +45,17 @@ export function Example() {
   };
 
   return (
-    <div className="grid grid-cols-[minmax(0,1fr)] w-full max-w-[560px] overflow-hidden rounded-2xl bg-white shadow-[0_0_0_0.5px_#00000014,0_2px_4px_#0000000a,0_8px_16px_#0000000d]">
-      <div className="grid min-h-[300px] content-end gap-[18px] px-4 py-[18px]">
+    <div className="grid grid-cols-1 w-full max-w-140 overflow-hidden rounded-2xl bg-card shadow-panel">
+      <div className="grid min-h-75 content-end gap-4.5 px-4 py-4.5">
         {shown.map(({ position, pair: [question, answer] }, index) => {
           const pending = thinking && index === shown.length - 1;
           return (
             <div key={position} className="flex flex-col gap-1.5">
-              <p className="m-0 mt-1.5 max-w-[74%] self-end rounded-[18px_18px_6px_18px] bg-[#1f6feb] px-3 py-2 text-sm leading-5 text-white">
+              <p className="m-0 mt-1.5 max-w-3/4 self-end rounded-panel rounded-br-md bg-message px-3 py-2 text-sm leading-5 text-message-foreground">
                 {question}
               </p>
               <div
-                className="flex min-h-9 max-w-[74%] self-start items-center rounded-[18px_18px_18px_6px] bg-[#efefee] px-3 py-2 text-sm leading-5 text-[#111] [&_.re-thinking-dots]:text-[#858585]"
+                className="flex min-h-9 max-w-3/4 self-start items-center rounded-panel rounded-bl-md bg-muted px-3 py-2 text-sm leading-5 text-foreground [&_.re-thinking-dots]:text-subtle-foreground"
                 aria-busy={pending}
               >
                 {pending ? (
@@ -70,19 +69,19 @@ export function Example() {
         })}
       </div>
       <form
-        className="mx-3 mb-3 flex items-center gap-2 rounded-[20px] py-1 pr-1 pl-3.5 shadow-[inset_0_0_0_1px_#0000001a]"
+        className="mx-3 mb-3 flex items-center gap-2 rounded-2xl py-1 pr-1 pl-3.5 shadow-ring"
         onSubmit={send}
       >
         <input
           type="text"
-          className="h-[30px] min-w-0 flex-1 border-0 bg-transparent text-sm text-[#111] outline-none"
+          className="h-7.5 min-w-0 flex-1 border-0 bg-transparent text-sm text-foreground outline-none"
           readOnly
           value={next[0]}
           aria-label="Next question"
         />
         <button
           type="submit"
-          className="grid size-[30px] shrink-0 cursor-pointer place-items-center rounded-full border-0 bg-[#1f6feb] p-0 text-white disabled:cursor-default disabled:opacity-40"
+          className="grid size-7.5 shrink-0 cursor-pointer place-items-center rounded-full border-0 bg-message p-0 text-message-foreground disabled:cursor-default disabled:opacity-40"
           aria-label="Send"
           data-re-tooltip="Send"
           disabled={!enhanced || thinking}

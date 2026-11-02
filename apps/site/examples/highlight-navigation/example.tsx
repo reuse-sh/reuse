@@ -166,20 +166,20 @@ export function NavigationList() {
   const [current, setCurrent] = useState(0);
   const [, label, summary] = pages[current];
   return (
-    <div className="overflow-hidden [border-radius:16px] bg-white [box-shadow:0_0_0_0.5px_rgb(0_0_0_/_8%),0_2px_4px_rgb(0_0_0_/_4%),0_8px_16px_rgb(0_0_0_/_5%)] grid [grid-template-columns:220px_minmax(0,_1fr)] [min-height:300px] max-[760px]:[grid-template-columns:1fr]">
+    <div className="overflow-hidden rounded-2xl bg-card shadow-panel flex min-h-75 max-md:flex-col">
       <nav
         aria-label="Workspace"
-        className="[padding:14px_8px] [background:#fafaf9] [box-shadow:inset_-1px_0_rgb(0_0_0_/_6%)] max-[760px]:[box-shadow:inset_0_-1px_rgb(0_0_0_/_6%)]"
+        className="w-55 shrink-0 py-3.5 px-2 bg-secondary border-r border-border max-md:w-full max-md:border-r-0 max-md:border-b"
       >
-        <p className="[padding:2px_16px_6px] [font-size:13px] font-semibold">
+        <p className="px-4 pt-0.5 pb-1.5 text-label font-semibold">
           Ink and Paper
         </p>
-        <MovingHighlight className="[--re-highlight-background:rgb(0_0_0_/_3%)] [--re-highlight-radius:8px] grid gap-px p-1.5">
+        <MovingHighlight className="[&_.re-moving-highlight]:bg-accent [&_.re-moving-highlight]:rounded-lg grid gap-px p-1.5">
           {pages.map(([icon, name, , count], index) => (
             <a
               key={name}
               href={`#x-nav-${index}`}
-              className="flex items-center gap-2.5 [height:34px] [padding:0_10px] border-0 [border-radius:8px] bg-transparent [color:#111] [font-size:13.5px] text-left cursor-pointer [&:focus-visible]:[outline:2px_solid_#111] [&:focus-visible]:[outline-offset:-2px] [&[aria-current=page]]:[font-weight:560]"
+              className="flex items-center gap-2.5 h-8.5 px-2.5 border-0 rounded-lg bg-transparent text-foreground text-ui text-left cursor-pointer [&:focus-visible]:outline-2 [&:focus-visible]:outline-ring [&:focus-visible]:-outline-offset-2 [&[aria-current=page]]:font-semibold"
               data-re-row=""
               data-current={index === current ? "" : undefined}
               aria-current={index === current ? "page" : undefined}
@@ -188,12 +188,12 @@ export function NavigationList() {
                 setCurrent(index);
               }}
             >
-              <span className="re-highlight-navigation-x-row-icon inline-flex flex-none [color:#5b5b5b]">
+              <span className="re-highlight-navigation-x-row-icon inline-flex flex-none text-muted-foreground">
                 {icon}
               </span>
               <span>{name}</span>
               {count ? (
-                <small className="ml-auto [font-size:12px] [color:#858585]">
+                <small className="ml-auto text-caption text-subtle-foreground">
                   {count}
                 </small>
               ) : null}
@@ -201,18 +201,14 @@ export function NavigationList() {
           ))}
         </MovingHighlight>
       </nav>
-      <section className="p-6" aria-live="polite">
-        <h2 className="[font-size:18px] [line-height:26px] font-semibold [letter-spacing:-0.012em]">
+      <section className="min-w-0 flex-1 p-6" aria-live="polite">
+        <h2 className="text-subsection leading-6.5 font-semibold tracking-tight">
           {label}
         </h2>
-        <p className="[margin-top:4px] [font-size:14px] [color:#5b5b5b]">
-          {summary}
-        </p>
+        <p className="mt-1 text-ui text-muted-foreground">{summary}</p>
       </section>
     </div>
   );
 }
 
 export const Example = NavigationList;
-
-import "@reuse-sh/interactions/styles.css";

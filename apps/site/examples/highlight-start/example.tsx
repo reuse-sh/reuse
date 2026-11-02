@@ -139,7 +139,7 @@ export function Example() {
   const [selected, setSelected] = useState("Overview");
   return (
     <div className="flex flex-col items-center justify-center">
-      <MovingHighlight className="[border-radius:13px] bg-white [box-shadow:0_0_0_0.5px_rgb(0_0_0_/_8%),0_1px_2px_rgb(0_0_0_/_5%),0_4px_8px_rgb(0_0_0_/_3.5%)] [--re-highlight-background:rgb(0_0_0_/_3%)] [--re-highlight-radius:8px] grid gap-px [width:min(100%,_232px)] [padding:5px] [&_button]:grid [&_button]:[grid-template-columns:16px_1fr_auto] [&_button]:items-center [&_button]:gap-2.5 [&_button]:h-8 [&_button]:[padding:0_10px] [&_button]:border-0 [&_button]:[border-radius:8px] [&_button]:bg-transparent [&_button]:[font-size:13.5px] [&_button]:text-left [&_svg]:[color:#666] [&_kbd]:min-w-0 [&_kbd]:h-auto [&_kbd]:p-0 [&_kbd]:[background:none] [&_kbd]:[box-shadow:none] [&_kbd]:[color:#858585] [&_kbd]:[font-size:12px] [&_kbd]:[font-weight:400] [&_button:focus-visible]:[outline-offset:-2px]">
+      <MovingHighlight className="rounded-xl bg-card shadow-raised [&_.re-moving-highlight]:bg-accent [&_.re-moving-highlight]:rounded-lg grid gap-px w-58 max-w-full p-1.5 [&_button]:flex [&_button_span]:flex-1 [&_button]:items-center [&_button]:gap-2.5 [&_button]:h-8 [&_button]:px-2.5 [&_button]:border-0 [&_button]:rounded-lg [&_button]:bg-transparent [&_button]:text-ui [&_button]:text-left [&_svg]:text-muted-foreground [&_kbd]:min-w-0 [&_kbd]:h-auto [&_kbd]:p-0 [&_kbd]:bg-transparent [&_kbd]:shadow-none [&_kbd]:text-subtle-foreground [&_kbd]:text-caption [&_kbd]:font-normal [&_button:focus-visible]:-outline-offset-2">
         {[
           { label: "Overview", icon: "book" },
           { label: "Image library", icon: "lightbox" },
@@ -162,5 +162,3 @@ export function Example() {
     </div>
   );
 }
-
-import "@reuse-sh/interactions/styles.css";

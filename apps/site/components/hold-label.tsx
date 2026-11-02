@@ -6,9 +6,13 @@ export function HoldLabel({
   shown: string;
 }) {
   return (
-    <span className="c-hold-label">
+    <span className="grid justify-items-center">
       {labels.map((label) => (
-        <span key={label} aria-hidden={label === shown ? undefined : "true"}>
+        <span
+          key={label}
+          className="col-start-1 row-start-1 aria-hidden:invisible"
+          aria-hidden={label === shown ? undefined : "true"}
+        >
           {label}
         </span>
       ))}

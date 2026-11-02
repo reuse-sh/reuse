@@ -2,8 +2,6 @@
 import type { Annotation } from "@reuse-sh/annotations";
 import { AnnotatedImage } from "@reuse-sh/annotations/react";
 import { Avatar } from "@reuse-sh/avatars/react";
-import "@reuse-sh/annotations/styles.css";
-import "@reuse-sh/avatars/styles.css";
 import "./mechanics.css";
 
 const photos = [
@@ -81,9 +79,9 @@ export function Example() {
   return (
     <div className="re-example w-full min-w-0">
       <article className="re-review">
-        <header className="re-review-head [display:flex] [align-items:center] [gap:12px] [margin-bottom:18px]">
+        <header className="re-review-head flex items-center gap-3 mb-4.5">
           <Avatar name="Aiko Tanaka" src={photos[3].src} size={32} />
-          <p className="re-review-meta [display:grid] [font-size:14px] [line-height:20px] [color:var(--re-demo-prose)]">
+          <p className="re-review-meta grid text-ui text-muted-foreground">
             <span>
               <b>Aiko Tanaka</b> reviewed proof 3 of {proof.caption}
             </span>
@@ -91,7 +89,7 @@ export function Example() {
           </p>
         </header>
         <AnnotatedImage
-          className="re-annot [--re-annotation-color:#d95746] [--re-annotation-radius:10px] [font-size:13px]"
+          className="re-annot text-label"
           src={proof.src}
           alt={`${proof.alt}, with six review notes`}
           width={proof.width}

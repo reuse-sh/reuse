@@ -1,6 +1,8 @@
 "use client";
 
 import { CopyButton } from "@reuse-sh/interactions/react";
+import { buttonVariants } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 import { useDocFramework } from "../lib/framework-context";
 
 export function CopyControl({
@@ -17,9 +19,16 @@ export function CopyControl({
   return (
     <CopyButton
       text={value}
-      className={["c-copy", text ? "" : "c-copy-icon", className]
-        .filter(Boolean)
-        .join(" ")}
+      data-slot="copy-control"
+      className={cn(
+        buttonVariants({
+          variant: text ? "surface" : "ghost",
+          size: text ? "sm" : "icon-sm",
+        }),
+        "copy-control",
+        !text && "text-subtle-foreground hover:text-foreground",
+        className,
+      )}
       aria-label={text ? undefined : label}
     >
       {text ? label : null}
@@ -27,7 +36,6 @@ export function CopyControl({
   );
 }
 
-/** The primary button that copies a prompt for a coding agent. */
 export function PromptButton({
   prompt,
   className,
@@ -42,7 +50,7 @@ export function PromptButton({
   return (
     <CopyButton
       text={value}
-      className={["c-btn c-prompt-btn", className].filter(Boolean).join(" ")}
+      className={cn(buttonVariants(), "copy-control", className)}
     >
       Copy prompt for your agent
     </CopyButton>

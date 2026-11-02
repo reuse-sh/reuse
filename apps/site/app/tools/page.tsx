@@ -1,10 +1,10 @@
-import { SiteFrame } from "../../components/site-frame";
-import { type DocSearch, frameworkFrom } from "../../lib/framework";
-import "../styles/home.css";
 import { toolGroups, tools } from "@reuse-sh/catalog";
 import { MovingHighlight } from "@reuse-sh/interactions/react";
 import type { Metadata } from "next";
+import { Heading, Text } from "@/components/ui/typography";
 import { Icon } from "../../components/icons";
+import { SiteFrame } from "../../components/site-frame";
+import { type DocSearch, frameworkFrom } from "../../lib/framework";
 
 export const metadata: Metadata = {
   title: "Tools we trust",
@@ -24,33 +24,38 @@ export default async function ToolsPage({
   const framework = frameworkFrom((await searchParams).framework);
   return (
     <SiteFrame framework={framework}>
-      <main id="main" className="c-col h-page pt-[56px]">
-        <h1 className="c-h1">Tools we trust</h1>
-        <p className="h-lead max-w-[600px] mt-[10px] text-[17px] leading-[27px] text-[color:var(--prose)] text-pretty">
+      <main id="main" className="mx-auto w-page pt-7 sm:pt-14">
+        <Heading variant="page">Tools we trust</Heading>
+        <Text
+          variant="lead"
+          className="mt-2.5 max-w-prose text-muted-foreground"
+        >
           Reuse covers a few parts. For the rest of an interface we reach for
           these. Each one does its job well and leaves the look to you.
-        </p>
+        </Text>
         {toolGroups.map((group) => (
           <section key={group} aria-labelledby={groupId(group)}>
-            <h2 className="c-h2 h-trust-h mt-[56px]" id={groupId(group)}>
+            <Heading className="mt-14" id={groupId(group)}>
               {group}
-            </h2>
-            <MovingHighlight className="h-trust">
+            </Heading>
+            <MovingHighlight className="moving-highlight -mx-3 mt-2.5 grid">
               {tools
                 .filter((tool) => tool.group === group)
                 .map((tool) => (
                   <a
                     key={tool.name}
-                    className="h-trust-row grid [grid-template-columns:168px_minmax(0,_1fr)_auto] items-baseline [gap:4px_20px] p-[12px] rounded-[10px]"
+                    className="group grid grid-cols-2 items-baseline gap-x-5 gap-y-1 rounded-control p-3 focus-visible:-outline-offset-2 sm:flex"
                     data-re-row=""
                     href={tool.url}
                     rel="noopener"
                   >
-                    <span className="h-trust-name font-[540]">{tool.name}</span>
-                    <span className="h-trust-reason text-[color:var(--prose)] text-[14.5px] leading-[23px] text-pretty">
+                    <span className="font-medium sm:w-42 sm:shrink-0">
+                      {tool.name}
+                    </span>
+                    <span className="col-span-2 row-start-2 text-body text-pretty text-muted-foreground sm:row-start-auto sm:flex-1">
                       {tool.reason}
                     </span>
-                    <span className="h-trust-link inline-flex items-center gap-[3px] text-[color:var(--mute)] text-[13px] whitespace-nowrap [transition:color_150ms_ease]">
+                    <span className="col-start-2 row-start-1 inline-flex items-center justify-self-end gap-1 text-label whitespace-nowrap text-subtle-foreground transition-colors group-hover:text-foreground sm:col-start-auto sm:row-start-auto sm:shrink-0">
                       {host(tool.url)}
                       <Icon name="arrow" size={13} />
                     </span>

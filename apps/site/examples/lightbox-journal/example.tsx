@@ -1,7 +1,7 @@
 "use client";
 import { createLightbox, type LightboxItem } from "@reuse-sh/lightbox";
 import { type ReactNode, useEffect, useRef } from "react";
-import "@reuse-sh/lightbox/styles.css";
+import { cn } from "@/lib/utils";
 import "./mechanics.css";
 
 const photos = [
@@ -109,7 +109,7 @@ function PhotoButton({
   return (
     <a
       href={photo.src}
-      className={className ? `re-photo ${className}` : "re-photo"}
+      className={cn("re-photo", className)}
       data-photo={photo.id}
       aria-label={`Open ${photo.caption}`}
       hidden={hidden}
@@ -197,34 +197,34 @@ export function Example() {
     <div className="re-example w-full min-w-0">
       <PhotoLightbox className="re-example">
         <article className="re-journal mt-11" data-photo-group>
-          <p className="re-date [font-size:13px] [color:var(--re-demo-mute)]">
+          <p className="re-date text-label text-subtle-foreground">
             October 2026 · 5 prints
           </p>
-          <h2 className="re-j-title [margin-top:6px] [font-size:26px] [line-height:32px] [font-weight:600] [letter-spacing:-0.028em] [text-wrap:balance]">
+          <h2 className="re-j-title mt-1.5 text-2xl leading-8 font-semibold tracking-tight text-balance">
             Six colors in one tray of water
           </h2>
-          <p className="re-j-text [max-width:560px] [margin-top:16px] [font-size:16px] [line-height:27px] [color:var(--re-demo-prose)] [text-wrap:pretty]">
+          <p className="re-j-text max-w-xl mt-4 text-body leading-7 text-muted-foreground text-pretty">
             Every print in this series starts as a tray of water and a few drops
             of ink. A comb pulls the colors into bands, and a sheet of paper
             lifts them off in one pass.
           </p>
-          <figure className="re-j-fig [margin-top:28px]">
+          <figure className="re-j-fig mt-7">
             <PhotoButton
               photo={hero}
-              className="re-j-hero [width:100%] [aspect-ratio:16_/_9]"
+              className="re-j-hero w-full aspect-video"
             />
             <figcaption>{hero.caption}</figcaption>
           </figure>
-          <div className="re-j-pair [display:grid] [grid-template-columns:1fr_1fr] [gap:8px] [margin-top:28px]">
+          <div className="re-j-pair grid grid-cols-2 gap-2 mt-7">
             <PhotoButton photo={a} />
             <PhotoButton photo={b} />
           </div>
-          <p className="re-j-text [max-width:560px] [margin-top:16px] [font-size:16px] [line-height:27px] [color:var(--re-demo-prose)] [text-wrap:pretty]">
+          <p className="re-j-text max-w-xl mt-4 text-body leading-7 text-muted-foreground text-pretty">
             No two sheets come out alike. We kept the five where the colors
             stayed apart, and printed them on matte cotton paper at the size
             they were made.
           </p>
-          <div className="re-j-wide [display:grid] [grid-template-columns:2fr_1fr] [gap:8px] [height:250px] [margin-top:28px]">
+          <div className="re-j-wide grid gap-2 h-64 max-sm:h-40 mt-7">
             <PhotoButton photo={c} />
             <PhotoButton photo={d} />
           </div>
