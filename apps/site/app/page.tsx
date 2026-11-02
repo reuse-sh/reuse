@@ -1,5 +1,6 @@
 import { buttonVariants } from "@/components/ui/button";
 import { Container } from "@/components/ui/container";
+import { FeatureGrid } from "@/components/ui/features";
 import { Heading, Text } from "@/components/ui/typography";
 import { SiteFrame } from "../components/site-frame";
 import { type DocSearch, frameworkFrom } from "../lib/framework";
@@ -87,20 +88,14 @@ export default async function HomePage({
             They are why a part written once keeps working in the next project,
             whatever it runs on.
           </Text>
-          <ul className="mt-10 grid gap-x-8 gap-y-9 sm:grid-cols-2 md:grid-cols-3">
-            {collectionPrinciples.map(([title, text], index) => (
-              <li key={title}>
-                <Icon
-                  name={icons[index] ?? "code"}
-                  size={22}
-                  className="mb-3.5 text-foreground"
-                />
-                <Text className="text-ui leading-6">
-                  <b>{title}.</b> {text}
-                </Text>
-              </li>
-            ))}
-          </ul>
+          <FeatureGrid
+            className="mt-10"
+            items={collectionPrinciples.map(([title, text], index) => ({
+              title,
+              description: text,
+              icon: <Icon name={icons[index] ?? "code"} size={20} />,
+            }))}
+          />
         </section>
       </main>
     </SiteFrame>

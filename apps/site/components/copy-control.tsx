@@ -1,9 +1,16 @@
 "use client";
 
 import { CopyButton } from "@reuse-sh/interactions/react";
+import { useEffect, useState } from "react";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useDocFramework } from "../lib/framework-context";
+
+function useCopyReady() {
+  const [ready, setReady] = useState(false);
+  useEffect(() => setReady(true), []);
+  return ready;
+}
 
 export function CopyControl({
   value,
@@ -16,8 +23,10 @@ export function CopyControl({
   text?: boolean;
   className?: string;
 }) {
+  const ready = useCopyReady();
   return (
     <CopyButton
+      disabled={!ready}
       text={value}
       data-slot="copy-control"
       className={cn(
@@ -43,12 +52,14 @@ export function PromptButton({
   prompt: string;
   className?: string;
 }) {
+  const ready = useCopyReady();
   const framework = useDocFramework();
   const value = framework
     ? `${prompt} Use ${framework === "react" ? "React with Tailwind CSS" : "HTML, CSS and JavaScript"}.`
     : prompt;
   return (
     <CopyButton
+      disabled={!ready}
       text={value}
       className={cn(buttonVariants(), "copy-control", className)}
     >

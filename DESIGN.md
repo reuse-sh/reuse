@@ -10,9 +10,9 @@ The site uses Tailwind 4 with semantic @theme mappings in apps/site/app/globals.
 
 Colors use background/foreground, card, popover, primary, secondary, muted, accent, border, ring and destructive roles. Body prose uses muted-foreground; captions use subtle-foreground. Message and overlay roles belong to their actual demonstrations. Do not add raw palette or arbitrary color classes to site components.
 
-Typography uses text-display, text-page-title, text-section, text-subsection, text-lead, text-body, text-ui, text-label, text-caption and text-code. Radii and shadows have control/panel/frame/code and control/raised/panel/pop roles. Layout uses content/docs containers and gutter/section tokens. Do not recreate c-* aliases or add a token for each old magic number.
+Typography uses text-display, text-page-title, text-section, text-subsection, text-lead, text-body, text-ui, text-label, text-caption and text-code. Radii and shadows have control/panel/frame/code and control/raised/panel/pop roles. Layout uses content/docs containers and gutter/section tokens. Do not recreate c-* aliases or add a token for each old magic number. Body copy stays 15px/24px. Feature copy uses 14px with a 1.5 line-height. Documentation section headings use the 17px/24px subsection role, not the marketing section role. Display and page headings use their own tracking presets; do not apply one tracking value to every font and size.
 
-Button variants, Card/CardContent, Heading/Text, Kbd, Badge, Toolbar/MenuSurface and CodeSurface own repeated presentation. Callers compose them and use utility classes for layout. cn is compiled from the Tailwind theme so named font sizes, colors and radii merge correctly. Package CSS lives in the components layer on the site; Tailwind utilities can adapt presentation without !important.
+Button variants, Card/CardContent, Heading/Text, Kbd, FeatureGrid/FeatureCopy, Toolbar/MenuSurface and CodeSurface own repeated presentation. Callers compose them and use utility classes for layout. cn is compiled from the Tailwind theme so named font sizes, colors and radii merge correctly. Package CSS lives in the components layer on the site; Tailwind utilities can adapt presentation without !important.
 
 Raw geometry is allowed for actual SVG paths, annotation coordinates, canvas data, measured highlights, gestures and syntax-highlighter output. Those are content or runtime mechanics, not alternative design tokens. Compound effects may use scoped CSS with semantic theme values.
 
@@ -28,11 +28,15 @@ The footer is the "Reuse" wordmark with its icon, then Agent guides, Tools and G
 
 Preserve the quiet existing sidebar and nested groups. Framework selection is an unboxed row with an icon and spacing; its options use Moving highlight. React is the default. The selected platform travels in URLs and changes instructions/code while the shared showcase keeps its state.
 
-Overview contains a description, live showcase, basic interaction hints and principles/features. It contains no install/code/prompt panel. Getting started starts with Install and proceeds through concise usage. Named examples show the result, installation and authored explanations/code in order. Preview/Code and source-file tabs are absent.
+Overview contains a description, contextual Copy prompt for your agent and Get started actions, the live showcase, basic interaction hints and principles/features. Every documentation page keeps its contextual agent handoff next to its introduction. Do not remove those entry points while simplifying page content. It contains no installation/code sections or bottom prompt panel. Getting started starts with Install and proceeds through concise usage. Named examples show the result, installation and authored explanations/code in order. Preview/Code and source-file tabs are absent.
 
 Published examples teach the library interface, not the showcase implementation. HTML is a fragment, not a whole page. Include only styling and lifecycle that the feature needs. Shadows starts with its stylesheet import and a literal re-shadow class. Do not publish fixture dumps, a private theme/reset, SVG icon inventories or an import Example/return Example tutorial. The catalog owns authored usage shared by website, README and agent guide.
 
-Code blocks and following paragraphs use shared content-flow spacing. Code remains readable/selectable without JS, copying is an enhancement. The actual showcase composition, photo crops, SVG icons, control order and motion stay intact. Carousel overview keeps compact moving dots on the left and quiet SVG arrows on the right; product arrows stay beside the heading.
+Features on the home page and library overviews use FeatureGrid and FeatureCopy. Their bold title uses foreground and their description uses muted-foreground. Agent guide cards reuse FeatureCopy. Do not let a title inherit the description color. Sidebar rows use compact UI leading without extra vertical link padding. Menu icons center on the title line. Pager corners use the smaller surface radius and compact vertical padding.
+
+Hold controls keep 40px hit targets with 14px labels. Shared buttons have no border by default; only an outline variant owns a border. A transparent border still changes the hold fill geometry.
+
+Code blocks use an outer frame containing a quiet language label and copy action, plus a nested white code surface. Pointer devices reveal copying on hover or keyboard focus. Touch devices keep copying visible, and pending/success/error feedback remains visible. Code blocks and following paragraphs use shared content-flow spacing. Code remains readable/selectable without JS, copying is an enhancement. The actual showcase composition, photo crops, SVG icons, control order and motion stay intact. Carousel overview keeps compact moving dots on the left and quiet SVG arrows on the right; product arrows stay beside the heading.
 
 ## Motion
 

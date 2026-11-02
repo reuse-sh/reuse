@@ -65,7 +65,7 @@ export function Example() {
       <HoldToConfirmButton
         className={cn(
           buttonVariants({ variant: "destructive", size: "lg" }),
-          "re-hold-start-button select-none transition duration-150 ease-ui data-confirmed:cursor-default data-confirmed:bg-destructive/10 [&_.re-hold-fill]:opacity-12",
+          "re-hold-start-button select-none transition duration-150 ease-ui data-confirmed:cursor-default data-confirmed:bg-destructive/8 [&_.re-hold-fill]:opacity-12",
         )}
         disabled={!ready}
         data-done={done ? "" : undefined}

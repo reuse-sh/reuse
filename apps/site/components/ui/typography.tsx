@@ -5,10 +5,10 @@ import { cn } from "@/lib/utils";
 const headingVariants = cva("text-foreground text-balance", {
   variants: {
     variant: {
-      display: "font-display text-display font-light tracking-tight",
-      page: "font-display text-page-title font-light tracking-tight",
-      section: "text-section font-semibold tracking-tight",
-      subsection: "text-subsection font-semibold tracking-tight",
+      display: "font-display text-display font-light tracking-display",
+      page: "font-display text-page-title font-light tracking-page",
+      section: "text-section font-semibold tracking-heading",
+      subsection: "text-subsection font-semibold tracking-subheading",
     },
   },
   defaultVariants: { variant: "section" },
@@ -39,7 +39,8 @@ const textVariants = cva("text-pretty", {
   variants: {
     variant: {
       body: "text-body text-muted-foreground",
-      lead: "text-lead text-secondary-foreground",
+      feature: "text-ui leading-normal text-muted-foreground",
+      lead: "text-lead text-muted-foreground",
       ui: "text-ui text-foreground",
       label: "text-label text-foreground",
       caption: "text-caption text-subtle-foreground",

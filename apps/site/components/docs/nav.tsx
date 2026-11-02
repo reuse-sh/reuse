@@ -25,7 +25,7 @@ function Toc({
       key={path}
       href={docHref(library, path)}
       aria-current={pathname === docHref(library, path) ? "page" : undefined}
-      className="block py-0.5 text-sidebar-foreground transition-colors hover:text-muted-foreground aria-[current=page]:text-sidebar-active"
+      className="block text-sidebar-foreground transition-colors hover:text-muted-foreground aria-[current=page]:text-sidebar-active"
     >
       {title}
     </DocLink>
@@ -49,7 +49,7 @@ function Toc({
                 : undefined
             }
           >
-            <span className="block py-0.5 text-sidebar-foreground group-data-[open]:text-muted-foreground">
+            <span className="block text-sidebar-foreground group-data-[open]:text-muted-foreground">
               {entry.title}
             </span>
             <div className="my-0.5 ml-0.5 border-l border-border pl-3">
@@ -104,7 +104,7 @@ export function DocsDisclosure({
     <details
       ref={details}
       data-slot="docs-disclosure"
-      className="group mb-8 rounded-panel bg-card shadow-raised wide:hidden"
+      className="group mb-8 rounded-xl bg-card shadow-raised wide:hidden"
     >
       <summary className="flex min-h-10 cursor-pointer list-none items-center justify-between gap-3 px-4 py-3 text-ui font-medium [&::-webkit-details-marker]:hidden">
         <span>{current?.title ?? library.name}</span>

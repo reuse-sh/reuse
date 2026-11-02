@@ -130,7 +130,7 @@ export function LibraryMenu({
                 <Icon
                   name={slug}
                   size={18}
-                  className="mt-0.5 shrink-0 text-muted-foreground group-data-current:text-foreground"
+                  className="mt-px shrink-0 text-muted-foreground group-data-current:text-foreground"
                 />
                 <span className="min-w-0">
                   <b className="block text-ui font-medium">

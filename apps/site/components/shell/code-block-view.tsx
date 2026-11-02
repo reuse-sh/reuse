@@ -3,11 +3,12 @@
 import { CodeContent, CodeSurface } from "@/components/ui/code-block";
 import { useFramework } from "../../lib/framework-context";
 import { CopyControl } from "../copy-control";
-import type { CodeRun } from "./highlight";
+import type { CodeLang, CodeRun } from "./highlight";
 
 export interface HighlightedTab {
   label?: "JavaScript" | "React";
   code: string;
+  lang: CodeLang;
   runs: CodeRun[];
 }
 
@@ -46,7 +47,18 @@ export function CodeBlockView({
     ) ?? list[0];
   return (
     <CodeSurface
-      label={caption}
+      label={
+        caption ??
+        active.label ??
+        {
+          ts: "JavaScript",
+          tsx: "React",
+          css: "CSS",
+          html: "HTML",
+          json: "JSON",
+          bash: "Terminal",
+        }[active.lang]
+      }
       data-snippet-id={snippetId}
       data-code-role={codeRole}
       action={<CopyControl value={active.code} />}

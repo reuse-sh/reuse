@@ -11,6 +11,7 @@ import { notFound } from "next/navigation";
 import { recipeId } from "../../lib/example-manifest";
 import { type DocSearch, frameworkFrom } from "../../lib/framework";
 import { SiteFrame } from "../site-frame";
+import { DocActions } from "./doc-actions";
 import { ExamplePanel } from "./example-panel";
 import { FrameworkChooser } from "./framework-chooser";
 import { GettingStarted } from "./getting-started";
@@ -95,7 +96,9 @@ export async function DocRoute({
         <PageTitle
           title={path ? found.page.title : found.library.name}
           lead={found.page.lead}
-        />
+        >
+          <DocActions library={found.library} path={path} />
+        </PageTitle>
         <article className="space-y-10" data-slot="doc-content">
           {body}
         </article>

@@ -103,7 +103,7 @@ export function SettingsRow() {
           <HoldToConfirmButton
             className={cn(
               buttonVariants({ variant: "destructive", size: "lg" }),
-              "re-hold-settings-button select-none transition duration-150 ease-ui data-confirmed:cursor-default data-confirmed:bg-destructive/10 [&_.re-hold-fill]:opacity-12",
+              "re-hold-settings-button select-none transition duration-150 ease-ui data-confirmed:cursor-default data-confirmed:bg-destructive/8 [&_.re-hold-fill]:opacity-12",
             )}
             disabled={!ready}
             holdMs={2000}

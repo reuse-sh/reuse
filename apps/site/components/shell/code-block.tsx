@@ -22,6 +22,7 @@ export function CodeBlock({
     ({ label, code, lang = "ts" }) => ({
       label,
       code,
+      lang,
       runs: highlight(code, lang),
     }),
   );

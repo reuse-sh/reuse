@@ -2,6 +2,7 @@ import { libraries } from "@reuse-sh/catalog";
 import { MovingHighlight } from "@reuse-sh/interactions/react";
 import type { Metadata } from "next";
 import { Card, CardContent } from "@/components/ui/card";
+import { FeatureCopy } from "@/components/ui/features";
 import { Heading, Text } from "@/components/ui/typography";
 import { PromptButton } from "../../components/copy-control";
 import { Icon, type IconName } from "../../components/icons";
@@ -55,9 +56,9 @@ export default async function AgentGuidesPage({
                   <span className="mb-3.5 grid size-6 place-items-center rounded-full bg-card text-caption font-medium tabular-nums shadow-control md:mb-20">
                     {index + 1}
                   </span>
-                  <Text className="text-ui leading-6">
-                    <b className="block">{title}</b> {text}
-                  </Text>
+                  <FeatureCopy title={title} stacked>
+                    {text}
+                  </FeatureCopy>
                 </CardContent>
               </Card>
             </li>
@@ -77,7 +78,7 @@ export default async function AgentGuidesPage({
                 size={18}
                 className="shrink-0 text-muted-foreground transition-colors group-hover:text-foreground"
               />
-              <span className="flex-1 font-medium sm:w-42 sm:flex-none">
+              <span className="flex-1 text-ui font-medium text-foreground sm:w-42 sm:flex-none">
                 {library.name}
               </span>
               <code className="w-full overflow-hidden pl-8 text-ellipsis whitespace-nowrap font-mono text-code text-muted-foreground sm:w-auto sm:flex-1 sm:pl-0">

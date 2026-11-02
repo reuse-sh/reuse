@@ -7,6 +7,7 @@ import {
 } from "@reuse-sh/catalog";
 import type { ReactNode } from "react";
 import { Card, CardContent } from "@/components/ui/card";
+import { FeatureGrid } from "@/components/ui/features";
 import {
   ContentFlow,
   Heading,
@@ -19,15 +20,26 @@ import { CodeBlock } from "../shell/code-block";
 import { DocIcon, type DocIconName } from "./doc-icon";
 import { DocLink } from "./doc-link";
 
-export function PageTitle({ title, lead }: { title: string; lead?: string }) {
+export function PageTitle({
+  title,
+  lead,
+  children,
+}: {
+  title: string;
+  lead?: string;
+  children?: ReactNode;
+}) {
   return (
-    <header className="mb-10 space-y-2.5">
-      <Heading variant="page">{title}</Heading>
-      {lead ? (
-        <Paragraph variant="lead" className="max-w-prose">
-          {lead}
-        </Paragraph>
-      ) : null}
+    <header className="mb-10">
+      <div className="space-y-2.5">
+        <Heading variant="page">{title}</Heading>
+        {lead ? (
+          <Paragraph variant="lead" className="max-w-prose">
+            {lead}
+          </Paragraph>
+        ) : null}
+      </div>
+      {children}
     </header>
   );
 }
@@ -39,14 +51,14 @@ export function Pager({ library, path }: { library: Library; path: string }) {
   return (
     <nav
       aria-label="Previous and next page"
-      className="mt-20 grid grid-cols-2 overflow-hidden rounded-panel bg-card shadow-raised"
+      className="mt-18 grid grid-cols-2 overflow-hidden rounded-xl bg-card shadow-raised"
     >
       {previous ? (
         <DocLink
           href={docHref(library, previous.path)}
-          className="group flex min-w-0 flex-col gap-1 p-4 transition-colors hover:bg-accent"
+          className="group flex min-w-0 flex-col gap-1 px-4 py-3.5 transition-colors hover:bg-accent"
         >
-          <span className="flex items-center gap-1 text-caption text-subtle-foreground">
+          <span className="flex items-center gap-1 text-caption leading-4 text-subtle-foreground">
             <Icon
               name="left"
               className="size-3.5 transition-transform group-hover:-translate-x-0.5"
@@ -62,11 +74,11 @@ export function Pager({ library, path }: { library: Library; path: string }) {
         <DocLink
           href={docHref(library, next.path)}
           className={cn(
-            "group flex min-w-0 flex-col items-end gap-1 p-4 text-right transition-colors hover:bg-accent",
+            "group flex min-w-0 flex-col items-end gap-1 px-4 py-3.5 text-right transition-colors hover:bg-accent",
             previous ? "border-l border-border" : "col-span-2",
           )}
         >
-          <span className="flex items-center gap-1 text-caption text-subtle-foreground">
+          <span className="flex items-center gap-1 text-caption leading-4 text-subtle-foreground">
             Next
             <Icon
               name="right"
@@ -97,28 +109,21 @@ export function Principles({
 }) {
   return (
     <section className="space-y-6">
-      <Heading>Principles</Heading>
-      <ul
-        className={cn(
-          "grid gap-6 sm:grid-cols-2",
-          rows.length === 4 ? "lg:grid-cols-2" : "lg:grid-cols-3",
-        )}
-      >
-        {rows.map(([name, text], index) => (
-          <li key={name} className="min-w-0 space-y-4">
-            <DocIcon
-              name={icons[index] ?? "code"}
-              className="text-foreground"
-            />
-            <Paragraph variant="ui" className="text-muted-foreground">
-              <strong className="text-foreground">{name}.</strong> {text}
-            </Paragraph>
-          </li>
-        ))}
-      </ul>
+      <Heading as="h2" variant="subsection">
+        Principles
+      </Heading>
+      <FeatureGrid
+        columns={rows.length === 4 ? 2 : 3}
+        items={rows.map(([name, text], index) => ({
+          title: name,
+          description: text,
+          icon: <DocIcon name={icons[index] ?? "code"} />,
+        }))}
+      />
     </section>
   );
 }
+
 export function Section({
   title,
   children,
@@ -128,7 +133,9 @@ export function Section({
 }) {
   return (
     <section className="space-y-4">
-      <Heading>{title}</Heading>
+      <Heading as="h2" variant="subsection">
+        {title}
+      </Heading>
       <ContentFlow>{children}</ContentFlow>
     </section>
   );
@@ -143,7 +150,7 @@ export function Install({ library }: { library: Library }) {
   return (
     <CodeBlock
       tabs={{ code: installCommand(library), lang: "bash" }}
-      caption="Install"
+      caption="Terminal"
       snippetId="install"
     />
   );

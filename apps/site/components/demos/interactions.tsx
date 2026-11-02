@@ -51,7 +51,7 @@ export function HoldDemo() {
       <HoldToConfirmButton
         className={cn(
           buttonVariants({ variant: "destructive", size: "lg" }),
-          "select-none active:scale-97 data-done:scale-100 data-done:cursor-default data-done:bg-destructive/10 [&_.re-hold-fill]:opacity-12",
+          "select-none active:scale-97 data-done:scale-100 data-done:cursor-default data-done:bg-destructive/8 [&_.re-hold-fill]:opacity-12",
         )}
         data-done={done ? "" : undefined}
         aria-disabled={done || undefined}

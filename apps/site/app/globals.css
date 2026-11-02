@@ -159,6 +159,10 @@
   --aspect-portrait: 4 / 5;
   --aspect-landscape: 3 / 2;
   --tracking-body: -0.006em;
+  --tracking-display: -0.02em;
+  --tracking-page: -0.032em;
+  --tracking-heading: -0.022em;
+  --tracking-subheading: -0.016em;
   --ease-ui: cubic-bezier(0.23, 1, 0.32, 1);
 }
 
