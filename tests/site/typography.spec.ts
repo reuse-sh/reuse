@@ -48,6 +48,11 @@ test("documentation typography and navigation use their compact roles", async ({
   await page
     .getByRole("button", { name: "Carousel", exact: true })
     .press("ArrowDown");
+  await page.locator("#library-menu").evaluate(async (element) => {
+    await Promise.allSettled(
+      element.getAnimations().map((animation) => animation.finished),
+    );
+  });
   const row = page
     .getByRole("navigation", { name: "Libraries", exact: true })
     .getByRole("link")
@@ -231,6 +236,7 @@ test("home and overview keep the same base hold color after confirmation", async
     await page.goto(path);
     const button = page.locator("button.re-hold").first();
     await expect(button).toBeEnabled();
+    await expect(button.locator(".re-hold-fill")).toHaveCount(1);
     await page.mouse.move(0, 0);
     const background = await button.evaluate(
       (element) => getComputedStyle(element).backgroundColor,
