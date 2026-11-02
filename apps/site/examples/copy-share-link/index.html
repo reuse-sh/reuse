@@ -1,13 +1,36 @@
 <!doctype html>
 <html lang="en">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Copy Share Link</title>
-<link rel="stylesheet" href="./styles.css">
-</head>
-<body>
-<main class="re-example"><div class="re-surface"><h2 class="re-heading">Share Coral sky</h2><p class="re-prose">Anyone with the link can see the print and order a proof.</p><div class="re-copy-row"><input class="re-input" value="https://prints.example/coral-sky" readonly aria-label="Link to the print"><button type="button" class="re-copy-action" id="copy" disabled>Copy link</button></div></div></main>
-<script type="module" src="./main.js"></script>
-</body>
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>copy-share-link</title>
+    <link rel="stylesheet" href="./styles.css">
+  </head>
+  <body
+    style="margin:0;font:15px/24px Geist,system-ui,sans-serif;letter-spacing:-0.006em"
+  >
+    <main class="re-example">
+      <div class="re-copy-share-link-x-share re-card re-shadow-ring-md">
+        <p class="re-copy-share-link-x-share-title">Share Coral sky</p>
+        <p class="re-copy-share-link-x-share-text">
+          Anyone with the link can see the print and order a proof.
+        </p>
+        <div class="re-copy-share-link-x-share-row">
+          <input
+            class="re-copy-share-link-x-share-url"
+            readonly=""
+            aria-label="Link to the print"
+            value="https://prints.example/coral-sky"
+          ><button
+            type="button"
+            disabled=""
+            class="re-copy-button re-copy-share-link-c-copy"
+          >
+            <span>Copy link</span>
+          </button>
+        </div>
+      </div>
+    </main>
+    <script type="module" src="./main.js"></script>
+  </body>
 </html>

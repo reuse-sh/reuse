@@ -49,8 +49,11 @@ export function Example() {
               }),
             }}
           />
-          <p className="m-0 text-sm leading-[22px] text-[#5b5b5b]">
-            <code>{easing}</code> {notes[easing]}
+          <p className="m-0 text-sm leading-[22px] text-pretty text-[#5b5b5b]">
+            <code className="rounded-[5px] bg-black/[0.045] px-[5px] py-px font-mono text-[0.86em] tracking-normal text-[#111]">
+              {easing}
+            </code>{" "}
+            {notes[easing]}
           </p>
         </li>
       ))}

@@ -1,23 +1,52 @@
-import { bindLightboxGallery } from "@reuse-sh/lightbox";
+import { createLightbox } from "@reuse-sh/lightbox";
+import { lightboxIcons } from "./icons.js";
 
-const galleries = [...document.querySelectorAll("[data-gallery]")].map((root) =>
-  bindLightboxGallery(root, {
-    thumbnails: true,
-    getItem: (image) => ({
-      src: image.src,
+const root = document.querySelector(".re-example");
+const lightbox = createLightbox({
+  thumbnails: true,
+  icons: lightboxIcons,
+  className: "re-lightbox-demo",
+});
+const open = (event) => {
+  const trigger = event.target.closest("[data-photo]");
+  if (
+    !trigger ||
+    !root.contains(trigger) ||
+    event.button !== 0 ||
+    event.metaKey ||
+    event.ctrlKey ||
+    event.shiftKey ||
+    event.altKey
+  )
+    return;
+  event.preventDefault();
+  const group =
+    trigger.closest("[data-photo-group]") ?? trigger.closest("[data-gallery]");
+  const triggers = [...group.querySelectorAll("[data-photo]")];
+  const items = triggers.map((anchor) => {
+    const image = anchor.querySelector("img");
+    return {
+      src: anchor.href,
       alt: image.alt,
-      caption: image.dataset.caption,
+      caption: anchor.getAttribute("aria-label").replace(/^Open /, ""),
       width: 1600,
       height: 1200,
-      origin: image.closest("[hidden]") ? null : image,
-      thumbnailSrc: image.src,
-    }),
-  }),
-);
+      thumbnailSrc: anchor.href,
+      previewSrc: image.currentSrc || image.src,
+      origin: anchor.hidden ? null : image,
+    };
+  });
+  lightbox.open(items, triggers.indexOf(trigger));
+};
+root.addEventListener("click", open);
+const cleanups = [
+  () => root.removeEventListener("click", open),
+  () => lightbox.destroy(),
+];
 window.addEventListener("pagehide", function cleanup(event) {
   if (event.persisted) return;
-  galleries.forEach((gallery) => {
-    gallery.destroy();
+  cleanups.reverse().forEach((destroy) => {
+    destroy();
   });
   window.removeEventListener("pagehide", cleanup);
 });

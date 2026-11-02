@@ -1,65 +1,85 @@
-import { bindLightboxGallery } from "@reuse-sh/lightbox";
+import { enhanceAvatar } from "@reuse-sh/avatars";
+import { createMovingHighlight } from "@reuse-sh/interactions";
+import { createLightbox } from "@reuse-sh/lightbox";
+import { lightboxIcons } from "./icons.js";
 
-const galleries = [...document.querySelectorAll("[data-gallery]")].map((root) =>
-  bindLightboxGallery(root, {
-    thumbnails: true,
-    getItem: (image) => ({
-      src: image.src,
+const root = document.querySelector(".re-example");
+const lightbox = createLightbox({
+  thumbnails: true,
+  icons: lightboxIcons,
+  className: "re-lightbox-demo",
+});
+const open = (event) => {
+  const trigger = event.target.closest("[data-photo]");
+  if (
+    !trigger ||
+    !root.contains(trigger) ||
+    event.button !== 0 ||
+    event.metaKey ||
+    event.ctrlKey ||
+    event.shiftKey ||
+    event.altKey
+  )
+    return;
+  event.preventDefault();
+  const group =
+    trigger.closest("[data-photo-group]") ?? trigger.closest("[data-gallery]");
+  const triggers = [...group.querySelectorAll("[data-photo]")];
+  const items = triggers.map((anchor) => {
+    const image = anchor.querySelector("img");
+    return {
+      src: anchor.href,
       alt: image.alt,
-      caption: image.dataset.caption,
+      caption: anchor.getAttribute("aria-label").replace(/^Open /, ""),
       width: 1600,
       height: 1200,
-      origin: image.closest("[hidden]") ? null : image,
-      thumbnailSrc: image.src,
-    }),
+      thumbnailSrc: anchor.href,
+      previewSrc: image.currentSrc || image.src,
+      origin: anchor.hidden ? null : image,
+    };
+  });
+  lightbox.open(items, triggers.indexOf(trigger));
+};
+root.addEventListener("click", open);
+const cleanups = [
+  () => root.removeEventListener("click", open),
+  () => lightbox.destroy(),
+];
+const avatars = [...root.querySelectorAll("[data-re-avatar]")].map(
+  enhanceAvatar,
+);
+cleanups.push(() =>
+  avatars.forEach((avatar) => {
+    avatar.destroy();
   }),
 );
-const form = document.querySelector(".re-compose");
-const send = form.querySelector("button");
-send.disabled = false;
-const submit = (event) => {
-  event.preventDefault();
-  const input = form.elements.namedItem("message");
-  if (!input.value.trim()) return;
-  const message = document.createElement("p");
-  message.className = "re-mine";
-  message.textContent = input.value;
-  document.querySelector("[data-messages]").append(message);
-  form.reset();
-};
-form.addEventListener("submit", submit);
-window.addEventListener("pagehide", function cleanup(event) {
-  if (event.persisted) return;
-  form.removeEventListener("submit", submit);
-  send.disabled = true;
-  window.removeEventListener("pagehide", cleanup);
-});
-window.addEventListener("pagehide", function cleanup(event) {
-  if (event.persisted) return;
-  galleries.forEach((gallery) => {
-    gallery.destroy();
-  });
-  window.removeEventListener("pagehide", cleanup);
-});
-const contacts = [...document.querySelectorAll(".re-contact")];
-contacts.forEach((button, index) => {
-  button.disabled = false;
-  button.setAttribute("aria-current", String(index === 0));
-});
+const rows = root.querySelector(".re-list-rows");
+const highlight = createMovingHighlight(rows);
+const people = [...rows.querySelectorAll(".re-person")];
 const choose = (event) => {
-  const button = event.target.closest(".re-contact");
-  if (button)
-    contacts.forEach((contact) => {
-      contact.setAttribute("aria-current", String(contact === button));
-    });
+  const target = event.target.closest(".re-person");
+  if (!target) return;
+  for (const person of people) {
+    person.toggleAttribute("data-current", person === target);
+    if (person === target) person.setAttribute("aria-current", "true");
+    else person.removeAttribute("aria-current");
+  }
 };
-const list = document.querySelector(".re-chat aside");
-list.addEventListener("click", choose);
+people.forEach((person) => {
+  person.disabled = false;
+});
+rows.addEventListener("click", choose);
+cleanups.push(() => {
+  highlight.destroy();
+  rows.removeEventListener("click", choose);
+  people.forEach((person) => {
+    person.disabled = true;
+  });
+});
 window.addEventListener("pagehide", function cleanup(event) {
   if (event.persisted) return;
-  list.removeEventListener("click", choose);
-  contacts.forEach((button) => {
-    button.disabled = true;
+  cleanups.reverse().forEach((destroy) => {
+    destroy();
   });
   window.removeEventListener("pagehide", cleanup);
 });

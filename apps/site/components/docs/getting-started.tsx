@@ -50,21 +50,16 @@ export function GettingStarted({
         <Text>
           {framework === "react" ? (
             <>
-              Use a React 19 project with Tailwind CSS 4 configured. Copy{" "}
-              <C>example.tsx</C> from the Code tab, then render the component.
-              The file includes its data and package stylesheet imports.
+              Use a React 19 project with Tailwind CSS 4 configured. Copy all
+              files from the Code tab into the same folder, then render{" "}
+              <C>{"<Example />"}</C>. The component includes its data and
+              imports its package styles and local helpers.
             </>
           ) : (
             <>
-              Copy <C>index.html</C>, <C>styles.css</C>
-              {library.slug === "shadows" ? null : (
-                <>
-                  {" "}
-                  and <C>main.js</C>
-                </>
-              )}{" "}
-              from the Code tab into the same folder in a project with an ES
-              module bundler, such as Vite.
+              Copy all files from the Code tab into the same folder in a project
+              with an ES module bundler, such as Vite. Open <C>index.html</C>{" "}
+              through the development server.
             </>
           )}
         </Text>
@@ -94,12 +89,9 @@ export function GettingStarted({
             </>
           ) : (
             <>
-              The HTML links to the stylesheet.
-              {library.slug === "shadows"
-                ? " This example needs no JavaScript."
-                : " The script loads as an ES module."}
-              The bundler resolves the package imports. Keep the initial markup
-              and its <C>re-</C> classes when adapting the example.
+              The HTML links to the stylesheet. The script loads as an ES
+              module. The bundler resolves the package imports. Keep the initial
+              markup and its <C>re-</C> classes when adapting the example.
             </>
           )}
         </Text>

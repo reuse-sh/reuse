@@ -22,10 +22,12 @@ const carousel = createCarousel(root.querySelector(".re-carousel"), {
 const previous = root.querySelector("[data-prev]");
 const next = root.querySelector("[data-next]");
 const dots = [...root.querySelectorAll("[data-index]")];
+const indicator = root.querySelector("[data-dots]");
 const render = (state) => {
+  indicator.style.setProperty("--re-c-dot", String(state.index));
   previous.disabled = !state.canPrev;
   next.disabled = !state.canNext;
-  root.querySelector(".re-counter").textContent =
+  root.querySelector(".re-c-counter").textContent =
     `${String(state.index + 1).padStart(2, "0")} / ${String(state.count).padStart(2, "0")}`;
   dots.forEach((dot, index) => {
     dot.disabled = false;

@@ -1,12 +1,16 @@
 import { createCopyButton } from "@reuse-sh/interactions";
 
-const button = document.querySelector("#copy");
-const controller = createCopyButton(button, {
-  text: "https://prints.example/coral-sky",
+const buttons = [...document.querySelectorAll(".re-copy-button")];
+const texts = ["https://prints.example/coral-sky"];
+const controllers = buttons.map((button, index) => {
+  const controller = createCopyButton(button, { text: texts[index] });
+  button.disabled = false;
+  return controller;
 });
-button.disabled = false;
 window.addEventListener("pagehide", function cleanup(event) {
   if (event.persisted) return;
-  controller.destroy();
+  controllers.forEach((controller) => {
+    controller.destroy();
+  });
   window.removeEventListener("pagehide", cleanup);
 });

@@ -425,16 +425,34 @@ import "./lightbox-style.css";${chrome ? `\nimport { addChrome } from "./lightbo
   );
   const fixtures = `const defaultPhotos = ${data};`;
   return {
-    js: `import { createLightbox } from "@reuse-sh/lightbox";
+    js: `import { bindLightboxGallery, lightboxItemFromImage } from "@reuse-sh/lightbox";
 ${imports}
 
-const photos = ${data};
-
-const lightbox = createLightbox({
-${body("  ")}
+const gallery = document.querySelector("[data-gallery]");
+const getItem = (image) => ({
+  ...lightboxItemFromImage(image, image.closest("a").href),
+  caption: image.dataset.caption,
 });
+const lightbox = bindLightboxGallery(gallery, {
+${body("  ")}
+  getItem,
+});${
+      chrome
+        ? `
+const items = [...gallery.querySelectorAll("img")].map(getItem);
+let opened = false;
+const stop = lightbox.subscribe((state) => {
+  if (state.isOpen && !opened) addChrome(lightbox, items);
+  opened = state.isOpen;
+});`
+        : ""
+    }
 
-lightbox.open(photos, 0);${chrome ? "\naddChrome(lightbox, photos);" : ""}`,
+window.addEventListener("pagehide", function cleanup(event) {
+  if (event.persisted) return;${chrome ? "\n  stop();" : ""}
+  lightbox.destroy();
+  window.removeEventListener("pagehide", cleanup);
+});`,
     react: `import { useLightbox } from "@reuse-sh/lightbox/react";
 import { useRef } from "react";
 ${imports}

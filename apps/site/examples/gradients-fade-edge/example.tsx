@@ -83,11 +83,13 @@ function Choice<T extends string>({
     setEnhanced(true);
     const selected = createMovingHighlight(root.current, {
       mode: "selected",
-      className: "[background:rgb(0_0_0_/_0.055)]",
+      className:
+        "[background:white] [box-shadow:0_0_0_0.5px_#00000014,0_1px_2px_#0000000d,0_2px_4px_#00000005]",
     });
     const hover = createMovingHighlight(root.current, {
       mode: "hover",
       selectedSelector: "[data-none]",
+      className: "[background:rgb(0_0_0_/_0.03)]",
     });
     return () => {
       hover.destroy();
@@ -97,7 +99,7 @@ function Choice<T extends string>({
   return (
     <fieldset
       ref={root}
-      className="relative m-0 inline-flex min-w-0 gap-0.5 rounded-xl border-0 bg-[#f3f3f3] p-1 [--re-highlight-radius:8px]"
+      className="relative m-0 flex w-fit min-w-0 max-w-full gap-0.5 overflow-x-auto rounded-full border-0 bg-black/[0.045] p-[3px] [--re-highlight-radius:999px] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
     >
       <legend className="sr-only">{legend}</legend>
       {values.map((value) => (
@@ -105,7 +107,7 @@ function Choice<T extends string>({
           key={value}
           data-re-row=""
           data-current={value === selected ? "" : undefined}
-          className="relative cursor-pointer rounded-lg px-3 py-1.5 text-[13px] capitalize text-[#1f1f1f] has-focus-visible:outline has-focus-visible:outline-2"
+          className="relative inline-flex h-[30px] shrink-0 cursor-pointer items-center whitespace-nowrap rounded-full border-0 bg-transparent px-[13px] text-[13px] font-medium capitalize text-[#707070] transition-colors duration-150 hover:text-[#1f1f1f] has-checked:text-[#1f1f1f] has-focus-visible:outline-2 has-focus-visible:outline-offset-[-2px] has-focus-visible:outline-[#1f1f1f]"
         >
           <input
             className="sr-only"
@@ -160,7 +162,7 @@ export function Example() {
       </div>
       <section
         ref={strip}
-        className="re-carousel [--re-carousel-gap:12px] [--re-carousel-slide-width:240px] max-sm:[--re-carousel-slide-width:180px]"
+        className="re-carousel [--re-carousel-gap:12px] [--re-carousel-slide-width:240px] max-[600px]:[--re-carousel-slide-width:200px] focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#111]"
         aria-label="Prints in the series"
         // biome-ignore lint/a11y/noNoninteractiveTabindex: the scrolling region must support keyboard scrolling.
         tabIndex={0}

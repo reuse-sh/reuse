@@ -29,11 +29,13 @@ function Choice<T extends string>({
     setEnhanced(true);
     const selected = createMovingHighlight(root.current, {
       mode: "selected",
-      className: "[background:rgb(0_0_0_/_0.055)]",
+      className:
+        "[background:white] [box-shadow:0_0_0_0.5px_#00000014,0_1px_2px_#0000000d,0_2px_4px_#00000005]",
     });
     const hover = createMovingHighlight(root.current, {
       mode: "hover",
       selectedSelector: "[data-none]",
+      className: "[background:rgb(0_0_0_/_0.03)]",
     });
     return () => {
       hover.destroy();
@@ -43,7 +45,7 @@ function Choice<T extends string>({
   return (
     <fieldset
       ref={root}
-      className="relative m-0 inline-flex min-w-0 gap-0.5 rounded-xl border-0 bg-[#f3f3f3] p-1 [--re-highlight-radius:8px]"
+      className="relative m-0 flex w-fit min-w-0 max-w-full gap-0.5 overflow-x-auto rounded-full border-0 bg-black/[0.045] p-[3px] [--re-highlight-radius:999px] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
     >
       <legend className="sr-only">{legend}</legend>
       {values.map((value) => (
@@ -51,7 +53,7 @@ function Choice<T extends string>({
           key={value}
           data-re-row=""
           data-current={value === selected ? "" : undefined}
-          className="relative cursor-pointer rounded-lg px-3 py-1.5 text-[13px] capitalize text-[#1f1f1f] has-focus-visible:outline has-focus-visible:outline-2"
+          className="relative inline-flex h-[30px] shrink-0 cursor-pointer items-center whitespace-nowrap rounded-full border-0 bg-transparent px-[13px] text-[13px] font-medium capitalize text-[#707070] transition-colors duration-150 hover:text-[#1f1f1f] has-checked:text-[#1f1f1f] has-focus-visible:outline-2 has-focus-visible:outline-offset-[-2px] has-focus-visible:outline-[#1f1f1f]"
         >
           <input
             className="sr-only"
@@ -80,7 +82,7 @@ export function Example() {
           onSelect={setCurve}
         />
       </div>
-      <figure className="relative m-0 overflow-hidden rounded-[14px]">
+      <figure className="relative m-0 overflow-hidden rounded-[14px] shadow-[0_0_0_0.5px_#00000014,0_1px_2px_#0000000d,0_4px_8px_#00000009]">
         {/* biome-ignore lint/performance/noImgElement: this standalone recipe uses a native image. */}
         <img
           className="block aspect-[3/2] h-auto w-full object-cover"
@@ -90,10 +92,12 @@ export function Example() {
           height={1200}
         />
         <figcaption
-          className="absolute inset-x-0 bottom-0 grid gap-0.5 px-6 pt-[120px] pb-[22px] text-[13.5px] leading-5 text-white max-sm:px-4 max-sm:pt-16"
+          className="absolute inset-x-0 bottom-0 grid gap-0.5 px-6 pt-[120px] pb-[22px] text-[13.5px] leading-5 text-white max-[600px]:px-4 max-[600px]:pt-[72px] max-[600px]:pb-3.5"
           style={{ backgroundImage: scrims[curve] }}
         >
-          <b className="text-[17px] leading-6 font-semibold">Sand and fern</b>
+          <b className="text-[17px] leading-6 font-semibold text-inherit">
+            Sand and fern
+          </b>
           <span>Marble print on cotton paper, 50 × 70 cm, edition of 30</span>
         </figcaption>
       </figure>

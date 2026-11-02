@@ -48,6 +48,13 @@ await copyFile(
   resolve(fontDirectory, "geist.woff2"),
 );
 await copyFile(
+  resolve(
+    root,
+    "apps/site/node_modules/geist/dist/fonts/geist-mono/GeistMono-Variable.woff2",
+  ),
+  resolve(fontDirectory, "geist-mono.woff2"),
+);
+await copyFile(
   resolve(root, "apps/site/node_modules/geist/LICENSE.txt"),
   resolve(fontDirectory, "OFL.txt"),
 ).catch(async () => {

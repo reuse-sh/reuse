@@ -1,11 +1,26 @@
 @import "@reuse-sh/shadows/styles.css";
 @import "@reuse-sh/interactions/styles.css";
+@font-face {
+  font-family: Geist;
+  src: url("https://reuse.sh/fonts/geist.woff2") format("woff2");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Geist Mono";
+  src: url("https://reuse.sh/fonts/geist-mono.woff2") format("woff2");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
 .re-example {
   box-sizing: border-box;
   width: 100%;
   color: #111;
   font:
-    15px / 1.6 system-ui,
+    15px / 1.6 "Geist",
+    system-ui,
     sans-serif;
 }
 .re-example * {
@@ -50,16 +65,43 @@
   line-height: 21px;
   color: #5b5b5b;
 }
-.re-shadow-cards button {
+.re-shadow-cards .re-card-action button {
   flex: none;
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  min-height: 36px;
+  height: 36px;
   padding: 0 14px;
   border: 0;
   border-radius: 10px;
   background: white;
   box-shadow: inset 0 0 0 1px #0000001f;
   font-size: 13.5px;
+  font-weight: 540;
+}
+.re-shadow-cards .re-card-action button:hover {
+  background: #fafafa;
+}
+.re-shadow-cards .re-copy {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  gap: 7px;
+  padding: 0;
+  border: 0;
+  border-radius: 9px;
+  background: transparent;
+  box-shadow: none;
+  color: #8a8a8a;
+  font-size: 13px;
+  font-weight: 500;
+  --re-copy-icon-size: 15px;
+  --re-copy-gap: 7px;
+}
+.re-shadow-cards .re-copy:hover {
+  background: rgb(0 0 0 / 4%);
+  color: #111;
 }

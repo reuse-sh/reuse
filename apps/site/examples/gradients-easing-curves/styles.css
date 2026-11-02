@@ -1,9 +1,24 @@
+@font-face {
+  font-family: Geist;
+  src: url("https://reuse.sh/fonts/geist.woff2") format("woff2");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Geist Mono";
+  src: url("https://reuse.sh/fonts/geist-mono.woff2") format("woff2");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
 .re-example {
   box-sizing: border-box;
   width: 100%;
   color: #111;
   font:
-    15px / 1.6 system-ui,
+    15px / 1.6 "Geist",
+    system-ui,
     sans-serif;
 }
 .re-example * {
@@ -62,4 +77,17 @@
   font-size: 14px;
   line-height: 22px;
   color: #5b5b5b;
+}
+
+.re-curves p {
+  text-wrap: pretty;
+}
+.re-curves code {
+  padding: 1px 5px;
+  border-radius: 5px;
+  background: rgb(0 0 0 / 4.5%);
+  color: #111;
+  font-family: "Geist Mono", monospace;
+  font-size: 0.86em;
+  letter-spacing: 0;
 }

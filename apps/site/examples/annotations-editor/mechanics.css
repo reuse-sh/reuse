@@ -1,0 +1,97 @@
+@layer base {
+  .re-example {
+    --re-demo-ink: #111;
+    --re-demo-ink-2: #2e2e2e;
+    --re-demo-mute: #858585;
+    --re-demo-prose: #5b5b5b;
+    --re-demo-surface: #fff;
+    --re-demo-hover: rgb(0 0 0 / 3%);
+    --re-demo-shadow-control:
+      0 0 0 0.5px rgb(0 0 0 / 8%), 0 1px 2px rgb(0 0 0 / 5%),
+      0 2px 4px rgb(0 0 0 / 2%);
+    --re-demo-shadow-raised:
+      0 0 0 0.5px rgb(0 0 0 / 8%), 0 1px 2px rgb(0 0 0 / 5%),
+      0 4px 8px rgb(0 0 0 / 3.5%);
+    --re-demo-shadow-panel:
+      0 0 0 0.5px rgb(0 0 0 / 8%), 0 2px 4px rgb(0 0 0 / 4%),
+      0 8px 16px rgb(0 0 0 / 5%);
+    --re-demo-ease: cubic-bezier(0.23, 1, 0.32, 1);
+    --re-demo-mono: ui-monospace, SFMono-Regular, Menlo, monospace;
+    width: 100%;
+    min-width: 0;
+    color: var(--re-demo-ink);
+    font-family: inherit;
+    font-size: 15px;
+    line-height: 24px;
+    letter-spacing: -0.006em;
+  }
+  .re-example *,
+  .re-example *::before,
+  .re-example *::after {
+    box-sizing: border-box;
+  }
+  .re-example :where(p, h2, figure, ul) {
+    margin: 0;
+    padding: 0;
+  }
+  .re-example :where(ul) {
+    list-style: none;
+  }
+  .re-example :where(button, input, select) {
+    font: inherit;
+    color: inherit;
+  }
+  .re-example :where(button) {
+    cursor: pointer;
+  }
+  .re-example :where(img) {
+    display: block;
+    max-width: 100%;
+    height: auto;
+  }
+  .re-example :where(a) {
+    color: inherit;
+    text-decoration: none;
+  }
+  .re-example :where(b, strong) {
+    font-weight: 560;
+    color: var(--re-demo-ink);
+  }
+  .re-example [hidden] {
+    display: none;
+  }
+}
+.re-annot-edit .re-annotation-toolbar {
+  gap: 4px;
+}
+.re-annot-edit .re-annotation-toolbar button {
+  height: 32px;
+  padding: 0 11px;
+  border: 0;
+  border-radius: 9px;
+  background: transparent;
+  box-shadow: inset 0 0 0 1px rgb(0 0 0 / 10%);
+  color: var(--re-demo-prose);
+  font-size: 13px;
+  transition:
+    background-color 150ms ease,
+    color 150ms ease;
+}
+.re-annot-edit .re-annotation-toolbar button:hover:not(:disabled) {
+  background: var(--re-demo-hover);
+  color: var(--re-demo-ink);
+}
+.re-annot-edit .re-annotation-toolbar button[aria-pressed="true"] {
+  background: var(--re-demo-ink);
+  box-shadow: none;
+  color: #fff;
+}
+.re-annot-edit .re-annotation-fields input,
+.re-annot-edit .re-annotation-fields select {
+  border-radius: 9px;
+}
+.re-annot-edit .re-annotation-editor-hint {
+  font-size: 13px;
+  line-height: 20px;
+  color: var(--re-demo-mute);
+}

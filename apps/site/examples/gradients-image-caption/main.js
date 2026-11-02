@@ -6,12 +6,15 @@ for (const group of document.querySelectorAll(".re-choices")) {
   highlights.push(
     createMovingHighlight(group, {
       mode: "selected",
+      className: "re-choice-selected",
     }),
     createMovingHighlight(group, {
       mode: "hover",
       selectedSelector: "[data-none]",
+      className: "re-choice-hover",
     }),
   );
+  group.dataset.enhanced = "";
   for (const input of group.querySelectorAll("input")) input.disabled = false;
 }
 function syncChoices() {

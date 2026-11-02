@@ -1,6 +1,6 @@
 import { createMovingHighlight } from "@reuse-sh/interactions";
 
-const root = document.querySelector("#highlight");
+const root = document.querySelector(".re-highlight-menu-x-menu");
 const controller = createMovingHighlight(root);
 const buttons = Array.from(root.querySelectorAll("button"));
 let selected = 0;
@@ -14,8 +14,8 @@ const click = (event) => {
   const index = buttons.indexOf(event.target.closest("button"));
   if (index < 0) return;
   select(index);
-  document.querySelector("#status").textContent =
-    `Chose ${buttons[index].firstChild.textContent}`;
+  document.querySelector(".re-highlight-menu-x-menu-status").textContent =
+    `Chose ${buttons[index].querySelector("span:nth-child(2)").textContent}`;
 };
 const focus = (event) => {
   const index = buttons.indexOf(event.target);

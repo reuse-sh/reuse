@@ -35,6 +35,8 @@ The footer is the "Reuse" wordmark with its icon, then Agent guides, Tools and G
 
 Documentation changes preserve the existing sidebar typography, spacing and nested page groups. The framework choice is an unboxed row with an icon, separated from the page links by spacing. Do not turn it into a raised button or add a separate navigation structure. Example controls stay quiet and omit a separate Open example action.
 
+Runnable examples preserve the existing demo composition, fixture data, SVG icons, controls, spacing and image crops. A platform or styling migration does not replace their design. Carousel overview dots remain a compact group with one moving active dot on the left and quiet SVG arrows on the right. Product-strip arrows stay beside its heading.
+
 Example views use plain Preview and Code links. Only the active item has a bottom line; there is no full-width divider, pill or raised surface. The sidebar chooses React or HTML + JavaScript for the whole documentation page. React is the default and examples use Tailwind. Framework options use the package Moving highlight for pointer and keyboard focus. The selected framework travels in documentation URLs. Code view shows the actual runnable files with filename links and the package copy control. CSS-only packages keep their stylesheet mechanics independent of the chosen framework.
 
 ## Motion

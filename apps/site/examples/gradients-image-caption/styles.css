@@ -1,10 +1,25 @@
 @import "@reuse-sh/interactions/styles.css";
+@font-face {
+  font-family: Geist;
+  src: url("https://reuse.sh/fonts/geist.woff2") format("woff2");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Geist Mono";
+  src: url("https://reuse.sh/fonts/geist-mono.woff2") format("woff2");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
 .re-example {
   box-sizing: border-box;
   width: 100%;
   color: #111;
   font:
-    15px / 1.6 system-ui,
+    15px / 1.6 "Geist",
+    system-ui,
     sans-serif;
 }
 .re-example * {
@@ -26,15 +41,20 @@
   opacity: 0.4;
 }
 .re-choices {
-  display: inline-flex;
+  position: relative;
+  display: flex;
+  width: fit-content;
+  max-width: 100%;
+  overflow-x: auto;
+  scrollbar-width: none;
   gap: 2px;
   min-width: 0;
   margin: 0;
   border: 0;
-  border-radius: 12px;
-  background: #f3f3f3;
-  padding: 4px;
-  --re-highlight-radius: 8px;
+  border-radius: 999px;
+  background: rgb(0 0 0 / 4.5%);
+  padding: 3px;
+  --re-highlight-radius: 999px;
 }
 .re-choices legend {
   position: absolute;
@@ -45,17 +65,47 @@
 }
 .re-choices label {
   position: relative;
-  padding: 6px 12px;
-  border-radius: 8px;
+  display: inline-flex;
+  align-items: center;
+  flex: none;
+  height: 30px;
+  padding: 0 13px;
+  border-radius: 999px;
+  white-space: nowrap;
+  color: #707070;
+  font-weight: 500;
+  transition: color 150ms ease;
   cursor: pointer;
   font-size: 13px;
   text-transform: capitalize;
 }
+.re-choices label:hover,
 .re-choices label:has(:checked) {
-  background: #0000000e;
+  color: #1f1f1f;
+}
+.re-choices:not([data-enhanced]) label:has(:checked) {
+  background: white;
+  box-shadow:
+    0 0 0 0.5px #00000014,
+    0 1px 2px #0000000d,
+    0 2px 4px #00000005;
+}
+.re-choices::-webkit-scrollbar {
+  display: none;
+}
+.re-choices .re-choice-selected {
+  background: white;
+  box-shadow:
+    0 0 0 0.5px #00000014,
+    0 1px 2px #0000000d,
+    0 2px 4px #00000005;
+}
+.re-choices .re-choice-hover {
+  background: rgb(0 0 0 / 3%);
 }
 .re-choices label:has(:focus-visible) {
-  outline: 2px solid;
+  outline: 2px solid #1f1f1f;
+  outline-offset: -2px;
 }
 .re-choices input {
   position: absolute;
@@ -74,6 +124,10 @@
   margin: 0;
   overflow: hidden;
   border-radius: 14px;
+  box-shadow:
+    0 0 0 0.5px #00000014,
+    0 1px 2px #0000000d,
+    0 4px 8px #00000009;
 }
 .re-caption img {
   display: block;
@@ -112,8 +166,8 @@
   line-height: 24px;
   font-weight: 600;
 }
-@media (max-width: 480px) {
+@media (max-width: 600px) {
   .re-caption figcaption {
-    padding: 64px 16px 16px;
+    padding: 72px 16px 14px;
   }
 }

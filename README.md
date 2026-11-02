@@ -55,8 +55,8 @@ npm install @reuse-sh/carousel
 
 Each library page has complete runnable examples. Choose React or HTML + JavaScript in the sidebar, then open Code to copy the actual files used by the preview.
 
-- [React with Tailwind](https://reuse.sh/carousel/getting-started?view=code) includes the component, data and package CSS imports. Copy `example.tsx` into a React 19 project with Tailwind CSS 4.
-- [HTML + JavaScript](https://reuse.sh/carousel/getting-started?framework=html&view=code) includes `index.html`, `styles.css` and `main.js`. Copy all three into an ES module project such as Vite. The initial markup remains useful before the script runs.
+- [React with Tailwind](https://reuse.sh/carousel/getting-started?view=code) includes the component, data and package CSS imports. Copy every file from the Code tab into a React 19 project with Tailwind CSS 4.
+- [HTML + JavaScript](https://reuse.sh/carousel/getting-started?framework=html&view=code) includes `index.html`, `styles.css` and `main.js`. Copy every supplied file into an ES module project such as Vite. The initial markup remains useful before the script runs.
 
 ## With a coding agent
 

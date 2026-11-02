@@ -37,6 +37,7 @@
   --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
   --mono:
     var(--font-geist-mono), ui-monospace, SFMono-Regular, Menlo, monospace;
+  --font-mono: var(--mono);
   --font-display: var(--font-fraunces), Georgia, serif;
   --display-weight: 300;
   --display-tracking: -0.02em;

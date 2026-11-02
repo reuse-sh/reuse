@@ -1,70 +1,147 @@
-import { Avatar } from "@reuse-sh/avatars/react";
+"use client";
+import { Avatar, type AvatarBadge } from "@reuse-sh/avatars/react";
 import { MovingHighlight } from "@reuse-sh/interactions/react";
+import type { CSSProperties } from "react";
 import "@reuse-sh/avatars/styles.css";
 import "@reuse-sh/interactions/styles.css";
+import "./mechanics.css";
 
-const members = [
+const photos = [
+  {
+    id: "lake",
+    src: "https://reuse.sh/images/marble-lake.svg",
+    caption: "Coral sky",
+    alt: "A soft marble texture in coral, sand and blue",
+    width: 1600,
+    height: 1200,
+  },
+  {
+    id: "mountains",
+    src: "https://reuse.sh/images/marble-mountains.svg",
+    caption: "Mint and ember",
+    alt: "A soft marble texture in mint, blue and orange",
+    width: 1600,
+    height: 1200,
+  },
+  {
+    id: "coast",
+    src: "https://reuse.sh/images/marble-coast.svg",
+    caption: "Lilac bloom",
+    alt: "A soft marble texture in lilac, rose and sea green",
+    width: 1600,
+    height: 1200,
+  },
+  {
+    id: "forest",
+    src: "https://reuse.sh/images/marble-forest.svg",
+    caption: "Sand and fern",
+    alt: "A soft marble texture in sand, green and violet",
+    width: 1600,
+    height: 1200,
+  },
+  {
+    id: "night",
+    src: "https://reuse.sh/images/marble-night.svg",
+    caption: "Blue hour",
+    alt: "A soft marble texture in blue, lilac and gold",
+    width: 1600,
+    height: 1200,
+  },
+  {
+    id: "woods",
+    src: "https://reuse.sh/images/marble-woods.svg",
+    caption: "Amber",
+    alt: "A soft marble texture in orange, yellow and blue",
+    width: 1600,
+    height: 1200,
+  },
+];
+
+const away = { "--re-avatar-status-color": "#d08a1c" } as CSSProperties;
+
+const members: {
+  name: string;
+  role: string;
+  badge?: AvatarBadge;
+  style?: CSSProperties;
+}[] = [
   {
     name: "Mara Lind",
     role: "Print editor",
-    src: "https://reuse.sh/images/marble-lake.svg",
     badge: { type: "dot", label: "Online" },
   },
   {
     name: "Jonas Weber",
     role: "Producer",
-    src: "https://reuse.sh/images/marble-mountains.svg",
     badge: { type: "dot", label: "Away" },
+    style: away,
   },
   {
     name: "Aiko Tanaka",
     role: "Writer",
-    src: "https://reuse.sh/images/marble-coast.svg",
-    badge: { type: "count", label: "3 unread messages", count: 3 },
+    badge: { type: "count", count: 3, label: "3 unread messages" },
   },
   {
     name: "Lea Novak",
     role: "Owner",
-    src: "https://reuse.sh/images/marble-forest.svg",
-    badge: { type: "icon", label: "Verified", icon: "\u2713" },
+    badge: {
+      type: "icon",
+      icon: (
+        <svg
+          width="10"
+          height="10"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="1.6"
+          aria-hidden="true"
+        >
+          <path
+            d="M5 14L8.5 17.5L19 6.5"
+            stroke="currentColor"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth="1.6"
+          />
+        </svg>
+      ),
+      label: "Verified",
+    },
   },
-  {
-    name: "Theo Brandt",
-    role: "Framer",
-    src: "https://reuse.sh/images/marble-night.svg",
-  },
+  { name: "Theo Brandt", role: "Framer" },
   {
     name: "Ines Duarte",
     role: "Guest",
-    src: "https://reuse.sh/images/marble-woods.svg",
-    badge: { type: "count", label: "12 unread messages", count: 12 },
+    badge: { type: "count", count: 12, label: "12 unread messages" },
   },
-] as const;
+];
+
 export function Example() {
   return (
-    <div className="mx-auto w-full min-w-0 max-w-[840px] p-6 font-sans text-[15px] leading-relaxed text-neutral-800">
-      <MovingHighlight className="max-w-[440px]">
-        <ul className="m-0 list-none p-0" aria-label="Members">
-          {members.map((member) => (
+    <div className="re-example w-full min-w-0">
+      <MovingHighlight className="re-members mx-auto w-full max-w-[400px] [--re-highlight-background:var(--re-demo-hover)] [--re-highlight-radius:12px]">
+        <ul
+          className="re-member-list [display:grid] [padding:6px]"
+          aria-label="Members"
+        >
+          {members.map((member, index) => (
             <li
               key={member.name}
-              className="flex items-center gap-3 rounded-xl p-3"
-              data-re-row
+              className="re-member [display:grid] [grid-template-columns:36px_minmax(0,_1fr)] [align-items:center] [gap:12px] [padding:9px_10px] [border-radius:12px]"
+              data-re-row=""
             >
               <Avatar
                 name={member.name}
-                src={member.src}
+                src={photos[index % photos.length].src}
                 size={36}
-                badge={"badge" in member ? member.badge : undefined}
-                className={
-                  member.name === "Jonas Weber"
-                    ? "[--re-avatar-status-color:#d08a1c]"
-                    : undefined
-                }
+                badge={member.badge}
+                style={member.style}
               />
-              <span>
-                <b className="font-medium">{member.name}</b>
-                <small className="block text-[13px] text-neutral-500">
+              <span className="re-member-text [display:grid] [min-width:0]">
+                <b className="re-member-name [font-size:14px] [line-height:20px] [font-weight:540]">
+                  {member.name}
+                </b>
+                <small className="re-member-meta [font-size:12.5px] [line-height:18px] [color:var(--re-demo-mute)]">
                   {member.role}
                 </small>
               </span>

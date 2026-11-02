@@ -1,13 +1,76 @@
 <!doctype html>
 <html lang="en">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Highlight Tabs</title>
-<link rel="stylesheet" href="./styles.css">
-</head>
-<body>
-<main class="re-example"><h2 class="re-heading">Spring catalogue</h2><div class="re-surface re-tabs" id="highlight" role="tablist" aria-label="Project"><button type="button" class="re-control " data-re-row role="tab" tabindex="0" id="tab-0" aria-selected="true" aria-controls="panel-0">Overview</button><button type="button" class="re-control " data-re-row role="tab" tabindex="-1" id="tab-1" aria-selected="false" aria-controls="panel-1">Prints</button><button type="button" class="re-control " data-re-row role="tab" tabindex="-1" id="tab-2" aria-selected="false" aria-controls="panel-2">Orders</button><button type="button" class="re-control " data-re-row role="tab" tabindex="-1" id="tab-3" aria-selected="false" aria-controls="panel-3">Settings</button></div><section id="panel-0" role="tabpanel" aria-labelledby="tab-0"><p class="re-prose">Nine prints, two waiting for review. The next proof ships on Friday.</p></section><section id="panel-1" role="tabpanel" aria-labelledby="tab-1" hidden><p class="re-prose">Coral sky, Mint and ember, Lilac bloom and six more, in print order.</p></section><section id="panel-2" role="tabpanel" aria-labelledby="tab-2" hidden><p class="re-prose">14 orders this week. Three are framed and wait for the courier.</p></section><section id="panel-3" role="tabpanel" aria-labelledby="tab-3" hidden><p class="re-prose">Who can see the series, how prints are named, and where proofs go.</p></section></main>
-<script type="module" src="./main.js"></script>
-</body>
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>highlight-tabs</title>
+    <link rel="stylesheet" href="./styles.css">
+  </head>
+  <body
+    style="margin:0;font:15px/24px Geist,system-ui,sans-serif;letter-spacing:-0.006em"
+  >
+    <main class="re-example">
+      <div class="re-highlight-tabs-x-app re-highlight-tabs-x-app-tabs">
+        <header class="re-highlight-tabs-x-tabs-head">
+          <h2 class="re-highlight-tabs-x-tabs-title">Spring catalogue</h2>
+          <div
+            role="tablist"
+            aria-label="Project"
+            class="re-highlight-tabs-x-tabs"
+          >
+            <button
+              id="x-tab-0"
+              type="button"
+              role="tab"
+              class="re-highlight-tabs-x-tab"
+              aria-selected="true"
+              aria-controls="re-highlight-tabs-x-tab-panel"
+              tabindex="0"
+            >
+              Overview
+            </button><button
+              id="x-tab-1"
+              type="button"
+              role="tab"
+              class="re-highlight-tabs-x-tab"
+              aria-selected="false"
+              aria-controls="re-highlight-tabs-x-tab-panel"
+              tabindex="-1"
+            >
+              Prints
+            </button><button
+              id="x-tab-2"
+              type="button"
+              role="tab"
+              class="re-highlight-tabs-x-tab"
+              aria-selected="false"
+              aria-controls="re-highlight-tabs-x-tab-panel"
+              tabindex="-1"
+            >
+              Orders
+            </button><button
+              id="x-tab-3"
+              type="button"
+              role="tab"
+              class="re-highlight-tabs-x-tab"
+              aria-selected="false"
+              aria-controls="re-highlight-tabs-x-tab-panel"
+              tabindex="-1"
+            >
+              Settings
+            </button>
+          </div>
+        </header>
+        <div
+          id="re-highlight-tabs-x-tab-panel"
+          role="tabpanel"
+          aria-labelledby="x-tab-0"
+          class="re-highlight-tabs-x-tab-panel"
+        >
+          Nine prints, two waiting for review. The next proof ships on Friday.
+        </div>
+      </div>
+    </main>
+    <script type="module" src="./main.js"></script>
+  </body>
 </html>

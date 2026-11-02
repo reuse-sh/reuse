@@ -59,7 +59,7 @@ npm install @reuse-sh/interactions
 
 ### Floating tooltip
 
-The [React example](https://reuse.sh/floating-tooltip/getting-started?view=code) includes its data, Tailwind styling and package CSS imports. Copy `example.tsx` into a React 19 project with Tailwind CSS 4, then render `<Example />`.
+The [React example](https://reuse.sh/floating-tooltip/getting-started?view=code) includes its data, Tailwind styling and package CSS imports. Copy every file from the Code tab into a React 19 project with Tailwind CSS 4, then render `<Example />`.
 
 The [HTML + JavaScript example](https://reuse.sh/floating-tooltip/getting-started?framework=html&view=code) contains its HTML, stylesheet and any required browser module. Copy every file into an ES module project such as Vite. Its initial markup stays useful before JavaScript.
 
@@ -67,7 +67,7 @@ Runnable browser example: [tooltip-start](https://reuse.sh/examples/tooltip-star
 
 ### Moving highlight
 
-The [React example](https://reuse.sh/moving-highlight/getting-started?view=code) includes its data, Tailwind styling and package CSS imports. Copy `example.tsx` into a React 19 project with Tailwind CSS 4, then render `<Example />`.
+The [React example](https://reuse.sh/moving-highlight/getting-started?view=code) includes its data, Tailwind styling and package CSS imports. Copy every file from the Code tab into a React 19 project with Tailwind CSS 4, then render `<Example />`.
 
 The [HTML + JavaScript example](https://reuse.sh/moving-highlight/getting-started?framework=html&view=code) contains its HTML, stylesheet and any required browser module. Copy every file into an ES module project such as Vite. Its initial markup stays useful before JavaScript.
 
@@ -75,7 +75,7 @@ Runnable browser example: [highlight-start](https://reuse.sh/examples/highlight-
 
 ### Hold to confirm
 
-The [React example](https://reuse.sh/hold-to-confirm/getting-started?view=code) includes its data, Tailwind styling and package CSS imports. Copy `example.tsx` into a React 19 project with Tailwind CSS 4, then render `<Example />`.
+The [React example](https://reuse.sh/hold-to-confirm/getting-started?view=code) includes its data, Tailwind styling and package CSS imports. Copy every file from the Code tab into a React 19 project with Tailwind CSS 4, then render `<Example />`.
 
 The [HTML + JavaScript example](https://reuse.sh/hold-to-confirm/getting-started?framework=html&view=code) contains its HTML, stylesheet and any required browser module. Copy every file into an ES module project such as Vite. Its initial markup stays useful before JavaScript.
 
@@ -83,7 +83,7 @@ Runnable browser example: [hold-start](https://reuse.sh/examples/hold-start/inde
 
 ### Copy button
 
-The [React example](https://reuse.sh/copy-button/getting-started?view=code) includes its data, Tailwind styling and package CSS imports. Copy `example.tsx` into a React 19 project with Tailwind CSS 4, then render `<Example />`.
+The [React example](https://reuse.sh/copy-button/getting-started?view=code) includes its data, Tailwind styling and package CSS imports. Copy every file from the Code tab into a React 19 project with Tailwind CSS 4, then render `<Example />`.
 
 The [HTML + JavaScript example](https://reuse.sh/copy-button/getting-started?framework=html&view=code) contains its HTML, stylesheet and any required browser module. Copy every file into an ES module project such as Vite. Its initial markup stays useful before JavaScript.
 

@@ -1,106 +1,237 @@
 @import "@reuse-sh/annotations/styles.css";
-.re-example {
-  color: #202020;
-  font:
-    15px / 1.6 system-ui,
-    sans-serif;
-  max-width: 840px;
-  margin: auto;
-  padding: 24px;
-  box-sizing: border-box;
+@import "@reuse-sh/avatars/styles.css";
+
+@font-face {
+  font-family: Geist;
+  src: url("https://reuse.sh/fonts/geist.woff2") format("woff2");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
 }
-.re-example *,
-.re-example *::before,
-.re-example *::after {
-  box-sizing: border-box;
+@font-face {
+  font-family: "Geist Mono";
+  src: url("https://reuse.sh/fonts/geist-mono.woff2") format("woff2");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
 }
-.re-example img {
-  max-width: 100%;
+.\[--re-annotation-color\:\#d95746\] {
+  --re-annotation-color: #d95746;
 }
-.re-example button,
-.re-example input {
-  font: inherit;
+.\[--re-annotation-radius\:10px\] {
+  --re-annotation-radius: 10px;
 }
-.re-example button {
-  cursor: pointer;
+.\[background\:var\(--re-demo-surface\)\] {
+  background: var(--re-demo-surface);
 }
-.re-example button:disabled {
-  cursor: default;
-  opacity: 0.5;
+.\[border-radius\:12px\] {
+  border-radius: 12px;
 }
-.re-example a {
-  color: inherit;
+.\[box-shadow\:var\(--re-demo-shadow-raised\)\] {
+  box-shadow: var(--re-demo-shadow-raised);
 }
-.re-example figure {
-  margin: 0;
+.\[color\:var\(--re-demo-ink\)\] {
+  color: var(--re-demo-ink);
 }
-.re-example figcaption,
-.re-meta {
-  color: #666;
+.\[color\:var\(--re-demo-mute\)\] {
+  color: var(--re-demo-mute);
+}
+.\[color\:var\(--re-demo-prose\)\] {
+  color: var(--re-demo-prose);
+}
+.\[display\:flex\] {
+  display: flex;
+}
+.\[display\:grid\] {
+  display: grid;
+}
+.\[font-family\:var\(--re-demo-mono\)\] {
+  font-family: var(--re-demo-mono);
+}
+.\[font-size\:12\.5px\] {
+  font-size: 12.5px;
+}
+.\[font-size\:12px\] {
+  font-size: 12px;
+}
+.\[font-size\:13px\] {
   font-size: 13px;
 }
-.re-example h2 {
-  font:
-    300 32px / 1.2 Georgia,
-    serif;
-  margin: 8px 0 20px;
+.\[font-weight\:560\] {
+  font-weight: 560;
 }
-.re-photo {
-  display: block;
-  position: relative;
+.\[gap\:20px\] {
+  gap: 20px;
 }
-.re-photo img {
-  display: block;
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  border-radius: 12px;
+.\[justify-content\:space-between\] {
+  justify-content: space-between;
 }
-.re-controls {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-top: 16px;
+.\[line-height\:19px\] {
+  line-height: 19px;
 }
-.re-controls button {
-  border: 1px solid #ddd;
-  border-radius: 50%;
-  background: white;
-  width: 32px;
-  height: 32px;
+.\[max-height\:140px\] {
+  max-height: 140px;
 }
-.re-counter {
-  margin-left: auto;
-  font-variant-numeric: tabular-nums;
+.\[overflow\:auto\] {
+  overflow: auto;
 }
-.re-example {
-  --re-annotation-radius: 12px;
+.\[overflow\:hidden\] {
+  overflow: hidden;
 }
-.re-review-head {
-  margin-bottom: 24px;
+.\[padding\:10px_14px_0\] {
+  padding: 10px 14px 0;
 }
-.re-review-head p {
-  margin: 0;
+.\[padding\:8px_14px_14px\] {
+  padding: 8px 14px 14px;
 }
-.re-review-head small {
-  color: #666;
-}
-.re-json {
-  padding: 16px;
-  border-radius: 12px;
-  background: #f5f5f5;
+.\[white-space\:pre-wrap\] {
   white-space: pre-wrap;
-  overflow-wrap: anywhere;
-  font: 12px / 1.6 monospace;
 }
-.re-field,
-.re-side {
-  margin-top: 12px;
+.\[word-break\:break-all\] {
+  word-break: break-all;
 }
-.re-field input {
-  width: 100%;
-  padding: 8px;
+body {
+  margin: 0;
+  font-family: "Geist", ui-sans-serif, system-ui, sans-serif;
 }
-.re-example [data-image] {
-  min-width: 0;
+
+@layer base {
+  .re-example {
+    --re-demo-ink: #111;
+    --re-demo-ink-2: #2e2e2e;
+    --re-demo-mute: #858585;
+    --re-demo-prose: #5b5b5b;
+    --re-demo-surface: #fff;
+    --re-demo-hover: rgb(0 0 0 / 3%);
+    --re-demo-shadow-control:
+      0 0 0 0.5px rgb(0 0 0 / 8%), 0 1px 2px rgb(0 0 0 / 5%),
+      0 2px 4px rgb(0 0 0 / 2%);
+    --re-demo-shadow-raised:
+      0 0 0 0.5px rgb(0 0 0 / 8%), 0 1px 2px rgb(0 0 0 / 5%),
+      0 4px 8px rgb(0 0 0 / 3.5%);
+    --re-demo-shadow-panel:
+      0 0 0 0.5px rgb(0 0 0 / 8%), 0 2px 4px rgb(0 0 0 / 4%),
+      0 8px 16px rgb(0 0 0 / 5%);
+    --re-demo-ease: cubic-bezier(0.23, 1, 0.32, 1);
+    --re-demo-mono:
+      ui-monospace, SFMono-Regular, Menlo, "Geist Mono", monospace;
+    width: 100%;
+    min-width: 0;
+    color: var(--re-demo-ink);
+    font-family: inherit;
+    font-size: 15px;
+    line-height: 24px;
+    letter-spacing: -0.006em;
+  }
+  .re-example *,
+  .re-example *::before,
+  .re-example *::after {
+    box-sizing: border-box;
+  }
+  .re-example :where(p, h2, figure, ul, pre) {
+    margin: 0;
+    padding: 0;
+  }
+  .re-example :where(ul) {
+    list-style: none;
+  }
+  .re-example :where(button, input, select) {
+    font: inherit;
+    color: inherit;
+  }
+  .re-example :where(button) {
+    cursor: pointer;
+  }
+  .re-example :where(img) {
+    display: block;
+    max-width: 100%;
+    height: auto;
+  }
+  .re-example :where(a) {
+    color: inherit;
+    text-decoration: none;
+  }
+  .re-example :where(b, strong) {
+    font-weight: 560;
+    color: var(--re-demo-ink);
+  }
+  .re-example [hidden] {
+    display: none;
+  }
+}
+.re-annot {
+  --re-annotation-color: #d95746;
+  --re-annotation-radius: 10px;
+  font-size: 13px;
+}
+.re-editor-doc {
+  display: grid;
+  gap: 20px;
+  margin-top: 0;
+}
+.re-annot-edit .re-annotation-toolbar {
+  gap: 4px;
+}
+.re-annot-edit .re-annotation-toolbar button {
+  height: 32px;
+  padding: 0 11px;
+  border: 0;
+  border-radius: 9px;
+  background: transparent;
+  box-shadow: inset 0 0 0 1px rgb(0 0 0 / 10%);
+  color: var(--re-demo-prose);
+  font-size: 13px;
+  transition:
+    background-color 150ms ease,
+    color 150ms ease;
+}
+.re-annot-edit .re-annotation-toolbar button:hover:not(:disabled) {
+  background: var(--re-demo-hover);
+  color: var(--re-demo-ink);
+}
+.re-annot-edit .re-annotation-toolbar button[aria-pressed="true"] {
+  background: var(--re-demo-ink);
+  box-shadow: none;
+  color: #fff;
+}
+.re-annot-edit .re-annotation-fields input,
+.re-annot-edit .re-annotation-fields select {
+  border-radius: 9px;
+}
+.re-annot-edit .re-annotation-editor-hint {
+  font-size: 13px;
+  line-height: 20px;
+  color: var(--re-demo-mute);
+}
+.re-saved {
+  overflow: hidden;
+  border-radius: 12px;
+  background: var(--re-demo-surface);
+  box-shadow: var(--re-demo-shadow-raised);
+}
+.re-saved-head {
+  display: flex;
+  justify-content: space-between;
+  padding: 10px 14px 0;
+  font-size: 12.5px;
+  color: var(--re-demo-mute);
+}
+.re-saved-label {
+  color: var(--re-demo-ink);
+  font-weight: 560;
+}
+.re-saved-code {
+  max-height: 140px;
+  padding: 8px 14px 14px;
+  overflow: auto;
+  font-family: var(--re-demo-mono);
+  font-size: 12px;
+  line-height: 19px;
+  white-space: pre-wrap;
+  word-break: break-all;
+  color: var(--re-demo-prose);
+}
+
+.re-saved-code {
+  margin-block: 12px;
 }

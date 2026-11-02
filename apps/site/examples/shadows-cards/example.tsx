@@ -11,17 +11,16 @@ export function Example() {
   useEffect(() => setEnhanced(true), []);
   return (
     <div className="mx-auto grid w-full min-w-0 max-w-[560px] grid-cols-1 gap-7">
-      <div className="re-card re-card-code re-shadow-ring-sm rounded-xl [--re-card-padding:6px_6px_6px_16px]">
+      <div className="re-card re-card-code re-shadow-ring-sm [--re-card-radius:12px] [--re-card-padding:6px_6px_6px_16px]">
         <pre>
           <code className="text-[13px]">{command}</code>
         </pre>
         <CopyButton
           disabled={!enhanced}
           text={command}
-          className="rounded-lg border-0 bg-transparent px-3 py-2 text-sm"
-        >
-          Copy
-        </CopyButton>
+          aria-label="Copy code"
+          className="relative inline-flex size-[30px] items-center justify-center gap-[7px] rounded-[9px] border-0 bg-transparent p-0 text-[13px] font-medium text-[#8a8a8a] shadow-none transition-[scale,background-color,color,opacity] hover:bg-black/4 hover:text-[#111] [--re-copy-icon-size:15px] [--re-copy-gap:7px]"
+        />
       </div>
       <div className="re-card-frame">
         <div className="re-card re-card-action re-shadow-ring-xs">
@@ -36,7 +35,7 @@ export function Example() {
           </div>
           <button
             type="button"
-            className="inline-flex h-9 shrink-0 items-center gap-1.5 rounded-[10px] border-0 bg-white px-3.5 text-[13.5px] shadow-[inset_0_0_0_1px_#0000001f]"
+            className="inline-flex h-9 shrink-0 items-center gap-1.5 rounded-[10px] border-0 bg-white px-3.5 text-[13.5px] font-[540] text-[#111] hover:bg-[#fafafa] shadow-[inset_0_0_0_1px_#0000001f]"
           >
             Order a proof{" "}
             <svg
@@ -44,13 +43,13 @@ export function Example() {
               height="14"
               viewBox="0 0 24 24"
               fill="none"
+              stroke="currentColor"
+              strokeWidth="1.8"
+              strokeLinecap="round"
+              strokeLinejoin="round"
               aria-hidden="true"
             >
-              <path
-                d="M5 12h14m-6-6 6 6-6 6"
-                stroke="currentColor"
-                strokeWidth="2"
-              />
+              <path d="M7 7h10v10M7 17 17 7" />
             </svg>
           </button>
         </div>

@@ -1,5 +1,11 @@
 @import "@reuse-sh/carousel/styles.css";
 @import "@reuse-sh/interactions/styles.css";
+@font-face {
+  font-family: Geist;
+  src: url("https://reuse.sh/fonts/geist.woff2") format("woff2");
+  font-weight: 100 900;
+  font-display: swap;
+}
 .re-cc {
   --re-cc-shadow-control:
     0 0 0 0.5px rgb(0 0 0 / 8%), 0 1px 2px rgb(0 0 0 / 5%),

@@ -1,117 +1,98 @@
 "use client";
-
 import { FloatingTooltipGroup } from "@reuse-sh/interactions/react";
-import "@reuse-sh/interactions/styles.css";
+import type { CSSProperties } from "react";
+import "./effects.css";
 
-const cards = [
-  [
-    "Mara Lind",
-    "Print editor",
-    "09:42 in Lisbon",
-    "https://reuse.sh/images/marble-lake.svg",
-  ],
-  [
-    "Jonas Weber",
-    "Producer",
-    "10:42 in Berlin",
-    "https://reuse.sh/images/marble-mountains.svg",
-  ],
-  [
-    "Aiko Tanaka",
-    "Writer",
-    "16:42 in Taipei",
-    "https://reuse.sh/images/marble-coast.svg",
-  ],
-];
-function card(trigger: HTMLElement) {
-  const index = Number(trigger.getAttribute("data-card"));
-  const [title, description, detail, src] = cards[index];
-  const root = document.createElement("span");
-  root.style.cssText =
-    "display:block;width:240px;max-width:calc(100vw - 36px);font:13px/1.5 system-ui,sans-serif";
-  const image = document.createElement("img");
-  image.src = src;
-  image.alt = "";
-  image.width = 240;
-  image.height = 140;
-  image.style.cssText =
-    "display:block;width:100%;height:140px;object-fit:cover;border-radius:10px";
-  const body = document.createElement("span");
-  body.style.cssText = "display:grid;gap:4px;padding:10px";
-  const heading = document.createElement("b");
-  heading.textContent = title;
-  const text = document.createElement("span");
-  text.textContent = description;
-  const small = document.createElement("small");
-  small.textContent = detail;
-  body.append(heading, text, small);
-  root.append(image, body);
-  return root;
-}
-export function Example() {
-  return (
-    <FloatingTooltipGroup
-      className="mx-auto w-full max-w-[640px] p-4 text-[15px] leading-6 text-[#111] sm:p-8"
-      content={card}
-    >
-      <div className="mb-6 flex gap-3">
-        {/* biome-ignore lint/performance/noImgElement: this portable recipe also runs outside Next.js. */}
-        <img
-          className="size-9 shrink-0 rounded-full object-cover"
-          src="https://reuse.sh/images/marble-lake.svg"
-          alt=""
-        />
-        <p>
-          <button
-            type="button"
-            className="font-semibold"
-            data-card="0"
-            data-re-tooltip="Mara Lind"
-          >
-            Mara Lind
-          </button>{" "}
-          The second crop of Coral sky reads better. Can we try it as the cover?
-        </p>
-      </div>
-      <div className="mb-6 flex gap-3">
-        {/* biome-ignore lint/performance/noImgElement: this portable recipe also runs outside Next.js. */}
-        <img
-          className="size-9 shrink-0 rounded-full object-cover"
-          src="https://reuse.sh/images/marble-mountains.svg"
-          alt=""
-        />
-        <p>
-          <button
-            type="button"
-            className="font-semibold"
-            data-card="1"
-            data-re-tooltip="Jonas Weber"
-          >
-            Jonas Weber
-          </button>{" "}
-          Works for me. The print run closes on Friday, so we have until
-          Thursday night.
-        </p>
-      </div>
-      <div className="mb-6 flex gap-3">
-        {/* biome-ignore lint/performance/noImgElement: this portable recipe also runs outside Next.js. */}
-        <img
-          className="size-9 shrink-0 rounded-full object-cover"
-          src="https://reuse.sh/images/marble-coast.svg"
-          alt=""
-        />
-        <p>
-          <button
-            type="button"
-            className="font-semibold"
-            data-card="2"
-            data-re-tooltip="Aiko Tanaka"
-          >
-            Aiko Tanaka
-          </button>{" "}
-          I'll trim the caption to one line so it sits under the photo.
-        </p>
-      </div>
-    </FloatingTooltipGroup>
+function escapeHtml(value: string) {
+  return value.replace(
+    /[&<>"']/g,
+    (char) =>
+      ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[
+        char
+      ] ?? char,
   );
 }
+const photos = [
+  {
+    src: "https://reuse.sh/images/marble-lake.svg",
+    alt: "A soft marble texture in coral, sand and blue",
+    width: 1600,
+    height: 1200,
+  },
+  {
+    src: "https://reuse.sh/images/marble-mountains.svg",
+    alt: "A soft marble texture in mint, blue and orange",
+    width: 1600,
+    height: 1200,
+  },
+  {
+    src: "https://reuse.sh/images/marble-coast.svg",
+    alt: "A soft marble texture in lilac, rose and sea green",
+    width: 1600,
+    height: 1200,
+  },
+];
+
+function Template({ id, html }: { id: string; html: string }) {
+  // biome-ignore lint/security/noDangerouslySetInnerHtml: the markup is built from fixed synthetic strings, escaped with escapeHtml.
+  return <template id={id} dangerouslySetInnerHTML={{ __html: html }} />;
+}
+
+const people = [
+  ["Mara Lind", "Print editor", "09:42 in Lisbon"],
+  ["Jonas Weber", "Producer", "10:42 in Berlin"],
+  ["Aiko Tanaka", "Writer", "16:42 in Taipei"],
+] as const;
+
+const comments = [
+  [0, "The second crop of Coral sky reads better. Can we try it as the cover?"],
+  [
+    1,
+    "Works for me. The print run closes on Friday, so we have until Thursday night.",
+  ],
+  [2, "I'll trim the caption to one line so it sits under the photo."],
+] as const;
+
+const face = (index: number) =>
+  ({ backgroundImage: `url(${photos[index].src})` }) as CSSProperties;
+
+export function TooltipPeople() {
+  return (
+    <>
+      <FloatingTooltipGroup>
+        <div className="grid [gap:18px]">
+          {comments.map(([index, text]) => (
+            <div
+              key={text}
+              className="grid [grid-template-columns:28px_minmax(0,_1fr)] gap-3 items-start [&_p]:[color:#5b5b5b]"
+            >
+              <span
+                className="re-tooltip-people-f-face re-tooltip-people-f-face-sm"
+                style={face(index)}
+              />
+              <p>
+                <button
+                  type="button"
+                  className="p-0 border-0 [border-radius:4px] [background:none] [color:#111] [font-weight:560] cursor-default [&:hover]:[text-decoration:underline] [&:hover]:[text-decoration-color:rgb(0_0_0_/_20%)] [&:hover]:[text-underline-offset:3px]"
+                  data-re-tooltip-template={`tt-person-${index}`}
+                >
+                  {people[index][0]}
+                </button>{" "}
+                {text}
+              </p>
+            </div>
+          ))}
+        </div>
+      </FloatingTooltipGroup>
+      {people.map(([name, role, time], index) => (
+        <Template
+          key={name}
+          id={`tt-person-${index}`}
+          html={`<span class="re-tooltip-people-f-person"><span class="re-tooltip-people-f-face" style="background-image:url(${escapeHtml(photos[index].src)})"></span><span class="re-tooltip-people-f-person-body"><b>${escapeHtml(name)}</b><span>${escapeHtml(role)}</span><small>${escapeHtml(time)}</small></span></span>`}
+        />
+      ))}
+    </>
+  );
+}
+
+export const Example = TooltipPeople;

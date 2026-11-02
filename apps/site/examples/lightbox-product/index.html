@@ -1,5 +1,143 @@
 <!doctype html>
 <html lang="en">
-<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Lightbox Product</title><link rel="stylesheet" href="./styles.css"></head>
-<body><main class="re-example"><div class="re-product"><div data-gallery><a class="re-photo" data-photo href="https://reuse.sh/images/marble-lake.svg" ><img src="https://reuse.sh/images/marble-lake.svg" alt="A soft marble texture in coral, sand and blue" width="1600" height="1200" draggable="false" data-caption="Coral sky"></a><div class="re-thumbs"><a class="re-photo" data-photo href="https://reuse.sh/images/marble-mountains.svg" ><img src="https://reuse.sh/images/marble-mountains.svg" alt="A soft marble texture in mint, blue and orange" width="1600" height="1200" draggable="false" data-caption="Mint and ember"></a><a class="re-photo" data-photo href="https://reuse.sh/images/marble-woods.svg" ><img src="https://reuse.sh/images/marble-woods.svg" alt="A soft marble texture in orange, yellow and blue" width="1600" height="1200" draggable="false" data-caption="Amber"></a><a class="re-photo" data-photo href="https://reuse.sh/images/marble-coast.svg" ><img src="https://reuse.sh/images/marble-coast.svg" alt="A soft marble texture in lilac, rose and sea green" width="1600" height="1200" draggable="false" data-caption="Lilac bloom"></a></div></div><section><p class="re-meta">Prints / Marble</p><h2>Coral sky print</h2><p><strong data-price>$84</strong> <span class="re-meta" data-paper>Archival paper · 40 × 30 cm</span></p><p>Coral, sand and blue drift across the sheet like ink on water. Printed to order on matte cotton paper with a 2 cm border.</p><fieldset class="re-sizes"><legend>Size</legend><label><input type="radio" name="size" value="0" > 30 × 20</label><label><input type="radio" name="size" value="1" checked> 40 × 30</label><label><input type="radio" name="size" value="2" > 60 × 45</label></fieldset><button class="re-buy" type="button" data-buy disabled>Add to bag</button><p class="re-meta">Ships flat between two boards in 3 to 5 days.</p></section></div></main><script type="module" src="./main.js"></script></body>
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Lightbox Product</title>
+    <link rel="stylesheet" href="./styles.css">
+  </head>
+  <body
+    style="margin:0;font:15px/24px Geist,system-ui,sans-serif;letter-spacing:-0.006em"
+  >
+    <div class="re-example w-full min-w-0">
+      <div
+        class="re-product [display:grid] [grid-template-columns:minmax(0,_1.08fr)_minmax(0,_1fr)] [gap:36px] "
+      >
+        <div data-gallery="" class="re-shots">
+          <div data-photo-group="true">
+            <a
+              href="https://reuse.sh/images/marble-lake.svg"
+              class="re-photo re-shot-main [width:100%] [aspect-ratio:4_/_5]"
+              data-photo="lake"
+              aria-label="Open Coral sky"
+              ><img
+                src="https://reuse.sh/images/marble-lake.svg"
+                alt="A soft marble texture in coral, sand and blue"
+                width="1600"
+                height="1200"
+                loading="lazy"
+                draggable="false"
+              ></a
+            >
+            <div
+              class="re-thumbs [display:grid] [grid-template-columns:repeat(3,_minmax(0,_1fr))] [gap:6px] [margin-top:6px]"
+            >
+              <a
+                href="https://reuse.sh/images/marble-mountains.svg"
+                class="re-photo"
+                data-photo="mountains"
+                aria-label="Open Mint and ember"
+                ><img
+                  src="https://reuse.sh/images/marble-mountains.svg"
+                  alt="A soft marble texture in mint, blue and orange"
+                  width="1600"
+                  height="1200"
+                  loading="lazy"
+                  draggable="false"
+                ></a
+              ><a
+                href="https://reuse.sh/images/marble-woods.svg"
+                class="re-photo"
+                data-photo="woods"
+                aria-label="Open Amber"
+                ><img
+                  src="https://reuse.sh/images/marble-woods.svg"
+                  alt="A soft marble texture in orange, yellow and blue"
+                  width="1600"
+                  height="1200"
+                  loading="lazy"
+                  draggable="false"
+                ></a
+              ><a
+                href="https://reuse.sh/images/marble-coast.svg"
+                class="re-photo"
+                data-photo="coast"
+                aria-label="Open Lilac bloom"
+                ><img
+                  src="https://reuse.sh/images/marble-coast.svg"
+                  alt="A soft marble texture in lilac, rose and sea green"
+                  width="1600"
+                  height="1200"
+                  loading="lazy"
+                  draggable="false"
+                ></a
+              >
+            </div>
+          </div>
+        </div>
+        <div
+          class="re-info [display:flex] [flex-direction:column] [padding-top:6px]"
+        >
+          <p class="re-crumb [font-size:12.5px] [color:var(--re-demo-mute)]">
+            Prints <span>/</span> Marble
+          </p>
+          <h2
+            class="re-title [margin-top:8px] [font-size:24px] [line-height:30px] [font-weight:600] [letter-spacing:-0.025em]"
+          >
+            Coral sky print
+          </h2>
+          <p
+            class="re-price [display:flex] [flex-wrap:wrap] [align-items:baseline] [gap:4px_10px] [margin-top:8px] [font-size:18px] [line-height:26px] [font-variant-numeric:tabular-nums]"
+          >
+            <span>$84</span
+            ><span class="re-meta [font-size:13px] [color:var(--re-demo-mute)]"
+              >Archival paper · 40 × 30 cm</span
+            >
+          </p>
+          <p
+            class="re-desc [margin-top:16px] [font-size:14px] [line-height:22px] [color:var(--re-demo-prose)]"
+          >
+            Coral, sand and blue drift across the sheet like ink on water.
+            Printed to order on matte cotton paper with a 2 cm border.
+          </p>
+          <fieldset
+            class="re-field [min-width:0] [margin:22px_0_0] [padding:0] [border:0]"
+          >
+            <legend
+              class="re-label [margin-bottom:8px] [padding:0] [font-size:12.5px] [font-weight:500] [color:var(--re-demo-ink-2)]"
+            >
+              Size
+            </legend>
+            <div
+              class="re-sizes [--re-highlight-radius:8px] [display:flex] [gap:2px] [padding:3px] [border-radius:11px] [background:rgb(0_0_0_/_4%)]"
+            >
+              <label data-re-row="true"
+                ><input type="radio" class="sr-only" name="x-size">30 ×
+                20</label
+              ><label data-re-row="true" data-current=""
+                ><input type="radio" class="sr-only" name="x-size" checked="">40
+                × 30</label
+              ><label data-re-row="true"
+                ><input type="radio" class="sr-only" name="x-size">60 ×
+                45</label
+              >
+            </div>
+          </fieldset>
+          <button
+            type="button"
+            disabled=""
+            class="re-buy [height:42px] [margin-top:22px] [border:0] [border-radius:11px] [background:var(--re-demo-ink)] [color:#fff] [font-size:14px] [font-weight:520] [cursor:pointer] [transition:transform_160ms_var(--re-demo-ease),_background-color_200ms_ease]"
+          >
+            Add to bag
+          </button>
+          <p
+            class="re-note [margin-top:10px] [font-size:12.5px] [color:var(--re-demo-mute)] [text-align:center]"
+          >
+            Ships flat between two boards in 3 to 5 days.
+          </p>
+        </div>
+      </div>
+    </div>
+    <script type="module" src="./main.js"></script>
+  </body>
 </html>

@@ -2,17 +2,24 @@
 
 import { useEffect, useRef } from "react";
 
-export function NativeFrame({ id }: { id: string }) {
+export function NativeFrame({
+  id,
+  unframed = false,
+}: {
+  id: string;
+  unframed?: boolean;
+}) {
   const frame = useRef<HTMLIFrameElement>(null);
   useEffect(() => {
     const element = frame.current;
-    if (!element) return;
+    const container = element?.parentElement;
+    if (!element || !container) return;
     let observer: ResizeObserver | undefined;
     const measure = () => {
       const body = element.contentDocument?.body;
       if (!body) return;
-      const style = getComputedStyle(body);
-      element.style.height = `${Math.ceil(body.getBoundingClientRect().height + Number.parseFloat(style.marginTop) + Number.parseFloat(style.marginBottom))}px`;
+      body.style.width = `${container.clientWidth}px`;
+      element.style.height = `${Math.ceil(body.getBoundingClientRect().height)}px`;
     };
     const loaded = () => {
       observer?.disconnect();
@@ -20,6 +27,7 @@ export function NativeFrame({ id }: { id: string }) {
       if (!body) return;
       observer = new ResizeObserver(measure);
       observer.observe(body);
+      observer.observe(container);
       measure();
     };
     element.addEventListener("load", loaded);
@@ -30,11 +38,13 @@ export function NativeFrame({ id }: { id: string }) {
     };
   }, []);
   return (
-    <iframe
-      ref={frame}
-      title="HTML and JavaScript example"
-      src={`/examples/${id}/index.html`}
-      className="block h-80 w-full border-0"
-    />
+    <div className="w-full min-w-0 overflow-hidden">
+      <iframe
+        ref={frame}
+        title="HTML and JavaScript example"
+        src={`/examples/${id}/index.html?embed=${unframed ? "plain" : "card"}`}
+        className="block h-80 w-screen border-0"
+      />
+    </div>
   );
 }

@@ -20,7 +20,7 @@ for (const [name, owned] of groups) {
     const page = `https://reuse.sh/${library.slug}/getting-started`;
     return [
       ...(owned.length > 1 ? [`### ${library.name}`] : []),
-      `The [React example](${page}?view=code) includes its data, Tailwind styling and package CSS imports. Copy \`example.tsx\` into a React 19 project with Tailwind CSS 4, then render \`<Example />\`.`,
+      `The [React example](${page}?view=code) includes its data, Tailwind styling and package CSS imports. Copy every file from the Code tab into a React 19 project with Tailwind CSS 4, then render \`<Example />\`.`,
       `The [HTML + JavaScript example](${page}?framework=html&view=code) contains its HTML, stylesheet and any required browser module. Copy every file into an ES module project such as Vite. Its initial markup stays useful before JavaScript.`,
       `Runnable browser example: [${id}](https://reuse.sh/examples/${id}/index.html).`,
     ].join("\n\n");

@@ -1,2 +1,52 @@
 <!doctype html>
-<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Shadows Cards</title><link rel="stylesheet" href="./styles.css"></head><body><div class="re-example re-shadow-cards"><div class="re-card re-card-code re-shadow-ring-sm"><pre><code>npm install @reuse-sh/shadows</code></pre><button class="re-copy" type="button" disabled>Copy</button></div><div class="re-card-frame"><div class="re-card re-card-action re-shadow-ring-xs"><div><h3>Order a test print</h3><p>A 20 × 15 cm proof of Coral sky on the same cotton paper, shipped in two days.</p></div><button type="button">Order a proof <span aria-hidden="true">→</span></button></div></div></div><script type="module" src="./main.js"></script></body></html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>Shadows Cards</title>
+    <link rel="stylesheet" href="./styles.css">
+  </head>
+  <body
+    style="margin:0;font:15px/24px Geist,system-ui,sans-serif;letter-spacing:-0.006em"
+  >
+    <div class="re-example re-shadow-cards">
+      <div class="re-card re-card-code re-shadow-ring-sm">
+        <pre><code>npm install @reuse-sh/shadows</code></pre>
+        <button
+          class="re-copy"
+          type="button"
+          aria-label="Copy code"
+          disabled
+        ></button>
+      </div>
+      <div class="re-card-frame">
+        <div class="re-card re-card-action re-shadow-ring-xs">
+          <div>
+            <h3>Order a test print</h3>
+            <p>
+              A 20 × 15 cm proof of Coral sky on the same cotton paper, shipped
+              in two days.
+            </p>
+          </div>
+          <button type="button">
+            Order a proof
+            <svg
+              width="14"
+              height="14"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.8"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              aria-hidden="true"
+            >
+              <path d="M7 7h10v10M7 17 17 7" />
+            </svg>
+          </button>
+        </div>
+      </div>
+    </div>
+    <script type="module" src="./main.js"></script>
+  </body>
+</html>

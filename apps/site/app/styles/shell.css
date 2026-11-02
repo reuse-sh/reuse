@@ -51,19 +51,21 @@
 .c-link:hover {
   text-decoration-color: currentColor;
 }
-kbd {
-  display: inline-grid;
-  place-items: center;
-  min-width: 20px;
-  height: 20px;
-  padding: 0 5px;
-  margin: 0 1px;
-  border-radius: 6px;
-  background: var(--surface);
-  box-shadow: var(--shadow-control);
-  color: var(--ink);
-  font: 500 11.5px / 1 var(--font-sans);
-  vertical-align: 1px;
+@layer components {
+  kbd {
+    display: inline-grid;
+    place-items: center;
+    min-width: 20px;
+    height: 20px;
+    padding: 0 5px;
+    margin: 0 1px;
+    border-radius: 6px;
+    background: var(--surface);
+    box-shadow: var(--shadow-control);
+    color: var(--ink);
+    font: 500 11.5px / 1 var(--font-sans);
+    vertical-align: 1px;
+  }
 }
 
 /* Cards: a light outer ring around a white inner card */

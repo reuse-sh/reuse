@@ -2,7 +2,7 @@ import type { Library } from "@reuse-sh/catalog";
 import type { ReactNode } from "react";
 import { CodeBlock } from "../shell/code-block";
 import { DocLink as Link } from "./doc-link";
-import { C, OverviewActions, Principles, Section, Text } from "./parts";
+import { C, Keys, OverviewActions, Principles, Section, Text } from "./parts";
 export function LightboxOverview({
   library,
   example,
@@ -14,6 +14,11 @@ export function LightboxOverview({
     <>
       <OverviewActions library={library} />
       {example}
+      <Keys>
+        Click an image, then <kbd>←</kbd>
+        <kbd>→</kbd> to page, <kbd>+</kbd>
+        <kbd>−</kbd> to zoom, <kbd>Esc</kbd> to close.
+      </Keys>
 
       <Principles
         rows={library.principles}

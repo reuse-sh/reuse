@@ -1,23 +1,167 @@
 <!doctype html>
-<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Carousel controls</title><link rel="stylesheet" href="./styles.css"></head><body style="font:15px/24px system-ui,sans-serif">
-<section class="re-cc">
-<fieldset class="re-cc-seg" disabled><legend class="re-cc-sr-only">Carousel control style</legend>
-<label class="re-cc-seg-item" data-re-row data-current=""><input type="radio" name="re-cc-style" class="re-cc-sr-only" value="Dots" checked>Dots</label>
-<label class="re-cc-seg-item" data-re-row><input type="radio" name="re-cc-style" class="re-cc-sr-only" value="Pills">Pills</label>
-<label class="re-cc-seg-item" data-re-row><input type="radio" name="re-cc-style" class="re-cc-sr-only" value="Stories">Stories</label>
-<label class="re-cc-seg-item" data-re-row><input type="radio" name="re-cc-style" class="re-cc-sr-only" value="Counter">Counter</label>
-<label class="re-cc-seg-item" data-re-row><input type="radio" name="re-cc-style" class="re-cc-sr-only" value="Thumbnails">Thumbnails</label>
-<label class="re-cc-seg-item" data-re-row><input type="radio" name="re-cc-style" class="re-cc-sr-only" value="Arrows">Arrows</label>
-<label class="re-cc-seg-item" data-re-row><input type="radio" name="re-cc-style" class="re-cc-sr-only" value="Scrubber">Scrubber</label>
-<label class="re-cc-seg-item" data-re-row><input type="radio" name="re-cc-style" class="re-cc-sr-only" value="Labels">Labels</label>
-</fieldset>
-<div class="re-cc-demo"><div class="re-cc-c re-cc-c-dots"><div class="re-cc-view re-carousel"><figure class="re-cc-slide re-carousel__slide" data-carousel-slide><img src="https://reuse.sh/images/marble-lake.svg" alt="A soft marble texture in coral, sand and blue" width="1600" height="1200" draggable="false"></figure>
-<figure class="re-cc-slide re-carousel__slide" data-carousel-slide><img src="https://reuse.sh/images/marble-mountains.svg" alt="A soft marble texture in mint, blue and orange" width="1600" height="1200" draggable="false"></figure>
-<figure class="re-cc-slide re-carousel__slide" data-carousel-slide><img src="https://reuse.sh/images/marble-coast.svg" alt="A soft marble texture in lilac, rose and sea green" width="1600" height="1200" draggable="false"></figure>
-<figure class="re-cc-slide re-carousel__slide" data-carousel-slide><img src="https://reuse.sh/images/marble-forest.svg" alt="A soft marble texture in sand, green and violet" width="1600" height="1200" draggable="false"></figure>
-<figure class="re-cc-slide re-carousel__slide" data-carousel-slide><img src="https://reuse.sh/images/marble-night.svg" alt="A soft marble texture in blue, lilac and gold" width="1600" height="1200" draggable="false"></figure>
-<figure class="re-cc-slide re-carousel__slide" data-carousel-slide><img src="https://reuse.sh/images/marble-woods.svg" alt="A soft marble texture in orange, yellow and blue" width="1600" height="1200" draggable="false"></figure>
-<figure class="re-cc-slide re-carousel__slide" data-carousel-slide><img src="https://reuse.sh/images/marble-dune.svg" alt="A soft marble texture in sea green, blue and pink" width="1600" height="1200" draggable="false"></figure>
-<figure class="re-cc-slide re-carousel__slide" data-carousel-slide><img src="https://reuse.sh/images/marble-meadow.svg" alt="A soft marble texture in periwinkle, peach and green" width="1600" height="1200" draggable="false"></figure></div></div></div>
-<p class="re-cc-note"><b>Dots.</b> One filled dot travels over static ones. Each 4 px mark has its own 24 px hit target.</p>
-</section><script type="module" src="./main.js"></script></body></html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Carousel controls</title>
+    <link rel="stylesheet" href="./styles.css">
+  </head>
+  <body
+    style="margin:0;font:15px/24px Geist,system-ui,sans-serif;letter-spacing:-0.006em"
+  >
+    <section class="re-cc">
+      <fieldset class="re-cc-seg" disabled>
+        <legend class="re-cc-sr-only">Carousel control style</legend>
+        <label class="re-cc-seg-item" data-re-row data-current=""
+          ><input
+            type="radio"
+            name="re-cc-style"
+            class="re-cc-sr-only"
+            value="Dots"
+            checked
+          >Dots</label
+        >
+        <label class="re-cc-seg-item" data-re-row
+          ><input
+            type="radio"
+            name="re-cc-style"
+            class="re-cc-sr-only"
+            value="Pills"
+          >Pills</label
+        >
+        <label class="re-cc-seg-item" data-re-row
+          ><input
+            type="radio"
+            name="re-cc-style"
+            class="re-cc-sr-only"
+            value="Stories"
+          >Stories</label
+        >
+        <label class="re-cc-seg-item" data-re-row
+          ><input
+            type="radio"
+            name="re-cc-style"
+            class="re-cc-sr-only"
+            value="Counter"
+          >Counter</label
+        >
+        <label class="re-cc-seg-item" data-re-row
+          ><input
+            type="radio"
+            name="re-cc-style"
+            class="re-cc-sr-only"
+            value="Thumbnails"
+          >Thumbnails</label
+        >
+        <label class="re-cc-seg-item" data-re-row
+          ><input
+            type="radio"
+            name="re-cc-style"
+            class="re-cc-sr-only"
+            value="Arrows"
+          >Arrows</label
+        >
+        <label class="re-cc-seg-item" data-re-row
+          ><input
+            type="radio"
+            name="re-cc-style"
+            class="re-cc-sr-only"
+            value="Scrubber"
+          >Scrubber</label
+        >
+        <label class="re-cc-seg-item" data-re-row
+          ><input
+            type="radio"
+            name="re-cc-style"
+            class="re-cc-sr-only"
+            value="Labels"
+          >Labels</label
+        >
+      </fieldset>
+      <div class="re-cc-demo">
+        <div class="re-cc-c re-cc-c-dots">
+          <div class="re-cc-view re-carousel">
+            <figure class="re-cc-slide re-carousel__slide" data-carousel-slide>
+              <img
+                src="https://reuse.sh/images/marble-lake.svg"
+                alt="A soft marble texture in coral, sand and blue"
+                width="1600"
+                height="1200"
+                draggable="false"
+              >
+            </figure>
+            <figure class="re-cc-slide re-carousel__slide" data-carousel-slide>
+              <img
+                src="https://reuse.sh/images/marble-mountains.svg"
+                alt="A soft marble texture in mint, blue and orange"
+                width="1600"
+                height="1200"
+                draggable="false"
+              >
+            </figure>
+            <figure class="re-cc-slide re-carousel__slide" data-carousel-slide>
+              <img
+                src="https://reuse.sh/images/marble-coast.svg"
+                alt="A soft marble texture in lilac, rose and sea green"
+                width="1600"
+                height="1200"
+                draggable="false"
+              >
+            </figure>
+            <figure class="re-cc-slide re-carousel__slide" data-carousel-slide>
+              <img
+                src="https://reuse.sh/images/marble-forest.svg"
+                alt="A soft marble texture in sand, green and violet"
+                width="1600"
+                height="1200"
+                draggable="false"
+              >
+            </figure>
+            <figure class="re-cc-slide re-carousel__slide" data-carousel-slide>
+              <img
+                src="https://reuse.sh/images/marble-night.svg"
+                alt="A soft marble texture in blue, lilac and gold"
+                width="1600"
+                height="1200"
+                draggable="false"
+              >
+            </figure>
+            <figure class="re-cc-slide re-carousel__slide" data-carousel-slide>
+              <img
+                src="https://reuse.sh/images/marble-woods.svg"
+                alt="A soft marble texture in orange, yellow and blue"
+                width="1600"
+                height="1200"
+                draggable="false"
+              >
+            </figure>
+            <figure class="re-cc-slide re-carousel__slide" data-carousel-slide>
+              <img
+                src="https://reuse.sh/images/marble-dune.svg"
+                alt="A soft marble texture in sea green, blue and pink"
+                width="1600"
+                height="1200"
+                draggable="false"
+              >
+            </figure>
+            <figure class="re-cc-slide re-carousel__slide" data-carousel-slide>
+              <img
+                src="https://reuse.sh/images/marble-meadow.svg"
+                alt="A soft marble texture in periwinkle, peach and green"
+                width="1600"
+                height="1200"
+                draggable="false"
+              >
+            </figure>
+          </div>
+        </div>
+      </div>
+      <p class="re-cc-note">
+        <b>Dots.</b>
+        One filled dot travels over static ones. Each 4 px mark has its own 24
+        px hit target.
+      </p>
+    </section>
+    <script type="module" src="./main.js"></script>
+  </body>
+</html>

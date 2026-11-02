@@ -1,10 +1,25 @@
 @import "@reuse-sh/loaders/styles.css";
+@font-face {
+  font-family: Geist;
+  src: url("https://reuse.sh/fonts/geist.woff2") format("woff2");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Geist Mono";
+  src: url("https://reuse.sh/fonts/geist-mono.woff2") format("woff2");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
 .re-example {
   box-sizing: border-box;
   width: 100%;
   color: #111;
   font:
-    15px / 1.6 system-ui,
+    15px / 1.6 "Geist",
+    system-ui,
     sans-serif;
 }
 .re-example * {
@@ -36,11 +51,18 @@
   gap: 12px;
 }
 .re-loader-gallery code {
-  font: 12px / 18px monospace;
+  font:
+    12px / 18px "Geist Mono",
+    monospace;
   text-align: center;
   color: #858585;
 }
-@media (max-width: 480px) {
+@media (max-width: 760px) {
+  .re-loader-gallery {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+@media (max-width: 600px) {
   .re-loader-gallery {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }

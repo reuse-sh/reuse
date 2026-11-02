@@ -1,0 +1,52 @@
+@import "@reuse-sh/interactions/styles.css";
+.re-tooltip-links-f-card {
+  display: grid;
+  grid-template-columns: 84px minmax(0, 1fr);
+  gap: 12px;
+  width: min(300px, 100vw - 48px);
+  font-size: 13px;
+  line-height: 18px;
+}
+.re-tooltip-links-f-card img {
+  width: 84px;
+  height: 84px;
+  border-radius: 10px;
+  object-fit: cover;
+}
+.re-tooltip-links-f-card-body {
+  display: grid;
+  align-content: start;
+  gap: 2px;
+  padding: 2px 6px 0 0;
+}
+.re-tooltip-links-f-card-body b {
+  font-weight: 560;
+}
+.re-tooltip-links-f-card-body span {
+  color: #5b5b5b;
+}
+.re-tooltip-links-f-card-body small {
+  margin-top: 2px;
+  font-size: 11.5px;
+  color: #858585;
+}
+.re-tooltip-links-f-tip-keys {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  white-space: nowrap;
+}
+.re-tooltip-links-f-tip-keys kbd {
+  display: inline-grid;
+  place-items: center;
+  min-width: 18px;
+  height: 16px;
+  padding: 0 5px;
+  margin: 0;
+  border-radius: 999px;
+  background: rgb(255 255 255 / 14%);
+  box-shadow: none;
+  color: rgb(255 255 255 / 80%);
+  font: 500 10.5px / 1 var(--font-geist-sans, system-ui);
+  vertical-align: 0;
+}

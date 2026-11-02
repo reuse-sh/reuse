@@ -1,0 +1,30 @@
+@import "@reuse-sh/interactions/styles.css";
+.re-tooltip-shortcuts-f-tip-keys {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  white-space: nowrap;
+}
+.re-tooltip-shortcuts-f-tip-keys kbd {
+  display: inline-grid;
+  place-items: center;
+  min-width: 18px;
+  height: 16px;
+  padding: 0 5px;
+  margin: 0;
+  border-radius: 999px;
+  background: rgb(255 255 255 / 14%);
+  box-shadow: none;
+  color: rgb(255 255 255 / 80%);
+  font: 500 10.5px / 1 var(--font-geist-sans, system-ui);
+  vertical-align: 0;
+}
+
+.re-floating-tooltip.re-tooltip-shortcuts-popup[data-rich] {
+  --re-tooltip-rich-background: #111;
+  --re-tooltip-rich-color: #fff;
+  --re-tooltip-rich-padding: 4px 4px 4px 10px;
+  --re-tooltip-rich-radius: 16px;
+  font-size: 12px;
+  line-height: 16px;
+}

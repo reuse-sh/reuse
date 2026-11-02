@@ -58,6 +58,6 @@ export function docBody(
   if (library.slug === "annotations" && path === "guides/data-format")
     return <AnnotationsDataFormat />;
   if (library.slug === "easing-gradients" && path === "guides/easing-curves")
-    return <GradientsCurves />;
+    return <GradientsCurves example={example} />;
   return null;
 }

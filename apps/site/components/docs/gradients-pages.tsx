@@ -1,5 +1,6 @@
 import type { EasingName } from "@reuse-sh/gradients";
 import { EASINGS, easingGradient, easingStops } from "@reuse-sh/gradients";
+import type { ReactNode } from "react";
 import { basicCode } from "./basic-code";
 import { C, CodePair, Section, Text } from "./parts";
 
@@ -30,29 +31,31 @@ function Plot({ easing }: { easing: EasingName }) {
     </svg>
   );
 }
-export function GradientsCurves() {
+export function GradientsCurves({ example }: { example?: ReactNode }) {
   return (
     <>
-      <ul className="x-curves">
-        {EASINGS.map((easing) => (
-          <li key={easing} className="x-curve">
-            <Plot easing={easing} />
-            <span
-              className="x-curve-swatch"
-              style={{
-                backgroundImage: easingGradient({
-                  to: "#111",
-                  easing,
-                  direction: "to right",
-                }),
-              }}
-            />
-            <p className="x-curve-note">
-              <code className="d-inline">{easing}</code> {curveNotes[easing]}
-            </p>
-          </li>
-        ))}
-      </ul>
+      {example ?? (
+        <ul className="x-curves">
+          {EASINGS.map((easing) => (
+            <li key={easing} className="x-curve">
+              <Plot easing={easing} />
+              <span
+                className="x-curve-swatch"
+                style={{
+                  backgroundImage: easingGradient({
+                    to: "#111",
+                    easing,
+                    direction: "to right",
+                  }),
+                }}
+              />
+              <p className="x-curve-note">
+                <code className="d-inline">{easing}</code> {curveNotes[easing]}
+              </p>
+            </li>
+          ))}
+        </ul>
+      )}
       <Section title="Your own curve">
         <Text>
           Pass a cubic bezier as four numbers, the same values CSS takes in{" "}

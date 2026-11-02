@@ -145,10 +145,16 @@ export function SingleCode({
 }
 
 /** The card a live example sits in, apart from the page text. */
-export function Stage({ children }: { children: ReactNode }) {
+export function Stage({
+  children,
+  className = "",
+}: {
+  children: ReactNode;
+  className?: string;
+}) {
   return (
     <div className="c-card d-stage-card">
-      <div className="c-card-in d-stage">{children}</div>
+      <div className={`c-card-in d-stage ${className}`}>{children}</div>
     </div>
   );
 }

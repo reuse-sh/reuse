@@ -1,100 +1,110 @@
 "use client";
-
 import { FloatingTooltipGroup } from "@reuse-sh/interactions/react";
-import "@reuse-sh/interactions/styles.css";
+import "./effects.css";
 
-const cards = [
-  [
-    "Coral sky",
-    "The first sheet pulled from the tray. Coral and sand over a cool blue.",
-    "prints.example.com",
-    "https://reuse.sh/images/marble-lake.svg",
-  ],
-  [
-    "Mint and ember",
-    "Pulled an hour later, after the orange had sunk to the bottom.",
-    "prints.example.com",
-    "https://reuse.sh/images/marble-mountains.svg",
-  ],
-  [
-    "Lilac bloom",
-    "The last sheet of the day, once the colors had softened.",
-    "prints.example.com",
-    "https://reuse.sh/images/marble-coast.svg",
-  ],
-];
-function card(trigger: HTMLElement) {
-  const index = Number(trigger.getAttribute("data-card"));
-  const [title, description, detail, src] = cards[index];
-  const root = document.createElement("span");
-  root.style.cssText =
-    "display:block;width:240px;max-width:calc(100vw - 36px);font:13px/1.5 system-ui,sans-serif";
-  const image = document.createElement("img");
-  image.src = src;
-  image.alt = "";
-  image.width = 240;
-  image.height = 140;
-  image.style.cssText =
-    "display:block;width:100%;height:140px;object-fit:cover;border-radius:10px";
-  const body = document.createElement("span");
-  body.style.cssText = "display:grid;gap:4px;padding:10px";
-  const heading = document.createElement("b");
-  heading.textContent = title;
-  const text = document.createElement("span");
-  text.textContent = description;
-  const small = document.createElement("small");
-  small.textContent = detail;
-  body.append(heading, text, small);
-  root.append(image, body);
-  return root;
-}
-export function Example() {
-  return (
-    <FloatingTooltipGroup
-      className="mx-auto w-full max-w-[640px] p-4 text-[15px] leading-6 text-[#111] sm:p-8"
-      content={card}
-    >
-      <article className="max-w-[460px]">
-        <p className="mb-3 text-sm text-[#858585]">
-          Print series · October 2026
-        </p>
-        <h2 className="mb-3 text-[21px] font-semibold">
-          Three prints from one tray
-        </h2>
-        <p className="mb-4 text-[#5b5b5b]">
-          The series opens with{" "}
-          <a
-            href="#links-note"
-            className="underline underline-offset-4"
-            data-card="0"
-            data-re-tooltip="Coral sky"
-          >
-            Coral sky
-          </a>
-          , the first sheet we pulled.{" "}
-          <a
-            href="#links-note"
-            className="underline underline-offset-4"
-            data-card="1"
-            data-re-tooltip="Mint and ember"
-          >
-            Mint and ember
-          </a>{" "}
-          came from the same water an hour later.{" "}
-          <a
-            href="#links-note"
-            className="underline underline-offset-4"
-            data-card="2"
-            data-re-tooltip="Lilac bloom"
-          >
-            Lilac bloom
-          </a>{" "}
-          was the last, once the colors had softened.
-        </p>
-        <p className="mb-4 text-[#5b5b5b]" id="links-note">
-          Point at a print name to see it.
-        </p>
-      </article>
-    </FloatingTooltipGroup>
+function escapeHtml(value: string) {
+  return value.replace(
+    /[&<>"']/g,
+    (char) =>
+      ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[
+        char
+      ] ?? char,
   );
 }
+const photos = [
+  {
+    src: "https://reuse.sh/images/marble-lake.svg",
+    alt: "A soft marble texture in coral, sand and blue",
+    width: 1600,
+    height: 1200,
+  },
+  {
+    src: "https://reuse.sh/images/marble-mountains.svg",
+    alt: "A soft marble texture in mint, blue and orange",
+    width: 1600,
+    height: 1200,
+  },
+  {
+    src: "https://reuse.sh/images/marble-coast.svg",
+    alt: "A soft marble texture in lilac, rose and sea green",
+    width: 1600,
+    height: 1200,
+  },
+];
+
+function Template({ id, html }: { id: string; html: string }) {
+  // biome-ignore lint/security/noDangerouslySetInnerHtml: the markup is built from fixed synthetic strings, escaped with escapeHtml.
+  return <template id={id} dangerouslySetInnerHTML={{ __html: html }} />;
+}
+
+const prints = [
+  [
+    "coral",
+    photos[0],
+    "Coral sky",
+    "The first sheet pulled from the tray. Coral and sand over a cool blue.",
+  ],
+  [
+    "mint",
+    photos[1],
+    "Mint and ember",
+    "Pulled an hour later, after the orange had sunk to the bottom.",
+  ],
+  [
+    "lilac",
+    photos[2],
+    "Lilac bloom",
+    "The last sheet of the day, once the colors had softened.",
+  ],
+] as const;
+
+function PrintLink({ id, children }: { id: string; children: string }) {
+  return (
+    <a
+      href="#links-note"
+      className="[color:#111] [text-decoration:underline] [text-underline-offset:3px] [transition:text-decoration-color_150ms_ease] [&:hover]:[text-decoration-color:currentColor] [text-decoration-color:rgb(0_0_0_/_25%)]"
+      data-re-tooltip-template={`tt-print-${id}`}
+    >
+      {children}
+    </a>
+  );
+}
+
+export function TooltipLinks() {
+  return (
+    <>
+      <FloatingTooltipGroup>
+        <article className="re-tooltip-links-x-story">
+          <p className="[font-size:13px] [color:#858585]">
+            Print series · October 2026
+          </p>
+          <h2 className="[margin-top:6px] [font-size:26px] [line-height:32px] font-semibold [letter-spacing:-0.028em] [text-wrap:balance]">
+            Three prints from one tray
+          </h2>
+          <p className="[max-width:560px] [margin-top:16px] [font-size:16px] [line-height:27px] [color:#5b5b5b] [text-wrap:pretty]">
+            The series opens with <PrintLink id="coral">Coral sky</PrintLink>,
+            the first sheet we pulled.{" "}
+            <PrintLink id="mint">Mint and ember</PrintLink> came from the same
+            water an hour later. <PrintLink id="lilac">Lilac bloom</PrintLink>{" "}
+            was the last, once the colors had softened.
+          </p>
+          <p
+            className="[max-width:560px] [margin-top:16px] [font-size:16px] [line-height:27px] [color:#5b5b5b] [text-wrap:pretty]"
+            id="links-note"
+          >
+            Point at a print name to see it.
+          </p>
+        </article>
+      </FloatingTooltipGroup>
+      {prints.map(([id, photo, name, text]) => (
+        <Template
+          key={id}
+          id={`tt-print-${id}`}
+          html={`<span class="re-tooltip-links-f-card"><img src="${escapeHtml(photo.src)}" alt="" width="1600" height="1200"><span class="re-tooltip-links-f-card-body"><b>${escapeHtml(name)}</b><span>${escapeHtml(text)}</span><small>prints.example.com</small></span></span>`}
+        />
+      ))}
+    </>
+  );
+}
+
+export const Example = TooltipLinks;

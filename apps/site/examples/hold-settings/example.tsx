@@ -1,66 +1,117 @@
 "use client";
-
 import { HoldToConfirmButton } from "@reuse-sh/interactions/react";
 import { useEffect, useRef, useState } from "react";
-import "@reuse-sh/interactions/styles.css";
-export function Example() {
+
+function useKeepFocus<E extends HTMLElement>(swap: unknown) {
+  const root = useRef<E>(null);
+  const refocus = useRef(false);
+  const keyHeld = useRef(false);
+  useEffect(() => {
+    const down = (event: KeyboardEvent) => {
+      if (event.key === "Enter" || event.key === " ") keyHeld.current = true;
+    };
+    const up = () => {
+      keyHeld.current = false;
+    };
+    document.addEventListener("keydown", down, true);
+    document.addEventListener("keyup", up, true);
+    return () => {
+      document.removeEventListener("keydown", down, true);
+      document.removeEventListener("keyup", up, true);
+    };
+  }, []);
+  // biome-ignore lint/correctness/useExhaustiveDependencies: focus moves after each swap renders.
+  useEffect(() => {
+    if (!refocus.current) return;
+    refocus.current = false;
+    const focus = () => root.current?.querySelector("button")?.focus();
+    if (!keyHeld.current) {
+      focus();
+      return;
+    }
+
+    document.addEventListener("keyup", focus, { once: true });
+    return () => document.removeEventListener("keyup", focus);
+  }, [swap]);
+  const mark = () => {
+    refocus.current = Boolean(root.current?.contains(document.activeElement));
+  };
+  return { root, mark };
+}
+
+const rows = [
+  ["Workspace name", "Ink and Paper"],
+  ["Members", "6 people"],
+  ["Default paper", "Matte cotton, 310 g"],
+] as const;
+
+export function SettingsRow() {
+  const [scheduled, setScheduled] = useState(false);
+  const { root, mark } = useKeepFocus<HTMLElement>(scheduled);
+  const change = (next: boolean) => {
+    mark();
+    setScheduled(next);
+  };
   const [ready, setReady] = useState(false);
-  const [confirmed, setConfirmed] = useState(false);
-  const root = useRef<HTMLDivElement>(null);
   useEffect(() => setReady(true), []);
   return (
-    <div
-      className="mx-auto w-full max-w-[640px] p-4 text-[15px] leading-6 text-[#111] sm:p-8"
+    <section
+      className="[max-width:600px]"
+      aria-labelledby="re-hold-settings-x-settings-h"
       ref={root}
     >
-      <div className="rounded-2xl bg-white p-4 shadow-[0_0_0_1px_#00000014,0_8px_24px_-12px_#00000026]">
-        <h2 className="mb-3 text-lg font-semibold">Workspace</h2>
-        <dl>
-          <div className="flex flex-wrap justify-between gap-4 border-b border-black/10 py-4">
-            <dt>Workspace name</dt>
-            <dd>Ink and Paper</dd>
+      <h2
+        id="re-hold-settings-x-settings-h"
+        className="[padding-bottom:10px] [font-size:15px] font-semibold"
+      >
+        Workspace
+      </h2>
+      <dl>
+        {rows.map(([name, value]) => (
+          <div
+            key={name}
+            className="flex items-center justify-between gap-4 [min-height:56px] [padding:12px_0] [box-shadow:inset_0_1px_rgb(0_0_0_/_7%)] [font-size:14px]"
+          >
+            <dt className="[color:#5b5b5b]">{name}</dt>
+            <dd className="[color:#111] text-right">{value}</dd>
           </div>
-          <div className="flex flex-wrap justify-between gap-4 border-b border-black/10 py-4">
-            <dt>Members</dt>
-            <dd>6 people</dd>
-          </div>
-          <div className="flex flex-wrap justify-between gap-4 border-b border-black/10 py-4">
-            <dt>Default paper</dt>
-            <dd>Matte cotton, 310 g</dd>
-          </div>
-        </dl>
-        <b>Delete workspace</b>
-        <p className="my-3 text-sm text-[#5b5b5b]" role="status">
-          {confirmed
-            ? "Scheduled. Everything is removed in 7 days."
-            : "Removes every print, order and member after 7 days."}
-        </p>
-        <HoldToConfirmButton
-          className="rounded-[10px] border-0 bg-[#c2362b]/8 px-4 py-2.5 text-[#c2362b] hover:bg-[#c2362b]/12 disabled:opacity-55 data-confirmed:bg-[#c2362b] data-confirmed:text-white"
-          disabled={!ready || confirmed}
-          holdMs={2000}
-          onConfirm={() => setConfirmed(true)}
-        >
-          Hold to delete
-        </HoldToConfirmButton>
-        {confirmed && (
+        ))}
+      </dl>
+      <div className="flex items-center justify-between gap-4 [min-height:56px] [font-size:14px] [margin-top:28px] [padding:16px] [border-radius:14px] [background:#fdf5f4] [box-shadow:inset_0_0_0_1px_rgb(194_54_43_/_14%)] [&_.re-hold-settings-c-hold]:flex-none max-[600px]:flex-col max-[600px]:items-stretch max-[600px]:[&_.re-hold-settings-c-hold]:justify-center">
+        <div>
+          <b className="[font-weight:560]">Delete workspace</b>
+          <p
+            className="[margin-top:2px] [font-size:13px] [line-height:19px] [color:#5b5b5b]"
+            role="status"
+          >
+            {scheduled
+              ? "Scheduled. Everything is removed in 7 days."
+              : "Removes every print, order and member after 7 days."}
+          </p>
+        </div>
+        {scheduled ? (
           <button
             type="button"
-            className="ml-4 underline underline-offset-4"
-            onClick={() => {
-              setConfirmed(false);
-              requestAnimationFrame(() =>
-                root.current
-                  ?.querySelector<HTMLButtonElement>(".re-hold")
-                  ?.focus(),
-              );
-            }}
+            className="[padding:4px_2px] border-0 [background:none] [color:#111] [font-size:13.5px] [font-weight:550] [text-decoration:underline] [text-decoration-color:rgb(0_0_0_/_25%)] [text-underline-offset:4px] cursor-pointer [&:hover]:[text-decoration-color:currentColor]"
+            onClick={() => change(false)}
           >
-            {" "}
             Cancel deletion
           </button>
+        ) : (
+          <HoldToConfirmButton
+            className="re-hold-settings-c-hold"
+            disabled={!ready}
+            holdMs={2000}
+            onConfirm={() => change(true)}
+          >
+            Hold to delete
+          </HoldToConfirmButton>
         )}
       </div>
-    </div>
+    </section>
   );
 }
+
+export const Example = SettingsRow;
+
+import "./effects.css";

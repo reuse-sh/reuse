@@ -1,12 +1,24 @@
 @import "@reuse-sh/interactions/styles.css";
+@font-face {
+  font-family: Geist;
+  src: url("https://reuse.sh/fonts/geist.woff2") format("woff2");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Geist Mono";
+  src: url("https://reuse.sh/fonts/geist-mono.woff2") format("woff2");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
 .re-example {
   box-sizing: border-box;
-  max-width: 640px;
-  margin: auto;
-  padding: 32px;
+  width: 100%;
   color: #111;
   font:
-    15px / 1.6 system-ui,
+    15px / 24px var(--font-geist-sans, Geist, system-ui),
     sans-serif;
 }
 .re-example *,
@@ -14,58 +26,105 @@
 .re-example *::after {
   box-sizing: border-box;
 }
+.re-example p,
+.re-example h2,
+.re-example dl,
+.re-example dd,
+.re-example pre {
+  margin: 0;
+}
 .re-example button,
 .re-example input {
   font: inherit;
-}
-.re-example button,
-.re-example a {
-  -webkit-tap-highlight-color: transparent;
 }
 .re-example button {
   cursor: pointer;
 }
 .re-example button:disabled {
   cursor: default;
-  opacity: 0.55;
 }
-.re-example button:focus-visible,
-.re-example a:focus-visible {
-  outline: 2px solid #111;
-  outline-offset: 3px;
+.re-example svg {
+  flex: none;
 }
-.re-surface {
-  padding: 16px;
-  background: white;
-  border-radius: 16px;
+.re-example a {
+  color: inherit;
+  text-decoration: none;
+}
+.re-example [hidden] {
+  display: none;
+}
+.re-tooltip-start-c-toolbar {
+  border-radius: 13px;
+  background: #fff;
   box-shadow:
-    0 0 0 1px #00000014,
-    0 8px 24px -12px #00000026;
+    0 0 0 0.5px rgb(0 0 0 / 8%),
+    0 1px 2px rgb(0 0 0 / 5%),
+    0 4px 8px rgb(0 0 0 / 3.5%);
+  --re-highlight-background: rgb(0 0 0 / 3%);
+  --re-highlight-radius: 8px;
 }
-.re-toolbar {
+.re-tooltip-start-c-toolbar {
   display: flex;
-  flex-wrap: wrap;
-  gap: 4px;
-  width: fit-content;
-  margin: auto;
+  gap: 2px;
+  padding: 4px;
 }
-.re-control {
+.re-tooltip-start-c-toolbar button {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
   border: 0;
   border-radius: 8px;
   background: transparent;
-  color: inherit;
-  padding: 8px 12px;
-  text-decoration: none;
+  color: #555;
+  transition:
+    color 150ms ease,
+    transform 160ms cubic-bezier(0.23, 1, 0.32, 1);
 }
-.re-row {
-  display: flex;
+.re-tooltip-start-c-toolbar button:hover {
+  color: #111;
+}
+.re-tooltip-start-c-toolbar button:active {
+  transform: scale(0.94);
+}
+.re-tooltip-start-c-toolbar button:focus-visible {
+  outline-offset: -2px;
+}
+.re-tooltip-start-f-tip-keys {
+  display: inline-flex;
   align-items: center;
-  gap: 16px;
-  width: 100%;
-  text-align: left;
+  gap: 8px;
+  white-space: nowrap;
 }
-@media (max-width: 480px) {
-  .re-example {
-    padding: 16px;
-  }
+.re-tooltip-start-f-tip-keys kbd {
+  display: inline-grid;
+  place-items: center;
+  min-width: 18px;
+  height: 16px;
+  padding: 0 5px;
+  margin: 0;
+  border-radius: 999px;
+  background: rgb(255 255 255 / 14%);
+  box-shadow: none;
+  color: rgb(255 255 255 / 80%);
+  font: 500 10.5px / 1 var(--font-geist-sans, Geist, system-ui);
+  vertical-align: 0;
+}
+
+.re-example .sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+
+.re-tooltip-start-c-toolbar {
+  width: fit-content;
+  margin: auto;
 }

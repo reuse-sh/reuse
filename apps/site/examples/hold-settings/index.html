@@ -1,13 +1,69 @@
 <!doctype html>
 <html lang="en">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Hold Settings</title>
-<link rel="stylesheet" href="./styles.css">
-</head>
-<body>
-<main class="re-example"><section class="re-surface"><h2 class="re-heading">Workspace</h2><dl><div class="re-settings-row"><dt>Workspace name</dt><dd>Ink and Paper</dd></div><div class="re-settings-row"><dt>Members</dt><dd>6 people</dd></div><div class="re-settings-row"><dt>Default paper</dt><dd>Matte cotton, 310 g</dd></div></dl><b>Delete workspace</b><p class="re-status" role="status" id="status">Removes every print, order and member after 7 days.</p><button type="button" class="re-hold-action" id="hold" disabled>Hold to delete</button> <button type="button" class="re-control re-link" id="undo" hidden>Cancel deletion</button></section></main>
-<script type="module" src="./main.js"></script>
-</body>
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>hold-settings</title>
+    <link rel="stylesheet" href="./styles.css">
+  </head>
+  <body
+    style="margin:0;font:15px/24px Geist,system-ui,sans-serif;letter-spacing:-0.006em"
+  >
+    <main class="re-example">
+      <section
+        class="re-hold-settings-x-settings"
+        aria-labelledby="re-hold-settings-x-settings-h"
+      >
+        <h2
+          id="re-hold-settings-x-settings-h"
+          class="re-hold-settings-x-settings-title"
+        >
+          Workspace
+        </h2>
+        <dl>
+          <div class="re-hold-settings-x-setting">
+            <dt class="re-hold-settings-x-setting-name">Workspace name</dt>
+            <dd class="re-hold-settings-x-setting-value">Ink and Paper</dd>
+          </div>
+          <div class="re-hold-settings-x-setting">
+            <dt class="re-hold-settings-x-setting-name">Members</dt>
+            <dd class="re-hold-settings-x-setting-value">6 people</dd>
+          </div>
+          <div class="re-hold-settings-x-setting">
+            <dt class="re-hold-settings-x-setting-name">Default paper</dt>
+            <dd class="re-hold-settings-x-setting-value">
+              Matte cotton, 310 g
+            </dd>
+          </div>
+        </dl>
+        <div
+          class="re-hold-settings-x-setting re-hold-settings-x-setting-danger"
+        >
+          <div>
+            <b class="re-hold-settings-x-setting-danger-title"
+              >Delete workspace</b
+            >
+            <p class="re-hold-settings-x-setting-note" role="status">
+              Removes every print, order and member after 7 days.
+            </p>
+          </div>
+          <button
+            type="button"
+            disabled=""
+            class="re-hold re-hold-settings-c-hold"
+          >
+            Hold to delete
+          </button><button
+            type="button"
+            id="undo"
+            class="re-hold-settings-x-text-btn"
+            hidden
+          >
+            Cancel deletion
+          </button>
+        </div>
+      </section>
+    </main>
+    <script type="module" src="./main.js"></script>
+  </body>
 </html>

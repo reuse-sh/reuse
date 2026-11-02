@@ -1,29 +1,32 @@
 import { createHoldToConfirm } from "@reuse-sh/interactions";
 
-const button = document.querySelector("#hold");
-const undo = document.querySelector("#undo");
-const status = document.querySelector("#status");
+const button = document.querySelector(".re-hold");
+const labels = button.querySelectorAll(".re-hold-start-c-hold-label > span");
+const status = document.querySelector('[role="status"]');
+let timer;
+const show = (done) => {
+  labels[0].toggleAttribute("aria-hidden", done);
+  labels[1].toggleAttribute("aria-hidden", !done);
+  status.textContent = done ? "Deleted" : "";
+};
 const controller = createHoldToConfirm(button, {
-  holdMs: 1200,
   onConfirm() {
-    status.textContent = "Confirmed.";
-    button.disabled = true;
-    undo.hidden = false;
+    button.setAttribute("aria-disabled", "true");
+    button.setAttribute("data-done", "");
+    show(true);
+    clearTimeout(timer);
+    timer = setTimeout(() => {
+      button.removeAttribute("aria-disabled");
+      button.removeAttribute("data-done");
+      show(false);
+      controller.reset();
+    }, 2400);
   },
 });
 button.disabled = false;
-const restore = () => {
-  controller.reset();
-  status.textContent =
-    "Release early, move off the button or press Esc to cancel.";
-  button.disabled = false;
-  undo.hidden = true;
-  button.focus();
-};
-undo.addEventListener("click", restore);
 window.addEventListener("pagehide", function cleanup(event) {
   if (event.persisted) return;
+  clearTimeout(timer);
   controller.destroy();
-  undo.removeEventListener("click", restore);
   window.removeEventListener("pagehide", cleanup);
 });

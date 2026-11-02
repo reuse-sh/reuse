@@ -11,9 +11,6 @@ import { GeistSans } from "geist/font/sans";
 import type { Metadata } from "next";
 import { Fraunces } from "next/font/google";
 import type { ReactNode } from "react";
-import { SiteFooter } from "../components/shell/site-footer";
-import { SiteHeader } from "../components/shell/site-header";
-import { TooltipRoot } from "../components/shell/tooltip-root";
 
 const fraunces = Fraunces({
   subsets: ["latin"],
@@ -41,10 +38,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
         <a className="skip-link" href="#main">
           Skip to content
         </a>
-        <SiteHeader />
         {children}
-        <SiteFooter />
-        <TooltipRoot />
       </body>
     </html>
   );

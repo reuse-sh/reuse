@@ -1,39 +1,100 @@
 @import "@reuse-sh/shadows/styles.css";
+@font-face {
+  font-family: Geist;
+  src: url("https://reuse.sh/fonts/geist.woff2") format("woff2");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Geist Mono";
+  src: url("https://reuse.sh/fonts/geist-mono.woff2") format("woff2");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
 .re-example {
   box-sizing: border-box;
   width: 100%;
   color: #111;
   font:
-    15px / 1.6 system-ui,
+    15px / 24px "Geist",
+    system-ui,
     sans-serif;
 }
 .re-example * {
   box-sizing: border-box;
 }
-.re-example p,
-.re-example h3 {
-  margin: 0;
-}
-.re-example button,
-.re-example input {
-  font: inherit;
-}
 .re-example button {
+  font: inherit;
+  color: inherit;
   cursor: pointer;
 }
-.re-example button:disabled {
-  cursor: default;
-  opacity: 0.4;
+.re-example button:focus-visible {
+  outline: 2px solid #111;
+  outline-offset: 2px;
 }
-.re-shadow-start {
+
+.re-shadow-surface {
   display: grid;
-  justify-items: start;
-  gap: 28px;
+  min-height: 240px;
+  padding-bottom: 32px;
+  place-items: center;
 }
-.re-shadow-start button {
-  padding: 8px 16px;
+.re-shadow-object {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  width: min(260px, 100%);
+  padding: 32px 20px;
+  border-radius: 14px;
+  background: white;
+  transition: box-shadow 220ms ease;
+}
+.re-shadow-object strong {
+  font-weight: 560;
+}
+.re-shadow-object span {
+  font-size: 13px;
+  color: #858585;
+}
+.re-shadow-levels {
+  min-width: 0;
+  display: flex;
+  width: fit-content;
+  max-width: 100%;
+  margin: 0 auto;
+  padding: 3px;
+  gap: 2px;
+  overflow-x: auto;
+  border: 0;
+  border-radius: 10px;
+  background: rgb(0 0 0 / 5%);
+}
+.re-shadow-levels legend {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+}
+.re-shadow-levels button {
+  padding: 6px 11px;
   border: 0;
   border-radius: 8px;
+  background: transparent;
+  font-size: 13px;
+}
+.re-shadow-levels button[aria-pressed="true"] {
   background: white;
-  font-size: 14px;
+  box-shadow:
+    0 0 0 0.5px #00000014,
+    0 1px 2px #0000000d,
+    0 2px 4px #00000005;
+}
+@media (prefers-reduced-motion: reduce) {
+  .re-shadow-object {
+    transition: none;
+  }
 }

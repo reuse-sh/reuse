@@ -18,6 +18,7 @@ export async function mount(page: Page, body: string, styles: string[] = []) {
         body: `<!doctype html><html><head><meta charset="utf-8">
 <script type="importmap">{"imports":{
   "@reuse-sh/carousel":"/modules/carousel/index.js",
+  "@reuse-sh/lightbox":"/modules/lightbox/index.js",
   "@reuse-sh/core/escape-html":"/modules/core/escape-html.js"
 }}</script>
 ${styles.map((href) => `<link rel="stylesheet" href="/modules/${href}">`).join("")}

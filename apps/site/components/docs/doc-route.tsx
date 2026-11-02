@@ -10,6 +10,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { recipeId } from "../../lib/example-manifest";
 import { type DocSearch, frameworkFrom } from "../../lib/framework";
+import { SiteFrame } from "../site-frame";
 import { ExamplePanel } from "./example-panel";
 import { FrameworkChooser } from "./framework-chooser";
 import { GettingStarted } from "./getting-started";
@@ -85,8 +86,12 @@ export async function DocRoute({
       example
     ) : (
       <>
-        {docBody(found.library, path, path === "" ? example : undefined)}
-        {path === "" ? null : example}
+        {docBody(
+          found.library,
+          path,
+          path === "" || slug === "easing-gradients" ? example : undefined,
+        )}
+        {path === "" || slug === "easing-gradients" ? null : example}
       </>
     );
   const basePrompt = pagePrompt(found.library, path);
@@ -94,20 +99,21 @@ export async function DocRoute({
     ? `${basePrompt} Use ${framework === "react" ? "React with Tailwind CSS" : "HTML, CSS and JavaScript"}.`
     : null;
   return (
-    <LibraryFrame
-      slug={slug}
-      framework={framework}
-      before={<FrameworkChooser framework={framework} pathname={pathname} />}
-    >
-      <PageTitle
-        title={path ? found.page.title : found.library.name}
-        lead={found.page.lead}
-      />
-      <div className="d-body">
-        {body}
-        {prompt ? <AgentPrompt prompt={prompt} /> : null}
-      </div>
-      <Pager library={found.library} path={path} />
-    </LibraryFrame>
+    <SiteFrame framework={framework}>
+      <LibraryFrame
+        slug={slug}
+        before={<FrameworkChooser framework={framework} pathname={pathname} />}
+      >
+        <PageTitle
+          title={path ? found.page.title : found.library.name}
+          lead={found.page.lead}
+        />
+        <div className="d-body">
+          {body}
+          {prompt ? <AgentPrompt prompt={prompt} /> : null}
+        </div>
+        <Pager library={found.library} path={path} />
+      </LibraryFrame>
+    </SiteFrame>
   );
 }

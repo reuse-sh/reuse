@@ -1,13 +1,101 @@
 <!doctype html>
 <html lang="en">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Tooltip People</title>
-<link rel="stylesheet" href="./styles.css">
-</head>
-<body>
-<main class="re-example"><div class="re-comment"><img class="re-face" src="https://reuse.sh/images/marble-lake.svg" alt=""><p><button type="button" class="re-name" data-card="0" data-re-tooltip="Mara Lind">Mara Lind</button> The second crop of Coral sky reads better. Can we try it as the cover?</p></div><div class="re-comment"><img class="re-face" src="https://reuse.sh/images/marble-mountains.svg" alt=""><p><button type="button" class="re-name" data-card="1" data-re-tooltip="Jonas Weber">Jonas Weber</button> Works for me. The print run closes on Friday, so we have until Thursday night.</p></div><div class="re-comment"><img class="re-face" src="https://reuse.sh/images/marble-coast.svg" alt=""><p><button type="button" class="re-name" data-card="2" data-re-tooltip="Aiko Tanaka">Aiko Tanaka</button> I'll trim the caption to one line so it sits under the photo.</p></div></main>
-<script type="module" src="./main.js"></script>
-</body>
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>tooltip-people</title>
+    <link rel="stylesheet" href="./styles.css">
+  </head>
+  <body
+    style="margin:0;font:15px/24px Geist,system-ui,sans-serif;letter-spacing:-0.006em"
+  >
+    <main class="re-example">
+      <div>
+        <div class="re-tooltip-people-x-thread-list">
+          <div class="re-tooltip-people-x-comment">
+            <span
+              class="re-tooltip-people-f-face re-tooltip-people-f-face-sm"
+              style="background-image:url(https://reuse.sh/images/marble-lake.svg)"
+            ></span>
+            <p>
+              <button
+                type="button"
+                class="re-tooltip-people-x-name"
+                data-re-tooltip-template="tt-person-0"
+              >
+                Mara Lind
+              </button>
+              The second crop of Coral sky reads better. Can we try it as the
+              cover?
+            </p>
+          </div>
+          <div class="re-tooltip-people-x-comment">
+            <span
+              class="re-tooltip-people-f-face re-tooltip-people-f-face-sm"
+              style="background-image:url(https://reuse.sh/images/marble-mountains.svg)"
+            ></span>
+            <p>
+              <button
+                type="button"
+                class="re-tooltip-people-x-name"
+                data-re-tooltip-template="tt-person-1"
+              >
+                Jonas Weber
+              </button>
+              Works for me. The print run closes on Friday, so we have until
+              Thursday night.
+            </p>
+          </div>
+          <div class="re-tooltip-people-x-comment">
+            <span
+              class="re-tooltip-people-f-face re-tooltip-people-f-face-sm"
+              style="background-image:url(https://reuse.sh/images/marble-coast.svg)"
+            ></span>
+            <p>
+              <button
+                type="button"
+                class="re-tooltip-people-x-name"
+                data-re-tooltip-template="tt-person-2"
+              >
+                Aiko Tanaka
+              </button>
+              I&#x27;ll trim the caption to one line so it sits under the photo.
+            </p>
+          </div>
+        </div>
+      </div>
+      <template id="tt-person-0"
+        ><span class="re-tooltip-people-f-person"
+          ><span
+            class="re-tooltip-people-f-face"
+            style="background-image:url(https://reuse.sh/images/marble-lake.svg)"
+          ></span><span class="re-tooltip-people-f-person-body"
+            ><b>Mara Lind</b><span>Print editor</span
+            ><small>09:42 in Lisbon</small></span
+          ></span
+        ></template
+      ><template id="tt-person-1"
+        ><span class="re-tooltip-people-f-person"
+          ><span
+            class="re-tooltip-people-f-face"
+            style="background-image:url(https://reuse.sh/images/marble-mountains.svg)"
+          ></span><span class="re-tooltip-people-f-person-body"
+            ><b>Jonas Weber</b><span>Producer</span
+            ><small>10:42 in Berlin</small></span
+          ></span
+        ></template
+      ><template id="tt-person-2"
+        ><span class="re-tooltip-people-f-person"
+          ><span
+            class="re-tooltip-people-f-face"
+            style="background-image:url(https://reuse.sh/images/marble-coast.svg)"
+          ></span><span class="re-tooltip-people-f-person-body"
+            ><b>Aiko Tanaka</b><span>Writer</span
+            ><small>16:42 in Taipei</small></span
+          ></span
+        ></template
+      >
+    </main>
+    <script type="module" src="./main.js"></script>
+  </body>
 </html>

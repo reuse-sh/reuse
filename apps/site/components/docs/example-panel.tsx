@@ -23,6 +23,18 @@ export async function ExamplePanel({
   const Component = examples[id];
   const files = await highlightedFiles(id, framework);
   if (!Component || !files?.length) notFound();
+  const unframed = [
+    "carousel-controls",
+    "loaders-figures",
+    "shadows-scale",
+    "gradients-easing-curves",
+  ].includes(id);
+  const preview =
+    framework === "react" ? (
+      <Component />
+    ) : (
+      <NativeFrame key={id} id={id} unframed={unframed} />
+    );
   const active = files.find((source) => source.name === file) ?? files[0];
   const href = (nextView: string, name?: string) => {
     const query = new URLSearchParams({ framework });
@@ -45,13 +57,17 @@ export async function ExamplePanel({
         ))}
       </nav>
       {view === "preview" ? (
-        <Stage>
-          {framework === "react" ? (
-            <Component />
-          ) : (
-            <NativeFrame key={id} id={id} />
-          )}
-        </Stage>
+        unframed ? (
+          <div className="mt-5">{preview}</div>
+        ) : (
+          <Stage
+            className={
+              id === "tooltip-shortcuts" ? "d-stage-editor" : undefined
+            }
+          >
+            {preview}
+          </Stage>
+        )
       ) : (
         <div className="c-code re-example-source">
           <div className="re-source-header">
