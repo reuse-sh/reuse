@@ -14,7 +14,12 @@ export function NativeFrame({ id }: { id: string }) {
     };
     const recipePath = `/examples/${id}/`;
     const adaptMedia = (sheet: CSSStyleSheet) => {
-      if (!sheet.href || !new URL(sheet.href).pathname.startsWith(recipePath))
+      if (!sheet.href) return;
+      const path = new URL(sheet.href).pathname;
+      if (
+        !path.startsWith(recipePath) &&
+        path !== "/modules/shadows/styles.css"
+      )
         return;
       const walk = (rules: CSSRuleList) => {
         for (const rule of rules) {
@@ -24,14 +29,16 @@ export function NativeFrame({ id }: { id: string }) {
           } else if (rule.type === CSSRule.MEDIA_RULE) {
             const media = rule as CSSMediaRule;
             if (/\b(?:width|height)\b/.test(media.conditionText)) {
-              const query = window.matchMedia(media.conditionText);
+              const condition = media.conditionText;
+              const query = window.matchMedia(condition);
               const apply = () => {
                 media.media.mediaText = query.matches ? "all" : "not all";
               };
               query.addEventListener("change", apply);
-              mediaCleanups.push(() =>
-                query.removeEventListener("change", apply),
-              );
+              mediaCleanups.push(() => {
+                query.removeEventListener("change", apply);
+                media.media.mediaText = condition;
+              });
               apply();
             }
             walk(media.cssRules);

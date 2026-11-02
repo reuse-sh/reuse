@@ -554,3 +554,14 @@ test("resizing an HTML preview updates its layout without resetting the carousel
     .toBe(originalWidth);
   await expect(previous).toBeEnabled();
 });
+
+test("HTML shadow cards use the page's layout breakpoint", async ({ page }) => {
+  await page.setViewportSize({ width: 540, height: 900 });
+  await page.goto("/shadows/examples/cards?framework=html");
+  const card = page
+    .frameLocator('iframe[title="HTML and JavaScript example"]')
+    .locator(".re-card-action");
+  await expect(card).toHaveCSS("flex-direction", "row");
+  await page.setViewportSize({ width: 320, height: 900 });
+  await expect(card).toHaveCSS("flex-direction", "column");
+});
