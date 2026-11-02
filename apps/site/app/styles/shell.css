@@ -1212,27 +1212,10 @@ kbd {
 .c-hold .re-hold-fill {
   opacity: 0.12;
 }
-.c-hold::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  background: currentColor;
-  opacity: 0;
-  transition: opacity 200ms ease;
-  pointer-events: none;
-}
-.c-hold[data-done] {
+.c-hold[data-confirmed] {
   background-color: rgb(194 54 43 / 8%);
   transform: none;
   cursor: default;
-}
-/* The controller empties its fill on release, so a finished press shows its own full fill. */
-.c-hold[data-done]::before {
-  opacity: 0.12;
-  transition: none;
-}
-.c-hold[data-done] .re-hold-fill {
-  opacity: 0;
 }
 .c-hold-label {
   display: grid;
