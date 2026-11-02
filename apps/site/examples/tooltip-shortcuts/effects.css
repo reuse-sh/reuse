@@ -16,7 +16,7 @@
   background: rgb(255 255 255 / 14%);
   box-shadow: none;
   color: rgb(255 255 255 / 80%);
-  font: 500 10.5px / 1 var(--font-geist-sans, system-ui);
+  font: 500 10.5px / 1 var(--font-geist-sans, Geist, system-ui);
   vertical-align: 0;
 }
 
@@ -27,4 +27,16 @@
   --re-tooltip-rich-radius: 16px;
   font-size: 12px;
   line-height: 16px;
+}
+
+.re-floating-tooltip.re-tooltip-shortcuts-popup {
+  font-family: var(--font-sans, Geist, system-ui);
+  letter-spacing: -0.003em;
+}
+
+.re-floating-tooltip.re-tooltip-shortcuts-popup[data-rich] {
+  box-shadow:
+    0 0 0 0.5px rgb(0 0 0 / 8%),
+    0 1px 2px rgb(0 0 0 / 5%),
+    0 4px 8px rgb(0 0 0 / 3.5%);
 }

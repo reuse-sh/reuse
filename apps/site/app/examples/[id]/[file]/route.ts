@@ -36,14 +36,6 @@ export async function GET(
         /<head>/i,
         `<head><script type="importmap">${JSON.stringify({ imports })}</script>`,
       );
-    const embed = url.searchParams.get("embed");
-    if (embed === "plain" || embed === "card") {
-      const padding = embed === "card" ? 72 : 0;
-      code = code.replace(
-        "</head>",
-        `<style>body{--re-embed-gutter:16px;width:calc(min(680px,100vw - 2 * var(--re-embed-gutter)) - ${padding}px)}@media(min-width:1100px){body{--re-embed-gutter:80px}}</style></head>`,
-      );
-    }
   }
   if (file.endsWith(".css"))
     code = code

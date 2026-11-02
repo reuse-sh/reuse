@@ -2,49 +2,82 @@
 
 import { useEffect, useRef } from "react";
 
-export function NativeFrame({
-  id,
-  unframed = false,
-}: {
-  id: string;
-  unframed?: boolean;
-}) {
+export function NativeFrame({ id }: { id: string }) {
   const frame = useRef<HTMLIFrameElement>(null);
   useEffect(() => {
     const element = frame.current;
-    const container = element?.parentElement;
-    if (!element || !container) return;
+    if (!element) return;
     let observer: ResizeObserver | undefined;
+    const mediaCleanups: (() => void)[] = [];
+    const clearMedia = () => {
+      for (const cleanup of mediaCleanups.splice(0)) cleanup();
+    };
+    const recipePath = `/examples/${id}/`;
+    const adaptMedia = (sheet: CSSStyleSheet) => {
+      if (!sheet.href || !new URL(sheet.href).pathname.startsWith(recipePath))
+        return;
+      const walk = (rules: CSSRuleList) => {
+        for (const rule of rules) {
+          if (rule.type === CSSRule.IMPORT_RULE) {
+            const imported = (rule as CSSImportRule).styleSheet;
+            if (imported) adaptMedia(imported);
+          } else if (rule.type === CSSRule.MEDIA_RULE) {
+            const media = rule as CSSMediaRule;
+            if (/\b(?:width|height)\b/.test(media.conditionText)) {
+              const query = window.matchMedia(media.conditionText);
+              const apply = () => {
+                media.media.mediaText = query.matches ? "all" : "not all";
+              };
+              query.addEventListener("change", apply);
+              mediaCleanups.push(() =>
+                query.removeEventListener("change", apply),
+              );
+              apply();
+            }
+            walk(media.cssRules);
+          } else if ("cssRules" in rule) {
+            walk((rule as CSSGroupingRule).cssRules);
+          }
+        }
+      };
+      walk(sheet.cssRules);
+    };
     const measure = () => {
-      const body = element.contentDocument?.body;
-      if (!body) return;
-      body.style.width = `${container.clientWidth}px`;
-      element.style.height = `${Math.ceil(body.getBoundingClientRect().height)}px`;
+      const document = element.contentDocument;
+      const body = document?.body;
+      document?.documentElement.style.setProperty(
+        "--re-example-viewport-width",
+        `${window.innerWidth}px`,
+      );
+      if (body)
+        element.style.height = `${Math.ceil(body.getBoundingClientRect().height)}px`;
     };
     const loaded = () => {
       observer?.disconnect();
-      const body = element.contentDocument?.body;
-      if (!body) return;
+      clearMedia();
+      const document = element.contentDocument;
+      if (!document?.body) return;
+      for (const sheet of document.styleSheets) adaptMedia(sheet);
       observer = new ResizeObserver(measure);
-      observer.observe(body);
-      observer.observe(container);
+      observer.observe(document.body);
       measure();
     };
     element.addEventListener("load", loaded);
+    window.addEventListener("resize", measure);
     if (element.contentDocument?.readyState === "complete") loaded();
     return () => {
       observer?.disconnect();
+      clearMedia();
       element.removeEventListener("load", loaded);
+      window.removeEventListener("resize", measure);
     };
-  }, []);
+  }, [id]);
   return (
-    <div className="w-full min-w-0 overflow-hidden">
-      <iframe
-        ref={frame}
-        title="HTML and JavaScript example"
-        src={`/examples/${id}/index.html?embed=${unframed ? "plain" : "card"}`}
-        className="block h-80 w-screen border-0"
-      />
-    </div>
+    <iframe
+      ref={frame}
+      title="HTML and JavaScript example"
+      src={`/examples/${id}/index.html`}
+      className="block h-80 w-full border-0"
+    />
   );
 }

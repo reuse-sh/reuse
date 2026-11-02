@@ -59,7 +59,7 @@ const face = (index: number) =>
 export function TooltipPeople() {
   return (
     <>
-      <FloatingTooltipGroup>
+      <FloatingTooltipGroup tooltipClassName="re-tooltip-people-popup">
         <div className="grid [gap:18px]">
           {comments.map(([index, text]) => (
             <div

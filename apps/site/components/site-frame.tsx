@@ -6,18 +6,23 @@ import { SiteHeader } from "./shell/site-header";
 import { TooltipRoot } from "./shell/tooltip-root";
 
 export function SiteFrame({
-  framework = "react",
+  framework,
   children,
 }: {
   framework?: Framework;
   children: ReactNode;
 }) {
-  return (
-    <FrameworkScope framework={framework}>
+  const content = (
+    <>
       <SiteHeader />
       {children}
       <SiteFooter />
       <TooltipRoot />
-    </FrameworkScope>
+    </>
+  );
+  return framework ? (
+    <FrameworkScope framework={framework}>{content}</FrameworkScope>
+  ) : (
+    content
   );
 }

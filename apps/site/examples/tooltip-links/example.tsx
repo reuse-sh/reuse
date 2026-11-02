@@ -73,7 +73,7 @@ function PrintLink({ id, children }: { id: string; children: string }) {
 export function TooltipLinks() {
   return (
     <>
-      <FloatingTooltipGroup>
+      <FloatingTooltipGroup tooltipClassName="re-tooltip-links-popup">
         <article className="re-tooltip-links-x-story">
           <p className="[font-size:13px] [color:#858585]">
             Print series · October 2026

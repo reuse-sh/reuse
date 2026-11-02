@@ -45,7 +45,10 @@ body {
   font: inherit;
 }
 .re-example .re-carousel {
-  --re-carousel-slide-width: min(288px, 72vw);
+  --re-carousel-slide-width: min(
+    288px,
+    calc(var(--re-example-viewport-width, 100vw) * 0.72)
+  );
   --re-carousel-gap: 12px;
   padding-inline: 0 16px;
   scroll-padding-inline: 0;

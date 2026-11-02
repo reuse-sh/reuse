@@ -197,7 +197,7 @@ function Toolbar({ tools, className }: { tools: Tool[]; className?: string }) {
 
 export function Example() {
   return (
-    <FloatingTooltipGroup>
+    <FloatingTooltipGroup tooltipClassName="re-tooltip-start-popup">
       <Toolbar
         tools={[
           ["zoom", "Zoom in"],

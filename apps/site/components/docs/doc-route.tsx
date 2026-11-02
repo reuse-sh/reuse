@@ -102,7 +102,14 @@ export async function DocRoute({
     <SiteFrame framework={framework}>
       <LibraryFrame
         slug={slug}
-        before={<FrameworkChooser framework={framework} pathname={pathname} />}
+        before={
+          <FrameworkChooser
+            framework={framework}
+            pathname={pathname}
+            view={query.view === "code" ? "code" : undefined}
+            file={typeof query.file === "string" ? query.file : undefined}
+          />
+        }
       >
         <PageTitle
           title={path ? found.page.title : found.library.name}

@@ -441,3 +441,116 @@ test("chat composers fit inside narrow panels", async ({ page }) => {
     ).toBeVisible();
   }
 });
+
+test("changing the platform preserves Code view", async ({ page }) => {
+  await page.goto("/carousel?framework=html&view=code&file=main.js");
+  await page.locator(".d-side .re-framework summary").click();
+  await page
+    .locator(".d-side .re-framework-options")
+    .getByRole("link", { name: "React", exact: true })
+    .click();
+  await expect(page).toHaveURL(
+    (url) =>
+      url.searchParams.get("framework") === "react" &&
+      url.searchParams.get("view") === "code",
+  );
+  await expect(page.locator(".re-example-source")).toBeVisible();
+});
+
+test("HTML lightbox controls stay inside the visible preview", async ({
+  page,
+}) => {
+  await page.goto("/lightbox?framework=html");
+  const frame = page.frameLocator(
+    'iframe[title="HTML and JavaScript example"]',
+  );
+  await frame.locator("a[data-photo]").first().click();
+  const close = frame.getByRole("button", {
+    name: "Close gallery",
+    exact: true,
+  });
+  await expect(close).toBeVisible();
+  const button = await close.boundingBox();
+  const stage = await page.locator(".re-example-panel .d-stage").boundingBox();
+  expect((button?.x ?? 0) + (button?.width ?? 0)).toBeLessThanOrEqual(
+    (stage?.x ?? 0) + (stage?.width ?? 0) - 31,
+  );
+  await close.click();
+  await expect(frame.locator("dialog[open]")).toHaveCount(0);
+});
+
+test("404 navigation retains the framework after hydration", async ({
+  page,
+}) => {
+  await page.goto("/lightbox/missing-page?framework=html");
+  await expect(
+    page.getByRole("link", { name: "Reuse", exact: true }),
+  ).toHaveAttribute("href", "/?framework=html");
+});
+
+test("a recipe tooltip has one owner inside the documentation shell", async ({
+  page,
+}) => {
+  for (const [path, label] of [
+    ["/floating-tooltip", "Zoom in"],
+    ["/floating-tooltip/examples/shortcuts", "Zoom in"],
+    ["/floating-tooltip/examples/links", "Coral sky"],
+    ["/floating-tooltip/examples/people", "Mara Lind"],
+  ]) {
+    await page.goto(path);
+    await page
+      .getByRole(path.endsWith("/links") ? "link" : "button", {
+        name: label,
+        exact: true,
+      })
+      .focus();
+    const tooltip = page.getByRole("tooltip");
+    await expect(tooltip).toHaveCount(1);
+    await expect(tooltip).toContainText(label);
+    await page.keyboard.press("Escape");
+    await expect(tooltip).toHaveCount(0);
+  }
+});
+
+test("rich shortcut tooltips preserve their original dark pill", async ({
+  page,
+}) => {
+  await page.goto("/floating-tooltip/examples/shortcuts");
+  await page.getByRole("button", { name: "Zoom in", exact: true }).focus();
+  const tooltip = page.getByRole("tooltip");
+  await expect(tooltip).toHaveCount(1);
+  await expect(tooltip).toHaveCSS("background-color", "rgb(17, 17, 17)");
+  await expect(tooltip).toHaveCSS("padding", "4px 4px 4px 10px");
+  await expect(tooltip.locator("kbd")).toHaveText("⌘+");
+  await page.keyboard.press("Escape");
+  await expect(tooltip).toHaveCount(0);
+});
+
+test("resizing an HTML preview updates its layout without resetting the carousel", async ({
+  page,
+}) => {
+  await page.goto("/carousel/examples/product-strip?framework=html");
+  const frame = page.frameLocator(
+    'iframe[title="HTML and JavaScript example"]',
+  );
+  const image = frame.locator("img").first();
+  const originalWidth = await image.evaluate(
+    (element) => element.getBoundingClientRect().width,
+  );
+  await frame.getByRole("button", { name: "Next prints", exact: true }).click();
+  const previous = frame.getByRole("button", {
+    name: "Previous prints",
+    exact: true,
+  });
+  await expect(previous).toBeEnabled();
+  await page.setViewportSize({ width: 320, height: 800 });
+  await expect(image).toHaveCSS("width", "101px");
+  await expect(previous).toBeEnabled();
+  await page.setViewportSize({ width: 1280, height: 800 });
+  await expect
+    .poll(() =>
+      image.evaluate((element) => element.getBoundingClientRect().width),
+    )
+    .toBe(originalWidth);
+  await expect(previous).toBeEnabled();
+});

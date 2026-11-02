@@ -30,11 +30,7 @@ export async function ExamplePanel({
     "gradients-easing-curves",
   ].includes(id);
   const preview =
-    framework === "react" ? (
-      <Component />
-    ) : (
-      <NativeFrame key={id} id={id} unframed={unframed} />
-    );
+    framework === "react" ? <Component /> : <NativeFrame key={id} id={id} />;
   const active = files.find((source) => source.name === file) ?? files[0];
   const href = (nextView: string, name?: string) => {
     const query = new URLSearchParams({ framework });
@@ -43,7 +39,13 @@ export async function ExamplePanel({
     return `${pathname}?${query}`;
   };
   return (
-    <section className="re-example-panel" aria-label="Example">
+    <section
+      className="re-example-panel"
+      aria-label="Example"
+      data-re-tooltip-scope={
+        view === "preview" && id.startsWith("tooltip-") ? "" : undefined
+      }
+    >
       <nav className="re-example-tabs" aria-label="Example view">
         {(["preview", "code"] as const).map((tab) => (
           <Link

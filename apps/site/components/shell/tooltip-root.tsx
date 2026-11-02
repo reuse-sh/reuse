@@ -6,7 +6,8 @@ import { useEffect } from "react";
 export function TooltipRoot() {
   useEffect(() => {
     const tooltip = createFloatingTooltip(document.body, {
-      selector: "[data-re-tooltip], [data-re-tooltip-template]",
+      selector:
+        ":is([data-re-tooltip], [data-re-tooltip-template]):not([data-re-tooltip-scope] *)",
       side: "bottom-right",
       sideOffset: 10,
       tilt: 5,

@@ -190,3 +190,8 @@
   white-space: nowrap;
   border: 0;
 }
+
+.re-floating-tooltip.re-tooltip-links-popup {
+  font-family: var(--font-sans, Geist, system-ui);
+  letter-spacing: -0.003em;
+}

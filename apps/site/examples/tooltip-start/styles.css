@@ -128,3 +128,8 @@
   width: fit-content;
   margin: auto;
 }
+
+.re-floating-tooltip.re-tooltip-start-popup {
+  font-family: var(--font-sans, Geist, system-ui);
+  letter-spacing: -0.003em;
+}

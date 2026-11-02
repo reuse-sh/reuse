@@ -9,9 +9,11 @@ import { Icon } from "../icons";
 interface ChooserProps {
   framework: Framework;
   pathname: string;
+  view?: "code";
+  file?: string;
 }
 
-function Menu({ framework, pathname }: ChooserProps) {
+function Menu({ framework, pathname, view, file }: ChooserProps) {
   const root = useRef<HTMLDetailsElement>(null);
   const options = useRef<HTMLDivElement>(null);
   const id = useId();
@@ -43,6 +45,12 @@ function Menu({ framework, pathname }: ChooserProps) {
       document.removeEventListener("keydown", onEscape);
     };
   }, []);
+  const href = (option: Framework) => {
+    const query = new URLSearchParams({ framework: option });
+    if (view) query.set("view", view);
+    if (file) query.set("file", file);
+    return `${pathname}?${query}`;
+  };
   return (
     <details ref={root} className="re-framework">
       <summary aria-controls={id}>
@@ -55,7 +63,7 @@ function Menu({ framework, pathname }: ChooserProps) {
           <Link
             key={option}
             data-re-row
-            href={`${pathname}?framework=${option}`}
+            href={href(option)}
             scroll={false}
             aria-current={framework === option ? "true" : undefined}
             onClick={(event) => {
