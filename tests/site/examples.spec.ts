@@ -316,6 +316,9 @@ test("a recipe tooltip has one owner inside the documentation shell", async ({
     ["/floating-tooltip/examples/people", "Mara Lind"],
   ]) {
     await page.goto(path);
+    await expect(
+      page.locator('[role="tooltip"][class*="re-tooltip-"]'),
+    ).toHaveCount(1);
     await page
       .getByRole(path.endsWith("/links") ? "link" : "button", {
         name: label,
@@ -334,6 +337,7 @@ test("rich shortcut tooltips preserve their original dark pill", async ({
   page,
 }) => {
   await page.goto("/floating-tooltip/examples/shortcuts");
+  await expect(page.locator(".re-tooltip-shortcuts-popup")).toHaveCount(1);
   await page.getByRole("button", { name: "Zoom in", exact: true }).focus();
   const tooltip = page.getByRole("tooltip");
   await expect(tooltip).toHaveCount(1);
