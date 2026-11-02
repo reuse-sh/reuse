@@ -25,21 +25,23 @@ const steps = [
 
 export default function AgentGuidesPage() {
   return (
-    <main id="main" className="c-col h-page">
+    <main id="main" className="c-col h-page pt-[56px]">
       <h1 className="c-h1">Agent guides</h1>
-      <p className="h-lead">
+      <p className="h-lead max-w-[600px] mt-[10px] text-[17px] leading-[27px] text-[color:var(--prose)] text-pretty">
         Every library has a guide written for coding agents. It opens with the
         library's principles, and your agent must keep them on any framework.
         Give it the link and say where the part should go.
       </p>
-      <div className="h-actions">
+      <div className="h-actions flex flex-wrap items-center gap-[8px] mt-[36px]">
         <PromptButton prompt={agentPrompt} />
       </div>
-      <ol className="h-steps">
+      <ol className="h-steps grid [grid-template-columns:repeat(3,_minmax(0,_1fr))] gap-[12px] mt-[40px]">
         {steps.map(([title, text], index) => (
           <li key={title} className="c-card">
             <div className="c-card-in">
-              <span className="h-step-n">{index + 1}</span>
+              <span className="h-step-n grid place-items-center w-[24px] h-[24px] mb-[80px] rounded-[50%] [background:var(--surface)] shadow-[var(--shadow-control)] text-[12.5px] font-[560] tabular-nums">
+                {index + 1}
+              </span>
               <p>
                 <b>{title}</b> {text}
               </p>
@@ -47,22 +49,22 @@ export default function AgentGuidesPage() {
           </li>
         ))}
       </ol>
-      <h2 className="c-h2 h-guides-h">Guides</h2>
+      <h2 className="c-h2 h-guides-h mt-[64px]">Guides</h2>
       <MovingHighlight className="h-guides">
         {libraries.map((library) => (
           <a
             key={library.slug}
-            className="h-guide"
+            className="h-guide grid [grid-template-columns:18px_168px_minmax(0,_1fr)] items-center gap-[14px] min-h-[44px] [padding:10px_12px] rounded-[10px]"
             data-re-row=""
             href={`/${library.slug}/guide.md`}
           >
             <Icon name={library.slug as IconName} size={18} />
-            <span className="h-guide-name">{library.name}</span>
+            <span className="h-guide-name font-[540]">{library.name}</span>
             <code>/{library.slug}/guide.md</code>
           </a>
         ))}
       </MovingHighlight>
-      <p className="h-index-note">
+      <p className="h-index-note mt-[16px] text-[color:var(--prose)]">
         The index of every guide is at{" "}
         <a className="c-link" href="/llms.txt">
           /llms.txt

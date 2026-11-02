@@ -53,63 +53,43 @@ These are the rules the code keeps. An adaptation on any framework keeps them to
 npm install @reuse-sh/interactions
 ```
 
-## Browser
+<!-- examples:start -->
 
-```js
-import {
-  createFloatingTooltip,
-  createMovingHighlight,
-  createHoldToConfirm,
-  createCopyButton,
-} from "@reuse-sh/interactions";
-import "@reuse-sh/interactions/styles.css";
+## Complete examples
 
-const tooltip = createFloatingTooltip(toolbar, {
-  side: "top",
-  delay: 150,
-});
-const highlight = createMovingHighlight(menu);
-const hold = createHoldToConfirm(button, {
-  holdMs: 1200,
-  onConfirm: () => removeDraft(),
-});
+### Floating tooltip
 
-const copy = createCopyButton(copyButton, {
-  text: "npm install @reuse-sh/interactions",
-});
-```
+The [React example](https://reuse.sh/floating-tooltip/getting-started?view=code) includes its data, Tailwind styling and package CSS imports. Copy `example.tsx` into a React 19 project with Tailwind CSS 4, then render `<Example />`.
 
-Tooltip triggers use `data-re-tooltip="Description"`. Highlight rows use `data-re-row`, and the selected row has `data-current`. The copy button sets `data-state` to `idle`, `copied` or `error`, swaps its icon, and announces the result to screen readers. It returns to idle after `resetMs`, 1600 by default.
+The [HTML + JavaScript example](https://reuse.sh/floating-tooltip/getting-started?framework=html&view=code) contains its HTML, stylesheet and any required browser module. Copy every file into an ES module project such as Vite. Its initial markup stays useful before JavaScript.
 
-## React
+Runnable browser example: [tooltip-start](https://reuse.sh/examples/tooltip-start/index.html).
 
-```tsx
-import {
-  CopyButton,
-  FloatingTooltip,
-  FloatingTooltipGroup,
-  HoldToConfirmButton,
-  MovingHighlight,
-} from "@reuse-sh/interactions/react";
-import "@reuse-sh/interactions/styles.css";
+### Moving highlight
 
-<FloatingTooltipGroup>
-  <FloatingTooltip content="Add an annotation">
-    <button>Add</button>
-  </FloatingTooltip>
-</FloatingTooltipGroup>
+The [React example](https://reuse.sh/moving-highlight/getting-started?view=code) includes its data, Tailwind styling and package CSS imports. Copy `example.tsx` into a React 19 project with Tailwind CSS 4, then render `<Example />`.
 
-<MovingHighlight>
-  <button data-re-row data-current>Overview</button>
-  <button data-re-row>Examples</button>
-</MovingHighlight>
+The [HTML + JavaScript example](https://reuse.sh/moving-highlight/getting-started?framework=html&view=code) contains its HTML, stylesheet and any required browser module. Copy every file into an ES module project such as Vite. Its initial markup stays useful before JavaScript.
 
-<HoldToConfirmButton holdMs={1200} onConfirm={removeDraft}>
-  Hold to remove
-</HoldToConfirmButton>
+Runnable browser example: [highlight-start](https://reuse.sh/examples/highlight-start/index.html).
 
-<CopyButton text="npm install @reuse-sh/interactions">Copy</CopyButton>
-```
+### Hold to confirm
+
+The [React example](https://reuse.sh/hold-to-confirm/getting-started?view=code) includes its data, Tailwind styling and package CSS imports. Copy `example.tsx` into a React 19 project with Tailwind CSS 4, then render `<Example />`.
+
+The [HTML + JavaScript example](https://reuse.sh/hold-to-confirm/getting-started?framework=html&view=code) contains its HTML, stylesheet and any required browser module. Copy every file into an ES module project such as Vite. Its initial markup stays useful before JavaScript.
+
+Runnable browser example: [hold-start](https://reuse.sh/examples/hold-start/index.html).
+
+### Copy button
+
+The [React example](https://reuse.sh/copy-button/getting-started?view=code) includes its data, Tailwind styling and package CSS imports. Copy `example.tsx` into a React 19 project with Tailwind CSS 4, then render `<Example />`.
+
+The [HTML + JavaScript example](https://reuse.sh/copy-button/getting-started?framework=html&view=code) contains its HTML, stylesheet and any required browser module. Copy every file into an ES module project such as Vite. Its initial markup stays useful before JavaScript.
+
+Runnable browser example: [copy-start](https://reuse.sh/examples/copy-start/index.html).
+
+<!-- examples:end -->
 
 ## Documentation
 

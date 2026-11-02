@@ -1,10 +1,10 @@
 "use client";
 
 import { createMovingHighlight } from "@reuse-sh/interactions";
-import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { type MouseEvent, useEffect, useRef, useState } from "react";
 import { libraryAt } from "../../lib/menu";
+import { DocLink as Link } from "../docs/doc-link";
 import { Icon, type IconName } from "../icons";
 import { focusMenuRow, LibraryMenu } from "./library-menu";
 
@@ -94,19 +94,29 @@ export function SiteHeader() {
 
   return (
     <header className="c-head" ref={header}>
-      <div className="c-head-in" ref={wrap}>
+      <div
+        className="c-head-in relative flex items-center h-[56px] px-[var(--gutter)]"
+        ref={wrap}
+      >
         <div className="c-brand" ref={brand}>
-          <Link className="c-logo" data-re-row href="/">
+          <Link
+            className="c-logo inline-flex items-center gap-[6px] h-[32px] [padding:0_8px] ml-[-8px] rounded-[8px] text-[14px] font-semibold tracking-[-0.02em] text-[color:var(--ink)]"
+            data-re-row
+            href="/"
+          >
             <Icon name="logo" size={16} />
             Reuse
           </Link>
-          <span className="c-slash" aria-hidden="true">
+          <span
+            className="c-slash [margin:0_2px] text-[color:rgb(0_0_0_/_16%)] text-[15px]"
+            aria-hidden="true"
+          >
             /
           </span>
           <button
             ref={button}
             type="button"
-            className="c-switch"
+            className="c-switch inline-flex items-center gap-[6px] min-w-[0] h-[32px] [padding:0_7px_0_9px] [border:0] rounded-[8px] [background:transparent] text-[14px] font-[520] text-[color:var(--ink)]"
             data-re-row
             data-highlighted={open ? "" : undefined}
             aria-expanded={open}
@@ -125,7 +135,11 @@ export function SiteHeader() {
               <Icon name={library.slug as IconName} size={16} />
             ) : null}
             <span>{library ? library.name : "Libraries"}</span>
-            <Icon name="down" size={14} className="c-switch-chevron" />
+            <Icon
+              name="down"
+              size={14}
+              className="c-switch-chevron ml-[-2px] text-[color:var(--mute)] [transition:transform_220ms_var(--ease)]"
+            />
           </button>
         </div>
         <nav className="c-nav" aria-label="Site" ref={nav}>

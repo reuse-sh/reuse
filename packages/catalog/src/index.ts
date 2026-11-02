@@ -470,6 +470,10 @@ export const libraries: Library[] = [
     packageName: "@reuse-sh/loaders",
     principles: [
       [
+        "Show a static figure first",
+        "Server-rendered markup keeps visible dots until the canvas has painted successfully.",
+      ],
+      [
         "Move dots, not frames",
         "Between figures each dot travels to its new place instead of popping.",
       ],
@@ -1153,6 +1157,10 @@ export const libraries: Library[] = [
     description: avatarsDescription,
     packageName: "@reuse-sh/avatars",
     principles: [
+      [
+        "Show content before enhancement",
+        "Photos and initials are available before scripts run, and initials remain when an image fails.",
+      ],
       [
         "Cut, never paint",
         "Badges and overlaps are vector clips through the avatar, so no painted ring fights the background and the edge stays sharp at any zoom.",

@@ -10,7 +10,7 @@ export async function GET(
   { params }: { params: Promise<{ library: string }> },
 ) {
   const library = findLibrary((await params).library);
-  return new Response(library ? libraryGuide(library) : "Not found", {
+  return new Response(library ? await libraryGuide(library) : "Not found", {
     status: library ? 200 : 404,
     headers: { "Content-Type": "text/markdown; charset=utf-8" },
   });

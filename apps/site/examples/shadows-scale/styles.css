@@ -1,0 +1,62 @@
+@import "@reuse-sh/shadows/styles.css";
+.re-example {
+  box-sizing: border-box;
+  width: 100%;
+  color: #111;
+  font:
+    15px / 1.6 system-ui,
+    sans-serif;
+}
+.re-example * {
+  box-sizing: border-box;
+}
+.re-example p,
+.re-example h3 {
+  margin: 0;
+}
+.re-example button,
+.re-example input {
+  font: inherit;
+}
+.re-example button {
+  cursor: pointer;
+}
+.re-example button:disabled {
+  cursor: default;
+  opacity: 0.4;
+}
+.re-shadow-scale {
+  display: grid;
+  gap: 32px;
+}
+.re-shadow-scale h3 {
+  font: 14px monospace;
+}
+.re-shadow-scale ul {
+  list-style: none;
+  margin: 18px 0 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 20px;
+}
+.re-shadow-scale li {
+  display: grid;
+  justify-items: center;
+  gap: 14px;
+}
+.re-shadow-scale li > span {
+  width: 100%;
+  aspect-ratio: 1;
+  border-radius: 14px;
+  background: white;
+}
+.re-shadow-scale code {
+  font: 12px monospace;
+  color: #858585;
+}
+@media (max-width: 480px) {
+  .re-shadow-scale ul {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}

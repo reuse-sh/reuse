@@ -1,0 +1,76 @@
+@import "@reuse-sh/interactions/styles.css";
+.re-example {
+  box-sizing: border-box;
+  max-width: 640px;
+  margin: auto;
+  padding: 32px;
+  color: #111;
+  font:
+    15px / 1.6 system-ui,
+    sans-serif;
+}
+.re-example *,
+.re-example *::before,
+.re-example *::after {
+  box-sizing: border-box;
+}
+.re-example button,
+.re-example input {
+  font: inherit;
+}
+.re-example button,
+.re-example a {
+  -webkit-tap-highlight-color: transparent;
+}
+.re-example button {
+  cursor: pointer;
+}
+.re-example button:disabled {
+  cursor: default;
+  opacity: 0.55;
+}
+.re-example button:focus-visible,
+.re-example a:focus-visible {
+  outline: 2px solid #111;
+  outline-offset: 3px;
+}
+.re-surface {
+  padding: 16px;
+  background: white;
+  border-radius: 16px;
+  box-shadow:
+    0 0 0 1px #00000014,
+    0 8px 24px -12px #00000026;
+}
+.re-control {
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: inherit;
+  padding: 8px 12px;
+  text-decoration: none;
+}
+.re-row {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  width: 100%;
+  text-align: left;
+}
+.re-key {
+  margin-left: auto;
+  color: #858585;
+  font:
+    12px ui-monospace,
+    monospace;
+}
+.re-status {
+  min-height: 24px;
+  color: #5b5b5b;
+  font-size: 13px;
+}
+@media (max-width: 480px) {
+  .re-example {
+    padding: 16px;
+  }
+}

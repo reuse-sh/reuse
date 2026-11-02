@@ -25,39 +25,17 @@ These are the rules the code keeps. An adaptation on any framework keeps them to
 npm install @reuse-sh/carousel
 ```
 
-## Browser
+<!-- examples:start -->
 
-```js
-import { createCarousel } from "@reuse-sh/carousel";
-import "@reuse-sh/carousel/styles.css";
+## Complete examples
 
-const viewport = document.querySelector("[data-carousel]");
-const carousel = createCarousel(viewport, {
-  align: "center",
-  loop: true,
-});
-nextButton.addEventListener("click", () => carousel.next());
-carousel.subscribe((state) => {
-  counter.textContent = String(state.index + 1);
-});
-```
+The [React example](https://reuse.sh/carousel/getting-started?view=code) includes its data, Tailwind styling and package CSS imports. Copy `example.tsx` into a React 19 project with Tailwind CSS 4, then render `<Example />`.
 
-## React
+The [HTML + JavaScript example](https://reuse.sh/carousel/getting-started?framework=html&view=code) contains its HTML, stylesheet and any required browser module. Copy every file into an ES module project such as Vite. Its initial markup stays useful before JavaScript.
 
-```tsx
-import { useCarousel } from "@reuse-sh/carousel/react";
-import "@reuse-sh/carousel/styles.css";
+Runnable browser example: [carousel-start](https://reuse.sh/examples/carousel-start/index.html).
 
-function Gallery({ children }) {
-  const { ref, carousel } = useCarousel({ loop: true });
-  return <>
-    <div ref={ref} className="re-carousel">
-      {children}
-    </div>
-    <button onClick={() => carousel?.next()}>Next</button>
-  </>;
-}
-```
+<!-- examples:end -->
 
 ## Documentation
 

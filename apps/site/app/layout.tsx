@@ -6,7 +6,6 @@ import "@reuse-sh/loaders/styles.css";
 import "@reuse-sh/interactions/styles.css";
 import "@reuse-sh/avatars/styles.css";
 import "./globals.css";
-import "./styles/shell.css";
 import { GeistMono } from "geist/font/mono";
 import { GeistSans } from "geist/font/sans";
 import type { Metadata } from "next";

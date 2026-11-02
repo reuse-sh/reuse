@@ -1,4 +1,5 @@
 // @vitest-environment jsdom
+import { readFileSync } from "node:fs";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   createAvatar,
@@ -81,6 +82,29 @@ describe("initials", () => {
 });
 
 describe("avatar", () => {
+  it("keeps server-rendered photos visible before enhancement and restores them after teardown", () => {
+    const style = document.createElement("style");
+    style.textContent = readFileSync("src/styles.css", "utf8");
+    document.head.append(style);
+    document.body.innerHTML =
+      '<span class="re-avatar" data-re-avatar><span class="re-avatar-face" data-re-avatar-face>ML<img class="re-avatar-image" src="/portrait.svg" alt=""></span></span>';
+    const root = document.body.firstElementChild as HTMLElement;
+    const image = root.querySelector("img");
+    if (!image) throw new Error("Image is missing");
+    try {
+      expect(getComputedStyle(image).visibility).toBe("visible");
+      const controller = enhanceAvatar(root);
+      controllers.push(controller);
+      expect(getComputedStyle(image).visibility).toBe("visible");
+      image.dispatchEvent(new Event("error"));
+      expect(getComputedStyle(image).visibility).toBe("hidden");
+      controller.destroy();
+      expect(getComputedStyle(image).visibility).toBe("visible");
+      expect(image.hasAttribute("style")).toBe(false);
+    } finally {
+      style.remove();
+    }
+  });
   it("keeps initials beneath images and recovers after an image error", () => {
     const root = document.createElement("span");
     document.body.append(root);
@@ -95,7 +119,7 @@ describe("avatar", () => {
     expect(root.querySelector("[data-re-avatar-face]")?.textContent).toBe("AL");
     const image = root.querySelector("img");
     if (!image) throw new Error("Image is missing");
-    expect(image.style.visibility).toBe("hidden");
+    expect(image.style.visibility).toBe("");
     Object.defineProperty(image, "naturalWidth", { value: 128 });
     image.dispatchEvent(new Event("load"));
     expect(image.style.visibility).toBe("visible");

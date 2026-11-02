@@ -1,0 +1,47 @@
+@import "@reuse-sh/loaders/styles.css";
+.re-example {
+  box-sizing: border-box;
+  width: 100%;
+  color: #111;
+  font:
+    15px / 1.6 system-ui,
+    sans-serif;
+}
+.re-example * {
+  box-sizing: border-box;
+}
+.re-example p,
+.re-example h3 {
+  margin: 0;
+}
+.re-example button,
+.re-example input {
+  font: inherit;
+}
+.re-example button {
+  cursor: pointer;
+}
+.re-example button:disabled {
+  cursor: default;
+  opacity: 0.4;
+}
+.re-loader-gallery {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 36px 16px;
+}
+.re-loader-gallery > div {
+  display: grid;
+  justify-items: center;
+  gap: 12px;
+}
+.re-loader-gallery code {
+  font: 12px / 18px monospace;
+  text-align: center;
+  color: #858585;
+}
+@media (max-width: 480px) {
+  .re-loader-gallery {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}

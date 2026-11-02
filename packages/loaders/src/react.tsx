@@ -1,6 +1,6 @@
 "use client";
 
-import { type ComponentProps, useEffect, useRef } from "react";
+import { type ComponentProps, useEffect, useRef, useState } from "react";
 import {
   createThinkingDots,
   THINKING_DOTS,
@@ -21,10 +21,15 @@ export function ThinkingDots({
   ...props
 }: ThinkingDotsProps) {
   const ref = useRef<HTMLCanvasElement>(null);
+  const [ready, setReady] = useState(false);
   useEffect(() => {
     if (!ref.current) return;
     const controller = createThinkingDots(ref.current, { size, config });
-    return () => controller.destroy();
+    setReady(true);
+    return () => {
+      controller.destroy();
+      setReady(false);
+    };
   }, [size, config]);
   return (
     <span
@@ -34,7 +39,17 @@ export function ThinkingDots({
       aria-label={label}
       aria-hidden={label ? undefined : true}
     >
-      <canvas ref={ref} style={{ width: size, height: size }} />
+      <span
+        className="re-thinking-dots__fallback"
+        aria-hidden="true"
+        hidden={ready}
+        style={{ width: size, height: size }}
+      >
+        <span />
+        <span />
+        <span />
+      </span>
+      <canvas ref={ref} hidden={!ready} style={{ width: size, height: size }} />
     </span>
   );
 }

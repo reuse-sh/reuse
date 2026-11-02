@@ -4,6 +4,8 @@
  * re-lightbox-style class, plus a small chrome script for the styles that move parts.
  * The preview frame (lightbox-frame.ts) runs exactly the CSS and chrome shown on the page.
  */
+import { photos } from "../../lib/photos";
+
 export interface LightboxStyle {
   arrows: "Sides" | "Toolbar" | "None";
   counter: "Corner" | "Toolbar" | "None";
@@ -416,9 +418,17 @@ export function lightboxCode(options: LightboxStyle) {
     lines.map((line) => `${indent}${line}`).join("\n");
   const imports = `import "@reuse-sh/lightbox/styles.css";
 import "./lightbox-style.css";${chrome ? `\nimport { addChrome } from "./lightbox-chrome.js";` : ""}`;
+  const data = JSON.stringify(
+    photos.map((photo) => ({ ...photo, src: `https://reuse.sh${photo.src}` })),
+    null,
+    2,
+  );
+  const fixtures = `const defaultPhotos = ${data};`;
   return {
     js: `import { createLightbox } from "@reuse-sh/lightbox";
 ${imports}
+
+const photos = ${data};
 
 const lightbox = createLightbox({
 ${body("  ")}
@@ -429,22 +439,28 @@ lightbox.open(photos, 0);${chrome ? "\naddChrome(lightbox, photos);" : ""}`,
 import { useRef } from "react";
 ${imports}
 
-export function Gallery({ photos }) {
+${fixtures}
+
+export function Gallery({ photos = defaultPhotos } = {}) {
   const lightbox = useLightbox({
 ${body("    ")}
   });
-  const root = useRef(null);
-  const open = (index) => {
-    const images = root.current.querySelectorAll("img");
-    const items = photos.map((photo, i) => ({ ...photo, origin: images[i] }));
+  const root = useRef<HTMLDivElement>(null);
+  const open = (index: number) => {
+    const images = root.current?.querySelectorAll<HTMLImageElement>("img");
+    const items = photos.map((photo, i) => ({ ...photo, origin: images?.[i] }));
     lightbox.open(items, index);${chrome ? "\n    addChrome(lightbox, items);" : ""}
   };
   return (
-    <div ref={root}>
+    <div ref={root} className="grid grid-cols-2 gap-3 sm:grid-cols-3">
       {photos.map((photo, index) => (
-        <button key={photo.src} onClick={() => open(index)}>
-          <img src={photo.src} alt={photo.alt} />
-        </button>
+        <a key={photo.src} href={photo.src} className="block overflow-hidden rounded-xl" onClick={(event) => {
+          if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+          event.preventDefault();
+          open(index);
+        }}>
+          <img className="h-auto w-full" src={photo.src} alt={photo.alt} />
+        </a>
       ))}
     </div>
   );

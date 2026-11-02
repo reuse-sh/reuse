@@ -1,47 +1,11 @@
 /* Home page and Agent guides page. Shared classes come from shell.css. */
 
 /* Opening */
-.h-open {
-  padding-top: 128px;
-}
-.h-prose {
-  max-width: 580px;
-  margin-top: 18px;
-  font-size: 16px;
-  line-height: 27px;
-  color: var(--prose);
-  text-wrap: pretty;
-}
 .c-display + .h-prose {
   margin-top: 28px;
 }
-.h-actions {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 8px;
-  margin-top: 36px;
-}
 
 /* Demo cards */
-.h-cards {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 12px;
-  margin-top: 28px;
-}
-.h-card-demo {
-  flex: 1;
-  display: grid;
-  place-items: center;
-  min-height: 184px;
-  padding: 24px;
-}
-.h-card-cap {
-  padding: 0 20px 18px;
-  font-size: 14px;
-  line-height: 20px;
-}
 .h-card-cap b,
 .h-card-cap span {
   display: block;
@@ -50,13 +14,6 @@
   color: var(--prose);
   text-wrap: pretty;
 }
-.h-load {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin: 0;
-  color: var(--ink);
-}
 .h-load > span:last-child {
   font-size: 15px;
   line-height: 24px;
@@ -64,9 +21,6 @@
 }
 
 /* Carousel: starts at the column and runs off the right edge */
-.h-strip {
-  margin-top: 28px;
-}
 .h-strip-vp {
   --h-off: max(var(--gutter), (100% - var(--col)) / 2);
   --re-carousel-slide-width: min(310px, 72vw);
@@ -100,19 +54,6 @@
   font-size: 14px;
   line-height: 20px;
 }
-.h-strip-ctrl {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  margin-top: 16px;
-}
-.h-dots {
-  position: relative;
-  display: flex;
-  align-items: center;
-  height: 24px;
-  margin-left: -3px;
-}
 .h-dots button {
   position: relative;
   width: 10px;
@@ -139,12 +80,6 @@
   pointer-events: none;
   transform: translateX(calc(var(--h-dot, 0) * 10px));
   transition: transform 300ms cubic-bezier(0.32, 0.72, 0, 1);
-}
-.h-arrows {
-  display: flex;
-  gap: 2px;
-  margin-left: auto;
-  margin-right: -6px;
 }
 .h-arrows button {
   display: grid;
@@ -188,38 +123,8 @@
 }
 
 /* Agent guides page */
-.h-page {
-  padding-top: 56px;
-}
-.h-lead {
-  max-width: 600px;
-  margin-top: 10px;
-  font-size: 17px;
-  line-height: 27px;
-  color: var(--prose);
-  text-wrap: pretty;
-}
-.h-steps {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 12px;
-  margin-top: 40px;
-}
 .h-steps .c-card-in {
   padding: 18px 20px 20px;
-}
-.h-step-n {
-  display: grid;
-  place-items: center;
-  width: 24px;
-  height: 24px;
-  margin-bottom: 80px;
-  border-radius: 50%;
-  background: var(--surface);
-  box-shadow: var(--shadow-control);
-  font-size: 12.5px;
-  font-weight: 560;
-  font-variant-numeric: tabular-nums;
 }
 .h-steps p {
   color: var(--prose);
@@ -230,23 +135,11 @@
 .h-steps b {
   display: block;
 }
-.h-guides-h {
-  margin-top: 64px;
-}
 .h-guides {
   display: grid;
   margin: 14px -12px 0;
   --re-highlight-background: var(--hover);
   --re-highlight-radius: 10px;
-}
-.h-guide {
-  display: grid;
-  grid-template-columns: 18px 168px minmax(0, 1fr);
-  align-items: center;
-  gap: 14px;
-  min-height: 44px;
-  padding: 10px 12px;
-  border-radius: 10px;
 }
 .h-guide svg {
   color: #707070;
@@ -254,9 +147,6 @@
 }
 .h-guide:hover svg {
   color: var(--ink);
-}
-.h-guide-name {
-  font-weight: 540;
 }
 .h-guide code {
   overflow: hidden;
@@ -269,50 +159,17 @@
 .h-guide:focus-visible {
   outline-offset: -2px;
 }
-.h-trust-h {
-  margin-top: 56px;
-}
 .h-trust {
   display: grid;
   margin: 10px -12px 0;
   --re-highlight-background: var(--hover);
   --re-highlight-radius: 10px;
 }
-.h-trust-row {
-  display: grid;
-  grid-template-columns: 168px minmax(0, 1fr) auto;
-  align-items: baseline;
-  gap: 4px 20px;
-  padding: 12px;
-  border-radius: 10px;
-}
-.h-trust-name {
-  font-weight: 540;
-}
-.h-trust-reason {
-  color: var(--prose);
-  font-size: 14.5px;
-  line-height: 23px;
-  text-wrap: pretty;
-}
-.h-trust-link {
-  display: inline-flex;
-  align-items: center;
-  gap: 3px;
-  color: var(--mute);
-  font-size: 13px;
-  white-space: nowrap;
-  transition: color 150ms ease;
-}
 .h-trust-row:hover .h-trust-link {
   color: var(--ink);
 }
 .h-trust-row:focus-visible {
   outline-offset: -2px;
-}
-.h-index-note {
-  margin-top: 16px;
-  color: var(--prose);
 }
 
 @media (max-width: 760px) {

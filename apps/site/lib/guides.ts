@@ -1,4 +1,6 @@
 import { installCommand, type Library } from "@reuse-sh/catalog";
+import { recipeId } from "./example-manifest";
+import { exampleFiles } from "./example-source";
 export const snippets: Record<string, { native: string; react: string }> = {
   lightbox: {
     native: `import { bindLightboxGallery } from "@reuse-sh/lightbox";
@@ -185,9 +187,28 @@ export const cssSnippets: Record<string, { css: string; html: string }> = {
 };
 
 const fence = String.fromCharCode(96).repeat(3);
-export function libraryGuide(library: Library) {
-  const example = snippets[library.slug];
-  const css = cssSnippets[library.slug];
+export async function libraryGuide(library: Library) {
+  const id = recipeId(library.slug, "getting-started");
+  const files = id ? await exampleFiles(id) : null;
+  if (!files) throw new Error(`Missing complete example for ${library.slug}.`);
+  const examples = [
+    "## React with Tailwind",
+    "Use React 19 and Tailwind CSS 4. The component includes its fixture data and package CSS imports.",
+    ...files
+      .filter((file) => /\.(tsx|ts)$/.test(file.name))
+      .flatMap((file) => [
+        `### ${file.name}`,
+        `${fence}tsx\n${file.code}\n${fence}`,
+      ]),
+    "## HTML + JavaScript",
+    "Use an ES module bundler such as Vite. Copy every supplied file into the same folder. The stylesheet imports package CSS; examples that need a browser controller also load an ES module.",
+    ...files
+      .filter((file) => !/\.(tsx|ts)$/.test(file.name))
+      .flatMap((file) => [
+        `### ${file.name}`,
+        `${fence}${file.name.endsWith(".html") ? "html" : file.name.endsWith(".css") ? "css" : "js"}\n${file.code}\n${fence}`,
+      ]),
+  ];
   return `${[
     `# ${library.name}`,
     library.description,
@@ -201,19 +222,7 @@ export function libraryGuide(library: Library) {
     ...library.notes.map((value) => `- ${value}`),
     "## API",
     ...library.api.map(([name, text]) => `- \`${name}\`: ${text}`),
-    ...(css
-      ? [
-          "## Stylesheet",
-          `${fence}css\n${css.css}\n${fence}`,
-          "## HTML",
-          `${fence}html\n${css.html}\n${fence}`,
-        ]
-      : [
-          "## Browser JavaScript",
-          `${fence}js\n${example.native}\n${fence}`,
-          "## React",
-          `${fence}tsx\n${example.react}\n${fence}`,
-        ]),
+    ...examples,
     "## Agent workflow",
     "1. Inspect the project and read the installed package's types and stylesheet.",
     "2. Reuse the native controller. Use the React adapter only in a React surface.",

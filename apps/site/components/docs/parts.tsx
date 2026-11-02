@@ -6,12 +6,12 @@ import {
   libraryPrompt,
   type Row,
 } from "@reuse-sh/catalog";
-import Link from "next/link";
 import type { ReactNode } from "react";
 import { CopyControl, PromptButton } from "../copy-control";
 import { Icon } from "../icons";
 import { CodeBlock } from "../shell/code-block";
 import { DocIcon, type DocIconName } from "./doc-icon";
+import { DocLink } from "./doc-link";
 
 export function PageTitle({ title, lead }: { title: string; lead?: string }) {
   return (
@@ -30,22 +30,22 @@ export function Pager({ library, path }: { library: Library; path: string }) {
   return (
     <nav className="d-pager" aria-label="Previous and next page">
       {prev ? (
-        <Link className="d-pager-prev" href={docHref(library, prev.path)}>
+        <DocLink className="d-pager-prev" href={docHref(library, prev.path)}>
           <small>
             <Icon name="left" size={13} className="d-pager-icon" />
             Previous
           </small>
           <span className="d-pager-title">{prev.title}</span>
-        </Link>
+        </DocLink>
       ) : null}
       {next ? (
-        <Link className="d-pager-next" href={docHref(library, next.path)}>
+        <DocLink className="d-pager-next" href={docHref(library, next.path)}>
           <small>
             Next
             <Icon name="right" size={13} className="d-pager-icon" />
           </small>
           <span className="d-pager-title">{next.title}</span>
-        </Link>
+        </DocLink>
       ) : null}
     </nav>
   );
@@ -55,9 +55,12 @@ export function OverviewActions({ library }: { library: Library }) {
   return (
     <div className="d-actions">
       <PromptButton prompt={libraryPrompt(library)} />
-      <Link className="c-btn-quiet" href={docHref(library, "getting-started")}>
+      <DocLink
+        className="c-btn-quiet"
+        href={docHref(library, "getting-started")}
+      >
         Get started
-      </Link>
+      </DocLink>
     </div>
   );
 }

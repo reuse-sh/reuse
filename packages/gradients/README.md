@@ -23,35 +23,17 @@ These are the rules the code keeps. An adaptation on any framework keeps them to
 npm install @reuse-sh/gradients
 ```
 
-## Easing gradient
+<!-- examples:start -->
 
-`easingGradient` returns a CSS gradient string. Each stop is a `color-mix()` between the two colors, so any CSS color works, `var()` included, and a transparent end keeps its hue.
+## Complete examples
 
-```js
-import { easingGradient } from "@reuse-sh/gradients";
+The [React example](https://reuse.sh/easing-gradients/getting-started?view=code) includes its data, Tailwind styling and package CSS imports. Copy `example.tsx` into a React 19 project with Tailwind CSS 4, then render `<Example />`.
 
-hero.style.backgroundImage = easingGradient({
-  from: "transparent",
-  to: "rgb(0 0 0 / 0.8)",
-  easing: "ease-in-out-sine",
-  direction: "to bottom",
-});
-```
+The [HTML + JavaScript example](https://reuse.sh/easing-gradients/getting-started?framework=html&view=code) contains its HTML, stylesheet and any required browser module. Copy every file into an ES module project such as Vite. Its initial markup stays useful before JavaScript.
 
-Easings are `ease-in-out-sine` (the default), `ease-in`, `ease-out`, `linear`, or a cubic bezier tuple such as `[0.23, 1, 0.32, 1]`. Pass `type: "radial"` for a radial gradient. `easingStops` returns the sampled positions and progress for gradients you assemble yourself.
+Runnable browser example: [gradients-start](https://reuse.sh/examples/gradients-start/index.html).
 
-## Fade edge
-
-`createFadeEdge` masks the edges of a horizontal scroller with an eased gradient. In the default `scroll` mode an edge fades in as you scroll away from it.
-
-```js
-import { createFadeEdge } from "@reuse-sh/gradients";
-
-const fade = createFadeEdge(strip, { size: 64, curve: "smooth", mode: "scroll" });
-
-// Later
-fade.destroy();
-```
+<!-- examples:end -->
 
 ## Documentation
 

@@ -1,0 +1,86 @@
+@import "@reuse-sh/lightbox/styles.css";
+.re-example {
+  color: #202020;
+  font:
+    15px / 1.6 system-ui,
+    sans-serif;
+  max-width: 840px;
+  margin: auto;
+  padding: 24px;
+  box-sizing: border-box;
+}
+.re-example *,
+.re-example *::before,
+.re-example *::after {
+  box-sizing: border-box;
+}
+.re-example img {
+  max-width: 100%;
+}
+.re-example button,
+.re-example input {
+  font: inherit;
+}
+.re-example button {
+  cursor: pointer;
+}
+.re-example button:disabled {
+  cursor: default;
+  opacity: 0.5;
+}
+.re-example a {
+  color: inherit;
+}
+.re-example figure {
+  margin: 0;
+}
+.re-example figcaption,
+.re-meta {
+  color: #666;
+  font-size: 13px;
+}
+.re-example h2 {
+  font:
+    300 32px / 1.2 Georgia,
+    serif;
+  margin: 8px 0 20px;
+}
+.re-photo {
+  display: block;
+  position: relative;
+}
+.re-photo img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 12px;
+}
+.re-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 16px;
+}
+.re-controls button {
+  border: 1px solid #ddd;
+  border-radius: 50%;
+  background: white;
+  width: 32px;
+  height: 32px;
+}
+.re-counter {
+  margin-left: auto;
+  font-variant-numeric: tabular-nums;
+}
+.re-gallery {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+}
+.re-gallery .re-photo:first-child {
+  grid-column: span 4;
+}
+.re-gallery .re-photo {
+  aspect-ratio: 4 / 3;
+}

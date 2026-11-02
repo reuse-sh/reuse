@@ -1,0 +1,62 @@
+.re-example {
+  box-sizing: border-box;
+  width: 100%;
+  color: #111;
+  font:
+    15px / 1.6 system-ui,
+    sans-serif;
+}
+.re-example * {
+  box-sizing: border-box;
+}
+.re-example p,
+.re-example h3 {
+  margin: 0;
+}
+.re-example button,
+.re-example input {
+  font: inherit;
+}
+.re-example button {
+  cursor: pointer;
+}
+.re-example button:disabled {
+  cursor: default;
+  opacity: 0.4;
+}
+.re-gradient-start {
+  display: grid;
+  gap: 12px;
+  font-size: 12px;
+  color: #858585;
+}
+.re-gradient-start > div {
+  display: grid;
+  grid-template-columns: 40px 1fr 1fr;
+  align-items: center;
+  gap: 12px;
+}
+.re-gradient-swatch {
+  height: 64px;
+  border-radius: 8px;
+}
+.re-gradient-start [data-easing="linear"] {
+  background-image: linear-gradient(to right, transparent 0%, #111 100%);
+}
+.re-gradient-start [data-easing="ease-in-out-sine"] {
+  background-image: linear-gradient(
+    to right,
+    transparent 0%,
+    color-mix(in oklab, #111 2.03%, transparent) 9.0909%,
+    color-mix(in oklab, #111 7.94%, transparent) 18.1818%,
+    color-mix(in oklab, #111 17.26%, transparent) 27.2727%,
+    color-mix(in oklab, #111 29.23%, transparent) 36.3636%,
+    color-mix(in oklab, #111 42.88%, transparent) 45.4545%,
+    color-mix(in oklab, #111 57.12%, transparent) 54.5455%,
+    color-mix(in oklab, #111 70.77%, transparent) 63.6364%,
+    color-mix(in oklab, #111 82.74%, transparent) 72.7273%,
+    color-mix(in oklab, #111 92.06%, transparent) 81.8182%,
+    color-mix(in oklab, #111 97.97%, transparent) 90.9091%,
+    #111 100%
+  );
+}

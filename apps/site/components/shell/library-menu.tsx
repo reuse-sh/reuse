@@ -4,7 +4,6 @@ import {
   createFloatingTooltip,
   createMovingHighlight,
 } from "@reuse-sh/interactions";
-import Link from "next/link";
 import { type Ref, useEffect, useRef } from "react";
 import {
   type MenuSlug,
@@ -12,6 +11,7 @@ import {
   menuLibrary,
   shortLines,
 } from "../../lib/menu";
+import { DocLink } from "../docs/doc-link";
 import { Icon } from "../icons";
 import { createLibraryPeek } from "./library-peek";
 
@@ -105,7 +105,7 @@ export function LibraryMenu({
           <div key={title} className="c-menu-col" data-menu-col>
             <p className="c-menu-h">{title}</p>
             {slugs.map((slug) => (
-              <Link
+              <DocLink
                 key={slug}
                 href={`/${slug}`}
                 className="c-menu-row"
@@ -120,7 +120,7 @@ export function LibraryMenu({
                   <b>{menuLibrary(slug).name}</b>
                   <small>{shortLines[slug]}</small>
                 </span>
-              </Link>
+              </DocLink>
             ))}
           </div>
         ))}

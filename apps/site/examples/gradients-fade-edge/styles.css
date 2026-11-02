@@ -1,0 +1,97 @@
+@import "@reuse-sh/carousel/styles.css";
+@import "@reuse-sh/interactions/styles.css";
+.re-example {
+  box-sizing: border-box;
+  width: 100%;
+  color: #111;
+  font:
+    15px / 1.6 system-ui,
+    sans-serif;
+}
+.re-example * {
+  box-sizing: border-box;
+}
+.re-example p,
+.re-example h3 {
+  margin: 0;
+}
+.re-example button,
+.re-example input {
+  font: inherit;
+}
+.re-example button {
+  cursor: pointer;
+}
+.re-example button:disabled {
+  cursor: default;
+  opacity: 0.4;
+}
+.re-choices {
+  display: inline-flex;
+  gap: 2px;
+  min-width: 0;
+  margin: 0;
+  border: 0;
+  border-radius: 12px;
+  background: #f3f3f3;
+  padding: 4px;
+  --re-highlight-radius: 8px;
+}
+.re-choices legend {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+}
+.re-choices label {
+  position: relative;
+  padding: 6px 12px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 13px;
+  text-transform: capitalize;
+}
+.re-choices label:has(:checked) {
+  background: #0000000e;
+}
+.re-choices label:has(:focus-visible) {
+  outline: 2px solid;
+}
+.re-choices input {
+  position: absolute;
+  opacity: 0;
+  width: 1px;
+  height: 1px;
+}
+.re-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 18px;
+}
+.re-fade-strip {
+  --re-carousel-gap: 12px;
+  --re-carousel-slide-width: 240px;
+}
+.re-fade-strip figure {
+  margin: 0;
+}
+.re-fade-strip img {
+  display: block;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 4 / 3;
+  object-fit: cover;
+  border-radius: 8px;
+}
+.re-fade-strip figcaption {
+  margin-top: 8px;
+  font-size: 13px;
+  color: #858585;
+}
+@media (max-width: 480px) {
+  .re-fade-strip {
+    --re-carousel-slide-width: 180px;
+  }
+}

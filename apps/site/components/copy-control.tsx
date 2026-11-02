@@ -1,6 +1,7 @@
 "use client";
 
 import { CopyButton } from "@reuse-sh/interactions/react";
+import { useDocFramework } from "../lib/framework-context";
 
 export function CopyControl({
   value,
@@ -34,9 +35,13 @@ export function PromptButton({
   prompt: string;
   className?: string;
 }) {
+  const framework = useDocFramework();
+  const value = framework
+    ? `${prompt} Use ${framework === "react" ? "React with Tailwind CSS" : "HTML, CSS and JavaScript"}.`
+    : prompt;
   return (
     <CopyButton
-      text={prompt}
+      text={value}
       className={["c-btn c-prompt-btn", className].filter(Boolean).join(" ")}
     >
       Copy prompt for your agent

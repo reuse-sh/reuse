@@ -7,10 +7,10 @@ import {
   isDocGroup,
   type Library,
 } from "@reuse-sh/catalog";
-import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { type ReactNode, useEffect, useRef } from "react";
 import { Icon } from "../icons";
+import { DocLink } from "./doc-link";
 
 function Toc({
   library,
@@ -24,13 +24,13 @@ function Toc({
   const link = (path: string, title: string) => {
     const href = docHref(library, path);
     return (
-      <Link
+      <DocLink
         key={path}
         href={href}
         aria-current={pathname === href ? "page" : undefined}
       >
         {title}
-      </Link>
+      </DocLink>
     );
   };
   return (
@@ -65,22 +65,16 @@ function Toc({
 export function DocsSidebar({
   slug,
   before,
-  currentPath,
 }: {
   slug: string;
   before?: ReactNode;
-  currentPath?: string;
 }) {
   const pathname = usePathname();
   const library = findLibrary(slug);
   if (!library) return null;
   return (
     <aside className="d-side">
-      <Toc
-        library={library}
-        pathname={currentPath ?? pathname}
-        before={before}
-      />
+      <Toc library={library} pathname={pathname} before={before} />
     </aside>
   );
 }
@@ -88,11 +82,9 @@ export function DocsSidebar({
 export function DocsDisclosure({
   slug,
   before,
-  currentPath,
 }: {
   slug: string;
   before?: ReactNode;
-  currentPath?: string;
 }) {
   const pathname = usePathname();
   const details = useRef<HTMLDetailsElement>(null);
@@ -103,7 +95,7 @@ export function DocsDisclosure({
   const library = findLibrary(slug);
   if (!library) return null;
   const current = docPages(library).find(
-    (page) => docHref(library, page.path) === (currentPath ?? pathname),
+    (page) => docHref(library, page.path) === pathname,
   );
   return (
     <details ref={details} className="d-toc-m">
@@ -111,11 +103,7 @@ export function DocsDisclosure({
         <span>{current?.title ?? library.name}</span>
         <Icon name="down" size={14} className="d-chevron" />
       </summary>
-      <Toc
-        library={library}
-        pathname={currentPath ?? pathname}
-        before={before}
-      />
+      <Toc library={library} pathname={pathname} before={before} />
     </details>
   );
 }

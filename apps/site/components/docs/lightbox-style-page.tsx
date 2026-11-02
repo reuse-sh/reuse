@@ -1,4 +1,6 @@
 import { notFound } from "next/navigation";
+import { FrameworkOnly } from "../../lib/framework-context";
+import { photos } from "../../lib/photos";
 import { CodeBlock } from "../shell/code-block";
 import { lightboxCode, lightboxStyles } from "./lightbox-styles";
 import { C, CodePair, Keys, Section } from "./parts";
@@ -21,6 +23,16 @@ export function LightboxStylePage({ style }: { style: string }) {
         <kbd>→</kbd> to page and <kbd>Esc</kbd> to close it.
       </Keys>
       <section className="d-ex-code" aria-label="Code">
+        <FrameworkOnly value="html">
+          <Section title={<C>index.html</C>}>
+            <CodeBlock
+              tabs={{
+                lang: "html",
+                code: `<!doctype html>\n<html lang="en">\n<head>\n<meta charset="utf-8">\n<meta name="viewport" content="width=device-width,initial-scale=1">\n<title>Lightbox gallery</title>\n<link rel="stylesheet" href="./lightbox-style.css">\n<script type="module" src="./main.js"></script>\n</head>\n<body>\n<main style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px">\n${photos.map((photo) => `  <a href="https://reuse.sh${photo.src}"><img src="https://reuse.sh${photo.src}" alt="${photo.alt}" width="${photo.width}" height="${photo.height}" style="display:block;width:100%;height:auto"></a>`).join("\n")}\n</main>\n</body>\n</html>`,
+              }}
+            />
+          </Section>
+        </FrameworkOnly>
         <CodePair js={code.js} react={code.react} />
         <Section title={<C>lightbox-style.css</C>}>
           <CodeBlock tabs={{ code: code.css, lang: "css" }} />

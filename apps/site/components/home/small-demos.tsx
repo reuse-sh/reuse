@@ -29,8 +29,10 @@ function DemoCard({ slug, children }: { slug: string; children: ReactNode }) {
   return (
     <article className="c-card">
       <div className="c-card-in">
-        <div className="h-card-demo">{children}</div>
-        <p className="h-card-cap">
+        <div className="h-card-demo flex-1 grid place-items-center min-h-[184px] p-[24px]">
+          {children}
+        </div>
+        <p className="h-card-cap [padding:0_20px_18px] text-[14px] leading-[20px]">
           <b>{library?.name}</b>
           <span>{library?.description}</span>
         </p>
@@ -86,7 +88,7 @@ function HoldDemo() {
 
 export function SmallDemos() {
   return (
-    <div className="h-cards">
+    <div className="h-cards grid [grid-template-columns:repeat(2,_minmax(0,_1fr))] gap-[12px] mt-[28px]">
       <DemoCard slug="floating-tooltip">
         <MovingHighlight
           className="c-toolbar"
@@ -113,7 +115,7 @@ export function SmallDemos() {
         <HoldDemo />
       </DemoCard>
       <DemoCard slug="loaders">
-        <p className="h-load">
+        <p className="h-load flex items-center gap-[8px] m-[0] text-[color:var(--ink)]">
           <ThinkingDots size={26} label="Thinking" />
           <span aria-hidden="true">Thinking</span>
         </p>

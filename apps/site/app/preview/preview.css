@@ -1,8 +1,0 @@
-@layer theme;
-@import "tailwindcss/theme.css" layer(theme);
-@import "tailwindcss/utilities.css" source(".");
-
-@theme inline {
-  --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
-  --font-mono: var(--font-geist-mono), ui-monospace, monospace;
-}

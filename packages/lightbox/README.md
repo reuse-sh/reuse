@@ -23,35 +23,17 @@ These are the rules the code keeps. An adaptation on any framework keeps them to
 npm install @reuse-sh/lightbox
 ```
 
-## Browser
+<!-- examples:start -->
 
-```js
-import { createLightbox } from "@reuse-sh/lightbox";
-import "@reuse-sh/lightbox/styles.css";
+## Complete examples
 
-const viewer = createLightbox({ thumbnails: true });
-viewer.open([{
-  src: "/photo.jpg",
-  alt: "A mountain lake",
-  width: 1600,
-  height: 1200,
-  origin: document.querySelector("img"),
-}]);
-```
+The [React example](https://reuse.sh/lightbox/getting-started?view=code) includes its data, Tailwind styling and package CSS imports. Copy `example.tsx` into a React 19 project with Tailwind CSS 4, then render `<Example />`.
 
-## React
+The [HTML + JavaScript example](https://reuse.sh/lightbox/getting-started?framework=html&view=code) contains its HTML, stylesheet and any required browser module. Copy every file into an ES module project such as Vite. Its initial markup stays useful before JavaScript.
 
-```tsx
-import { useLightbox } from "@reuse-sh/lightbox/react";
-import "@reuse-sh/lightbox/styles.css";
+Runnable browser example: [lightbox-start](https://reuse.sh/examples/lightbox-start/index.html).
 
-function Gallery({ images }) {
-  const viewer = useLightbox();
-  return <button onClick={() => viewer.open(images)}>
-    Open gallery
-  </button>;
-}
-```
+<!-- examples:end -->
 
 ## Documentation
 

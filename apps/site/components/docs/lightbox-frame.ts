@@ -148,6 +148,7 @@ ${chrome ?? ""}
     again.addEventListener("click", () => render({ animate: true }));
 
     render();
+    document.querySelector(".f-fallback").style.display = "none";
   `;
 
 /** A standalone page that opens a real lightbox in one control style, for an iframe preview. */
@@ -171,6 +172,7 @@ export function lightboxFrame(options: LightboxStyle) {
 ${lightboxStyleCss(options)}</style>
 </head>
 <body>
+<main class="f-fallback" style="box-sizing:border-box;width:100%;max-height:100%;overflow:auto;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;padding:16px">${photos.map((photo) => `<a href="${photo.src}"><img src="${photo.src}" alt="${photo.alt}" width="${photo.width}" height="${photo.height}" style="display:block;width:100%;height:auto"></a>`).join("")}</main>
 <button type="button" class="f-again" hidden>Open again</button>
 <script type="application/json" id="frame-data">${data}</script>
 <script type="module">${script(lightboxChrome(options))}</script>

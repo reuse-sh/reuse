@@ -48,9 +48,5 @@ const byRoute = new Map<string, Library>(
 );
 
 export function libraryAt(pathname: string | null) {
-  const route =
-    process.env.NODE_ENV === "development" && pathname === "/preview/carousel"
-      ? "/carousel"
-      : pathname;
-  return (route && byRoute.get(route)) || null;
+  return (pathname && byRoute.get(pathname)) || null;
 }

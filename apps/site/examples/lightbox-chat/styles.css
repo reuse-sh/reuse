@@ -1,0 +1,156 @@
+@import "@reuse-sh/lightbox/styles.css";
+.re-example {
+  color: #202020;
+  font:
+    15px / 1.6 system-ui,
+    sans-serif;
+  max-width: 840px;
+  margin: auto;
+  padding: 24px;
+  box-sizing: border-box;
+}
+.re-example *,
+.re-example *::before,
+.re-example *::after {
+  box-sizing: border-box;
+}
+.re-example img {
+  max-width: 100%;
+}
+.re-example button,
+.re-example input {
+  font: inherit;
+}
+.re-example button {
+  cursor: pointer;
+}
+.re-example button:disabled {
+  cursor: default;
+  opacity: 0.5;
+}
+.re-example a {
+  color: inherit;
+}
+.re-example figure {
+  margin: 0;
+}
+.re-example figcaption,
+.re-meta {
+  color: #666;
+  font-size: 13px;
+}
+.re-example h2 {
+  font:
+    300 32px / 1.2 Georgia,
+    serif;
+  margin: 8px 0 20px;
+}
+.re-photo {
+  display: block;
+  position: relative;
+}
+.re-photo img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 12px;
+}
+.re-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 16px;
+}
+.re-controls button {
+  border: 1px solid #ddd;
+  border-radius: 50%;
+  background: white;
+  width: 32px;
+  height: 32px;
+}
+.re-counter {
+  margin-left: auto;
+  font-variant-numeric: tabular-nums;
+}
+.re-chat {
+  display: grid;
+  grid-template-columns: 220px minmax(0, 1fr);
+  gap: 24px;
+}
+.re-chat aside {
+  border-right: 1px solid #eee;
+  padding-right: 20px;
+}
+.re-person {
+  display: block;
+  color: #666;
+  font-size: 12px;
+}
+.re-tiles {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px;
+}
+.re-tiles .re-photo {
+  aspect-ratio: 1;
+}
+.re-tiles [hidden] {
+  display: none;
+}
+.re-more {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  background: #0006;
+  color: white;
+  font-size: 24px;
+  border-radius: 12px;
+}
+.re-mine {
+  text-align: right;
+}
+.re-single {
+  max-width: 240px;
+}
+.re-compose {
+  display: flex;
+  gap: 8px;
+  margin-top: 20px;
+}
+.re-compose input {
+  min-width: 0;
+  flex: 1;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  padding: 8px;
+}
+.re-compose button {
+  border: 0;
+  border-radius: 8px;
+  padding: 8px;
+}
+@media (max-width: 600px) {
+  .re-chat {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .re-chat aside {
+    display: none;
+  }
+}
+
+.re-contact {
+  display: block;
+  width: 100%;
+  text-align: left;
+  border: 0;
+  border-radius: 12px;
+  background: transparent;
+  padding: 12px;
+  margin: 8px 0;
+}
+.re-contact:hover,
+.re-contact[aria-current="true"] {
+  background: #f5f5f5;
+}

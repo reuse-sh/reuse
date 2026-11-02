@@ -1,0 +1,39 @@
+@import "@reuse-sh/shadows/styles.css";
+.re-example {
+  box-sizing: border-box;
+  width: 100%;
+  color: #111;
+  font:
+    15px / 1.6 system-ui,
+    sans-serif;
+}
+.re-example * {
+  box-sizing: border-box;
+}
+.re-example p,
+.re-example h3 {
+  margin: 0;
+}
+.re-example button,
+.re-example input {
+  font: inherit;
+}
+.re-example button {
+  cursor: pointer;
+}
+.re-example button:disabled {
+  cursor: default;
+  opacity: 0.4;
+}
+.re-shadow-start {
+  display: grid;
+  justify-items: start;
+  gap: 28px;
+}
+.re-shadow-start button {
+  padding: 8px 16px;
+  border: 0;
+  border-radius: 8px;
+  background: white;
+  font-size: 14px;
+}

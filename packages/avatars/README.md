@@ -8,6 +8,7 @@ Avatars with images, Unicode-aware initials, and badges cut out of the image ins
 
 These are the rules the code keeps. An adaptation on any framework keeps them too.
 
+- **Show content before enhancement.** Photos and initials are available before scripts run, and initials remain when an image fails.
 - **Cut, never paint.** Badges and overlaps are vector clips through the avatar, so no painted ring fights the background and the edge stays sharp at any zoom.
 - **Keep initials underneath.** Initials show until the image loads and stay if it fails.
 - **Name badges in words.** The badge label joins the accessible name, and the drawing stays decorative.
@@ -23,29 +24,17 @@ These are the rules the code keeps. An adaptation on any framework keeps them to
 npm install @reuse-sh/avatars
 ```
 
-## Browser
+<!-- examples:start -->
 
-```js
-import { enhanceAvatar, createAvatarGroup } from "@reuse-sh/avatars";
-import "@reuse-sh/avatars/styles.css";
+## Complete examples
 
-const avatar = enhanceAvatar(avatarElement);
-const group = createAvatarGroup(groupElement, { overlap: 12 });
-```
+The [React example](https://reuse.sh/avatars/getting-started?view=code) includes its data, Tailwind styling and package CSS imports. Copy `example.tsx` into a React 19 project with Tailwind CSS 4, then render `<Example />`.
 
-## React
+The [HTML + JavaScript example](https://reuse.sh/avatars/getting-started?framework=html&view=code) contains its HTML, stylesheet and any required browser module. Copy every file into an ES module project such as Vite. Its initial markup stays useful before JavaScript.
 
-```tsx
-import { Avatar, AvatarGroup } from "@reuse-sh/avatars/react";
-import "@reuse-sh/avatars/styles.css";
+Runnable browser example: [avatars-start](https://reuse.sh/examples/avatars-start/index.html).
 
-<AvatarGroup overlap={12}>
-  <Avatar name="Alex Rivers" badge={{ type: "dot", label: "Online" }} />
-  <Avatar name="Sam Field" badge={{
-    type: "count", count: 128, label: "128 messages",
-  }} />
-</AvatarGroup>
-```
+<!-- examples:end -->
 
 ## Documentation
 

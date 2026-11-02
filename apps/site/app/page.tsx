@@ -1,7 +1,7 @@
 import "./styles/home.css";
 import { collectionPrinciples } from "@reuse-sh/catalog";
-import Link from "next/link";
 import { PromptButton } from "../components/copy-control";
+import { DocLink as Link } from "../components/docs/doc-link";
 import { PhotoStrip } from "../components/home/photo-strip";
 import { SmallDemos } from "../components/home/small-demos";
 import { Icon, type IconName } from "../components/icons";
@@ -19,21 +19,21 @@ const icons: IconName[] = [
 export default function HomePage() {
   return (
     <main id="main">
-      <section className="c-col h-open">
+      <section className="c-col h-open pt-[128px]">
         <h1 className="c-display">Parts you stop writing twice</h1>
-        <p className="h-prose">
+        <p className="h-prose max-w-[580px] mt-[18px] text-[16px] leading-[27px] text-[color:var(--prose)] text-pretty">
           Reuse is a set of interface parts we use across many products: a
           lightbox, a carousel, tooltips, loaders and a few more. What carries
           from one product to the next is not the code, but the rules behind it.
         </p>
-        <p className="h-prose">
+        <p className="h-prose max-w-[580px] mt-[18px] text-[16px] leading-[27px] text-[color:var(--prose)] text-pretty">
           Every part comes with a short list of principles: how it scrolls,
           where focus goes, what it cleans up, how it moves. The code is one way
           to keep them. Your coding agent reads them before it builds, so the
           part behaves the same in React, Vue, plain JavaScript or anything
           else.
         </p>
-        <div className="h-actions">
+        <div className="h-actions flex flex-wrap items-center gap-[8px] mt-[36px]">
           <PromptButton prompt={agentPrompt} />
           <Link className="c-btn-quiet" href="/lightbox">
             Start with Lightbox

@@ -23,41 +23,17 @@ These are the rules the code keeps. An adaptation on any framework keeps them to
 npm install @reuse-sh/annotations
 ```
 
-## Browser
+<!-- examples:start -->
 
-```js
-import {
-  parseAnnotations,
-  createAnnotatedImage,
-} from "@reuse-sh/annotations";
-import "@reuse-sh/annotations/styles.css";
+## Complete examples
 
-const annotations = parseAnnotations([{
-  kind: "area",
-  box: [10, 20, 35, 25],
-  label: "The part to notice",
-}]);
-const image = createAnnotatedImage(root, {
-  src: "/photo.jpg", alt: "A mountain lake",
-  width: 1600, height: 1200, annotations,
-});
-```
+The [React example](https://reuse.sh/annotations/getting-started?view=code) includes its data, Tailwind styling and package CSS imports. Copy `example.tsx` into a React 19 project with Tailwind CSS 4, then render `<Example />`.
 
-## React
+The [HTML + JavaScript example](https://reuse.sh/annotations/getting-started?framework=html&view=code) contains its HTML, stylesheet and any required browser module. Copy every file into an ES module project such as Vite. Its initial markup stays useful before JavaScript.
 
-```tsx
-import { AnnotationEditor } from "@reuse-sh/annotations/react";
-import "@reuse-sh/annotations/styles.css";
+Runnable browser example: [annotations-start](https://reuse.sh/examples/annotations-start/index.html).
 
-<AnnotationEditor
-  src="/photo.jpg"
-  alt="A mountain lake"
-  annotations={annotations}
-  onChange={setAnnotations}
-  width={1600}
-  height={1200}
-/>
-```
+<!-- examples:end -->
 
 ## Documentation
 

@@ -21,19 +21,17 @@ These are the rules the code keeps. An adaptation on any framework keeps them to
 npm install @reuse-sh/shadows
 ```
 
-## Usage
+<!-- examples:start -->
 
-Import the stylesheet once, then add the classes to any element.
+## Complete examples
 
-```js
-import "@reuse-sh/shadows/styles.css";
-```
+The [React example](https://reuse.sh/shadows/getting-started?view=code) includes its data, Tailwind styling and package CSS imports. Copy `example.tsx` into a React 19 project with Tailwind CSS 4, then render `<Example />`.
 
-```html
-<div class="re-card re-shadow-ring-md">
-  Your content
-</div>
-```
+The [HTML + JavaScript example](https://reuse.sh/shadows/getting-started?framework=html&view=code) contains its HTML, stylesheet and any required browser module. Copy every file into an ES module project such as Vite. Its initial markup stays useful before JavaScript.
+
+Runnable browser example: [shadows-start](https://reuse.sh/examples/shadows-start/index.html).
+
+<!-- examples:end -->
 
 ## Documentation
 

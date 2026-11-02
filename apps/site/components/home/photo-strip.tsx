@@ -36,7 +36,10 @@ export function PhotoStrip() {
     );
   };
   return (
-    <div className="h-strip" data-dragging={state.isDragging ? "" : undefined}>
+    <div
+      className="h-strip mt-[28px]"
+      data-dragging={state.isDragging ? "" : undefined}
+    >
       <section ref={ref} className="re-carousel h-strip-vp" aria-label="Photos">
         {strip.map((photo, index) => (
           <figure
@@ -62,9 +65,9 @@ export function PhotoStrip() {
           </figure>
         ))}
       </section>
-      <div className="c-col h-strip-ctrl">
+      <div className="c-col h-strip-ctrl flex items-center gap-[14px] mt-[16px]">
         <div
-          className="h-dots"
+          className="h-dots relative flex items-center h-[24px] ml-[-3px]"
           style={{ "--h-dot": state.index } as CSSProperties}
         >
           {strip.map((photo, index) => (
@@ -77,7 +80,7 @@ export function PhotoStrip() {
             />
           ))}
         </div>
-        <span className="h-arrows">
+        <span className="h-arrows flex gap-[2px] ml-[auto] mr-[-6px]">
           <button
             type="button"
             aria-label="Previous slide"

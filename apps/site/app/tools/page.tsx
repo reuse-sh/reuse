@@ -16,15 +16,15 @@ const groupId = (group: string) =>
 
 export default function ToolsPage() {
   return (
-    <main id="main" className="c-col h-page">
+    <main id="main" className="c-col h-page pt-[56px]">
       <h1 className="c-h1">Tools we trust</h1>
-      <p className="h-lead">
+      <p className="h-lead max-w-[600px] mt-[10px] text-[17px] leading-[27px] text-[color:var(--prose)] text-pretty">
         Reuse covers a few parts. For the rest of an interface we reach for
         these. Each one does its job well and leaves the look to you.
       </p>
       {toolGroups.map((group) => (
         <section key={group} aria-labelledby={groupId(group)}>
-          <h2 className="c-h2 h-trust-h" id={groupId(group)}>
+          <h2 className="c-h2 h-trust-h mt-[56px]" id={groupId(group)}>
             {group}
           </h2>
           <MovingHighlight className="h-trust">
@@ -33,14 +33,16 @@ export default function ToolsPage() {
               .map((tool) => (
                 <a
                   key={tool.name}
-                  className="h-trust-row"
+                  className="h-trust-row grid [grid-template-columns:168px_minmax(0,_1fr)_auto] items-baseline [gap:4px_20px] p-[12px] rounded-[10px]"
                   data-re-row=""
                   href={tool.url}
                   rel="noopener"
                 >
-                  <span className="h-trust-name">{tool.name}</span>
-                  <span className="h-trust-reason">{tool.reason}</span>
-                  <span className="h-trust-link">
+                  <span className="h-trust-name font-[540]">{tool.name}</span>
+                  <span className="h-trust-reason text-[color:var(--prose)] text-[14.5px] leading-[23px] text-pretty">
+                    {tool.reason}
+                  </span>
+                  <span className="h-trust-link inline-flex items-center gap-[3px] text-[color:var(--mute)] text-[13px] whitespace-nowrap [transition:color_150ms_ease]">
                     {host(tool.url)}
                     <Icon name="arrow" size={13} />
                   </span>
