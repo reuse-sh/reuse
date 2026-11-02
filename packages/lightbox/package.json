@@ -1,6 +1,6 @@
 {
   "name": "@reuse-sh/lightbox",
-  "version": "0.0.4",
+  "version": "0.0.5",
   "description": "An image lightbox on native scrolling, with thumbnail transitions, zoom, pan, and pinch.",
   "keywords": [
     "reuse",
