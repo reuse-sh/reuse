@@ -1,6 +1,16 @@
 "use client";
 
 import { CopyButton } from "@reuse-sh/interactions/react";
+import { useEffect, useState } from "react";
+import { buttonVariants } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
+import type { Framework } from "../lib/framework";
+
+function useCopyReady() {
+  const [ready, setReady] = useState(false);
+  useEffect(() => setReady(true), []);
+  return ready;
+}
 
 export function CopyControl({
   value,
@@ -13,12 +23,21 @@ export function CopyControl({
   text?: boolean;
   className?: string;
 }) {
+  const ready = useCopyReady();
   return (
     <CopyButton
+      disabled={!ready}
       text={value}
-      className={["c-copy", text ? "" : "c-copy-icon", className]
-        .filter(Boolean)
-        .join(" ")}
+      data-slot="copy-control"
+      className={cn(
+        buttonVariants({
+          variant: text ? "surface" : "ghost",
+          size: text ? "sm" : "icon-sm",
+        }),
+        "copy-control",
+        !text && "text-subtle-foreground hover:text-foreground",
+        className,
+      )}
       aria-label={text ? undefined : label}
     >
       {text ? label : null}
@@ -26,18 +45,28 @@ export function CopyControl({
   );
 }
 
-/** The primary button that copies a prompt for a coding agent. */
 export function PromptButton({
   prompt,
   className,
+  framework,
 }: {
   prompt: string;
   className?: string;
+  framework?: Framework;
 }) {
+  const ready = useCopyReady();
+  const value = framework
+    ? `${prompt} Use ${framework === "react" ? "React with Tailwind CSS" : "HTML, CSS and JavaScript"}.`
+    : prompt;
   return (
     <CopyButton
-      text={prompt}
-      className={["c-btn c-prompt-btn", className].filter(Boolean).join(" ")}
+      disabled={!ready}
+      text={value}
+      className={cn(
+        buttonVariants({ variant: "surface" }),
+        "copy-control",
+        className,
+      )}
     >
       Copy prompt for your agent
     </CopyButton>

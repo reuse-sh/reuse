@@ -16,7 +16,7 @@ const initial: Annotation[] = [
 
 export function AnnotationsDemo() {
   return (
-    <div className="annotation-demo">
+    <div className="[&_img]:rounded-xl [&_[data-re-annotations]]:text-label">
       <AnnotatedImage
         src={photos[0].src}
         alt={`${photos[0].alt}, with three annotations`}

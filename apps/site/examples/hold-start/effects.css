@@ -1,0 +1,8 @@
+@layer components {
+  .re-hold-start-button:active {
+    transform: scale(0.97);
+  }
+  .re-hold-start-button[data-confirmed] {
+    transform: none;
+  }
+}

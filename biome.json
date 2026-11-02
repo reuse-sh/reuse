@@ -11,13 +11,20 @@
       "!**/playwright-report",
       "!**/node_modules",
       "!**/public/modules",
-      "!**/public/fonts"
+      "!**/public/fonts",
+      "!**/.cn",
+      "!**/public/styles"
     ]
   },
   "formatter": {
     "enabled": true,
     "indentStyle": "space",
     "indentWidth": 2
+  },
+  "css": {
+    "parser": {
+      "tailwindDirectives": true
+    }
   },
   "linter": {
     "enabled": true,
@@ -37,5 +44,15 @@
       "quoteStyle": "double",
       "semicolons": "always"
     }
-  }
+  },
+  "overrides": [
+    {
+      "includes": ["apps/site/examples/**/*.html"],
+      "html": {
+        "formatter": {
+          "enabled": true
+        }
+      }
+    }
+  ]
 }

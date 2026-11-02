@@ -11,7 +11,7 @@
     "build": "turbo run build",
     "type-check": "turbo run type-check",
     "test": "turbo run test",
-    "lint": "biome check . --error-on-warnings && pnpm --filter @reuse-sh/catalog build && node scripts/sync-principles.mjs --check",
+    "lint": "biome check . --error-on-warnings && node scripts/check-design-system.mjs && pnpm --filter @reuse-sh/catalog build && node scripts/sync-principles.mjs --check && node scripts/sync-example-readmes.mjs --check",
     "principles": "node scripts/sync-principles.mjs",
     "lint:fix": "biome check --write .",
     "test:browser": "playwright test",

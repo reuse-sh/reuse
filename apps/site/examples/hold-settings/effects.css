@@ -1,0 +1,8 @@
+@layer components {
+  .re-hold-settings-button:active {
+    transform: scale(0.97);
+  }
+  .re-hold-settings-button[data-confirmed] {
+    transform: none;
+  }
+}

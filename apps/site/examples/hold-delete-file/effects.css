@@ -1,0 +1,8 @@
+@layer components {
+  .re-hold-delete-file-button:active {
+    transform: scale(0.97);
+  }
+  .re-hold-delete-file-button[data-confirmed] {
+    transform: none;
+  }
+}

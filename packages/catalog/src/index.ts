@@ -1,3 +1,4 @@
+import type { UsagePlatform } from "./usage-types.js";
 /** A name and its explanation: an API entry or a principle. */
 export type Row = readonly [name: string, text: string];
 
@@ -149,7 +150,7 @@ export const libraries: Library[] = [
     notes: [
       'A click on the image zooms by default. For a publishing gallery, set imageClick: "close" and doubleTapZoom: false.',
       "Paging runs on the carousel package. Only the current and neighboring images stay loaded. Next and previous scroll smoothly, and a jump from a distant thumbnail fades through the backdrop so unloaded pages never flash past.",
-      "Images and captions are supported, with optional thumbnails. Video and iframes are not supported yet.",
+      "Images and captions are supported, with optional thumbnails. Video and iframe players are outside this image viewer.",
     ],
     pages: [
       { path: "", title: "Overview", lead: lightboxDescription },
@@ -223,7 +224,7 @@ export const libraries: Library[] = [
           {
             path: "guides/media",
             title: "Media",
-            lead: "Images work today. Video, YouTube, Vimeo and iframes are planned.",
+            lead: "Supported images, full-size assets, previews, dimensions and captions.",
           },
         ],
       },
@@ -470,6 +471,10 @@ export const libraries: Library[] = [
     packageName: "@reuse-sh/loaders",
     principles: [
       [
+        "Show a static figure first",
+        "Server-rendered markup keeps visible dots until the canvas has painted successfully.",
+      ],
+      [
         "Move dots, not frames",
         "Between figures each dot travels to its new place instead of popping.",
       ],
@@ -582,6 +587,10 @@ export const libraries: Library[] = [
     api: [
       ["re-shadow-xs … re-shadow-2xl", "Six shadow levels."],
       [
+        "@reuse-sh/shadows/tailwind.css",
+        "Optional Tailwind 4 utilities with hover, responsive variants and @apply. Import instead of the plain stylesheet.",
+      ],
+      [
         "re-shadow-ring-xs … re-shadow-ring-2xl",
         "The same levels with a hairline ring instead of a border.",
       ],
@@ -600,6 +609,7 @@ export const libraries: Library[] = [
       ],
     ],
     notes: [
+      "For Tailwind 4 variants, import @reuse-sh/shadows/tailwind.css in the consumer stylesheet instead of the unlayered plain stylesheet.",
       "Import the stylesheet. The classes need no JavaScript and no Tailwind.",
       "Use the ring variant instead of adding a border on top of the shadow.",
       'A data-re-theme="dark" ancestor switches to stronger shadows and a light ring.',
@@ -647,7 +657,7 @@ export const libraries: Library[] = [
       ],
       [
         "Mix in oklab",
-        "Each stop is a color-mix() in oklab, so a fade to transparent keeps its hue instead of passing through gray.",
+        "Interior stops use color-mix() in oklab, so a fade to transparent keeps its hue instead of passing through gray.",
       ],
       [
         "Take any CSS color",
@@ -659,7 +669,7 @@ export const libraries: Library[] = [
       ],
       [
         "Refuse broken input",
-        "An unknown easing, a bezier outside 0 to 1 or fewer than two stops throws a RangeError instead of writing a gradient the browser drops.",
+        "Unknown easings, nonfinite bezier coordinates, X coordinates outside 0 to 1 and stop counts other than integers of at least two throw RangeError.",
       ],
       [
         "Restore what it touched",
@@ -667,6 +677,22 @@ export const libraries: Library[] = [
       ],
     ],
     api: [
+      [
+        "re-gradient",
+        "Static eased linear gradient from styles.css. Set --re-gradient-to; --re-gradient-from defaults to transparent.",
+      ],
+      [
+        "re-gradient-{ease-in-out-sine,ease-in,ease-out,linear}",
+        "Choose a named easing curve for a CSS gradient.",
+      ],
+      [
+        "re-gradient-dir-{t,tr,r,br,b,bl,l,tl}",
+        "Choose a gradient direction. Bottom is the default.",
+      ],
+      [
+        "@reuse-sh/gradients/tailwind.css",
+        "Tailwind 4 utilities, including re-gradient-from-* and re-gradient-to-* theme colors with opacity modifiers.",
+      ],
       [
         "easingGradient({ from?, to, easing?, direction?, stops?, type? })",
         "Returns a CSS gradient string to use as a background or a mask.",
@@ -707,8 +733,9 @@ export const libraries: Library[] = [
       ],
     ],
     notes: [
+      "Named linear curves are available as static CSS presets with a required end color. The optional Tailwind 4 entry resolves theme colors and variants without adding runtime JavaScript.",
       "easingGradient returns a string. Set it as background-image or mask-image wherever a gradient goes, in CSS-in-JS, a style attribute or a server template.",
-      "Every stop is a color-mix() in oklab, so the browser needs color-mix support.",
+      "Curved gradients use color-mix() in oklab for intermediate stops, so they require browser support for color-mix().",
       "createFadeEdge writes a mask and two custom properties to the scroller's inline style and puts the old style back on destroy. It follows right-to-left layouts.",
     ],
     pages: [
@@ -716,7 +743,7 @@ export const libraries: Library[] = [
       {
         path: "getting-started",
         title: "Getting started",
-        lead: "Install the package, build a gradient string, and set it wherever CSS takes a gradient.",
+        lead: "Install the package and add an eased fade with CSS utilities. Use JavaScript for custom curves and scroll-aware masks.",
       },
       {
         title: "Examples",
@@ -1154,6 +1181,10 @@ export const libraries: Library[] = [
     packageName: "@reuse-sh/avatars",
     principles: [
       [
+        "Show content before enhancement",
+        "Photos and initials are available before scripts run, and initials remain when an image fails.",
+      ],
+      [
         "Cut, never paint",
         "Badges and overlaps are vector clips through the avatar, so no painted ring fights the background and the edge stays sharp at any zoom.",
       ],
@@ -1286,12 +1317,19 @@ export function libraryPrompt(library: Library) {
 }
 
 /** The prompt for a documentation page, or null when the page has none. */
-export function pagePrompt(library: Library, path: string) {
+export function pagePrompt(
+  library: Library,
+  path: string,
+  platform: UsagePlatform,
+) {
   if (path === "getting-started")
     return `Read ${guideUrl(library.slug)}, install ${library.packageName} and add ${library.name} to <where>. ${keepPrinciples}`;
   const page = findDocPage(library, path);
-  if (!page?.build) return null;
-  return `Read ${guideUrl(library.slug)} and build ${page.build} like ${siteUrl}${docHref(library, path)}. ${keepPrinciples}`;
+  if (!page || !path) return null;
+  const reference = `${siteUrl}${docHref(library, path)}${platform === "html" ? "?framework=html" : ""}`;
+  if (!page.build)
+    return `Read ${guideUrl(library.slug)} and use ${reference} as the reference for adding ${library.name} to <where>. ${keepPrinciples}`;
+  return `Read ${guideUrl(library.slug)} and build ${page.build} like ${reference}. ${keepPrinciples}`;
 }
 
 export const toolGroups = [
@@ -1384,3 +1422,13 @@ export const tools: readonly Tool[] = [
     group: "Code",
   },
 ];
+
+export { getUsage, usageRecipes } from "./usage.js";
+export { usageMarkdown } from "./usage-markdown.js";
+export type {
+  UsageBlock,
+  UsageLanguage,
+  UsagePlatform,
+  UsageRecipe,
+  UsageSection,
+} from "./usage-types.js";

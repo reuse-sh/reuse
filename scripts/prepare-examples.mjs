@@ -6,6 +6,7 @@ import {
   rm,
   writeFile,
 } from "node:fs/promises";
+import { createRequire } from "node:module";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -48,6 +49,13 @@ await copyFile(
   resolve(fontDirectory, "geist.woff2"),
 );
 await copyFile(
+  resolve(
+    root,
+    "apps/site/node_modules/geist/dist/fonts/geist-mono/GeistMono-Variable.woff2",
+  ),
+  resolve(fontDirectory, "geist-mono.woff2"),
+);
+await copyFile(
   resolve(root, "apps/site/node_modules/geist/LICENSE.txt"),
   resolve(fontDirectory, "OFL.txt"),
 ).catch(async () => {
@@ -56,3 +64,16 @@ await copyFile(
     await readFile(resolve(root, "apps/site/node_modules/geist/LICENSE")),
   );
 });
+
+const requireSite = createRequire(resolve(root, "apps/site/package.json"));
+const postcss = requireSite("postcss");
+const tailwind = requireSite("@tailwindcss/postcss");
+const stylesheet = resolve(root, "apps/site/app/globals.css");
+const result = await postcss([
+  tailwind({ base: resolve(root, "apps/site") }),
+]).process(await readFile(stylesheet, "utf8"), { from: stylesheet });
+const stylesDirectory = resolve(publicDirectory, "styles");
+await mkdir(stylesDirectory, { recursive: true });
+const fonts =
+  '@font-face{font-family:Geist;src:url("/fonts/geist.woff2") format("woff2");font-weight:100 900;font-display:swap;}@font-face{font-family:"Geist Mono";src:url("/fonts/geist-mono.woff2") format("woff2");font-weight:100 900;font-display:swap;}';
+await writeFile(resolve(stylesDirectory, "site.css"), fonts + result.css);

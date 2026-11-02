@@ -1,0 +1,10 @@
+@reference "../../app/globals.css";
+@layer components {
+  .re-example {
+    --re-avatar-background: var(--muted);
+    --re-avatar-color: var(--secondary-foreground);
+    --re-avatar-badge-background: var(--primary);
+    --re-avatar-badge-color: var(--primary-foreground);
+    --re-avatar-status-color: var(--success);
+  }
+}

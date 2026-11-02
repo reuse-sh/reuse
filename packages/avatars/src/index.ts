@@ -138,7 +138,6 @@ export function enhanceAvatar(root: HTMLElement) {
     if (image) image.style.visibility = "hidden";
   };
   if (image) {
-    image.style.visibility = "hidden";
     image.addEventListener("load", load);
     image.addEventListener("error", error);
     if (image.complete) load();

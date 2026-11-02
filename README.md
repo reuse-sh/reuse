@@ -53,14 +53,10 @@ Install the package for the part you need:
 npm install @reuse-sh/carousel
 ```
 
-```js
-import { createCarousel } from "@reuse-sh/carousel";
-import "@reuse-sh/carousel/styles.css";
+Each library page has complete runnable examples. Choose React or HTML + JavaScript in the sidebar, then open Code to copy the actual files used by the preview.
 
-const carousel = createCarousel(document.querySelector(".gallery"));
-```
-
-In React, import the same part from its `/react` entry. Each library page on [reuse.sh](https://reuse.sh) has live examples, the API and code for both.
+- [React with Tailwind](https://reuse.sh/carousel/getting-started) shows installation, package imports and concise component usage.
+- [HTML + JavaScript](https://reuse.sh/carousel/getting-started?framework=html) shows markup, necessary styles, initialization and lifecycle in order. The fragments enhance existing HTML.
 
 ## With a coding agent
 

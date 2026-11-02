@@ -1,0 +1,36 @@
+@reference "../../app/globals.css";
+@layer components {
+  .re-annot {
+    --re-annotation-color: var(--destructive);
+    --re-annotation-radius: var(--radius-control);
+  }
+  .re-annot-edit .re-annotation-toolbar {
+    @apply gap-1;
+  }
+  .re-annot-edit .re-annotation-toolbar button {
+    @apply h-8;
+    @apply px-3 py-0;
+    @apply border-0 rounded-control bg-transparent;
+    box-shadow: inset 0 0 0 1px
+      color-mix(in srgb, var(--foreground) 10%, transparent);
+    @apply text-muted-foreground text-label;
+    transition:
+      background-color 150ms ease,
+      color 150ms ease;
+  }
+  .re-annot-edit .re-annotation-toolbar button:hover:not(:disabled) {
+    @apply bg-accent text-foreground;
+  }
+  .re-annot-edit .re-annotation-toolbar button[aria-pressed="true"] {
+    @apply bg-foreground;
+    box-shadow: none;
+    @apply text-primary-foreground;
+  }
+  .re-annot-edit .re-annotation-fields input,
+  .re-annot-edit .re-annotation-fields select {
+    @apply rounded-control;
+  }
+  .re-annot-edit .re-annotation-editor-hint {
+    @apply text-label leading-5 text-subtle-foreground;
+  }
+}

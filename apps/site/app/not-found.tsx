@@ -1,14 +1,21 @@
-import Link from "next/link";
+import { Heading, Text } from "@/components/ui/typography";
+import { DocLink as Link } from "../components/docs/doc-link";
+import { SiteFrame } from "../components/site-frame";
 export default function NotFound() {
   return (
-    <main id="main" className="c-col" style={{ paddingBlock: "96px 40px" }}>
-      <h1 className="c-h1">This page is missing.</h1>
-      <p className="c-text">
-        The address may be old. Every library is in the Libraries menu above.
-      </p>
-      <Link className="c-link" href="/">
-        Go to the home page
-      </Link>
-    </main>
+    <SiteFrame>
+      <main id="main" className="mx-auto w-page pt-24 pb-10">
+        <Heading variant="page">This page is missing.</Heading>
+        <Text className="mt-4 mb-4 max-w-prose">
+          The address may be old. Every library is in the Libraries menu above.
+        </Text>
+        <Link
+          className="text-foreground underline decoration-border underline-offset-4 hover:decoration-current"
+          href="/"
+        >
+          Go to the home page
+        </Link>
+      </main>
+    </SiteFrame>
   );
 }

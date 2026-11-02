@@ -1,0 +1,78 @@
+@reference "../../app/globals.css";
+@layer components {
+  .re-c-dots {
+    @apply relative flex h-6 items-center;
+  }
+  .re-c-dots button {
+    @apply relative w-2.5 h-6 p-0 border-0 bg-transparent cursor-pointer;
+  }
+  .re-c-dots button::before,
+  .re-c-dots::after {
+    content: "";
+    @apply absolute;
+    top: calc(50% - 2px);
+    left: 3px;
+    @apply w-1 h-1 rounded-full;
+  }
+  .re-c-dots button::before {
+    background: color-mix(in srgb, currentColor 18%, transparent);
+  }
+  .re-c-dots::after {
+    background: currentColor;
+    @apply pointer-events-none;
+    transform: translateX(calc(var(--re-c-dot, 0) * 10px));
+    transition: transform 300ms var(--ease-ui);
+  }
+  .re-c-arrows {
+    @apply flex gap-0.5;
+    margin-left: auto;
+    @apply -mr-1.5;
+  }
+  .re-c-arrows button {
+    @apply grid place-items-center w-8 h-8 p-0 border-0 rounded-full bg-transparent text-foreground cursor-pointer;
+    transition:
+      background-color 150ms ease,
+      transform 160ms var(--ease-ui),
+      opacity 150ms ease;
+  }
+  .re-c-arrows button:hover {
+    @apply bg-accent;
+  }
+  .re-c-arrows button:active {
+    transform: scale(0.94);
+  }
+  .re-c-arrows button:disabled {
+    opacity: 0.3;
+    @apply cursor-default bg-transparent;
+  }
+  .re-c-arrows-ring {
+    @apply gap-1.5 mr-0;
+  }
+  .re-c-arrows-ring button {
+    @apply bg-card shadow-control;
+  }
+  .re-c-counter {
+    @apply text-label text-subtle-foreground tabular-nums;
+  }
+
+  .re-c-photo {
+    @apply relative block overflow-hidden rounded-control bg-media cursor-zoom-in;
+  }
+  .re-c-photo::after {
+    content: "";
+    @apply absolute inset-0;
+    border-radius: inherit;
+    box-shadow: inset 0 0 0 1px
+      color-mix(in srgb, var(--foreground) 5%, transparent);
+    @apply pointer-events-none;
+  }
+  .re-c-photo img {
+    @apply block w-full h-full object-cover;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .re-c-dots::after,
+    .re-c-arrows button {
+      transition: none;
+    }
+  }
+}

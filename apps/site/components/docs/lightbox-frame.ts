@@ -2,6 +2,7 @@ import Cancel01Icon from "@hugeicons/core-free-icons/Cancel01Icon";
 import ZoomInAreaIcon from "@hugeicons/core-free-icons/ZoomInAreaIcon";
 import { photos } from "../../lib/photos";
 import { arrowPaths } from "../lucide-arrows";
+import { buttonVariants } from "../ui/button";
 import {
   LIGHTBOX_STYLE_CLASS,
   type LightboxStyle,
@@ -37,38 +38,6 @@ const icons = {
   next: arrow(arrowPaths.right[0]),
   zoom: hugeicon(ZoomInAreaIcon as IconData),
 };
-
-const frameCss = `
-@font-face { font-family: Geist; src: url("/fonts/geist.woff2") format("woff2"); font-weight: 100 900; font-display: swap; }
-
-    html, body { height: 100%; }
-    html, body { background: #f6f6f5; }
-    body {
-      display: grid;
-      place-items: center;
-      overflow: hidden;
-      font-family: Geist, ui-sans-serif, system-ui, sans-serif;
-      -webkit-font-smoothing: antialiased;
-    }
-    .f-again {
-      display: inline-flex;
-      align-items: center;
-      height: 36px;
-      padding: 0 15px;
-      border: 0;
-      border-radius: 10px;
-      background: #fff;
-      box-shadow: 0 0 0 1px rgb(0 0 0 / 7%), 0 1px 2px rgb(0 0 0 / 6%), 0 2px 6px rgb(0 0 0 / 4%);
-      color: #111;
-      font: 520 14px/1 Geist, ui-sans-serif, system-ui, sans-serif;
-      cursor: pointer;
-      transition: transform 160ms cubic-bezier(0.23, 1, 0.32, 1), background-color 150ms ease;
-    }
-    .f-again:hover { background: #fafafa; }
-    .f-again:active { transform: scale(0.97); }
-    .f-again:focus-visible { outline: 2px solid #111; outline-offset: 2px; }
-    .f-again[hidden] { display: none; }
-  `;
 
 const script = (chrome: string | null) => `
 
@@ -148,6 +117,7 @@ ${chrome ?? ""}
     again.addEventListener("click", () => render({ animate: true }));
 
     render();
+    document.querySelector(".f-fallback").style.display = "none";
   `;
 
 /** A standalone page that opens a real lightbox in one control style, for an iframe preview. */
@@ -166,12 +136,13 @@ export function lightboxFrame(options: LightboxStyle) {
 <meta name="robots" content="noindex">
 <title>Lightbox preview</title>
 <link rel="stylesheet" href="/modules/lightbox/styles.css">
+<link rel="stylesheet" href="/styles/site.css">
 <script type="importmap">{"imports":{"@reuse-sh/carousel":"/modules/carousel/index.js","@reuse-sh/lightbox":"/modules/lightbox/index.js"}}</script>
-<style>${frameCss}
-${lightboxStyleCss(options)}</style>
+<style>${lightboxStyleCss(options)}</style>
 </head>
-<body>
-<button type="button" class="f-again" hidden>Open again</button>
+<body class="grid h-screen min-h-0 place-items-center overflow-hidden bg-secondary font-sans text-ui">
+<main class="f-fallback grid max-h-full w-full grid-cols-2 gap-3 overflow-auto p-4">${photos.map((photo) => `<a href="${photo.src}"><img src="${photo.src}" alt="${photo.alt}" width="${photo.width}" height="${photo.height}" class="block h-auto w-full"></a>`).join("")}</main>
+<button type="button" class="f-again ${buttonVariants({ variant: "surface", size: "default" })}" hidden>Open again</button>
 <script type="application/json" id="frame-data">${data}</script>
 <script type="module">${script(lightboxChrome(options))}</script>
 </body>

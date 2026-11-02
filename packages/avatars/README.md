@@ -8,6 +8,7 @@ Avatars with images, Unicode-aware initials, and badges cut out of the image ins
 
 These are the rules the code keeps. An adaptation on any framework keeps them too.
 
+- **Show content before enhancement.** Photos and initials are available before scripts run, and initials remain when an image fails.
 - **Cut, never paint.** Badges and overlaps are vector clips through the avatar, so no painted ring fights the background and the edge stays sharp at any zoom.
 - **Keep initials underneath.** Initials show until the image loads and stay if it fails.
 - **Name badges in words.** The badge label joins the accessible name, and the drawing stays decorative.
@@ -23,29 +24,82 @@ These are the rules the code keeps. An adaptation on any framework keeps them to
 npm install @reuse-sh/avatars
 ```
 
-## Browser
+<!-- examples:start -->
 
-```js
-import { enhanceAvatar, createAvatarGroup } from "@reuse-sh/avatars";
-import "@reuse-sh/avatars/styles.css";
+## Usage
 
-const avatar = enhanceAvatar(avatarElement);
-const group = createAvatarGroup(groupElement, { overlap: 12 });
+[Documentation](https://reuse.sh/avatars/getting-started)
+
+### React
+
+#### Package styles
+
+Import the package stylesheet once in your main CSS. The components layer lets Tailwind utilities adapt its presentation.
+
+```css
+@import "@reuse-sh/avatars/styles.css" layer(components);
 ```
 
-## React
+#### Usage
+
+Render a name, optional photo and meaningful badge label. The component keeps initials underneath the photo and enhances badge cutouts after mounting.
 
 ```tsx
-import { Avatar, AvatarGroup } from "@reuse-sh/avatars/react";
-import "@reuse-sh/avatars/styles.css";
+import { Avatar } from "@reuse-sh/avatars/react";
 
-<AvatarGroup overlap={12}>
-  <Avatar name="Alex Rivers" badge={{ type: "dot", label: "Online" }} />
-  <Avatar name="Sam Field" badge={{
-    type: "count", count: 128, label: "128 messages",
-  }} />
-</AvatarGroup>
+export function Person() {
+  return <Avatar name="Alex Morgan" src="/images/alex.jpg" badge={{ type: "dot", label: "Available" }} />;
+}
 ```
+
+#### Integration
+
+The badge label joins the accessible name. The image has empty alt because the avatar already names the person. Initials remain if the photo fails; without JavaScript the markup still shows the person and status. The React wrapper owns cleanup.
+
+### HTML + JavaScript
+
+#### Usage
+
+Render a name, optional photo and meaningful badge label. The component keeps initials underneath the photo and enhances badge cutouts after mounting.
+
+```html
+<span id="person" class="re-avatar" data-re-avatar role="img" aria-label="Alex Morgan, Available">
+  <span class="re-avatar-face" data-re-avatar-face aria-hidden="true">AM<img class="re-avatar-image" src="/images/alex.jpg" alt="" /></span>
+  <span class="re-avatar-badge" data-re-avatar-badge="dot" aria-hidden="true"></span>
+</span>
+```
+
+#### Styles
+
+Import the package stylesheet once. Keep application layout styles scoped to this integration.
+
+```css
+@import "@reuse-sh/avatars/styles.css";
+```
+
+#### Initialize
+
+Run this after the markup exists. Keep the returned controller for the lifetime of this content.
+
+```javascript
+import { enhanceAvatar } from "@reuse-sh/avatars";
+
+const avatar = enhanceAvatar(document.querySelector("#person"));
+```
+
+#### Integration
+
+The badge label joins the accessible name. The image has empty alt because the avatar already names the person. Initials remain if the photo fails; without JavaScript the markup still shows the person and status.
+
+#### Cleanup
+
+Run this when the view is removed, before mounting another controller on the same element.
+
+```javascript
+avatar.destroy();
+```
+
+<!-- examples:end -->
 
 ## Documentation
 

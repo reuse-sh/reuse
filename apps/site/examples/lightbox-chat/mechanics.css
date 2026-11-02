@@ -1,0 +1,109 @@
+@reference "../../app/globals.css";
+@layer components {
+  .re-example {
+    --re-avatar-background: var(--muted);
+    --re-avatar-color: var(--secondary-foreground);
+    --re-avatar-badge-background: var(--primary);
+    --re-avatar-badge-color: var(--primary-foreground);
+    --re-avatar-status-color: var(--success);
+  }
+
+  .re-list-rows {
+    --re-highlight-background: var(--accent);
+    --re-highlight-radius: var(--radius-control);
+  }
+  .re-chat {
+    grid-template-columns: 14.25rem minmax(0, 1fr);
+  }
+  .re-person {
+    grid-template-columns: 2.25rem minmax(0, 1fr) auto;
+  }
+  .re-thread {
+    grid-template-rows: auto minmax(0, 1fr) auto;
+  }
+  .re-tiles {
+    grid-template-columns: 2fr 1fr;
+  }
+  .re-photo {
+    @apply relative block p-0 overflow-hidden border-0 rounded-control bg-media cursor-zoom-in;
+  }
+  .re-photo::after {
+    content: "";
+    @apply absolute inset-0;
+    border-radius: inherit;
+    box-shadow: inset 0 0 0 1px
+      color-mix(in srgb, var(--foreground) 5%, transparent);
+    @apply pointer-events-none;
+  }
+  .re-photo img {
+    @apply w-full h-full object-cover;
+  }
+  .re-photo[hidden] {
+    @apply hidden;
+  }
+
+  .re-lightbox-demo {
+    --re-lightbox-background: var(--background);
+    --re-lightbox-foreground: var(--foreground);
+    --re-lightbox-control: color-mix(in srgb, var(--card) 96%, transparent);
+  }
+  .re-lightbox-demo .re-lightbox-button,
+  .re-lightbox-demo .re-lightbox-counter {
+    @apply shadow-raised;
+  }
+  .re-person b {
+    @apply text-label leading-4.5 font-medium;
+  }
+  .re-person small {
+    @apply overflow-hidden text-caption leading-4.5 text-subtle-foreground whitespace-nowrap text-ellipsis;
+  }
+  .re-person time {
+    @apply self-start mt-0.5 text-caption text-subtle-foreground;
+  }
+  .re-thread-head > span:last-child {
+    @apply grid leading-4.5;
+  }
+  .re-thread-head b {
+    @apply text-label font-semibold;
+  }
+  .re-thread-head small {
+    @apply text-caption text-subtle-foreground;
+  }
+  .re-day,
+  .re-tiles .re-photo {
+    @apply rounded-none;
+  }
+  .re-tiles .re-photo:first-child {
+    grid-row: span 2;
+  }
+  .re-single .re-photo {
+    @apply w-full;
+    aspect-ratio: 4 / 3;
+    @apply rounded-none;
+  }
+  .re-compose input {
+    @apply flex-1 min-w-0 h-7.5 border-0;
+    outline: 0;
+    @apply bg-transparent text-foreground text-ui;
+  }
+  .re-compose button {
+    @apply grid place-items-center w-7.5 h-7.5 p-0 border-0 rounded-full bg-primary text-primary-foreground cursor-pointer;
+  }
+  @media (max-width: 760px) {
+    .re-chat {
+      grid-template-columns: 1fr;
+    }
+    .re-list {
+      @apply hidden;
+    }
+  }
+  @media (max-width: 600px) {
+    .re-msgs {
+      @apply pt-3.5 pr-3 pb-3.5 pl-3;
+    }
+  }
+
+  .re-thread {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

@@ -1,14 +1,24 @@
 import {
+  docHref,
   docParams,
   findDocPage,
   findLibrary,
+  getUsage,
   libraries,
-  pagePrompt,
 } from "@reuse-sh/catalog";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { AgentPrompt, Pager, PageTitle } from "./parts";
+import { recipeId } from "../../lib/example-manifest";
+import { type DocSearch, frameworkFrom } from "../../lib/framework";
+import { SiteFrame } from "../site-frame";
+import { DocActions } from "./doc-actions";
+import { ExamplePanel } from "./example-panel";
+import { FrameworkChooser } from "./framework-chooser";
+import { GettingStarted } from "./getting-started";
+import { LibraryFrame } from "./library-frame";
+import { Install, Pager, PageTitle, Section } from "./parts";
 import { docBody } from "./registry";
+import { UsageContent } from "./usage-content";
 
 export type DocParams = Promise<{ library: string; page?: string }>;
 
@@ -46,26 +56,60 @@ export async function docMetadata(
 export async function DocRoute({
   params,
   prefix,
+  searchParams,
 }: {
   params: DocParams;
   prefix: string;
+  searchParams: Promise<DocSearch>;
 }) {
   const { slug, path } = await pathOf(params, prefix);
   const found = resolve(slug, path);
-  const body = found && docBody(found.library, path);
-  if (!found || !body) notFound();
-  const prompt = pagePrompt(found.library, path);
+  if (!found) notFound();
+  const query = await searchParams;
+  const framework = frameworkFrom(query.framework);
+  const pathname = docHref(found.library, path);
+  const id = recipeId(slug, path || "getting-started");
+  const example = id ? <ExamplePanel id={id} /> : null;
+  const sections = path ? getUsage(slug, path, framework) : undefined;
+  const body =
+    path === "getting-started" ? (
+      <GettingStarted library={found.library} framework={framework} />
+    ) : sections ? (
+      <>
+        {path.startsWith("examples/") || path.startsWith("guides/")
+          ? example
+          : null}
+        {path.startsWith("examples/") ? (
+          <Section title="Install">
+            <Install library={found.library} />
+          </Section>
+        ) : null}
+        <UsageContent sections={sections} />
+      </>
+    ) : (
+      docBody(found.library, path, path === "" ? example : undefined)
+    );
   return (
-    <>
-      <PageTitle
-        title={path ? found.page.title : found.library.name}
-        lead={found.page.lead}
-      />
-      <div className="d-body">
-        {body}
-        {prompt ? <AgentPrompt prompt={prompt} /> : null}
-      </div>
-      <Pager library={found.library} path={path} />
-    </>
+    <SiteFrame framework={framework}>
+      <LibraryFrame
+        slug={slug}
+        before={<FrameworkChooser framework={framework} pathname={pathname} />}
+      >
+        <PageTitle
+          title={path ? found.page.title : found.library.name}
+          lead={found.page.lead}
+        >
+          <DocActions
+            library={found.library}
+            path={path}
+            framework={framework}
+          />
+        </PageTitle>
+        <article className="space-y-10" data-slot="doc-content">
+          {body}
+        </article>
+        <Pager library={found.library} path={path} />
+      </LibraryFrame>
+    </SiteFrame>
   );
 }

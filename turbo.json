@@ -8,7 +8,9 @@
         ".next/**",
         "!.next/cache/**",
         "public/modules/**",
-        "public/fonts/**"
+        "public/fonts/**",
+        ".cn/**",
+        "public/styles/**"
       ]
     },
     "dev": {
@@ -25,5 +27,6 @@
       "outputs": []
     }
   },
-  "globalDependencies": ["tsconfig.base.json", "scripts/*.mjs"]
+  "globalDependencies": ["tsconfig.base.json", "scripts/*.mjs"],
+  "globalPassThroughEnv": ["REUSE_PORT"]
 }

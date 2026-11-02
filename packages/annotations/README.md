@@ -23,41 +23,92 @@ These are the rules the code keeps. An adaptation on any framework keeps them to
 npm install @reuse-sh/annotations
 ```
 
-## Browser
+<!-- examples:start -->
 
-```js
-import {
-  parseAnnotations,
-  createAnnotatedImage,
-} from "@reuse-sh/annotations";
-import "@reuse-sh/annotations/styles.css";
+## Usage
 
-const annotations = parseAnnotations([{
-  kind: "area",
-  box: [10, 20, 35, 25],
-  label: "The part to notice",
-}]);
+[Documentation](https://reuse.sh/annotations/getting-started)
+
+### React
+
+#### Package styles
+
+Import the package stylesheet once in your main CSS. The components layer lets Tailwind utilities adapt its presentation.
+
+```css
+@import "@reuse-sh/annotations/styles.css" layer(components);
+```
+
+#### Usage
+
+Pass image dimensions and a typed annotation list to AnnotatedImage. Coordinates are percentages of the image, so a mark keeps its position when the image becomes narrower.
+
+```tsx
+import type { Annotation } from "@reuse-sh/annotations";
+import { AnnotatedImage } from "@reuse-sh/annotations/react";
+
+export function ReviewImage() {
+  const annotations: Annotation[] = [
+    { kind: "marker", point: [38, 46], text: "Check the paper texture." },
+  ];
+  return <AnnotatedImage src="/images/proof.jpg" alt="Print proof" width={1200} height={900} annotations={annotations} />;
+}
+```
+
+#### Integration
+
+The HTML list preserves the note before enhancement and the controller restores it on destroy. React renders the image and notes on the server. Give every image useful alt text; annotation labels add detail rather than replacing it.
+
+### HTML + JavaScript
+
+#### Usage
+
+Read the annotation list from the markup and pass it with the image dimensions to createAnnotatedImage. Coordinates are percentages of the image, so a mark keeps its position when the image becomes narrower.
+
+```html
+<div id="review-image">
+  <img src="/images/proof.jpg" alt="Print proof" width="1200" height="900" />
+  <ol data-annotations>
+    <li data-kind="marker" data-point="38 46">Check the paper texture.</li>
+  </ol>
+</div>
+```
+
+#### Styles
+
+Import the package stylesheet once. Keep application layout styles scoped to this integration.
+
+```css
+@import "@reuse-sh/annotations/styles.css";
+```
+
+#### Initialize
+
+Run this after the markup exists. Keep the returned controller for the lifetime of this content.
+
+```javascript
+import { annotationsFromHtml, createAnnotatedImage } from "@reuse-sh/annotations";
+
+const root = document.querySelector("#review-image");
+const annotations = annotationsFromHtml(root);
 const image = createAnnotatedImage(root, {
-  src: "/photo.jpg", alt: "A mountain lake",
-  width: 1600, height: 1200, annotations,
+  src: "/images/proof.jpg", alt: "Print proof", width: 1200, height: 900, annotations,
 });
 ```
 
-## React
+#### Integration
 
-```tsx
-import { AnnotationEditor } from "@reuse-sh/annotations/react";
-import "@reuse-sh/annotations/styles.css";
+The HTML list preserves the note before enhancement and the controller restores it on destroy. Give every image useful alt text; annotation labels add detail rather than replacing it.
 
-<AnnotationEditor
-  src="/photo.jpg"
-  alt="A mountain lake"
-  annotations={annotations}
-  onChange={setAnnotations}
-  width={1600}
-  height={1200}
-/>
+#### Cleanup
+
+Run this when the view is removed, before mounting another controller on the same element.
+
+```javascript
+image.destroy();
 ```
+
+<!-- examples:end -->
 
 ## Documentation
 

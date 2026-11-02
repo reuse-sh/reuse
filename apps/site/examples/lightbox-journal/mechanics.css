@@ -1,0 +1,51 @@
+@reference "../../app/globals.css";
+@layer components {
+  .re-j-wide {
+    grid-template-columns: 2fr 1fr;
+  }
+  .re-photo {
+    @apply relative block p-0 overflow-hidden border-0 rounded-control bg-media cursor-zoom-in;
+  }
+  .re-photo::after {
+    content: "";
+    @apply absolute inset-0;
+    border-radius: inherit;
+    box-shadow: inset 0 0 0 1px
+      color-mix(in srgb, var(--foreground) 5%, transparent);
+    @apply pointer-events-none;
+  }
+  .re-photo img {
+    @apply w-full h-full object-cover;
+  }
+  .re-photo[hidden] {
+    @apply hidden;
+  }
+
+  .re-lightbox-demo {
+    --re-lightbox-background: var(--background);
+    --re-lightbox-foreground: var(--foreground);
+    --re-lightbox-control: color-mix(in srgb, var(--card) 96%, transparent);
+  }
+  .re-lightbox-demo .re-lightbox-button,
+  .re-lightbox-demo .re-lightbox-counter {
+    @apply shadow-raised;
+  }
+
+  .re-journal,
+  .re-j-fig .re-j-hero,
+  .re-j-pair .re-photo,
+  .re-j-wide .re-photo {
+    @apply rounded-md;
+  }
+  .re-j-fig figcaption {
+    @apply mt-2.5 text-label text-subtle-foreground;
+  }
+  .re-j-pair .re-photo {
+    @apply aspect-portrait;
+  }
+  @media (max-width: 600px) {
+    .re-j-wide {
+      @apply h-40;
+    }
+  }
+}

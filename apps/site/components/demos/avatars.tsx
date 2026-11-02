@@ -6,8 +6,8 @@ import { Icon } from "../icons";
 
 export function AvatarsDemo() {
   return (
-    <div className="avatar-stage">
-      <div className="avatar-examples">
+    <div className="flex flex-col items-center justify-center">
+      <div className="flex flex-wrap items-center justify-center gap-10">
         <div>
           <Avatar
             name="Mara Lind"
@@ -37,7 +37,7 @@ export function AvatarsDemo() {
           />
         </div>
       </div>
-      <div className="avatar-group-example">
+      <div className="mt-8 flex flex-col items-center gap-3.5">
         <AvatarGroup overlap={12}>
           <Avatar name="Alex Rivers" src={photos[3].src} size={52} />
           <Avatar name="Sam Field" src={photos[4].src} size={52} />

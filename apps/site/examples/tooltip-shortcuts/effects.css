@@ -1,0 +1,9 @@
+@reference "../../app/globals.css";
+@layer components {
+  .re-floating-tooltip.re-tooltip-shortcuts-popup {
+    @apply font-sans tracking-normal;
+  }
+  .re-floating-tooltip.re-tooltip-shortcuts-popup[data-rich] {
+    @apply rounded-2xl bg-tooltip p-1 pl-2.5 text-caption text-tooltip-foreground shadow-raised;
+  }
+}

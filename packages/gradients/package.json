@@ -20,7 +20,9 @@
   "license": "MIT",
   "author": "nK <https://nkdev.info>",
   "type": "module",
-  "sideEffects": false,
+  "sideEffects": [
+    "**/*.css"
+  ],
   "files": [
     "dist",
     "README.md",
@@ -30,10 +32,12 @@
     ".": {
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js"
-    }
+    },
+    "./tailwind.css": "./dist/tailwind.css",
+    "./styles.css": "./dist/styles.css"
   },
   "scripts": {
-    "build": "node ../../scripts/clean-dist.mjs && tsc -p tsconfig.json",
+    "build": "node ../../scripts/clean-dist.mjs && tsc -p tsconfig.json && node ../../scripts/generate-css-integrations.mjs gradients",
     "type-check": "tsc -p tsconfig.json --noEmit",
     "test": "vitest run"
   },

@@ -1,5 +1,4 @@
 "use client";
-
 import {
   docHref,
   docPages,
@@ -7,31 +6,41 @@ import {
   isDocGroup,
   type Library,
 } from "@reuse-sh/catalog";
-import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useRef } from "react";
+import { type ReactNode, useEffect, useRef } from "react";
 import { Icon } from "../icons";
+import { DocLink } from "./doc-link";
 
-function Toc({ library, pathname }: { library: Library; pathname: string }) {
-  const link = (path: string, title: string) => {
-    const href = docHref(library, path);
-    return (
-      <Link
-        key={path}
-        href={href}
-        aria-current={pathname === href ? "page" : undefined}
-      >
-        {title}
-      </Link>
-    );
-  };
+function Toc({
+  library,
+  pathname,
+  before,
+}: {
+  library: Library;
+  pathname: string;
+  before?: ReactNode;
+}) {
+  const link = (path: string, title: string) => (
+    <DocLink
+      key={path}
+      href={docHref(library, path)}
+      aria-current={pathname === docHref(library, path) ? "page" : undefined}
+      className="block text-sidebar-foreground transition-colors hover:text-muted-foreground aria-[current=page]:text-sidebar-active"
+    >
+      {title}
+    </DocLink>
+  );
   return (
-    <nav className="d-toc" aria-label={`${library.name} pages`}>
+    <nav
+      className="flex flex-col text-label leading-6"
+      aria-label={`${library.name} pages`}
+    >
+      {before}
       {library.pages.map((entry) =>
         isDocGroup(entry) ? (
           <div
             key={entry.title}
-            className="d-toc-group"
+            className="group"
             data-open={
               entry.pages.some(
                 (page) => docHref(library, page.path) === pathname,
@@ -40,8 +49,10 @@ function Toc({ library, pathname }: { library: Library; pathname: string }) {
                 : undefined
             }
           >
-            <span className="d-toc-label">{entry.title}</span>
-            <div className="d-toc-sub">
+            <span className="block text-sidebar-foreground group-data-[open]:text-muted-foreground">
+              {entry.title}
+            </span>
+            <div className="my-0.5 ml-0.5 border-l border-border pl-3">
               {entry.pages.map((page) => link(page.path, page.title))}
             </div>
           </div>
@@ -52,22 +63,35 @@ function Toc({ library, pathname }: { library: Library; pathname: string }) {
     </nav>
   );
 }
-
-export function DocsSidebar({ slug }: { slug: string }) {
+export function DocsSidebar({
+  slug,
+  before,
+}: {
+  slug: string;
+  before?: ReactNode;
+}) {
   const pathname = usePathname();
   const library = findLibrary(slug);
   if (!library) return null;
   return (
-    <aside className="d-side">
-      <Toc library={library} pathname={pathname} />
+    <aside
+      data-slot="docs-sidebar"
+      className="fixed top-30 left-gutter z-10 hidden w-sidebar wide:block"
+    >
+      <Toc library={library} pathname={pathname} before={before} />
     </aside>
   );
 }
-
-export function DocsDisclosure({ slug }: { slug: string }) {
+export function DocsDisclosure({
+  slug,
+  before,
+}: {
+  slug: string;
+  before?: ReactNode;
+}) {
   const pathname = usePathname();
   const details = useRef<HTMLDetailsElement>(null);
-  // biome-ignore lint/correctness/useExhaustiveDependencies: the disclosure closes whenever the route changes.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: route changes close the mobile disclosure.
   useEffect(() => {
     if (details.current) details.current.open = false;
   }, [pathname]);
@@ -77,12 +101,21 @@ export function DocsDisclosure({ slug }: { slug: string }) {
     (page) => docHref(library, page.path) === pathname,
   );
   return (
-    <details ref={details} className="d-toc-m">
-      <summary>
+    <details
+      ref={details}
+      data-slot="docs-disclosure"
+      className="group mb-8 rounded-xl bg-card shadow-raised wide:hidden"
+    >
+      <summary className="flex min-h-10 cursor-pointer list-none items-center justify-between gap-3 px-4 py-3 text-ui font-medium [&::-webkit-details-marker]:hidden">
         <span>{current?.title ?? library.name}</span>
-        <Icon name="down" size={14} className="d-chevron" />
+        <Icon
+          name="down"
+          className="size-3.5 text-subtle-foreground transition-transform group-open:rotate-180"
+        />
       </summary>
-      <Toc library={library} pathname={pathname} />
+      <div className="px-4 pt-1 pb-4">
+        <Toc library={library} pathname={pathname} before={before} />
+      </div>
     </details>
   );
 }

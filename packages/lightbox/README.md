@@ -23,35 +23,98 @@ These are the rules the code keeps. An adaptation on any framework keeps them to
 npm install @reuse-sh/lightbox
 ```
 
-## Browser
+<!-- examples:start -->
 
-```js
-import { createLightbox } from "@reuse-sh/lightbox";
-import "@reuse-sh/lightbox/styles.css";
+## Usage
 
-const viewer = createLightbox({ thumbnails: true });
-viewer.open([{
-  src: "/photo.jpg",
-  alt: "A mountain lake",
-  width: 1600,
-  height: 1200,
-  origin: document.querySelector("img"),
-}]);
+[Documentation](https://reuse.sh/lightbox/getting-started)
+
+### React
+
+#### Package styles
+
+Import the package stylesheet once in your main CSS. The components layer lets Tailwind utilities adapt its presentation.
+
+```css
+@import "@reuse-sh/lightbox/styles.css" layer(components);
 ```
 
-## React
+#### Usage
+
+Keep a real image link as the trigger, then open its full-size image through useLightbox. The origin image gives the opening and closing transition its actual crop.
 
 ```tsx
-import { useLightbox } from "@reuse-sh/lightbox/react";
-import "@reuse-sh/lightbox/styles.css";
+"use client";
 
-function Gallery({ images }) {
-  const viewer = useLightbox();
-  return <button onClick={() => viewer.open(images)}>
-    Open gallery
-  </button>;
+import { useLightbox } from "@reuse-sh/lightbox/react";
+
+export function Gallery() {
+  const lightbox = useLightbox({});
+  return (
+    <a href="/images/print-large.jpg" onClick={(event) => {
+      if (event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+      event.preventDefault();
+      lightbox.open([{
+        src: event.currentTarget.href,
+        alt: "Marble print",
+        origin: event.currentTarget.querySelector("img"),
+      }]);
+    }}>
+      <img src="/images/print.jpg" alt="Marble print" width="640" height="480" />
+    </a>
+  );
 }
 ```
+
+#### Integration
+
+Links still open the image without JavaScript. The native dialog keeps focus inside, Escape closes it, and close restores the opening element. The React hook destroys its viewer on unmount.
+
+### HTML + JavaScript
+
+#### Usage
+
+Keep a real image link as the trigger, then enhance the gallery with bindLightboxGallery. The origin image gives the opening and closing transition its actual crop.
+
+```html
+<div id="gallery">
+  <a href="/images/print-large.jpg">
+    <img data-lightbox-src="/images/print-large.jpg" src="/images/print.jpg" alt="Marble print" width="640" height="480" />
+  </a>
+</div>
+```
+
+#### Styles
+
+Import the package stylesheet once. Keep application layout styles scoped to this integration.
+
+```css
+@import "@reuse-sh/lightbox/styles.css";
+```
+
+#### Initialize
+
+Run this after the markup exists. Keep the returned controller for the lifetime of this content.
+
+```javascript
+import { bindLightboxGallery } from "@reuse-sh/lightbox";
+
+const gallery = bindLightboxGallery(document.querySelector("#gallery"), {});
+```
+
+#### Integration
+
+Links still open the image without JavaScript. The native dialog keeps focus inside, Escape closes it, and close restores the opening element.
+
+#### Cleanup
+
+Run this when the view is removed, before mounting another controller on the same element.
+
+```javascript
+gallery.destroy();
+```
+
+<!-- examples:end -->
 
 ## Documentation
 

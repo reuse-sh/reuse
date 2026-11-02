@@ -4,10 +4,10 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "node ../../scripts/prepare-examples.mjs && next dev --hostname 127.0.0.1 --port 4300",
-    "build": "node ../../scripts/prepare-examples.mjs && next build",
+    "dev": "node ../../scripts/generate-example-registry.mjs && node ../../scripts/prepare-examples.mjs && next dev --hostname 127.0.0.1 --port ${REUSE_PORT:-4300}",
+    "build": "node ../../scripts/generate-example-registry.mjs && node ../../scripts/prepare-examples.mjs && next build",
     "start": "next start --hostname 127.0.0.1 --port 4300",
-    "type-check": "next typegen && tsc --noEmit"
+    "type-check": "next typegen && tsc --noEmit && node ../../scripts/check-usage.mjs"
   },
   "dependencies": {
     "@hugeicons/core-free-icons": "4.3.5",
@@ -23,13 +23,18 @@
     "@reuse-sh/lightbox": "workspace:*",
     "@reuse-sh/loaders": "workspace:*",
     "@reuse-sh/shadows": "workspace:*",
+    "class-variance-authority": "0.7.1",
+    "cn": "0.5.0",
     "geist": "^1.9.0",
     "next": "16.4.2",
     "react": "19.3.0",
     "react-dom": "19.3.0"
   },
   "devDependencies": {
+    "@tailwindcss/postcss": "^4.3.3",
     "@types/react": "19.3.0",
-    "@types/react-dom": "19.3.0"
+    "@types/react-dom": "19.3.0",
+    "postcss": "8.5.32",
+    "tailwindcss": "^4.3.3"
   }
 }

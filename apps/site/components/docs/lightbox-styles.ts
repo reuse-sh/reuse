@@ -1,9 +1,3 @@
-/**
- * Lightbox control styles. The package draws its own buttons, counter, caption and
- * thumbnails; each style rearranges and restyles them with page CSS on the
- * re-lightbox-style class, plus a small chrome script for the styles that move parts.
- * The preview frame (lightbox-frame.ts) runs exactly the CSS and chrome shown on the page.
- */
 export interface LightboxStyle {
   arrows: "Sides" | "Toolbar" | "None";
   counter: "Corner" | "Toolbar" | "None";
@@ -417,39 +411,76 @@ export function lightboxCode(options: LightboxStyle) {
   const imports = `import "@reuse-sh/lightbox/styles.css";
 import "./lightbox-style.css";${chrome ? `\nimport { addChrome } from "./lightbox-chrome.js";` : ""}`;
   return {
-    js: `import { createLightbox } from "@reuse-sh/lightbox";
+    html: `<div data-gallery>
+  <a href="/photos/coast.jpg">
+    <img src="/photos/coast-small.jpg" data-lightbox-src="/photos/coast.jpg" alt="A rocky coast" data-caption="Coast" width="400" height="300">
+  </a>
+  <a href="/photos/forest.jpg">
+    <img src="/photos/forest-small.jpg" data-lightbox-src="/photos/forest.jpg" alt="A path through a forest" data-caption="Forest" width="400" height="300">
+  </a>
+</div>`,
+    js: `import { bindLightboxGallery, lightboxItemFromImage } from "@reuse-sh/lightbox";
 ${imports}
 
-const lightbox = createLightbox({
-${body("  ")}
+const gallery = document.querySelector("[data-gallery]");
+const getItem = (image) => ({
+  ...lightboxItemFromImage(image),
+  caption: image.dataset.caption,${options.thumbnails ? "\n  thumbnailSrc: image.currentSrc || image.src," : ""}
 });
+const lightbox = bindLightboxGallery(gallery, {
+${body("  ")}
+  getItem,
+});${
+      chrome
+        ? `
+let opened = false;
+const stop = lightbox.subscribe((state) => {
+  if (state.isOpen && !opened) {
+    const items = [...gallery.querySelectorAll("img")].map(getItem);
+    addChrome(lightbox, items);
+  }
+  opened = state.isOpen;
+});`
+        : ""
+    }`,
+    react: `"use client";
 
-lightbox.open(photos, 0);${chrome ? "\naddChrome(lightbox, photos);" : ""}`,
-    react: `import { useLightbox } from "@reuse-sh/lightbox/react";
+import type { LightboxItem } from "@reuse-sh/lightbox";
+import { useLightbox } from "@reuse-sh/lightbox/react";
 import { useRef } from "react";
 ${imports}
 
-export function Gallery({ photos }) {
+const photos: LightboxItem[] = [
+  { src: "/photos/coast.jpg", alt: "A rocky coast", caption: "Coast"${options.thumbnails ? ', thumbnailSrc: "/photos/coast.jpg"' : ""} },
+  { src: "/photos/forest.jpg", alt: "A path through a forest", caption: "Forest"${options.thumbnails ? ', thumbnailSrc: "/photos/forest.jpg"' : ""} },
+];
+
+export function Gallery() {
   const lightbox = useLightbox({
 ${body("    ")}
   });
-  const root = useRef(null);
-  const open = (index) => {
-    const images = root.current.querySelectorAll("img");
-    const items = photos.map((photo, i) => ({ ...photo, origin: images[i] }));
+  const root = useRef<HTMLDivElement>(null);
+  const open = (index: number) => {
+    const images = root.current?.querySelectorAll<HTMLImageElement>("img");
+    const items = photos.map((photo, i) => ({ ...photo, origin: images?.[i] }));
     lightbox.open(items, index);${chrome ? "\n    addChrome(lightbox, items);" : ""}
   };
   return (
-    <div ref={root}>
+    <div ref={root} className="grid grid-cols-2 gap-3">
       {photos.map((photo, index) => (
-        <button key={photo.src} onClick={() => open(index)}>
-          <img src={photo.src} alt={photo.alt} />
-        </button>
+        <a key={photo.src} href={photo.src} onClick={(event) => {
+          if (event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+          event.preventDefault();
+          open(index);
+        }}>
+          <img className="h-auto w-full" src={photo.src} alt={photo.alt} width="400" height="300" />
+        </a>
       ))}
     </div>
   );
 }`,
     css: lightboxStyleCss(options),
     chrome: chromeSource,
+    cleanup: `${chrome ? "stop();\n" : ""}lightbox.destroy();`,
   };
 }

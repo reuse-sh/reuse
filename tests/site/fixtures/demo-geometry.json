@@ -1,0 +1,223 @@
+[
+  {
+    "path": "/lightbox",
+    "height": 422,
+    "images": [[298, 350], [149, 172], [149, 172], [149, 172], [149, 172]]
+  },
+  {
+    "path": "/lightbox/examples/product",
+    "height": 544.25,
+    "images": [[297, 371.25], [95, 95], [95, 95], [95, 95]]
+  },
+  {
+    "path": "/lightbox/examples/chat",
+    "height": 763.1875,
+    "images": [
+      [36, 36],
+      [36, 36],
+      [36, 36],
+      [36, 36],
+      [32, 32],
+      [182.921875, 185.59375],
+      [91.453125, 90.796875],
+      [91.453125, 90.796875],
+      [0, 0],
+      [0, 0],
+      [0, 0],
+      [208.796875, 156.59375]
+    ]
+  },
+  {
+    "path": "/lightbox/examples/journal",
+    "height": 1405,
+    "images": [[608, 342], [300, 375], [300, 375], [400, 256], [200, 256]]
+  },
+  {
+    "path": "/carousel",
+    "height": 510,
+    "images": [
+      [288, 360],
+      [288, 360],
+      [288, 360],
+      [288, 360],
+      [288, 360],
+      [288, 360]
+    ]
+  },
+  {
+    "path": "/carousel/examples/product-strip",
+    "height": 413.65625,
+    "images": [
+      [193.328125, 241.65625],
+      [193.328125, 241.65625],
+      [193.328125, 241.65625],
+      [193.328125, 241.65625],
+      [193.328125, 241.65625],
+      [193.328125, 241.65625]
+    ]
+  },
+  {
+    "path": "/carousel/examples/editorial",
+    "height": 650.65625,
+    "images": [
+      [520, 346.65625],
+      [520, 346.65625],
+      [520, 346.65625],
+      [520, 346.65625],
+      [520, 346.65625],
+      [520, 346.65625]
+    ]
+  },
+  {
+    "path": "/annotations",
+    "height": 572,
+    "images": [[608, 456]]
+  },
+  {
+    "path": "/annotations/examples/review-notes",
+    "height": 515.5,
+    "images": [[32, 32], [458, 343.5]]
+  },
+  {
+    "path": "/annotations/examples/editor",
+    "height": 798,
+    "images": [[608, 456]]
+  },
+  {
+    "path": "/avatars",
+    "height": 288,
+    "images": [
+      [64, 64],
+      [64, 64],
+      [64, 64],
+      [52, 52],
+      [52, 52],
+      [52, 52],
+      [52, 52]
+    ]
+  },
+  {
+    "path": "/avatars/examples/team",
+    "height": 408,
+    "images": [[36, 36], [36, 36], [36, 36], [36, 36], [36, 36], [36, 36]]
+  },
+  {
+    "path": "/avatars/examples/stack",
+    "height": 288,
+    "images": [[48, 48], [48, 48], [48, 48], [48, 48]]
+  },
+  {
+    "path": "/floating-tooltip",
+    "height": 288,
+    "images": []
+  },
+  {
+    "path": "/floating-tooltip/examples/shortcuts",
+    "height": 428,
+    "images": [[672, 420]]
+  },
+  {
+    "path": "/floating-tooltip/examples/links",
+    "height": 288,
+    "images": []
+  },
+  {
+    "path": "/floating-tooltip/examples/people",
+    "height": 288,
+    "images": []
+  },
+  {
+    "path": "/moving-highlight",
+    "height": 288,
+    "images": []
+  },
+  {
+    "path": "/moving-highlight/examples/menu",
+    "height": 337,
+    "images": []
+  },
+  {
+    "path": "/moving-highlight/examples/navigation",
+    "height": 372,
+    "images": []
+  },
+  {
+    "path": "/moving-highlight/examples/tabs",
+    "height": 288,
+    "images": []
+  },
+  {
+    "path": "/hold-to-confirm",
+    "height": 288,
+    "images": []
+  },
+  {
+    "path": "/hold-to-confirm/examples/delete-file",
+    "height": 288,
+    "images": []
+  },
+  {
+    "path": "/hold-to-confirm/examples/settings",
+    "height": 376,
+    "images": []
+  },
+  {
+    "path": "/copy-button",
+    "height": 288,
+    "images": []
+  },
+  {
+    "path": "/copy-button/examples/code-block",
+    "height": 288,
+    "images": []
+  },
+  {
+    "path": "/copy-button/examples/share-link",
+    "height": 288,
+    "images": []
+  },
+  {
+    "path": "/loaders",
+    "height": 288,
+    "images": []
+  },
+  {
+    "path": "/loaders/examples/chat-reply",
+    "height": 422,
+    "images": []
+  },
+  {
+    "path": "/shadows",
+    "height": 352,
+    "images": []
+  },
+  {
+    "path": "/shadows/examples/cards",
+    "height": 288,
+    "images": []
+  },
+  {
+    "path": "/easing-gradients",
+    "height": 288,
+    "images": []
+  },
+  {
+    "path": "/easing-gradients/examples/image-caption",
+    "height": 533.328125,
+    "images": [[608, 405.328125]]
+  },
+  {
+    "path": "/easing-gradients/examples/fade-edge",
+    "height": 336,
+    "images": [
+      [240, 180],
+      [240, 180],
+      [240, 180],
+      [240, 180],
+      [240, 180],
+      [240, 180],
+      [240, 180],
+      [240, 180]
+    ]
+  }
+]

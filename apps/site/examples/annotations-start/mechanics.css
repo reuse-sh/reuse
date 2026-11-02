@@ -1,0 +1,7 @@
+@reference "../../app/globals.css";
+@layer components {
+  .re-annot {
+    --re-annotation-color: var(--destructive);
+    --re-annotation-radius: var(--radius-control);
+  }
+}

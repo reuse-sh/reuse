@@ -1,44 +1,15 @@
 "use client";
 
-import { useId, useState, useSyncExternalStore } from "react";
+import { CodeContent, CodeSurface } from "@/components/ui/code-block";
+import { useFramework } from "../../lib/framework-context";
 import { CopyControl } from "../copy-control";
-import { Icon } from "../icons";
-import type { CodeRun } from "./highlight";
-import { Tabs, tabPanelProps } from "./tabs";
+import type { CodeLang, CodeRun } from "./highlight";
 
 export interface HighlightedTab {
   label?: "JavaScript" | "React";
   code: string;
+  lang: CodeLang;
   runs: CodeRun[];
-}
-
-const KEY = "re-code-tab";
-const EVENT = "re-code-tab";
-
-function readTab() {
-  try {
-    return localStorage.getItem(KEY);
-  } catch {
-    return null;
-  }
-}
-
-function writeTab(label: string) {
-  try {
-    localStorage.setItem(KEY, label);
-  } catch {
-    return;
-  }
-  window.dispatchEvent(new Event(EVENT));
-}
-
-function subscribe(onChange: () => void) {
-  window.addEventListener(EVENT, onChange);
-  window.addEventListener("storage", onChange);
-  return () => {
-    window.removeEventListener(EVENT, onChange);
-    window.removeEventListener("storage", onChange);
-  };
 }
 
 function Code({ runs }: { runs: CodeRun[] }) {
@@ -58,61 +29,43 @@ function Code({ runs }: { runs: CodeRun[] }) {
   );
 }
 
-const tabIcons = { JavaScript: "js", React: "react" } as const;
-
-export function CodeBlockView({ list }: { list: HighlightedTab[] }) {
-  const idBase = useId();
-  const remembered = useSyncExternalStore(subscribe, readTab, () => null);
-  const [chosen, setChosen] = useState<string>(list[0].label ?? "");
-  const labels: string[] = list.map((tab) => tab.label ?? "");
-  const selected =
-    remembered && labels.includes(remembered) ? remembered : chosen;
-  const active = list[labels.indexOf(selected)] ?? list[0];
-  const tabbed = list.length > 1 || Boolean(list[0].label);
-
-  if (!tabbed)
-    return (
-      <div className="c-code">
-        <pre>
-          <Code runs={active.runs} />
-        </pre>
-        <CopyControl value={active.code} className="c-code-float" />
-      </div>
-    );
-
+export function CodeBlockView({
+  list,
+  caption,
+  snippetId,
+  codeRole,
+}: {
+  list: HighlightedTab[];
+  caption?: string;
+  snippetId?: string;
+  codeRole?: string;
+}) {
+  const framework = useFramework();
+  const active =
+    list.find(
+      (tab) => tab.label === (framework === "react" ? "React" : "JavaScript"),
+    ) ?? list[0];
   return (
-    <div className="c-code">
-      <div className="c-code-bar">
-        <Tabs
-          idBase={idBase}
-          label="Code"
-          selected={selected}
-          onSelect={(label) => {
-            setChosen(label);
-            writeTab(label);
-          }}
-          items={list.map((tab) => ({
-            id: tab.label ?? "",
-            label: (
-              <>
-                {tab.label ? (
-                  <Icon name={tabIcons[tab.label]} size={14} />
-                ) : null}
-                <span>{tab.label}</span>
-              </>
-            ),
-          }))}
-        />
-        <CopyControl value={active.code} />
-      </div>
-      {list.map((tab) => (
-        <pre
-          key={tab.label}
-          {...tabPanelProps(idBase, tab.label ?? "", selected)}
-        >
-          <Code runs={tab.runs} />
-        </pre>
-      ))}
-    </div>
+    <CodeSurface
+      label={
+        caption ??
+        active.label ??
+        {
+          ts: "JavaScript",
+          tsx: "React",
+          css: "CSS",
+          html: "HTML",
+          json: "JSON",
+          bash: "Terminal",
+        }[active.lang]
+      }
+      data-snippet-id={snippetId}
+      data-code-role={codeRole}
+      action={<CopyControl value={active.code} />}
+    >
+      <CodeContent>
+        <Code runs={active.runs} />
+      </CodeContent>
+    </CodeSurface>
   );
 }

@@ -7,3 +7,19 @@
 .re-thinking-dots canvas {
   display: block;
 }
+
+.re-thinking-dots__fallback {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10%;
+}
+.re-thinking-dots__fallback > span {
+  width: 16%;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  background: currentColor;
+}
+.re-thinking-dots [hidden] {
+  display: none;
+}

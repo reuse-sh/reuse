@@ -25,39 +25,90 @@ These are the rules the code keeps. An adaptation on any framework keeps them to
 npm install @reuse-sh/carousel
 ```
 
-## Browser
+<!-- examples:start -->
 
-```js
-import { createCarousel } from "@reuse-sh/carousel";
-import "@reuse-sh/carousel/styles.css";
+## Usage
 
-const viewport = document.querySelector("[data-carousel]");
-const carousel = createCarousel(viewport, {
-  align: "center",
-  loop: true,
-});
-nextButton.addEventListener("click", () => carousel.next());
-carousel.subscribe((state) => {
-  counter.textContent = String(state.index + 1);
-});
+[Documentation](https://reuse.sh/carousel/getting-started)
+
+### React
+
+#### Package styles
+
+Import the package stylesheet once in your main CSS. The components layer lets Tailwind utilities adapt its presentation.
+
+```css
+@import "@reuse-sh/carousel/styles.css" layer(components);
 ```
 
-## React
+#### Usage
+
+The viewport scrolls and each direct child snaps. Start with ordinary links and the package classes, then add the controller for dragging and local arrow keys.
 
 ```tsx
-import { useCarousel } from "@reuse-sh/carousel/react";
-import "@reuse-sh/carousel/styles.css";
+"use client";
 
-function Gallery({ children }) {
-  const { ref, carousel } = useCarousel({ loop: true });
-  return <>
-    <div ref={ref} className="re-carousel">
-      {children}
-    </div>
-    <button onClick={() => carousel?.next()}>Next</button>
-  </>;
+import { Carousel } from "@reuse-sh/carousel/react";
+
+export function PrintGallery() {
+  return <Carousel tabIndex={0} aria-label="Prints">
+    <a className="re-carousel__slide basis-4/5" href="/prints/blue"><img className="w-full" src="/images/blue.jpg" alt="Blue print" width="640" height="480" /></a>
+    <a className="re-carousel__slide basis-4/5" href="/prints/sand"><img className="w-full" src="/images/sand.jpg" alt="Sand print" width="640" height="480" /></a>
+  </Carousel>;
 }
 ```
+
+#### Integration
+
+Touch and trackpad scrolling work before scripts run. Keep tabIndex on the viewport so keyboard users can reach local arrow navigation. The React component owns initialization and teardown.
+
+### HTML + JavaScript
+
+#### Usage
+
+The viewport scrolls and each direct child snaps. Start with ordinary links and the package classes, then add the controller for dragging and local arrow keys.
+
+```html
+<div id="prints" class="re-carousel" tabindex="0" aria-label="Prints">
+  <a class="re-carousel__slide" href="/prints/blue"><img src="/images/blue.jpg" alt="Blue print" width="640" height="480" /></a>
+  <a class="re-carousel__slide" href="/prints/sand"><img src="/images/sand.jpg" alt="Sand print" width="640" height="480" /></a>
+</div>
+```
+
+#### Styles
+
+Import the package stylesheet once. Keep application layout styles scoped to this integration.
+
+```css
+@import "@reuse-sh/carousel/styles.css";
+
+#prints { --re-carousel-slide-width: 80%; }
+#prints img { display: block; width: 100%; height: auto; }
+```
+
+#### Initialize
+
+Run this after the markup exists. Keep the returned controller for the lifetime of this content.
+
+```javascript
+import { createCarousel } from "@reuse-sh/carousel";
+
+const carousel = createCarousel(document.querySelector("#prints"));
+```
+
+#### Integration
+
+Touch and trackpad scrolling work before scripts run. Keep tabindex on the viewport so keyboard users can reach local arrow navigation.
+
+#### Cleanup
+
+Run this when the view is removed, before mounting another controller on the same element.
+
+```javascript
+carousel.destroy();
+```
+
+<!-- examples:end -->
 
 ## Documentation
 

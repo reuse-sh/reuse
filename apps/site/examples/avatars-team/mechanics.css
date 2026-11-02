@@ -1,0 +1,23 @@
+@reference "../../app/globals.css";
+@layer components {
+  .re-example {
+    --re-avatar-background: var(--muted);
+    --re-avatar-color: var(--secondary-foreground);
+    --re-avatar-badge-background: var(--primary);
+    --re-avatar-badge-color: var(--primary-foreground);
+    --re-avatar-status-color: var(--success);
+  }
+
+  .re-members {
+    --re-highlight-background: var(--accent);
+    --re-highlight-radius: var(--radius-control);
+  }
+  .re-member {
+    grid-template-columns: 2.25rem minmax(0, 1fr);
+  }
+  .re-members .re-avatar {
+    --re-avatar-badge-size: 16px;
+    --re-avatar-dot-size: 9px;
+    @apply text-caption;
+  }
+}

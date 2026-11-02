@@ -1,0 +1,71 @@
+@reference "../../app/globals.css";
+@layer components {
+  .re-product {
+    grid-template-columns: minmax(0, 1.08fr) minmax(0, 1fr);
+  }
+  .re-sizes {
+    --re-highlight-radius: var(--radius-control);
+  }
+  .re-photo {
+    @apply relative block p-0 overflow-hidden border-0 rounded-control bg-media cursor-zoom-in;
+  }
+  .re-photo::after {
+    content: "";
+    @apply absolute inset-0;
+    border-radius: inherit;
+    box-shadow: inset 0 0 0 1px
+      color-mix(in srgb, var(--foreground) 5%, transparent);
+    @apply pointer-events-none;
+  }
+  .re-photo img {
+    @apply w-full h-full object-cover;
+  }
+  .re-photo[hidden] {
+    @apply hidden;
+  }
+
+  .re-lightbox-demo {
+    --re-lightbox-background: var(--background);
+    --re-lightbox-foreground: var(--foreground);
+    --re-lightbox-control: color-mix(in srgb, var(--card) 96%, transparent);
+  }
+  .re-lightbox-demo .re-lightbox-button,
+  .re-lightbox-demo .re-lightbox-counter {
+    @apply shadow-raised;
+  }
+
+  .re-thumbs .re-photo {
+    aspect-ratio: 1;
+    @apply rounded-lg;
+  }
+  .re-crumb span {
+    @apply mt-0 mr-1 mb-0 ml-1;
+    color: color-mix(in srgb, var(--foreground) 20%, transparent);
+  }
+  .re-sizes .re-seg-fill {
+    @apply bg-card shadow-control;
+  }
+  .re-sizes .re-seg-hover {
+    @apply bg-accent;
+  }
+  .re-sizes label {
+    @apply relative grid place-items-center flex-1 h-8 pt-0 pr-2 pb-0 pl-2 border-0 rounded-lg bg-transparent text-muted-foreground text-label font-medium tabular-nums cursor-pointer;
+    transition: color 150ms ease;
+  }
+  .re-sizes label:has(:checked) {
+    @apply text-foreground;
+  }
+  .re-sizes label:has(:focus-visible) {
+    outline: 2px solid var(--foreground);
+    @apply -outline-offset-2;
+  }
+  .re-buy:active {
+    transform: scale(0.98);
+  }
+  @media (max-width: 600px) {
+    .re-product {
+      grid-template-columns: 1fr;
+      @apply gap-6;
+    }
+  }
+}
