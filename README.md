@@ -1,75 +1,86 @@
-# Reuse
+<p align="center">
+  <a href="https://reuse.sh">
+    <picture>
+      <source media="(prefers-color-scheme: dark)" srcset=".github/assets/readme-header-dark.png">
+      <img src=".github/assets/readme-header.png" alt="Reuse: parts you stop writing twice. A toolbar with a tooltip, a menu with a moving highlight, a hold to delete button and a stack of avatars." width="100%">
+    </picture>
+  </a>
+</p>
 
-Project domain: reuse.sh.
+<p align="center">
+  <a href="https://github.com/reuse-sh/reuse/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/reuse-sh/reuse/ci.yml?branch=main&label=checks" alt="Checks"></a>
+  <a href="https://www.npmjs.com/org/reuse-sh"><img src="https://img.shields.io/badge/npm-%40reuse--sh-111" alt="npm scope @reuse-sh"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/github/license/reuse-sh/reuse?color=111" alt="MIT license"></a>
+  <a href="https://reuse.sh"><img src="https://img.shields.io/badge/docs-reuse.sh-111" alt="Documentation"></a>
+  <a href="https://reuse.sh/for-agents"><img src="https://img.shields.io/badge/agent%20guides-llms.txt-111" alt="Agent guides"></a>
+</p>
 
-Reusable native web libraries with thin React adapters, live examples, and integration guides for coding agents.
+Reuse is a set of interface parts we use across many products: a lightbox, a carousel, tooltips, loaders and a few more. Each one is a small browser module with a thin React wrapper, so it works the same in React, Vue, Svelte or a page with no framework.
 
-The principles are the core of the set. Each library lists a few rules its code keeps: how it scrolls, where focus goes, what it cleans up, how it moves. They carry from one product to the next, and an adaptation on any framework keeps them. They live in packages/catalog and appear on the site, in each package README, and in the agent guides.
+What carries from one product to the next is not the code but the rules behind it. Every part lists a few principles: how it scrolls, where focus goes, what it cleans up, how it moves. Each part also ships a guide written for coding agents, so your agent can use the part or rebuild it on another stack and keep those rules.
 
-## Local development
+- **Built on the browser.** Native dialogs, CSS scroll snap and CSS animations do the heavy lifting.
+- **Leaves the page alone.** Styles are scoped to `re-` classes, and `destroy()` puts back everything a part added.
+- **Works from the keyboard.** Real buttons, dialogs and focus order, with reduced motion respected.
 
-Use Node.js 22.13 or newer and pnpm 11.15.1.
+## Parts
 
-    pnpm install
-    pnpm dev
+### Media
 
-Open http://127.0.0.1:4300. The site needs no environment variables or external services.
+- [Lightbox](https://reuse.sh/lightbox), an image viewer that grows out of the thumbnail and zooms into the detail.
+- [Carousel](https://reuse.sh/carousel), a scroll-snap strip with drag, loop and autoplay, built on your own markup.
+- [Annotations](https://reuse.sh/annotations), areas, arrows and notes on an image, kept in one format your tools can share.
 
-## Libraries
+### Interface
 
-- Lightbox shares native scroll snap and navigation with Carousel. It adds cropped-thumbnail transitions, zoom/pan/pinch, image loading, modal focus, and cleanup.
-- Carousel adds mouse dragging, responsive targets, grouping, RTL, controls, synchronization, optional repeat, and an autoplay clock to native scrolling.
-- Annotations preserves six kinds, percentage coordinates, a versioned JSON format, HTML transport, validation, rendering, and editing.
-- Loaders contains the sixteen ThinkingDots figures, their timeline, native canvas controller, and React integration.
-- Shadows provides the six-level CSS scale, ring variants, and code/action card patterns, with no JavaScript.
-- Easing gradients builds CSS gradients from an easing curve and fades the edges of horizontal scrollers.
-- Interactions contains floating tooltip, moving highlight, hold to confirm, and copy button.
-- Avatars provides images/initials, transparent badge cutouts, and overlapping groups.
+- [Avatars](https://reuse.sh/avatars), photos and initials with badges and groups, cut out cleanly on any background.
+- [Floating tooltip](https://reuse.sh/floating-tooltip), one shared hint that follows the pointer and slides between triggers.
+- [Moving highlight](https://reuse.sh/moving-highlight), one background that slides to the row under the pointer, the focus or the selection.
+- [Hold to confirm](https://reuse.sh/hold-to-confirm), a button that acts only after a full press.
+- [Copy button](https://reuse.sh/copy-button), a button that copies text, swaps its icon for a check and says what happened.
 
-Each native entry is independent of React. Import the package's /react entry when needed. Original code is MIT.
+### Motion and style
 
-## Packages and releases
+- [Loaders](https://reuse.sh/loaders), a few dots that change shape while an answer is on its way.
+- [Shadows](https://reuse.sh/shadows), six shadow levels and a hairline ring in one stylesheet, with no JavaScript.
+- [Easing gradients](https://reuse.sh/easing-gradients), gradients that follow an easing curve, so a fade ends without a hard edge.
 
-The published packages are @reuse-sh/annotations, avatars, carousel, core, gradients, interactions, lightbox, loaders, and shadows. Each one lives in packages/<name>, with its README.md and, after its first versioned release, its CHANGELOG.md. packages/catalog and apps/site are private and never published.
+## Use it
 
-Every pull request that changes a published package adds a changeset:
+Install the package for the part you need:
 
-    pnpm changeset
+```sh
+npm install @reuse-sh/carousel
+```
 
-Pick the packages, choose patch, minor, or major, and write one line a user of the package would understand. The changeset file is committed with the change.
+```js
+import { createCarousel } from "@reuse-sh/carousel";
+import "@reuse-sh/carousel/styles.css";
 
-On every push to main, the release workflow (.github/workflows/release.yml) runs lint, type-check, and tests, then opens or updates a "chore: version packages" pull request with the pending changesets. Merging that pull request bumps the versions, writes the changelogs, and publishes the new versions to npm through npm trusted publishing. No npm token is stored in the repository.
+const carousel = createCarousel(document.querySelector(".gallery"));
+```
 
-## Workspace
+In React, import the same part from its `/react` entry. Each library page on [reuse.sh](https://reuse.sh) has live examples, the API and code for both.
 
-apps/site owns the Next.js marketing site and documentation. packages/catalog is the selected public inventory. Each library has its own package. packages/core contains the small internal clipboard and HTML escaping utilities.
+## With a coding agent
 
-The site includes independent library landing pages, scoped documentation navigation, a library switcher, agent Markdown guides, and a plain HTML example at /examples/native.html.
+Give your agent this prompt:
 
-Turborepo watch rebuilds library dependencies during development. Production builds prepare the standalone ESM examples before building the site. Build outputs are cleaned so deleted source cannot survive in a package distribution.
+> Read https://reuse.sh/llms.txt. It lists the Reuse libraries and links a guide for each. Pick the library that fits what I am building and follow its guide. Keep the principles the guide lists.
 
-## Verification
+Every guide opens with the library's principles, then covers the markup, the options, the cleanup and the checks to run. The full list is at [reuse.sh/for-agents](https://reuse.sh/for-agents).
 
-    pnpm lint
-    pnpm type-check
-    pnpm test
-    pnpm build
-    node scripts/measure-native.mjs
+## Develop
 
-The measurement follows native ESM imports, rejects external runtime imports, and records unminified/gzipped module totals in docs/native-sizes.json. It excludes React adapters and CSS. Browser checks remain necessary for scroll snap, gestures, focus, canvas animation, and responsive layout.
+Use Node.js 22.13 or newer and pnpm.
 
-## Scope
+```sh
+pnpm install
+pnpm dev
+```
 
-The carousel is the foundational set. Paid Visual Portfolio effects and marquee are not included. Repeat retains original DOM and requires cycleWidth >= viewportWidth + largestSlideWidth; isLooping reports availability. There are no duplicate slide clones.
+The site runs at http://127.0.0.1:4300 and needs no environment variables. Run `pnpm check` for lint, types, tests, the build and browser tests. [CONTRIBUTING.md](CONTRIBUTING.md) covers the workspace, principles and releases.
 
-The lightbox baseline is images. Captions and optional thumbnails are supported. Custom content can use renderContent, but video/iframe renderers, Poise widget coordination, and product-specific annotation cloning are not included.
+## License
 
-No existing product has been migrated by this change. Poise, Visual Portfolio, Pro, and Fantasma remain separate consumers. Publication and product migrations require their own release verification.
-
-## Agent guides
-
-Read /llms.txt, then /{library}/guide.md. Guides describe the real API, current boundaries, and checks. Reuse the implementation, adapt the integration, and report evidence. Do not generate a replacement engine.
-
-## Licensing
-
-Original code is MIT. See LICENSE and THIRD_PARTY_NOTICES.md. Demo photos and the site font keep their own asset licenses.
+MIT. See [LICENSE](LICENSE) and [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
