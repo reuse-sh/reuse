@@ -972,6 +972,10 @@ export const libraries: Library[] = [
         "A completed hold calls onConfirm exactly once, and the next action needs a new press.",
       ],
       [
+        "Hold the result",
+        "A confirmed button keeps its fill and ignores presses until resetMs ends it. Releasing, blur or disabling it does not empty the fill early.",
+      ],
+      [
         "Cancel on any doubt",
         "Letting go early, leaving the button, blur, Escape or disabling the button cancels the hold.",
       ],
@@ -994,20 +998,20 @@ export const libraries: Library[] = [
     ],
     api: [
       [
-        "createHoldToConfirm(button, { onConfirm, holdMs? })",
-        "Turns a button into a hold. onConfirm runs once the hold completes. holdMs is 1200 by default.",
+        "createHoldToConfirm(button, { onConfirm, onReset?, holdMs?, resetMs? })",
+        "Turns a button into a hold. onConfirm runs once the hold completes, and onReset when the confirmed state ends. holdMs is 1200 and resetMs is 1600 by default.",
       ],
       [
-        "cancel(), destroy()",
-        "Stops a hold in progress, or removes the hold and restores the button.",
+        "cancel(), reset(), destroy()",
+        "Stops a hold in progress, ends the confirmed state early, or removes the hold and restores the button.",
       ],
       [
-        "data-holding, re-hold-fill",
-        "The attribute set on the button while it is held, and the fill element that grows across it.",
+        "data-holding, data-confirmed, re-hold-fill",
+        "The attributes set on the button while it is held and while it shows a confirmed result, and the fill element that grows across it.",
       ],
       [
         "HoldToConfirmButton",
-        "The React button around the same controller. It takes onConfirm and holdMs.",
+        "The React button around the same controller. It takes onConfirm, onReset, holdMs and resetMs.",
       ],
     ],
     notes: [

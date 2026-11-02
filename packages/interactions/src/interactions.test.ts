@@ -81,6 +81,13 @@ describe("hold to confirm", () => {
     vi.advanceTimersByTime(200);
     expect(count()).toBe(1);
     pointer(window, "pointerup");
+    expect(button.hasAttribute("data-confirmed")).toBe(true);
+    pointer(button, "pointerdown");
+    vi.advanceTimersByTime(100);
+    expect(count()).toBe(1);
+    pointer(window, "pointerup");
+    vi.advanceTimersByTime(1600);
+    expect(button.hasAttribute("data-confirmed")).toBe(false);
     pointer(button, "pointerdown");
     vi.advanceTimersByTime(100);
     expect(count()).toBe(2);
@@ -116,6 +123,32 @@ describe("hold to confirm", () => {
     expect(count()).toBe(0);
     expect(button.hasAttribute("data-holding")).toBe(false);
   });
+  it("keeps a confirmed press full until resetMs ends it", () => {
+    const button = document.createElement("button");
+    document.body.append(button);
+    let resets = 0;
+    const controller = createHoldToConfirm(button, {
+      holdMs: 100,
+      resetMs: 500,
+      onConfirm: () => {},
+      onReset: () => {
+        resets++;
+      },
+    });
+    controllers.push(controller);
+    const fill = button.lastElementChild as HTMLElement;
+    pointer(button, "pointerdown");
+    vi.advanceTimersByTime(100);
+    pointer(window, "pointerup");
+    button.setAttribute("aria-disabled", "true");
+    vi.advanceTimersByTime(499);
+    expect(fill.style.transform).toBe("scaleX(1)");
+    expect(resets).toBe(0);
+    vi.advanceTimersByTime(1);
+    expect(fill.style.transform).toBe("scaleX(0)");
+    expect(button.hasAttribute("data-confirmed")).toBe(false);
+    expect(resets).toBe(1);
+  });
   it("prevents keyboard auto-repeat, cancels key release, and allows assistive activation", () => {
     const { button, count } = setup();
     const event = new KeyboardEvent("keydown", {
@@ -135,8 +168,10 @@ describe("hold to confirm", () => {
     window.dispatchEvent(new KeyboardEvent("keyup", { key: "Enter" }));
     button.dispatchEvent(new MouseEvent("click", { detail: 1 }));
     expect(count()).toBe(1);
+    vi.advanceTimersByTime(1600);
     button.dispatchEvent(new MouseEvent("click", { detail: 0 }));
     expect(count()).toBe(2);
+    vi.advanceTimersByTime(1600);
     button.dispatchEvent(new KeyboardEvent("keydown", { key: " " }));
     vi.advanceTimersByTime(20);
     window.dispatchEvent(new KeyboardEvent("keyup", { key: " " }));

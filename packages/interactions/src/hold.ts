@@ -1,6 +1,8 @@
 export interface HoldToConfirmOptions {
   onConfirm: () => void;
+  onReset?: () => void;
   holdMs?: number;
+  resetMs?: number;
 }
 
 export function createHoldToConfirm(
@@ -12,51 +14,68 @@ export function createHoldToConfirm(
   const duration = options.holdMs ?? 1200;
   if (!Number.isFinite(duration) || duration <= 0)
     throw new RangeError("holdMs must be positive.");
+  const resetMs = options.resetMs ?? 1600;
+  if (!Number.isFinite(resetMs) || resetMs <= 0)
+    throw new RangeError("resetMs must be positive.");
   const originalStyle = button.getAttribute("style");
   const originalHolding = button.getAttribute("data-holding");
+  const originalConfirmed = button.getAttribute("data-confirmed");
   const hadClass = button.classList.contains("re-hold");
   button.classList.add("re-hold");
   const fill = button.ownerDocument.createElement("span");
   fill.className = "re-hold-fill";
   fill.setAttribute("aria-hidden", "true");
   button.append(fill);
+  let state: "idle" | "holding" | "confirmed" = "idle";
   let timer: number | undefined;
   let holdingPointer: number | undefined;
-  let active = false;
   let destroyed = false;
-  const cancel = () => {
+  const isDisabled = () =>
+    button.disabled || button.getAttribute("aria-disabled") === "true";
+  const empty = () => {
     view.clearTimeout(timer);
     timer = undefined;
     holdingPointer = undefined;
-    active = false;
-    button.removeAttribute("data-holding");
+    state = "idle";
     fill.style.transitionDuration = "200ms";
     fill.style.transform = "scaleX(0)";
   };
+  const cancel = () => {
+    if (state !== "holding") return;
+    button.removeAttribute("data-holding");
+    empty();
+  };
+  const reset = () => {
+    if (state !== "confirmed") return;
+    button.removeAttribute("data-confirmed");
+    empty();
+    options.onReset?.();
+  };
+  const confirm = () => {
+    state = "confirmed";
+    holdingPointer = undefined;
+    button.removeAttribute("data-holding");
+    button.setAttribute("data-confirmed", "");
+    fill.style.transform = "scaleX(1)";
+    timer = view.setTimeout(reset, resetMs);
+    options.onConfirm();
+  };
   const start = () => {
-    if (
-      destroyed ||
-      button.disabled ||
-      button.getAttribute("aria-disabled") === "true" ||
-      active
-    )
-      return;
-    active = true;
+    if (destroyed || isDisabled() || state !== "idle") return;
+    state = "holding";
     button.setAttribute("data-holding", "");
     fill.style.transitionDuration = `${duration}ms`;
     fill.style.transform = "scaleX(1)";
     timer = view.setTimeout(() => {
       timer = undefined;
-      if (button.disabled || button.getAttribute("aria-disabled") === "true")
-        return cancel();
-      button.removeAttribute("data-holding");
-      options.onConfirm();
+      if (isDisabled()) return cancel();
+      confirm();
     }, duration);
   };
   const pointerDown = (event: PointerEvent) => {
     if (event.button !== 0 || event.isPrimary === false) return;
     start();
-    if (active) holdingPointer = event.pointerId;
+    if (state === "holding") holdingPointer = event.pointerId;
   };
   const pointerLeave = (event: PointerEvent) => {
     if (holdingPointer !== undefined && event.pointerId === holdingPointer)
@@ -72,14 +91,10 @@ export function createHoldToConfirm(
     if (event.key === " " || event.key === "Enter") cancel();
   };
   const click = (event: MouseEvent) => {
-    if (
-      event.detail === 0 &&
-      !active &&
-      !button.disabled &&
-      button.getAttribute("aria-disabled") !== "true" &&
-      !destroyed
-    )
-      options.onConfirm();
+    if (event.detail !== 0 || state !== "idle" || isDisabled() || destroyed)
+      return;
+    fill.style.transitionDuration = "200ms";
+    confirm();
   };
   const onEscape = (event: KeyboardEvent) => {
     if (event.key === "Escape") cancel();
@@ -95,8 +110,7 @@ export function createHoldToConfirm(
   view.addEventListener("keydown", onEscape);
   view.addEventListener("blur", cancel);
   const observer = new view.MutationObserver(() => {
-    if (button.disabled || button.getAttribute("aria-disabled") === "true")
-      cancel();
+    if (isDisabled()) cancel();
   });
   observer.observe(button, {
     attributes: true,
@@ -104,10 +118,11 @@ export function createHoldToConfirm(
   });
   return {
     cancel,
+    reset,
     destroy() {
       if (destroyed) return;
       destroyed = true;
-      cancel();
+      view.clearTimeout(timer);
       observer.disconnect();
       button.removeEventListener("pointerdown", pointerDown);
       button.removeEventListener("pointerleave", pointerLeave);
@@ -125,6 +140,8 @@ export function createHoldToConfirm(
       else button.setAttribute("style", originalStyle);
       if (originalHolding === null) button.removeAttribute("data-holding");
       else button.setAttribute("data-holding", originalHolding);
+      if (originalConfirmed === null) button.removeAttribute("data-confirmed");
+      else button.setAttribute("data-confirmed", originalConfirmed);
     },
   };
 }
