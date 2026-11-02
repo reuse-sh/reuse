@@ -3,7 +3,7 @@
   "servers": [
     {
       "name": "site",
-      "command": "pnpm --filter @reuse-sh/site exec next dev --hostname 127.0.0.1 --port {port}",
+      "command": "env REUSE_PORT={port} pnpm dev",
       "portRange": [4301, 4399]
     }
   ],

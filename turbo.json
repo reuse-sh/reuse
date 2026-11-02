@@ -25,5 +25,6 @@
       "outputs": []
     }
   },
-  "globalDependencies": ["tsconfig.base.json", "scripts/*.mjs"]
+  "globalDependencies": ["tsconfig.base.json", "scripts/*.mjs"],
+  "globalPassThroughEnv": ["REUSE_PORT"]
 }

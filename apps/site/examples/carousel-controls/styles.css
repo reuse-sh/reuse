@@ -6,9 +6,9 @@
     0 2px 4px rgb(0 0 0 / 2%);
   --re-cc-hover: rgb(0 0 0 / 3%);
   --re-cc-ui-ease: cubic-bezier(0.23, 1, 0.32, 1);
-  font:
-    15px / 24px system-ui,
-    sans-serif;
+  font: inherit;
+  font-size: 15px;
+  line-height: 24px;
   width: 100%;
 }
 .re-cc *,

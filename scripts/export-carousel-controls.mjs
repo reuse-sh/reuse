@@ -60,7 +60,9 @@ await write(
   --re-cc-shadow-control: 0 0 0 .5px rgb(0 0 0 / 8%), 0 1px 2px rgb(0 0 0 / 5%), 0 2px 4px rgb(0 0 0 / 2%);
   --re-cc-hover: rgb(0 0 0 / 3%);
   --re-cc-ui-ease: cubic-bezier(0.23, 1, 0.32, 1);
-  font: 15px / 24px system-ui, sans-serif;
+  font: inherit;
+  font-size: 15px;
+  line-height: 24px;
   width: 100%;
 }
 .re-cc *, .re-cc *::before, .re-cc *::after { box-sizing: border-box; }
@@ -86,7 +88,7 @@ const slides = photos
 await write(
   "index.html",
   `<!doctype html>
-<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Carousel controls</title><link rel="stylesheet" href="./styles.css"></head><body>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Carousel controls</title><link rel="stylesheet" href="./styles.css"></head><body style="font:15px/24px system-ui,sans-serif">
 <section class="re-cc">
 <fieldset class="re-cc-seg" disabled><legend class="re-cc-sr-only">Carousel control style</legend>
 ${styles.map((style, index) => `<label class="re-cc-seg-item" data-re-row${index === 0 ? ' data-current=""' : ""}><input type="radio" name="re-cc-style" class="re-cc-sr-only" value="${style.name}"${index === 0 ? " checked" : ""}>${style.name}</label>`).join("\n")}
