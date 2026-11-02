@@ -1,5 +1,15 @@
 # @reuse-sh/carousel
 
+## 0.1.0
+
+### Minor Changes
+
+- b118549: A released mouse drag now keeps its speed and glides to the slide nearest where it would stop, like trackpad momentum. Dragging past either end stretches the strip, and it springs back on release. A press that stops a moving strip no longer clicks the slide under it. The viewport shows a grab cursor while a mouse drag can move it. The lightbox gets the same dragging through its carousel and still moves one photo per flick.
+
+### Patch Changes
+
+- d2eaadb: A mouse drag past either end stretches less and stops growing at 120px, or 30% of a narrow strip, closer to trackpad overscroll.
+
 ## 0.0.4
 
 ### Patch Changes
