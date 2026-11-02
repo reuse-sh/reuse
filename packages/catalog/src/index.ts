@@ -1147,7 +1147,7 @@ export const libraries: Library[] = [
     principles: [
       [
         "Cut, never paint",
-        "Badges and overlaps are masks through the image, so no painted ring fights the background.",
+        "Badges and overlaps are vector clips through the avatar, so no painted ring fights the background and the edge stays sharp at any zoom.",
       ],
       [
         "Keep initials underneath",
@@ -1185,7 +1185,7 @@ export const libraries: Library[] = [
       ],
       [
         "createAvatarGroup(root, options?)",
-        "Overlaps avatars and cuts each one where the next covers it. Options: overlap, 12 by default, and clearance, 2.",
+        "Overlaps avatars and cuts each one, badge included, where the next covers it. Options: overlap, 12 by default, and clearance, 2.",
       ],
       ["getInitials(name)", "Initials for a name, safe for emoji and accents."],
       ["Avatar, AvatarGroup", "The React components around the same code."],
@@ -1288,6 +1288,7 @@ export function pagePrompt(library: Library, path: string) {
 
 export const toolGroups = [
   "Icons",
+  "Images",
   "Components",
   "Motion and numbers",
   "Code",
@@ -1317,6 +1318,13 @@ export const tools: readonly Tool[] = [
     reason:
       "An open-source icon set with a consistent stroke, drawn by a community and shipped for most frameworks.",
     group: "Icons",
+  },
+  {
+    name: "Boring Avatars",
+    url: "https://boringavatars.com",
+    reason:
+      "Generated SVG avatars from a name and a palette. The marble textures across this site follow its marble variant.",
+    group: "Images",
   },
   {
     name: "shadcn/ui",
