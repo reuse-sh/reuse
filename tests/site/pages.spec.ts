@@ -8,6 +8,9 @@ const concurrency = 4;
 
 async function problems(context: BrowserContext, path: string) {
   const page = await context.newPage();
+  await page.route("https://cdn.visitors.now/v.js", (route) =>
+    route.fulfill({ contentType: "application/javascript", body: "" }),
+  );
   const found: string[] = [];
   page.on("console", (message) => {
     if (message.type() === "error") found.push(`console: ${message.text()}`);
@@ -41,6 +44,18 @@ async function problems(context: BrowserContext, path: string) {
   await page.close();
   return found.map((problem) => `${path} ${problem}`);
 }
+
+test("unavailable analytics does not prevent page navigation", async ({
+  page,
+}) => {
+  await page.route("https://cdn.visitors.now/v.js", (route) => route.abort());
+  await page.goto("/");
+  await page.getByRole("link", { name: "Start with Lightbox" }).click();
+  await expect(page).toHaveURL("/lightbox");
+  await expect(
+    page.getByRole("heading", { name: "Lightbox", exact: true }),
+  ).toBeVisible();
+});
 
 for (const viewport of viewports) {
   test.describe(`${viewport.width}px`, () => {
