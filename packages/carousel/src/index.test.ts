@@ -1316,11 +1316,19 @@ describe("one state for every control", () => {
     carousel.next();
     vi.advanceTimersByTime(1000);
     carousel.pause();
+    carousel.play();
+    viewport.addEventListener("re-carousel:change", () => carousel.pause(), {
+      once: true,
+    });
+    carousel.next();
     expect(events).toEqual([
       "play 0 true",
       "change 1 true",
       "settle 1 true",
       "pause 1 false",
+      "play 1 true",
+      "pause 2 false",
+      "change 2 true",
     ]);
   });
 
@@ -1390,10 +1398,10 @@ describe("one state for every control", () => {
     expect(slides[7].hasAttribute("aria-label")).toBe(false);
     vi.advanceTimersByTime(1100);
     expect(carousel.getState().index).toBe(1);
-    expect(viewport.nextElementSibling).toBeNull();
-    carousel.next();
     const live = viewport.nextElementSibling as HTMLElement;
     expect(live.getAttribute("aria-live")).toBe("polite");
+    expect(live.textContent).toBe("");
+    carousel.next();
     expect(live.textContent).toBe("3 of 8");
     viewport.dispatchEvent(
       new KeyboardEvent("keydown", { key: "End", bubbles: true }),
@@ -1645,6 +1653,10 @@ describe("controls binder", () => {
     expect(bar.getAttribute("aria-valuenow")).toBe("2");
     key("End");
     expect(carousel.getState().index).toBe(5);
+    key("ArrowDown");
+    expect(carousel.getState().index).toBe(4);
+    key("ArrowUp");
+    expect(carousel.getState().index).toBe(5);
     key("PageDown");
     expect(carousel.getState().index).toBe(4);
     key("Home");
@@ -1661,7 +1673,11 @@ describe("controls binder", () => {
   });
 
   it("finds controls outside the root by the viewport id and windows the dots", () => {
-    const { root, carousel } = bound("", Array(8).fill(100), 100);
+    const { root, carousel } = bound(
+      '<div data-carousel-controls="thumbs"><button data-carousel-next></button></div>',
+      Array(8).fill(100),
+      100,
+    );
     const outside = document.createElement("div");
     outside.dataset.carouselControls = "photos";
     outside.innerHTML = "<div data-carousel-dots></div>";
@@ -1677,6 +1693,8 @@ describe("controls binder", () => {
         .join(" ");
     expect(dots).toHaveLength(8);
     expect(shown()).toBe("0 1 2 3n 4f");
+    click(root.querySelector("[data-carousel-next]"));
+    expect(carousel.getState().index).toBe(0);
     carousel.goTo(3, "instant");
     expect(shown()).toBe("0 1 2 3 4f");
     carousel.goTo(4, "instant");
@@ -1684,6 +1702,18 @@ describe("controls binder", () => {
     carousel.goTo(7, "instant");
     expect(shown()).toBe("3f 4n 5 6 7");
     unbind();
+    for (const [size, expected] of [
+      [1, "7"],
+      [3, "5f 6n 7"],
+    ] as const) {
+      const again = bindCarouselControls(root, carousel, { dotsWindow: size });
+      dots.splice(0, dots.length, ...outside.querySelectorAll("button"));
+      expect(shown()).toBe(expected);
+      carousel.goTo(0, "instant");
+      expect(shown()).toBe(size === 1 ? "0" : "0 1n 2f");
+      carousel.goTo(7, "instant");
+      again();
+    }
     expect(outside.querySelectorAll("button")).toHaveLength(0);
   });
 });

@@ -284,7 +284,12 @@ export function createCarousel(
   let runningSince: number | undefined;
   let clockFrame = 0;
   let unsettled = false;
-  let live: HTMLElement | undefined;
+  // Screen readers announce changes to a live region already in the page, not one inserted with its text.
+  const live = document.createElement("div");
+  live.setAttribute("aria-live", "polite");
+  live.setAttribute("aria-atomic", "true");
+  live.style.cssText =
+    "position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; border: 0; overflow: hidden; clip-path: inset(50%); white-space: nowrap;";
   const ownsRole = generic(viewport);
   const roled = new Map<HTMLElement, boolean>();
   let state: CarouselState = Object.freeze({
@@ -301,6 +306,7 @@ export function createCarousel(
     visible: Object.freeze([]),
     autoplayProgress: 0,
   });
+  let emitted = state;
 
   function listen(
     target: EventTarget,
@@ -457,11 +463,11 @@ export function createCarousel(
     return shown;
   }
 
-  function emit(type: string) {
+  function emit(type: string, detail: CarouselState) {
     viewport.dispatchEvent(
       new window.CustomEvent(`re-carousel:${type}`, {
         bubbles: true,
-        detail: state,
+        detail,
       }),
     );
   }
@@ -516,13 +522,15 @@ export function createCarousel(
     ) {
       return;
     }
-    const previous = state;
-    state = Object.freeze(next);
-    options.onChange?.(state);
-    for (const listener of listeners) listener(state);
-    if (state.index !== previous.index) emit("change");
-    if (state.isPlaying !== previous.isPlaying)
-      emit(state.isPlaying ? "play" : "pause");
+    const from = emitted;
+    const to = Object.freeze(next);
+    state = to;
+    emitted = to;
+    options.onChange?.(to);
+    for (const listener of listeners) listener(to);
+    if (to.index !== from.index) emit("change", to);
+    if (to.isPlaying !== from.isPlaying)
+      emit(to.isPlaying ? "play" : "pause", to);
   }
 
   function tick() {
@@ -762,7 +770,7 @@ export function createCarousel(
     schedule();
     if (unsettled) {
       unsettled = false;
-      emit("settle");
+      emit("settle", state);
     }
   }
 
@@ -934,14 +942,7 @@ export function createCarousel(
   }
 
   function say(text: string) {
-    if (!live) {
-      live = document.createElement("div");
-      live.setAttribute("aria-live", "polite");
-      live.setAttribute("aria-atomic", "true");
-      live.style.cssText =
-        "position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; border: 0; overflow: hidden; clip-path: inset(50%); white-space: nowrap;";
-      viewport.after(live);
-    }
+    if (!live.isConnected) viewport.after(live);
     live.textContent = text;
   }
 
@@ -1258,8 +1259,10 @@ export function createCarousel(
       for (const name of changed)
         Object.assign(options, { [name]: next[name] });
       if (changed.includes("autoplay")) {
-        if (options.autoplay === undefined) requestedPlaying = false;
-        else if (!hadAutoplay) requestedPlaying = true;
+        if (options.autoplay === undefined) {
+          requestedPlaying = false;
+          viewport.style.removeProperty("--re-carousel-autoplay-progress");
+        } else if (!hadAutoplay) requestedPlaying = true;
         waited = 0;
         runningSince = undefined;
       }
@@ -1293,7 +1296,7 @@ export function createCarousel(
         viewport.removeAttribute("aria-roledescription");
       }
       for (const [slide, ownsLabel] of roled) unlabel(slide, ownsLabel);
-      live?.remove();
+      live.remove();
       const restoredPosition = span
         ? (targets[state.index] ?? span) - span
         : position();
@@ -1435,6 +1438,7 @@ export function createCarousel(
     viewport.setAttribute("role", "region");
     viewport.setAttribute("aria-roledescription", "carousel");
   }
+  viewport.after(live);
   listen(viewport, "scroll", () => {
     if (!enabled) {
       if (Math.abs(position() - disabledPosition) > 0.5) {

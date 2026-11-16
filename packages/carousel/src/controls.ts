@@ -71,7 +71,12 @@ export function bindCarouselControls(
       for (const element of scope.querySelectorAll<T>(selector))
         found.add(element);
     }
-    return [...found];
+    return [...found].filter(
+      (element) =>
+        (element
+          .closest("[data-carousel-controls]")
+          ?.getAttribute("data-carousel-controls") ?? id) === id,
+    );
   }
 
   function disable(element: HTMLElement, disabled: boolean) {
@@ -144,8 +149,10 @@ export function bindCarouselControls(
       }
       const shown = Math.min(dotsWindow ?? dots.length, dots.length);
       const active = state.pageIndex;
-      if (active < start + 1) start = active - 1;
-      if (active > start + shown - 2) start = active - shown + 2;
+      const margin = shown >= 3 ? 1 : 0;
+      if (active < start + margin) start = active - margin;
+      if (active > start + shown - 1 - margin)
+        start = active - shown + 1 + margin;
       start = Math.max(0, Math.min(start, dots.length - shown));
       const end = start + shown;
       dots.forEach((dot, page) => {
@@ -314,8 +321,10 @@ export function bindCarouselControls(
       const key = (event as KeyboardEvent).key;
       const forward = rtl() ? "ArrowLeft" : "ArrowRight";
       const back = rtl() ? "ArrowRight" : "ArrowLeft";
-      if (key === forward || key === "PageUp") carousel.next();
-      else if (key === back || key === "PageDown") carousel.prev();
+      if (key === forward || key === "ArrowUp" || key === "PageUp")
+        carousel.next();
+      else if (key === back || key === "ArrowDown" || key === "PageDown")
+        carousel.prev();
       else if (key === "Home") goToPage(0);
       else if (key === "End") goToPage(carousel.getState().pageCount - 1);
       else return;
