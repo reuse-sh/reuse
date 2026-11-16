@@ -86,7 +86,6 @@ function scrollPadding(viewport: HTMLElement, value: string): number {
   return padding;
 }
 
-// A list, a figure or a button keeps its own role; only a div or span takes the carousel's.
 function generic(element: HTMLElement) {
   return (
     !element.hasAttribute("role") &&
@@ -287,7 +286,6 @@ export function createCarousel(
   let unsettled = false;
   let live: HTMLElement | undefined;
   const ownsRole = generic(viewport);
-  // Slides given a role by the carousel, and whether their label is the carousel's too.
   const roled = new Map<HTMLElement, boolean>();
   let state: CarouselState = Object.freeze({
     index: 0,
@@ -468,7 +466,6 @@ export function createCarousel(
     );
   }
 
-  // A new slide starts the autoplay wait again, whatever moved the strip there.
   function restartWait() {
     waited = 0;
     if (runningSince !== undefined) runningSince = window.performance.now();
@@ -547,7 +544,6 @@ export function createCarousel(
     schedule();
   }
 
-  // Pausing keeps what is left of the wait; the clock runs only while autoplay plays.
   function schedule() {
     const playing = !destroyed && isPlaying();
     const now = window.performance.now();
@@ -829,7 +825,6 @@ export function createCarousel(
       span > 0
         ? ((rounded % slides.length) + slides.length) % slides.length
         : clamp(rounded, slides.length - 1);
-    // A strip that does not overflow yet keeps the slide; the first refresh that finds overflow scrolls to it.
     if (max <= 0) {
       publish(next);
       return;
@@ -917,7 +912,6 @@ export function createCarousel(
     return current + direction * (options.group ?? 1);
   }
 
-  // The stops next() reaches from the first slide, one per distinct position.
   function measurePages() {
     if (!slides.length) return [];
     const found = [0];
@@ -951,7 +945,6 @@ export function createCarousel(
     live.textContent = text;
   }
 
-  // Buttons and keys announce the slide they reach; autoplay, drags and swipes stay quiet.
   function announced(move: () => void) {
     const before = state.index;
     move();

@@ -39,7 +39,6 @@ export function bindCarouselControls(
     cleanup.push(() => target.removeEventListener(type, listener));
   }
 
-  // Every attribute the binder writes is put back as it was.
   function keep(element: Element, ...names: string[]) {
     for (const name of names) {
       const value = element.getAttribute(name);
@@ -92,11 +91,11 @@ export function bindCarouselControls(
     );
   }
 
-  function goToPage(page: number) {
-    const pages = strip?.pages() ?? [];
+  const goToPage = (page: number) => {
+    const pages = strip.pages();
     const target = pages[Math.max(0, Math.min(page, pages.length - 1))];
-    if (target) strip?.goTo(target.index, "smooth", true);
-  }
+    if (target) strip.goTo(target.index, "smooth", true);
+  };
 
   for (const [selector, direction] of [
     ["[data-carousel-prev]", -1],

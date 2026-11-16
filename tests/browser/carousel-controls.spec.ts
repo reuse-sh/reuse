@@ -40,7 +40,6 @@ async function setup(page: Page, options: Record<string, unknown> = {}) {
   }, options);
 }
 
-// What the state says and what each control shows, read in one frame.
 function snapshot(page: Page) {
   return page.evaluate(() => {
     const { carousel, events } = window as unknown as {
