@@ -14,6 +14,14 @@ These are the rules the code keeps. An adaptation on any framework keeps them to
 - **Zoom around the point you touch.** Pinch, wheel and double-tap zoom around the pointer or fingers, and panning stops at the image's edges.
 - **Keep focus inside and give it back.** The viewer is a native modal dialog, and closing it returns focus to the element that opened it.
 - **Leave the page as it was.** Destroy restores the page scroll, the hidden thumbnail, and every style and listener the viewer touched.
+- **Behave like the platform's photo viewer.** Gestures, keys and timing match iOS Photos, macOS Photos and Google Photos unless a recorded decision says otherwise.
+- **Dismiss like a photos app.** A vertical swipe carries the photo, fades the backdrop and the controls with it, and closes past a distance or a speed. A cancelled pointer never closes.
+- **Let the photo lead.** Controls fade in after the photo starts moving and leave before it. They hide while zoomed and after a still pointer, never while hovered or focused.
+- **Return to what is on screen.** Close goes back to the current photo's tile, after bringing it into view in its own carousel, and fades in place when the tile cannot be seen or the strip is still moving.
+- **Fetch the pixels the screen shows.** Each image loads the source that fits the rendered size, a zoom asks for more, and the preview stays until the sharper file has decoded.
+- **Zoom to real pixels.** Zoom levels follow the image's own resolution. Panning stretches past the edge and glides on release.
+- **Never block a frame.** No layout read or framework render runs per pointer move, scroll or wheel event.
+- **Give focus back quietly.** Focus returns to the photo's tile without a ring after a pointer close, and with one after a keyboard close.
 
 <!-- principles:end -->
 
@@ -21,6 +29,19 @@ These are the rules the code keeps. An adaptation on any framework keeps them to
 
 ```sh
 npm install @reuse-sh/lightbox
+```
+
+## Browser build
+
+For a page without a bundler or an import map, such as a theme or a plugin, copy `dist/browser/` and `dist/styles.css` from the package into your assets. `lightbox.js` is one minified ES module with a source map and no imports, with the carousel inside it.
+
+```html
+<link rel="stylesheet" href="/assets/lightbox/styles.css" />
+<script type="module">
+  import { bindLightboxGallery } from "/assets/lightbox/browser/lightbox.js";
+
+  const gallery = bindLightboxGallery(document.querySelector("#gallery"), {});
+</script>
 ```
 
 <!-- examples:start -->
@@ -115,19 +136,6 @@ gallery.destroy();
 ```
 
 <!-- examples:end -->
-
-## Browser build
-
-For a page without a bundler or an import map, such as a theme or a plugin, copy `dist/browser/` and `dist/styles.css` from the package into your assets. `lightbox.js` is one minified ES module with a source map and no imports, with the carousel inside it.
-
-```html
-<link rel="stylesheet" href="/assets/lightbox/styles.css" />
-<script type="module">
-  import { bindLightboxGallery } from "/assets/lightbox/browser/lightbox.js";
-
-  const gallery = bindLightboxGallery(document.querySelector("#gallery"), {});
-</script>
-```
 
 ## Documentation
 

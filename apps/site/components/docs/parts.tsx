@@ -3,6 +3,7 @@ import {
   docPages,
   installCommand,
   type Library,
+  type Principle,
   type Row,
 } from "@reuse-sh/catalog";
 import type { ReactNode } from "react";
@@ -104,7 +105,7 @@ export function Principles({
   rows,
   icons,
 }: {
-  rows: readonly Row[];
+  rows: readonly Principle[];
   icons: readonly DocIconName[];
 }) {
   return (

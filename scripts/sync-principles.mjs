@@ -1,4 +1,4 @@
-import { readdir, readFile, writeFile } from "node:fs/promises";
+import { access, readdir, readFile, writeFile } from "node:fs/promises";
 import { join, relative } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -65,8 +65,18 @@ for (const entry of await readdir(packages, { withFileTypes: true })) {
   else await writeFile(file, next);
 }
 
-if (stale.length > 0) {
-  for (const file of stale)
-    console.error(`${file} is out of date. Run pnpm principles.`);
-  process.exit(1);
+const missing = [];
+for (const library of libraries) {
+  for (const [title, , test] of library.principles) {
+    if (test === undefined) continue;
+    await access(join(root, test)).catch(() => missing.push({ title, test }));
+  }
 }
+
+for (const file of stale)
+  console.error(`${file} is out of date. Run pnpm principles.`);
+for (const { title, test } of missing)
+  console.error(
+    `The principle "${title}" names ${test}, which does not exist.`,
+  );
+if (stale.length > 0 || missing.length > 0) process.exit(1);
