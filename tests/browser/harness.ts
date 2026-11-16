@@ -29,6 +29,7 @@ export async function mount(
   "@reuse-sh/loaders":"/modules/loaders/index.js",
   "@reuse-sh/gradients":"/modules/gradients/index.js",
   "@reuse-sh/lightbox":"/modules/lightbox/index.js",
+  "@reuse-sh/gallery":"/modules/gallery/index.js",
   "@reuse-sh/core/escape-html":"/modules/core/escape-html.js"
 }}</script>
 ${styles.map((href) => `<link rel="stylesheet" href="/modules/${href}">`).join("")}
