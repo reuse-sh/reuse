@@ -273,4 +273,19 @@ describe("createMasonry", () => {
     expect(spinner.style.gridColumn).toBe("");
     expect(items()[1].style.gridColumn).toBe("1 / span 1");
   });
+
+  it("measures lanes that differ by a rounding hair once", () => {
+    const { container, items } = masonry([100, 50, 80, 40]);
+    container.style.gridTemplateColumns = "100px 100.015625px 100px";
+    let reads = 0;
+    for (const item of items()) {
+      const read = item.getBoundingClientRect;
+      item.getBoundingClientRect = () => {
+        reads++;
+        return read.call(item);
+      };
+    }
+    createMasonry(container);
+    expect(reads).toBe(items().length);
+  });
 });
