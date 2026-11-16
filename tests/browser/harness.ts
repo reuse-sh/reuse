@@ -161,8 +161,8 @@ async function synthesizeTouches(
 
 // Steps follow the clock because some engines' input calls take longer than a frame.
 async function* timeline(page: Page, duration: number) {
-  const start = Date.now();
   yield 0;
+  const start = Date.now();
   for (let share = 0; share < 1; ) {
     await page.waitForTimeout(16);
     share = Math.min(1, (Date.now() - start) / duration);

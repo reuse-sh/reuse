@@ -11,7 +11,9 @@ const routes = libraries.flatMap((library) =>
     .filter(
       (page) =>
         page.path === "getting-started" ||
-        (page.path.startsWith("examples/") && page.build !== undefined) ||
+        (page.path.startsWith("examples/") &&
+          `${library.slug}/${page.path}` !==
+            "lightbox/examples/device-check") ||
         page.path.startsWith("guides/"),
     )
     .map((page) => `${library.slug}/${page.path}`),

@@ -108,11 +108,11 @@ test.describe("lightbox performance", { tag: "@desktop" }, () => {
     expect(insideListener.scroll ?? 0).toBe(0);
   });
 
-  test("reads no layout inside a wheel listener", async ({ page }) => {
-    test.fail(
-      true,
-      "Ctrl and the wheel zoom around the pointer by reading the viewport rect on every event. The zoom rework removes the read; drop this line then.",
-    );
+  // Ctrl and the wheel zoom around the pointer by reading the viewport rect on every event.
+  // The zoom rework removes the read and turns the last assertion into toBe(0).
+  test("still reads layout inside a wheel listener until the zoom rework", async ({
+    page,
+  }) => {
     const reads = await countLayoutReads(page);
     await mount(page, "", ["lightbox/styles.css"]);
     await page.evaluate(async (src) => {
@@ -126,7 +126,7 @@ test.describe("lightbox performance", { tag: "@desktop" }, () => {
       await page.waitForTimeout(16);
     }
     const { insideListener, eventsHandled } = await reads.read();
-    expect(eventsHandled.wheel).toBeGreaterThan(0);
-    expect(insideListener.wheel ?? 0).toBe(0);
+    expect(eventsHandled.wheel).toBe(6);
+    expect(insideListener.wheel ?? 0).toBeGreaterThan(0);
   });
 });
