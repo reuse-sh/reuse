@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { createCarousel, syncCarousels } from "./index.js";
+import { connectThumbnails, createCarousel, syncCarousels } from "./index.js";
 
 const cleanups: (() => void)[] = [];
 let motion: EventTarget & { matches: boolean };
@@ -42,6 +42,7 @@ function fixture(widths = [100, 100, 100], width = 100, rtl = false, gap = 0) {
     configurable: true,
   });
   Object.defineProperty(viewport, "scrollWidth", {
+    configurable: true,
     get: () =>
       Array.from(viewport.children).reduce(
         (sum, child, index) => sum + widthOf(child) + (index ? gap : 0),
@@ -1162,5 +1163,256 @@ describe("one motion and strip state", () => {
     pointer(viewport, "pointermove", 50);
     pointer(viewport, "pointermove", 60);
     expect(dragging()).toBe(1);
+  });
+});
+
+describe("one state for every control", () => {
+  const eight = () => fixture(Array(8).fill(100), 300);
+
+  it("counts the distinct stops next() reaches as pages", () => {
+    for (const [group, pages] of [
+      [1, 6],
+      [3, 3],
+      ["page", 3],
+    ] as const) {
+      const { viewport } = eight();
+      const carousel = createCarousel(viewport, { group });
+      cleanups.push(carousel.destroy);
+      expect(carousel.getState()).toMatchObject({ count: 8, pageCount: pages });
+      carousel.goTo(7, "instant");
+      expect(carousel.getState().pageIndex).toBe(pages - 1);
+    }
+  });
+
+  it("lists the slides at least half in view and publishes the list only when it changes", () => {
+    const { viewport } = eight();
+    const carousel = createCarousel(viewport);
+    cleanups.push(carousel.destroy);
+    const lists: (readonly number[])[] = [];
+    carousel.subscribe((state) => lists.push(state.visible));
+    expect(carousel.getState().visible).toEqual([0, 1, 2]);
+    carousel.goTo(2);
+    vi.advanceTimersByTime(1000);
+    expect(carousel.getState().visible).toEqual([2, 3, 4]);
+    viewport.scrollLeft = 260;
+    viewport.dispatchEvent(new Event("scroll"));
+    expect(carousel.getState().visible).toEqual([3, 4, 5]);
+    viewport.scrollLeft = 265;
+    viewport.dispatchEvent(new Event("scroll"));
+    expect(new Set(lists).size).toBe(
+      lists.filter((list, at) => list !== lists[at - 1]).length,
+    );
+  });
+
+  it("keeps the rest of the autoplay wait over a hover and starts it again on a new slide", () => {
+    const { viewport } = eight();
+    const carousel = createCarousel(viewport, { autoplay: 5000 });
+    cleanups.push(carousel.destroy);
+    vi.advanceTimersByTime(2000);
+    viewport.dispatchEvent(new Event("pointerenter"));
+    vi.advanceTimersByTime(2000);
+    viewport.dispatchEvent(new Event("pointerleave"));
+    vi.advanceTimersByTime(2999);
+    expect(carousel.getState().index).toBe(0);
+    vi.advanceTimersByTime(1);
+    expect(carousel.getState().index).toBe(1);
+    vi.advanceTimersByTime(3000);
+    carousel.goTo(4, "instant");
+    vi.advanceTimersByTime(4999);
+    expect(carousel.getState().index).toBe(4);
+    vi.advanceTimersByTime(1);
+    expect(carousel.getState().index).toBe(5);
+  });
+
+  it("returns from the last slide to the first on the spring when the strip does not loop", () => {
+    const { viewport } = fixture();
+    const carousel = createCarousel(viewport, { autoplay: 1000 });
+    cleanups.push(carousel.destroy);
+    carousel.goTo(2, "instant");
+    expect(carousel.getState().isPlaying).toBe(true);
+    vi.advanceTimersByTime(1100);
+    expect(carousel.getState().index).toBe(0);
+    expect(viewport.scrollLeft).toBeGreaterThan(0);
+    expect(viewport.scrollLeft).toBeLessThan(200);
+    vi.advanceTimersByTime(600);
+    expect(viewport.scrollLeft).toBe(0);
+  });
+
+  it("writes the autoplay progress every frame, publishes whole percents and freezes it on a hold", () => {
+    const { viewport } = fixture();
+    const carousel = createCarousel(viewport, { autoplay: 1000 });
+    cleanups.push(carousel.destroy);
+    const published: number[] = [];
+    carousel.subscribe((state) => published.push(state.autoplayProgress));
+    vi.advanceTimersByTime(500);
+    const written = Number(
+      viewport.style.getPropertyValue("--re-carousel-autoplay-progress"),
+    );
+    expect(written).toBeGreaterThan(0.45);
+    expect(written).toBeLessThanOrEqual(0.5);
+    expect(
+      published.every(
+        (value) => Math.abs(Math.round(value * 100) - value * 100) < 1e-9,
+      ),
+    ).toBe(true);
+    expect(new Set(published).size).toBe(published.length);
+    carousel.hold("x", true);
+    const frozen = viewport.style.getPropertyValue(
+      "--re-carousel-autoplay-progress",
+    );
+    vi.advanceTimersByTime(2000);
+    expect(
+      viewport.style.getPropertyValue("--re-carousel-autoplay-progress"),
+    ).toBe(frozen);
+    expect(carousel.getState().index).toBe(0);
+  });
+
+  it("stays paused by the visitor after every hold is released", () => {
+    const { viewport } = fixture();
+    const carousel = createCarousel(viewport, { autoplay: 1000 });
+    cleanups.push(carousel.destroy);
+    carousel.pause();
+    carousel.hold("x", true);
+    carousel.hold("x", false);
+    expect(carousel.getState().isPlaying).toBe(false);
+    vi.advanceTimersByTime(3000);
+    expect(carousel.getState().index).toBe(0);
+  });
+
+  it("pauses autoplay while less than half of the strip is in view", () => {
+    let report: (ratio: number) => void = () => {};
+    vi.stubGlobal(
+      "IntersectionObserver",
+      class {
+        constructor(
+          callback: (entries: { intersectionRatio: number }[]) => void,
+        ) {
+          report = (ratio) => callback([{ intersectionRatio: ratio }]);
+        }
+        observe() {}
+        disconnect() {}
+      },
+    );
+    const { viewport } = fixture();
+    const carousel = createCarousel(viewport, { autoplay: 1000 });
+    cleanups.push(carousel.destroy);
+    report(0.4);
+    expect(carousel.getState().isPlaying).toBe(false);
+    report(0.6);
+    expect(carousel.getState().isPlaying).toBe(true);
+  });
+
+  it("dispatches change, settle, play and pause on the viewport with the state", () => {
+    const { viewport } = fixture();
+    const events: string[] = [];
+    for (const type of ["change", "settle", "play", "pause"])
+      document.addEventListener(`re-carousel:${type}`, (event) => {
+        const { detail } = event as CustomEvent;
+        events.push(`${type} ${detail.index} ${detail.isPlaying}`);
+      });
+    const carousel = createCarousel(viewport, { autoplay: 5000 });
+    cleanups.push(carousel.destroy);
+    carousel.next();
+    vi.advanceTimersByTime(1000);
+    carousel.pause();
+    expect(events).toEqual([
+      "play 0 true",
+      "change 1 true",
+      "settle 1 true",
+      "pause 1 false",
+    ]);
+  });
+
+  it("keeps a goTo on a hidden strip for the first refresh that finds overflow", () => {
+    const { viewport, slides } = eight();
+    let hidden = true;
+    Object.defineProperty(viewport, "clientWidth", {
+      get: () => (hidden ? 0 : 300),
+    });
+    Object.defineProperty(viewport, "scrollWidth", {
+      get: () => (hidden ? 0 : 800),
+    });
+    const carousel = createCarousel(viewport);
+    cleanups.push(carousel.destroy);
+    carousel.goTo(2);
+    carousel.goTo(5);
+    vi.advanceTimersByTime(1000);
+    expect(viewport.scrollLeft).toBe(0);
+    hidden = false;
+    carousel.refresh();
+    expect(carousel.getState().index).toBe(5);
+    expect(viewport.scrollLeft).toBe(slides[5].offsetLeft);
+  });
+
+  it("turns the loop on without moving the active slide", () => {
+    const { viewport, slides } = eight();
+    const carousel = createCarousel(viewport);
+    cleanups.push(carousel.destroy);
+    carousel.goTo(2, "instant");
+    const shown = slides[2].offsetLeft - viewport.scrollLeft;
+    carousel.setOptions({ loop: true });
+    expect(carousel.getState()).toMatchObject({ index: 2, isLooping: true });
+    expect(slides[2].offsetLeft - viewport.scrollLeft).toBe(shown);
+    carousel.setOptions({ group: 3 });
+    expect(carousel.getState()).toMatchObject({ index: 2, pageCount: 3 });
+    expect(() => carousel.setOptions({ group: 0 })).toThrow(RangeError);
+  });
+
+  it("starts, changes and stops autoplay and dragging without a rebuild", () => {
+    const { viewport } = eight();
+    const carousel = createCarousel(viewport);
+    cleanups.push(carousel.destroy);
+    carousel.setOptions({ autoplay: 1000 });
+    expect(carousel.getState().isPlaying).toBe(true);
+    vi.advanceTimersByTime(1000);
+    expect(carousel.getState().index).toBe(1);
+    carousel.setOptions({ autoplay: undefined });
+    vi.advanceTimersByTime(3000);
+    expect(carousel.getState()).toMatchObject({ index: 1, isPlaying: false });
+    carousel.setOptions({ drag: false });
+    pointer(viewport, "pointermove", 0, { buttons: 0 });
+    expect(viewport.style.cursor).toBe("");
+    carousel.setOptions({ drag: true });
+    pointer(viewport, "pointermove", 0, { buttons: 0 });
+    expect(viewport.style.cursor).toBe("grab");
+  });
+
+  it("labels the strip and its slides and announces only moves from buttons and keys", () => {
+    const { viewport, slides } = eight();
+    slides[7].setAttribute("role", "listitem");
+    const carousel = createCarousel(viewport, { autoplay: 1000 });
+    cleanups.push(carousel.destroy);
+    expect(viewport.getAttribute("role")).toBe("region");
+    expect(viewport.getAttribute("aria-roledescription")).toBe("carousel");
+    expect(slides[2].getAttribute("aria-label")).toBe("3 of 8");
+    expect(slides[2].getAttribute("aria-roledescription")).toBe("slide");
+    expect(slides[7].hasAttribute("aria-label")).toBe(false);
+    vi.advanceTimersByTime(1100);
+    expect(carousel.getState().index).toBe(1);
+    expect(viewport.nextElementSibling).toBeNull();
+    carousel.next();
+    const live = viewport.nextElementSibling as HTMLElement;
+    expect(live.getAttribute("aria-live")).toBe("polite");
+    expect(live.textContent).toBe("3 of 8");
+    viewport.dispatchEvent(
+      new KeyboardEvent("keydown", { key: "End", bubbles: true }),
+    );
+    expect(live.textContent).toBe("8 of 8");
+    carousel.goTo(0);
+    expect(live.textContent).toBe("8 of 8");
+    carousel.destroy();
+    expect(viewport.hasAttribute("role")).toBe(false);
+    expect(slides[2].hasAttribute("aria-label")).toBe(false);
+    expect(slides[7].getAttribute("role")).toBe("listitem");
+    expect(viewport.nextElementSibling).toBeNull();
+  });
+
+  it("uses the strings option for slide labels", () => {
+    const { viewport, slides } = fixture();
+    const carousel = createCarousel(viewport, {
+      strings: { slide: (index, count) => `Photo ${index + 1}/${count}` },
+    });
+    cleanups.push(carousel.destroy);
+    expect(slides[0].getAttribute("aria-label")).toBe("Photo 1/3");
   });
 });

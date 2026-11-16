@@ -15,9 +15,12 @@ CarouselOptions:
 - releaseDuration?: number, milliseconds, default 260, the spring time for a slow release and for the return from a stretched end
 - moveMotion?: "spring" | "native", default spring. next, prev, goTo, the arrow keys, Home and End travel on the same critically damped spring as a released drag, settling in 500ms. A move during a move redirects the spring, keeps its speed and counts from its target. The spring crosses the loop seam. native keeps the browser smooth scroll. goTo(index, "instant") and reduced motion jump.
 - wheel?: "vertical", off by default. A vertical mouse wheel (line or page deltaMode, or |deltaY| >= 50 per event) moves one slide per notch and lets the page scroll once the strip cannot move that way; trackpads stay native.
+- strings?: Partial<CarouselStrings>, the slide labels and announcements
 - onChange?: (state: CarouselState) => void
 
-CarouselState: index, count, progress, canPrev, canNext, isPlaying, isDragging, isLooping. index is zero-based; progress is 0..1. isLooping is true only while the slides can cover the viewport and the loop actually repeats them. getState returns a stable snapshot until something actually changes.
+CarouselState: index, count, progress, canPrev, canNext, isPlaying, isDragging, isLooping, pageCount, pageIndex, visible, autoplayProgress. index is zero-based; progress is 0..1. isLooping is true only while the slides can cover the viewport and the loop actually repeats them. pageCount is the number of distinct stops next() reaches from the first slide (fewer than count with group N or "page", or when the last slides share the end position), and pageIndex is the last page whose position is at or before the active slide's. visible lists the slides at least half inside the viewport, in index order, measured during scrolling and replaced only when it changes. autoplayProgress is the part of the autoplay wait that has passed, 0..1 in whole percents. getState returns a stable snapshot until something actually changes.
+
+CarouselStrings: previous ("Previous slide"), next ("Next slide"), goTo(index, count) ("Go to slide 3 of 8"), counter(index, count) ("3 / 8"), slide(index, count) ("3 of 8"), play ("Play slideshow"), pause ("Pause slideshow"), progress ("Slide position"). index is zero-based, like the state's.
 
 Carousel methods:
 - next(), prev()
@@ -27,7 +30,16 @@ Carousel methods:
 - refresh(): void, remeasure dynamic content while retaining the active element where possible
 - setEnabled(enabled: boolean): void, temporarily suspend user scrolling and dragging, used for lightbox zoom
 - play(), pause(), hold(reason: string, isHeld: boolean)
+- setOptions(options: Pick<CarouselOptions, "autoplay" | "loop" | "group" | "align" | "drag">): void, applies the options it is given without rebuilding and keeps the active slide in place
 - destroy(): void, idempotent, restore owned DOM/style/listeners and cancel all pending work
+
+Autoplay waits for its interval, then moves on; on the last slide of a strip that does not loop it returns to the first slide the same way. Hover, focus, a drag, a hidden page, a strip less than half visible, reduced motion and hold() pause it and keep what is left of the wait. Any change of index starts the wait again. pause() by the visitor outlasts every hold(): releasing the holds does not resume it. --re-carousel-autoplay-progress on the viewport carries the passed part of the wait, written every frame while autoplay plays and left in place while it pauses.
+
+DOM events on the viewport, bubbling, with the state in detail: re-carousel:change when index changes, re-carousel:settle when a move comes to rest, re-carousel:play and re-carousel:pause when isPlaying changes.
+
+A goTo while the strip does not overflow (a hidden tab, display: none, images not loaded) only sets the index; the first refresh that finds overflow scrolls to that slide at once. A later goTo replaces it.
+
+A viewport without a role gets role="region" and aria-roledescription="carousel"; a slide without a role gets role="group", aria-roledescription="slide" and, without its own label, aria-label from strings.slide. next(), prev() and the keys announce the slide they reach in a polite live region placed after the viewport; autoplay, goTo from code, drags and swipes do not. destroy removes all of it.
 
 A touch, a mouse press, a wheel and a scroll from outside the carousel stop a running spring where it is, and the strip snaps to the nearest point.
 
@@ -48,30 +60,6 @@ The React adapter belongs to the package and uses this same controller, not a du
 ## Planned
 
 The carousel and lightbox work in progress adds the names below. They are fixed now so the lightbox and the controls can be built against them. Each moves into the sections above once the code ships it.
-
-### Controls, state and events
-
-CarouselOptions:
-- strings?: Partial<CarouselStrings>
-
-CarouselState additions: pageCount, pageIndex, visible (readonly number[], slides at least half visible), autoplayProgress (0..1).
-
-Carousel method additions:
-- setOptions(options: Pick<CarouselOptions, "autoplay" | "loop" | "group" | "align" | "drag">): void, keeps the position
-
-CarouselStrings: previous ("Previous slide"), next ("Next slide"), goTo(index, count) ("Go to slide 3 of 8"), counter(index, count) ("3 / 8"), slide(index, count) ("3 of 8"), play ("Play slideshow"), pause ("Pause slideshow"), progress ("Slide position").
-
-DOM events on the viewport, bubbling, with the state in detail: re-carousel:change, re-carousel:settle, re-carousel:play, re-carousel:pause.
-
-Custom property: --re-carousel-autoplay-progress on the viewport.
-
-A goTo before the strip overflows is kept and runs on the first refresh that finds overflow. pause() by the visitor outlasts every hold().
-
-Entry point @reuse-sh/carousel/controls:
-- bindCarouselControls(root: HTMLElement, carousel: Carousel, options?: { strings?: Partial<CarouselStrings>; dotsWindow?: number }): () => void. Binds [data-carousel-prev], [data-carousel-next], [data-carousel-dots], [data-carousel-counter] (data-roll), [data-carousel-play] and [data-carousel-progress], also outside root through data-carousel-controls="<viewport id>". The returned function removes every listener and created element.
-
-Main entry addition:
-- connectThumbnails(main: Carousel, thumbnails: Carousel): () => void. Keeps the active thumbnail visible and centered, sets aria-current="true" on it, and moves the main strip on a thumbnail click.
 
 ### Effects, marquee and groups
 
