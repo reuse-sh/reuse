@@ -78,7 +78,11 @@ function world(): World {
   };
 }
 
-it("agrees with the lightbox under every order of four events", async () => {
+// Exhaustive: 225ms locally, 3.1-5.2s on the 2-vCPU Checks runner beside the
+// other packages' model checks, past vitest's 5s default.
+it("agrees with the lightbox under every order of four events", {
+  timeout: 30_000,
+}, async () => {
   const verdict = await explore(world, 4);
   expect(
     verdict.ok ? "holds" : `${verdict.broke}: ${verdict.path.join(" → ")}`,

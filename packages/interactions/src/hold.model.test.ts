@@ -99,7 +99,11 @@ function world(): World {
   };
 }
 
-it("keeps its principles under every order of four events", async () => {
+// Exhaustive: 48ms locally, 1.9s on the 2-vCPU Checks runner beside the other
+// packages' model checks, which pushed carousel's past vitest's 5s default.
+it("keeps its principles under every order of four events", {
+  timeout: 30_000,
+}, async () => {
   const verdict = await explore(world, 4);
   expect(
     verdict.ok ? "holds" : `${verdict.broke}: ${verdict.path.join(" → ")}`,
