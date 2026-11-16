@@ -496,10 +496,10 @@ test.describe("masonry", () => {
   test("measures items in their own lane under auto-fit, and reads a percentage row gap as none", async ({
     page,
   }) => {
-    const layout = async (columns: string, rowGap: string) => {
+    const layout = async (columns: string, rowGap: string, width = 800) => {
       await mount(
         page,
-        `<style>#masonry{width:800px;column-gap:10px;row-gap:${rowGap};grid-template-columns:${columns}}#masonry>div{background:#ccc}#masonry img{display:block;width:100%;height:auto}</style>
+        `<style>#masonry{width:${width}px;column-gap:10px;row-gap:${rowGap};grid-template-columns:${columns}}#masonry>div{background:#ccc}#masonry img{display:block;width:100%;height:auto}</style>
 <div id="masonry" class="re-masonry">${heights
           .slice(0, 12)
           .map(
@@ -531,6 +531,16 @@ test.describe("masonry", () => {
     expect(await layout("repeat(auto-fill, minmax(150px, 1fr))", "5%")).toEqual(
       filled,
     );
+    // Tracks of a fractional width differ by a hair, so the lanes are
+    // measured one start at a time: auto-fit must not collapse then either.
+    const uneven = await layout(
+      "repeat(auto-fill, minmax(150px, 1fr))",
+      "0px",
+      812,
+    );
+    expect(
+      await layout("repeat(auto-fit, minmax(150px, 1fr))", "0px", 812),
+    ).toEqual(uneven);
   });
 
   test("places the items again when a picture grows and when items change", async ({

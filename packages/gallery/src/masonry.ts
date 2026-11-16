@@ -180,37 +180,26 @@ export function createMasonry(container: HTMLElement): Masonry {
       view.getComputedStyle(container).gridTemplateColumns,
     );
     const spans = authored.map((item) => Math.min(lanes, item.span));
-    // An item's height depends on its lane's width, so lanes of different
-    // widths measure every item at every start it could take.
     const even = tracks.every((track) => track === tracks[0]);
     const sizes = items.map(() => [] as number[]);
     const outer = (item: HTMLElement, index: number) =>
       item.getBoundingClientRect().height +
       authored[index].margin +
       (Number.parseFloat(view.getComputedStyle(item).marginBottom) || 0);
-    if (even) {
-      // Equal lanes give an item one height wherever it lands, so it is
-      // measured spread out as above, with every lane still held.
+    // Measured with every lane holding an item, as the widths were read:
+    // equal lanes once, in place; lanes of different widths once per lane,
+    // each pass turning every item one lane further round, so each item is
+    // measured at every start it could take.
+    for (let turn = 0; turn < (even ? 1 : lanes); turn++) {
+      const starts = items.map((_, index) =>
+        Math.min((index + turn) % lanes, lanes - spans[index]),
+      );
       items.forEach((item, index) => {
-        const start = Math.min(index % lanes, lanes - spans[index]);
-        item.style.gridColumn = `${start + 1} / span ${spans[index]}`;
+        item.style.gridColumn = `${starts[index] + 1} / span ${spans[index]}`;
       });
       items.forEach((item, index) => {
-        sizes[index][0] = outer(item, index);
+        sizes[index][even ? 0 : starts[index]] = outer(item, index);
       });
-    } else {
-      for (let start = 0; start < lanes; start++) {
-        items.forEach((item, index) => {
-          if (start + spans[index] <= lanes) {
-            item.style.gridColumn = `${start + 1} / span ${spans[index]}`;
-          }
-        });
-        items.forEach((item, index) => {
-          if (start + spans[index] <= lanes) {
-            sizes[index][start] = outer(item, index);
-          }
-        });
-      }
     }
     const { placements } = placeLanes(
       items.map((_, index) => ({
