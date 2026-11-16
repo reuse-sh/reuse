@@ -270,6 +270,31 @@ function lockScroll(doc: Document) {
   };
 }
 
+// history.back() lands asynchronously, so a lightbox that opens or closes before it lands must
+// not push or go back again; the pending back is shared by every lightbox of the window.
+const historyBacks = new WeakMap<Window, (event: Event) => void>();
+const landings = new WeakSet<Event>();
+
+function landed(win: Window, event: Event) {
+  if (landings.has(event)) return true;
+  const drain = historyBacks.get(win);
+  if (!drain) return false;
+  landings.add(event);
+  win.removeEventListener("popstate", drain);
+  historyBacks.delete(win);
+  return true;
+}
+
+function goBack(win: Window) {
+  if (historyBacks.has(win)) return;
+  const drain = (event: Event) => {
+    landed(win, event);
+  };
+  historyBacks.set(win, drain);
+  win.addEventListener("popstate", drain);
+  win.history.back();
+}
+
 function validateItems(items: readonly LightboxItem[]) {
   if (!items.length) throw new TypeError("Lightbox needs at least one image.");
   return items.map((item) => {
@@ -327,7 +352,6 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
   const historyKey = "reuseLightbox";
   const historyId = Math.random().toString(36).slice(2);
   let historyWindow: Window | undefined;
-  let backPending = false;
 
   let notifiedState = state;
 
@@ -1252,31 +1276,27 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
       win.addEventListener("popstate", onPopState);
     }
     // While a back is still on its way, its popstate restores the entry.
-    if (!backPending && !ownsHistory(win)) pushHistory(win);
+    if (!historyBacks.has(win) && !ownsHistory(win)) pushHistory(win);
   }
 
   function leaveHistory() {
     const win = historyWindow;
     if (!win) return;
-    if (ownsHistory(win)) {
-      backPending = true;
-      win.history.back();
-    } else releaseHistory();
+    if (ownsHistory(win)) goBack(win);
+    releaseHistory();
   }
 
   function releaseHistory() {
-    if (backPending || session) return;
+    if (session) return;
     historyWindow?.removeEventListener("popstate", onPopState);
     historyWindow = undefined;
   }
 
-  function onPopState() {
+  function onPopState(event: Event) {
     const win = historyWindow;
     if (!win) return;
-    if (backPending) {
-      backPending = false;
+    if (landed(win, event)) {
       if (session && !state.isClosing && !ownsHistory(win)) pushHistory(win);
-      releaseHistory();
       return;
     }
     if (session && !state.isClosing && !ownsHistory(win))
@@ -1787,10 +1807,9 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
       });
       if (s) emit("closed", undefined);
       const win = historyWindow;
-      if (win && ownsHistory(win)) win.history.back();
+      if (win && ownsHistory(win)) goBack(win);
       win?.removeEventListener("popstate", onPopState);
       historyWindow = undefined;
-      backPending = false;
       listeners.clear();
       handlers.clear();
     },

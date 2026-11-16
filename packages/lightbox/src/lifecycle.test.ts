@@ -1017,26 +1017,53 @@ describe("lightbox public API", () => {
   });
 
   it("adds one history entry, closes on Back and goes back after another close", async () => {
-    const start = history.length;
+    // Earlier tests' destroy() sent backs that land on a later task.
+    await new Promise((resolve) => setTimeout(resolve, 10));
     const controller = create();
     controller.open(gallery, 0);
-    expect(history.length).toBe(start + 1);
+    const opened = history.length;
+    const entry = (history.state as Record<string, unknown>).reuseLightbox;
+    expect(entry).toEqual(expect.any(String));
     controller.open(gallery, 2);
-    expect(history.length).toBe(start + 1);
+    expect(history.length).toBe(opened);
     history.back();
     await vi.waitFor(() => expect(document.querySelector("dialog")).toBeNull());
     controller.open(gallery, 1);
-    expect(history.length).toBe(start + 1);
-    const entry = (history.state as Record<string, unknown>).reuseLightbox;
-    expect(entry).toEqual(expect.any(String));
+    expect(history.length).toBe(opened);
+    expect((history.state as Record<string, unknown>).reuseLightbox).toBe(
+      entry,
+    );
     const popped = new Promise((resolve) =>
       addEventListener("popstate", resolve, { once: true }),
     );
     await controller.close();
     await popped;
-    expect(history.length).toBe(start + 1);
+    expect(history.length).toBe(opened);
     expect(
       (history.state as Record<string, unknown> | null)?.reuseLightbox,
     ).not.toBe(entry);
+  });
+
+  it("waits for a back on its way instead of closing the next lightbox or going back twice", async () => {
+    await new Promise((resolve) => setTimeout(resolve, 10));
+    const first = create();
+    const second = create();
+    first.open(gallery, 0);
+    const opened = history.length;
+    const pops: unknown[] = [];
+    const count = (event: Event) => pops.push(event);
+    addEventListener("popstate", count);
+    first.destroy();
+    second.open(gallery, 1);
+    await second.close();
+    second.open(gallery, 2);
+    await new Promise((resolve) => setTimeout(resolve, 10));
+    removeEventListener("popstate", count);
+    expect(pops).toHaveLength(1);
+    expect(second.getState().isOpen).toBe(true);
+    expect(history.length).toBe(opened);
+    expect((history.state as Record<string, unknown>).reuseLightbox).toEqual(
+      expect.any(String),
+    );
   });
 });
