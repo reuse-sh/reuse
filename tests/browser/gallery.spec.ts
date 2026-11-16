@@ -496,12 +496,17 @@ test.describe("masonry", () => {
   test("measures items in their own lane under auto-fit, and reads a percentage row gap as none", async ({
     page,
   }) => {
-    const layout = async (columns: string, rowGap: string, width = 800) => {
+    const layout = async (
+      columns: string,
+      rowGap: string,
+      width = 800,
+      count = 12,
+    ) => {
       await mount(
         page,
         `<style>#masonry{width:${width}px;column-gap:10px;row-gap:${rowGap};grid-template-columns:${columns}}#masonry>div{background:#ccc}#masonry img{display:block;width:100%;height:auto}</style>
 <div id="masonry" class="re-masonry">${heights
-          .slice(0, 12)
+          .slice(0, count)
           .map(
             (height, index) =>
               `<div><img alt="" width="200" height="${height + (index % 3) * 40}" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='${height + (index % 3) * 40}'/%3E"></div>`,
@@ -541,6 +546,17 @@ test.describe("masonry", () => {
     expect(
       await layout("repeat(auto-fit, minmax(150px, 1fr))", "0px", 812),
     ).toEqual(uneven);
+    // Fewer items than lanes: grid lanes keep the empty lanes of auto-fit,
+    // so the items are as wide as under auto-fill.
+    const few = await layout(
+      "repeat(auto-fill, minmax(150px, 1fr))",
+      "0px",
+      800,
+      2,
+    );
+    expect(
+      await layout("repeat(auto-fit, minmax(150px, 1fr))", "0px", 800, 2),
+    ).toEqual(few);
   });
 
   test("places the items again when a picture grows and when items change", async ({

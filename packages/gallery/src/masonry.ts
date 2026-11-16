@@ -65,6 +65,19 @@ export function createMasonry(container: HTMLElement): Masonry {
   }
 
   const previousState = container.getAttribute(STATE);
+  const previousTemplate = container.style.gridTemplateColumns;
+  // The tracks written onto the container to keep the empty lanes of
+  // auto-fit, while fewer items than lanes would let a plain grid drop them.
+  let heldTemplate: string | undefined;
+  const releaseTemplate = () => {
+    if (
+      heldTemplate !== undefined &&
+      container.style.gridTemplateColumns === heldTemplate
+    ) {
+      container.style.gridTemplateColumns = previousTemplate;
+    }
+    heldTemplate = undefined;
+  };
   const owned = new Map<HTMLElement, Owned>();
   const observed = new Set<HTMLElement>();
   let frame = 0;
@@ -166,6 +179,7 @@ export function createMasonry(container: HTMLElement): Masonry {
         margin: Number.parseFloat(own.marginTop) || 0,
       };
     });
+    releaseTemplate();
     for (const item of items) item.style.gridColumn = "1";
     const lanes = Math.max(
       1,
@@ -176,11 +190,29 @@ export function createMasonry(container: HTMLElement): Masonry {
     items.forEach((item, index) => {
       item.style.gridColumn = String((index % lanes) + 1);
     });
-    const tracks = tracksOf(
-      view.getComputedStyle(container).gridTemplateColumns,
-    );
+    let tracks = tracksOf(view.getComputedStyle(container).gridTemplateColumns);
+    if (items.length < lanes && tracks.some((track) => track === 0)) {
+      // Fewer items than lanes: hold the empty lanes with placeholders to
+      // read their widths, and keep those widths on the container.
+      const placeholders = Array.from(
+        { length: lanes - items.length },
+        (_, index) => {
+          const placeholder = container.ownerDocument.createElement("div");
+          placeholder.style.cssText = `grid-column:${items.length + index + 1};grid-row:1;visibility:hidden;height:0;margin:0;padding:0;border:0`;
+          container.append(placeholder);
+          return placeholder;
+        },
+      );
+      tracks = tracksOf(view.getComputedStyle(container).gridTemplateColumns);
+      for (const placeholder of placeholders) placeholder.remove();
+      container.style.gridTemplateColumns = tracks
+        .map((track) => `${track}px`)
+        .join(" ");
+      heldTemplate = container.style.gridTemplateColumns;
+    }
     const spans = authored.map((item) => Math.min(lanes, item.span));
-    const even = tracks.every((track) => track === tracks[0]);
+    // Tracks that differ by a layout rounding step are equal lanes.
+    const even = tracks.every((track) => Math.abs(track - tracks[0]) <= 1 / 32);
     const sizes = items.map(() => [] as number[]);
     const outer = (item: HTMLElement, index: number) =>
       item.getBoundingClientRect().height +
@@ -279,6 +311,7 @@ export function createMasonry(container: HTMLElement): Masonry {
       container.removeEventListener("loadedmetadata", onLoad, true);
       for (const item of [...owned.keys()]) release(item);
       observed.clear();
+      releaseTemplate();
       if (previousState === null) container.removeAttribute(STATE);
       else container.setAttribute(STATE, previousState);
       restoreClass();
