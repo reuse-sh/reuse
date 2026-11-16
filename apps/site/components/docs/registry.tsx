@@ -1,6 +1,7 @@
 import type { Library } from "@reuse-sh/catalog";
 import type { ReactNode } from "react";
 import { Kbd } from "@/components/ui/typography";
+import { DeviceCheck } from "./device-check";
 import type { DocIconName } from "./doc-icon";
 import { LightboxStylePage } from "./lightbox-style-page";
 import { ApiTable, Keys, Principles } from "./parts";
@@ -113,6 +114,8 @@ export function docBody(
   example?: ReactNode,
 ): ReactNode {
   if (path === "api") return <ApiTable rows={library.api} />;
+  if (path === "examples/device-check" && library.slug === "lightbox")
+    return <DeviceCheck />;
   if (path.startsWith("controls/") && library.slug === "lightbox")
     return <LightboxStylePage style={path.slice(9)} />;
   if (!path)

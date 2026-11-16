@@ -226,6 +226,11 @@ export const libraries: Library[] = [
             lead: "A short essay about a print series. Every image opens in one sequence, shown whole whatever its crop.",
             build: "a journal where every image opens in one sequence",
           },
+          {
+            path: "examples/device-check",
+            title: "Device check",
+            lead: "A checklist for trying the lightbox by hand on an iPhone, an Android phone and a Mac, with the examples to open.",
+          },
         ],
       },
       {
