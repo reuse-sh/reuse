@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { bindCarouselControls } from "./controls.js";
 import { connectThumbnails, createCarousel, syncCarousels } from "./index.js";
 
 const cleanups: (() => void)[] = [];
@@ -1414,5 +1415,257 @@ describe("one state for every control", () => {
     });
     cleanups.push(carousel.destroy);
     expect(slides[0].getAttribute("aria-label")).toBe("Photo 1/3");
+  });
+});
+
+describe("thumbnails", () => {
+  it("centers the active thumbnail, marks it and moves the main strip on a click", () => {
+    const main = fixture(Array(8).fill(100), 100);
+    const strip = fixture(Array(8).fill(100), 300);
+    const carousel = createCarousel(main.viewport);
+    const thumbnails = createCarousel(strip.viewport);
+    cleanups.push(carousel.destroy, thumbnails.destroy);
+    carousel.goTo(4, "instant");
+    const disconnect = connectThumbnails(carousel, thumbnails);
+    expect(strip.viewport.scrollLeft).toBe(300);
+    expect(strip.slides[4].getAttribute("aria-current")).toBe("true");
+    strip.slides[7].dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    expect(carousel.getState().index).toBe(7);
+    vi.advanceTimersByTime(1000);
+    expect(main.viewport.scrollLeft).toBe(700);
+    expect(strip.viewport.scrollLeft).toBe(500);
+    main.viewport.scrollLeft = 200;
+    main.viewport.dispatchEvent(new Event("scroll"));
+    vi.advanceTimersByTime(1000);
+    expect(carousel.getState().index).toBe(2);
+    expect(strip.slides[2].getAttribute("aria-current")).toBe("true");
+    expect(strip.slides[7].hasAttribute("aria-current")).toBe(false);
+    expect(strip.viewport.scrollLeft).toBe(100);
+    disconnect();
+    expect(strip.slides[2].hasAttribute("aria-current")).toBe(false);
+    strip.slides[5].dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    expect(carousel.getState().index).toBe(2);
+  });
+});
+
+describe("controls binder", () => {
+  function bound(markup: string, widths = Array(8).fill(100), width = 300) {
+    const strip = fixture(widths, width);
+    strip.viewport.id = "photos";
+    const root = document.createElement("div");
+    root.innerHTML = markup;
+    strip.viewport.before(root);
+    root.prepend(strip.viewport);
+    const carousel = createCarousel(strip.viewport, { autoplay: 5000 });
+    cleanups.push(carousel.destroy);
+    return { ...strip, root, carousel };
+  }
+  const click = (element: Element | null | undefined) =>
+    element?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+
+  it("creates one dot per page and drives the strip from the dots and arrows", () => {
+    const { root, carousel, viewport } = bound(
+      "<button data-carousel-prev></button><div data-carousel-dots></div><button data-carousel-next>Next</button>",
+    );
+    const unbind = bindCarouselControls(root, carousel);
+    const dots = root.querySelectorAll("[data-carousel-dots] button");
+    const prev = root.querySelector<HTMLButtonElement>("[data-carousel-prev]");
+    const next = root.querySelector<HTMLButtonElement>("[data-carousel-next]");
+    expect(dots).toHaveLength(6);
+    expect(dots[2].getAttribute("aria-label")).toBe("Go to slide 3 of 6");
+    expect(dots[0].getAttribute("aria-current")).toBe("true");
+    expect(prev?.disabled).toBe(true);
+    expect(prev?.getAttribute("aria-label")).toBe("Previous slide");
+    expect(next?.hasAttribute("aria-label")).toBe(false);
+    expect(next?.getAttribute("aria-controls")).toBe("photos");
+    click(dots[5]);
+    expect(carousel.getState()).toMatchObject({ index: 5, pageIndex: 5 });
+    expect(viewport.nextElementSibling?.textContent).toBe("6 of 8");
+    expect(dots[5].getAttribute("aria-current")).toBe("true");
+    expect(dots[0].hasAttribute("aria-current")).toBe(false);
+    vi.advanceTimersByTime(1000);
+    expect(next?.disabled).toBe(true);
+    click(prev);
+    expect(carousel.getState().index).toBe(4);
+    unbind();
+    expect(root.querySelectorAll("[data-carousel-dots] button")).toHaveLength(
+      0,
+    );
+    expect(prev?.hasAttribute("aria-label")).toBe(false);
+    expect(prev?.hasAttribute("aria-controls")).toBe(false);
+  });
+
+  it("leaves no listener on the root or a control after unbinding", () => {
+    const counts = new Map<EventTarget, number>();
+    const add = EventTarget.prototype.addEventListener;
+    const remove = EventTarget.prototype.removeEventListener;
+    vi.spyOn(EventTarget.prototype, "addEventListener").mockImplementation(
+      function (this: EventTarget, ...args) {
+        counts.set(this, (counts.get(this) ?? 0) + 1);
+        return add.apply(this, args);
+      },
+    );
+    vi.spyOn(EventTarget.prototype, "removeEventListener").mockImplementation(
+      function (this: EventTarget, ...args) {
+        counts.set(this, (counts.get(this) ?? 0) - 1);
+        return remove.apply(this, args);
+      },
+    );
+    const { root, carousel } = bound(
+      `<button data-carousel-prev></button><button data-carousel-next></button><div data-carousel-dots></div>
+      <span data-carousel-counter></span><button data-carousel-play></button><div data-carousel-progress></div>`,
+    );
+    const controls = [
+      root,
+      ...root.querySelectorAll(
+        "[data-carousel-prev], [data-carousel-next], [data-carousel-dots], [data-carousel-counter], [data-carousel-play], [data-carousel-progress]",
+      ),
+    ];
+    const unbind = bindCarouselControls(root, carousel);
+    expect(controls.some((control) => (counts.get(control) ?? 0) > 0)).toBe(
+      true,
+    );
+    unbind();
+    vi.restoreAllMocks();
+    expect(controls.map((control) => counts.get(control) ?? 0)).toEqual(
+      controls.map(() => 0),
+    );
+  });
+
+  it("writes the counter only when its text changes and rolls it the way the strip moved", () => {
+    const { root, carousel, viewport } = bound(
+      "<span data-carousel-counter></span><span data-carousel-counter data-roll></span>",
+    );
+    const [plain, rolling] = root.querySelectorAll<HTMLElement>(
+      "[data-carousel-counter]",
+    );
+    const frames: string[] = [];
+    Element.prototype.animate = vi.fn(function (
+      this: Element,
+      keyframes: Keyframe[],
+      timing: KeyframeAnimationOptions,
+    ) {
+      frames.push(`${keyframes[0].transform} ${timing.duration}`);
+      return { finished: Promise.resolve() } as unknown as Animation;
+    }) as unknown as Element["animate"];
+    cleanups.push(() => {
+      Reflect.deleteProperty(Element.prototype, "animate");
+    });
+    const unbind = bindCarouselControls(root, carousel);
+    const text = plain.firstChild;
+    expect(plain.textContent).toBe("1 / 8");
+    const changes: MutationRecord[] = [];
+    const observer = new MutationObserver((records) =>
+      changes.push(...records),
+    );
+    observer.observe(plain, {
+      characterData: true,
+      subtree: true,
+      childList: true,
+    });
+    viewport.scrollLeft = 20;
+    viewport.dispatchEvent(new Event("scroll"));
+    carousel.next();
+    carousel.prev();
+    observer.takeRecords().forEach((record) => changes.push(record));
+    expect(plain.firstChild).toBe(text);
+    expect(changes.map((record) => record.type)).toEqual([
+      "characterData",
+      "characterData",
+    ]);
+    expect(rolling.textContent).toContain("1 / 8");
+    expect(frames).toEqual([
+      "none 200",
+      "translateY(100%) 200",
+      "none 200",
+      "translateY(-100%) 200",
+    ]);
+    motion.matches = true;
+    carousel.next();
+    expect(frames).toHaveLength(4);
+    expect(rolling.children).toHaveLength(1);
+    unbind();
+    expect(plain.childNodes).toHaveLength(0);
+  });
+
+  it("toggles play and pause with its label and pressed state", () => {
+    const { root, carousel } = bound("<button data-carousel-play></button>");
+    const unbind = bindCarouselControls(root, carousel);
+    const play = root.querySelector("[data-carousel-play]");
+    expect(play?.getAttribute("aria-pressed")).toBe("true");
+    expect(play?.getAttribute("aria-label")).toBe("Pause slideshow");
+    click(play);
+    expect(carousel.getState().isPlaying).toBe(false);
+    expect(play?.getAttribute("aria-pressed")).toBe("false");
+    expect(play?.getAttribute("aria-label")).toBe("Play slideshow");
+    carousel.hold("x", true);
+    carousel.hold("x", false);
+    expect(carousel.getState().isPlaying).toBe(false);
+    click(play);
+    expect(carousel.getState().isPlaying).toBe(true);
+    unbind();
+    expect(play?.hasAttribute("aria-pressed")).toBe(false);
+  });
+
+  it("makes the progress bar a slider for the pointer and the keys", () => {
+    const { root, carousel } = bound("<div data-carousel-progress></div>");
+    const unbind = bindCarouselControls(root, carousel, {
+      strings: { progress: "Position" },
+    });
+    const bar = root.querySelector<HTMLElement>("[data-carousel-progress]");
+    if (!bar) throw new Error("No bar");
+    bar.getBoundingClientRect = () => ({ left: 0, width: 100 }) as DOMRect;
+    const key = (name: string) =>
+      bar.dispatchEvent(
+        new KeyboardEvent("keydown", { key: name, bubbles: true }),
+      );
+    expect(bar.getAttribute("role")).toBe("slider");
+    expect(bar.getAttribute("aria-label")).toBe("Position");
+    expect(bar.getAttribute("aria-valuemax")).toBe("6");
+    key("ArrowRight");
+    expect(carousel.getState().index).toBe(1);
+    expect(bar.getAttribute("aria-valuenow")).toBe("2");
+    key("End");
+    expect(carousel.getState().index).toBe(5);
+    key("PageDown");
+    expect(carousel.getState().index).toBe(4);
+    key("Home");
+    expect(carousel.getState().index).toBe(0);
+    pointer(bar, "pointerdown", 61);
+    expect(carousel.getState().index).toBe(3);
+    pointer(bar, "pointermove", 100);
+    expect(carousel.getState().index).toBe(5);
+    expect(bar.style.getPropertyValue("--re-carousel-progress")).toBe("1");
+    pointer(bar, "pointerup", 100);
+    unbind();
+    expect(bar.hasAttribute("role")).toBe(false);
+    expect(bar.style.getPropertyValue("--re-carousel-progress")).toBe("");
+  });
+
+  it("finds controls outside the root by the viewport id and windows the dots", () => {
+    const { root, carousel } = bound("", Array(8).fill(100), 100);
+    const outside = document.createElement("div");
+    outside.dataset.carouselControls = "photos";
+    outside.innerHTML = "<div data-carousel-dots></div>";
+    document.body.append(outside);
+    const unbind = bindCarouselControls(root, carousel, { dotsWindow: 5 });
+    const dots = [...outside.querySelectorAll("button")];
+    const shown = () =>
+      dots
+        .map((dot, page) =>
+          dot.hidden ? "" : `${page}${dot.dataset.edge?.[0] ?? ""}`,
+        )
+        .filter(Boolean)
+        .join(" ");
+    expect(dots).toHaveLength(8);
+    expect(shown()).toBe("0 1 2 3n 4f");
+    carousel.goTo(3, "instant");
+    expect(shown()).toBe("0 1 2 3 4f");
+    carousel.goTo(4, "instant");
+    expect(shown()).toBe("1f 2n 3 4 5f");
+    carousel.goTo(7, "instant");
+    expect(shown()).toBe("3f 4n 5 6 7");
+    unbind();
+    expect(outside.querySelectorAll("button")).toHaveLength(0);
   });
 });

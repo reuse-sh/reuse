@@ -33,6 +33,10 @@
     },
     "./styles.css": "./dist/styles.css",
     "./browser/*": "./dist/browser/*",
+    "./controls": {
+      "types": "./dist/controls.d.ts",
+      "import": "./dist/controls.js"
+    },
     "./react": {
       "types": "./dist/react.d.ts",
       "import": "./dist/react.js"

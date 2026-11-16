@@ -57,6 +57,16 @@ When disabled, the current viewport position stays stable. No global keyboard in
 
 The React adapter belongs to the package and uses this same controller, not a duplicate geometry implementation. Controls may be rendered by the owner. Native touch and trackpad scrolling remain browser scrolling. Looping must preserve original interactive slide behavior and must not leave duplicate ids or stale transformations on destroy.
 
+Main entry: connectThumbnails(main: Carousel, thumbnails: Carousel): () => void sets the thumbnail strip to align: "center", keeps the main strip's slide active in it (at once the first time, on the spring after that), sets aria-current="true" on that thumbnail and sends the main strip to a clicked thumbnail's slide, announced. The returned function restores the alignment and removes the mark and the listener.
+
+Entry point @reuse-sh/carousel/controls: bindCarouselControls(root: HTMLElement, carousel: Carousel, options?: { strings?: Partial<CarouselStrings>; dotsWindow?: number }): () => void binds, inside root and on elements whose data-carousel-controls is the viewport id:
+- [data-carousel-prev], [data-carousel-next]: click, disabled (aria-disabled on other elements) at the ends, aria-controls, a label from strings when the element has no text or label
+- [data-carousel-dots]: one button per page when it holds no buttons, its own buttons in page order otherwise; aria-current="true" on the active page; a click goes to the page, announced. dotsWindow: N shows at most N dots and moves the window only when the active dot would reach its outer two; on a side with more pages, the outermost shown dot gets data-edge="far" and the next data-edge="near"
+- [data-carousel-counter]: one text node with strings.counter(index, count), written only when the text changes; with data-roll each new text rolls in over 200ms, up going forward and down going back, and without the roll under reduced motion
+- [data-carousel-play]: play() and pause() by the visitor, aria-pressed="true" and the strings.pause label while autoplay is requested, aria-pressed="false" and strings.play otherwise
+- [data-carousel-progress]: role="slider" over pages (aria-valuemin 1, aria-valuemax pageCount, aria-valuenow pageIndex + 1, aria-valuetext strings.slide), --re-carousel-progress with the strip progress, a pointer drag that goes to the nearest page, ArrowRight and PageUp forward, ArrowLeft and PageDown back (arrows swap in right-to-left layouts), Home and End
+The binder gives the viewport a generated id when it has none. The returned function removes every listener, created element and attribute it added and restores the ones it changed.
+
 ## Planned
 
 The carousel and lightbox work in progress adds the names below. They are fixed now so the lightbox and the controls can be built against them. Each moves into the sections above once the code ships it.

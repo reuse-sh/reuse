@@ -1,4 +1,4 @@
-import { defaultStrings, internals } from "./internal.js";
+import type { CarouselInternals } from "./internal.js";
 
 export interface CarouselStrings {
   previous: string;
@@ -131,6 +131,25 @@ const stateAttributes = [
   "data-re-at-start",
   "data-re-at-end",
 ];
+
+const internalKey = Symbol.for("@reuse-sh/carousel internals");
+
+function internalsOf(carousel: Carousel) {
+  return (carousel as unknown as Record<symbol, CarouselInternals | undefined>)[
+    internalKey
+  ];
+}
+
+const defaultStrings: CarouselStrings = {
+  previous: "Previous slide",
+  next: "Next slide",
+  goTo: (index, count) => `Go to slide ${index + 1} of ${count}`,
+  counter: (index, count) => `${index + 1} / ${count}`,
+  slide: (index, count) => `${index + 1} of ${count}`,
+  play: "Play slideshow",
+  pause: "Pause slideshow",
+  progress: "Slide position",
+};
 
 function validate(options: CarouselOptions) {
   if (
@@ -1554,8 +1573,9 @@ export function createCarousel(
   refresh();
   mutation?.observe(viewport, { childList: true, subtree: true });
   intersection?.observe(viewport);
-  internals.set(controller, {
+  const reach: CarouselInternals = {
     viewport,
+    strings,
     slides: () => slides,
     pages: () =>
       pages.map((index) => ({
@@ -1570,7 +1590,8 @@ export function createCarousel(
     align: () => options.align,
     goTo: (index, behavior, announce) =>
       announce ? announced(() => goTo(index, behavior)) : goTo(index, behavior),
-  });
+  };
+  Object.defineProperty(controller, internalKey, { value: reach });
   return controller;
 }
 
@@ -1594,5 +1615,51 @@ export function syncCarousels(...carousels: Carousel[]): () => void {
   });
   return () => {
     for (const unsubscribe of unsubscribes) unsubscribe();
+  };
+}
+
+export function connectThumbnails(
+  main: Carousel,
+  thumbnails: Carousel,
+): () => void {
+  const strip = internalsOf(thumbnails);
+  if (!strip) throw new TypeError("connectThumbnails needs two carousels.");
+  const align = strip.align();
+  thumbnails.setOptions({ align: "center" });
+  let shown = -1;
+  let count = -1;
+  const mark = () => {
+    strip.slides().forEach((slide, index) => {
+      if (index === shown) slide.setAttribute("aria-current", "true");
+      else slide.removeAttribute("aria-current");
+    });
+  };
+  const follow = (state: CarouselState) => {
+    if (state.index === shown) return;
+    strip.goTo(state.index, shown < 0 ? "instant" : "smooth");
+    shown = state.index;
+    mark();
+  };
+  const unsubscribe = main.subscribe(follow);
+  const recount = thumbnails.subscribe((state) => {
+    if (state.count === count) return;
+    count = state.count;
+    mark();
+  });
+  follow(main.getState());
+  const choose = (event: Event) => {
+    const index = strip
+      .slides()
+      .findIndex((slide) => slide.contains(event.target as Node));
+    if (index >= 0) internalsOf(main)?.goTo(index, "smooth", true);
+  };
+  strip.viewport.addEventListener("click", choose);
+  return () => {
+    unsubscribe();
+    recount();
+    strip.viewport.removeEventListener("click", choose);
+    shown = -1;
+    mark();
+    thumbnails.setOptions({ align });
   };
 }
