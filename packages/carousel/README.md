@@ -13,7 +13,7 @@ These are the rules the code keeps. An adaptation on any framework keeps them to
 - **Drag like a trackpad.** A released mouse drag keeps its speed and glides to the slide nearest where it would stop, or to the stop itself when the strip does not snap there, never past a slide that asks to stop. Past either end it stretches and springs back.
 - **Keep the slide it was sent to.** When the last slides share one scroll position, the active index stays the slide that goTo, a dot or a lightbox chose.
 - **Repeat without clones.** The loop moves the original slides, so ids, links and buttons stay unique, and it turns on only when the slides can cover the viewport.
-- **Let autoplay wait for people.** Autoplay pauses for hover, focus, dragging, hidden pages, offscreen strips and reduced motion.
+- **Let autoplay wait for people.** Autoplay pauses for hover, focus, dragging, hidden pages, strips less than half in view and reduced motion, keeps the rest of its wait, and stays paused after the visitor pauses it.
 - **Keep keys local.** Arrow keys act only inside the focused strip and swap sides in right-to-left layouts.
 - **Put back what it moved.** Destroy cancels timers and restores the styles, transforms and listeners it added.
 - **Move the same way every time.** Next, dots, goTo and a released drag use one motion, so browsers do not differ.
@@ -30,7 +30,7 @@ npm install @reuse-sh/carousel
 
 ## Browser build
 
-For a page without a bundler or an import map, such as a theme or a plugin, copy `dist/browser/` and `dist/styles.css` from the package into your assets. `carousel.js` is one minified ES module with a source map and no imports.
+For a page without a bundler or an import map, such as a theme or a plugin, copy `dist/browser/` and `dist/styles.css` from the package into your assets. `carousel.js` is one minified ES module with a source map and no imports. `controls.js` beside it holds `bindCarouselControls` and has no imports either.
 
 ```html
 <link rel="stylesheet" href="/assets/carousel/styles.css" />
