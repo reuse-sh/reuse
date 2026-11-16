@@ -167,28 +167,50 @@ export function createMasonry(container: HTMLElement): Masonry {
       };
     });
     for (const item of items) item.style.gridColumn = "1";
+    const lanes = Math.max(
+      1,
+      tracksOf(view.getComputedStyle(container).gridTemplateColumns).length,
+    );
+    // Read the widths with every lane holding an item: a plain grid collapses
+    // the empty tracks of `auto-fit`, where grid lanes keep them.
+    items.forEach((item, index) => {
+      item.style.gridColumn = String((index % lanes) + 1);
+    });
     const tracks = tracksOf(
       view.getComputedStyle(container).gridTemplateColumns,
     );
-    const lanes = Math.max(1, tracks.length);
     const spans = authored.map((item) => Math.min(lanes, item.span));
     // An item's height depends on its lane's width, so lanes of different
     // widths measure every item at every start it could take.
     const even = tracks.every((track) => track === tracks[0]);
     const sizes = items.map(() => [] as number[]);
-    for (let start = 0; start < (even ? 1 : lanes); start++) {
+    const outer = (item: HTMLElement, index: number) =>
+      item.getBoundingClientRect().height +
+      authored[index].margin +
+      (Number.parseFloat(view.getComputedStyle(item).marginBottom) || 0);
+    if (even) {
+      // Equal lanes give an item one height wherever it lands, so it is
+      // measured spread out as above, with every lane still held.
       items.forEach((item, index) => {
-        if (start + spans[index] <= lanes) {
-          item.style.gridColumn = `${start + 1} / span ${spans[index]}`;
-        }
+        const start = Math.min(index % lanes, lanes - spans[index]);
+        item.style.gridColumn = `${start + 1} / span ${spans[index]}`;
       });
       items.forEach((item, index) => {
-        if (start + spans[index] > lanes) return;
-        sizes[index][start] =
-          item.getBoundingClientRect().height +
-          authored[index].margin +
-          (Number.parseFloat(view.getComputedStyle(item).marginBottom) || 0);
+        sizes[index][0] = outer(item, index);
       });
+    } else {
+      for (let start = 0; start < lanes; start++) {
+        items.forEach((item, index) => {
+          if (start + spans[index] <= lanes) {
+            item.style.gridColumn = `${start + 1} / span ${spans[index]}`;
+          }
+        });
+        items.forEach((item, index) => {
+          if (start + spans[index] <= lanes) {
+            sizes[index][start] = outer(item, index);
+          }
+        });
+      }
     }
     const { placements } = placeLanes(
       items.map((_, index) => ({
@@ -196,7 +218,11 @@ export function createMasonry(container: HTMLElement): Masonry {
         span: spans[index],
       })),
       lanes,
-      Number.parseFloat(styles.rowGap) || 0,
+      // A percentage resolves against the lanes' height, which is not known
+      // while they are laid out, so grid lanes take it as no gap at all.
+      styles.rowGap.trim().endsWith("%")
+        ? 0
+        : Number.parseFloat(styles.rowGap) || 0,
       // The stylesheet registers the property, so it computes to a keyword,
       // pixels, a percentage, or a math function of them. WebKit, the one
       // engine shipping grid lanes, resolves a percentage here against zero;
