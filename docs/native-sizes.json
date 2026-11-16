@@ -46,9 +46,9 @@
     },
     {
       "name": "gallery",
-      "modules": 5,
-      "bytes": 28588,
-      "gzipBytes": 8523
+      "modules": 7,
+      "bytes": 34725,
+      "gzipBytes": 10492
     }
   ]
 }

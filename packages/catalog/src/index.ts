@@ -636,7 +636,7 @@ export const libraries: Library[] = [
       ],
       [
         "--re-masonry-tolerance",
-        "How close to the shortest column a column must be to take the next item in order: normal (1em, the default), infinite, a length, a percentage of the width, or a calc() of them.",
+        "How close to the shortest column a column must be to take the next item in order: normal (1em, the default), infinite, or a length.",
       ],
       [
         "grid-column: span N",

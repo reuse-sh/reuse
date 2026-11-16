@@ -42,8 +42,33 @@ const SHARE = "--re-justified-share";
 const COUNT = "--re-justified-count";
 const COLUMN_GAP = "--re-justified-column-gap";
 const DEFAULT_ROW_HEIGHT = 240;
-// Classic scrollbars are 12-17px wide, about 34 CSS px at 50% zoom.
-const SCROLLBAR_LIMIT = 40;
+/** The width vertical scrollbars take from the container: the page's and every scrolling ancestor's. */
+function scrollbarsAround(
+  container: HTMLElement,
+  view: Window & typeof globalThis,
+): number {
+  const root = container.ownerDocument.documentElement;
+  let total = view.innerWidth - root.clientWidth;
+  let node: Node | null = container.parentNode;
+  while (node && node !== root) {
+    if (node instanceof view.ShadowRoot) {
+      node = node.host;
+      continue;
+    }
+    if (node instanceof view.HTMLElement) {
+      const styles = view.getComputedStyle(node);
+      if (/auto|scroll/.test(styles.overflowY)) {
+        total +=
+          node.offsetWidth -
+          node.clientWidth -
+          (Number.parseFloat(styles.borderLeftWidth) || 0) -
+          (Number.parseFloat(styles.borderRightWidth) || 0);
+      }
+    }
+    node = node.parentNode;
+  }
+  return total;
+}
 
 /** What an item held before the controller wrote to it, and the ratio it wrote. */
 interface Owned {
@@ -61,6 +86,7 @@ interface Layout {
   ratios: number[];
   rows: Row[];
   metrics: RowMetrics;
+  scrollbars: number;
 }
 
 function media(item: HTMLElement): Element | null {
@@ -134,10 +160,10 @@ export function createJustifiedGallery(
   const hadStyle = container.hasAttribute("style");
   const owned = new Map<HTMLElement, Owned>();
   let current: Layout | undefined;
-  // Rows given up for others at a width, so a width that flips back and forth
-  // by a scrollbar (one coming and going with the gallery's own height) does
-  // not flip the rows with it.
-  let abandoned: { rows: Row[]; width: number; next: number } | undefined;
+  // Rows given up when a scrollbar took or gave back exactly the width that
+  // changed, so a scrollbar that comes and goes with the gallery's own height
+  // does not flip the rows with it.
+  let abandoned: { rows: Row[]; width: number } | undefined;
   let pending = false;
   let destroyed = false;
 
@@ -280,6 +306,7 @@ export function createJustifiedGallery(
       return;
     }
     pending = false;
+    const scrollbars = scrollbarsAround(container, view);
     const items = readItems();
     const ratios = items.map(readRatio);
     const unchanged = !fresh && sameContent(items, ratios);
@@ -293,7 +320,6 @@ export function createJustifiedGallery(
       const flipsBack =
         abandoned !== undefined &&
         Math.abs(metrics.width - abandoned.width) < 1 &&
-        Math.abs(abandoned.next - abandoned.width) <= SCROLLBAR_LIMIT &&
         sameRows(optimal, abandoned.rows);
       if (
         kept &&
@@ -302,13 +328,19 @@ export function createJustifiedGallery(
       ) {
         rows = kept.rows;
       } else {
-        abandoned = kept
-          ? { rows: kept.rows, width: kept.metrics.width, next: metrics.width }
-          : undefined;
+        const byScrollbar =
+          kept !== undefined &&
+          Math.abs(
+            kept.metrics.width - metrics.width - (scrollbars - kept.scrollbars),
+          ) < 1;
+        abandoned =
+          kept && byScrollbar
+            ? { rows: kept.rows, width: kept.metrics.width }
+            : undefined;
         rows = optimal;
       }
     }
-    const next = { items, ratios, rows, metrics };
+    const next = { items, ratios, rows, metrics, scrollbars };
     if (kept && rows === kept.rows) {
       if (kept.metrics.gap !== metrics.gap) {
         container.style.setProperty(COLUMN_GAP, `${metrics.gap}px`);

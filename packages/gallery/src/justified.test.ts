@@ -242,6 +242,12 @@ describe("createJustifiedGallery", () => {
     items().forEach((item, index) => {
       item.style.setProperty("--re-ratio", String(ratios[index]));
     });
+    // The page's scrollbar takes the 15px the container loses.
+    const root = document.documentElement;
+    Object.defineProperty(root, "clientWidth", {
+      configurable: true,
+      get: () => window.innerWidth - (container.clientWidth === 985 ? 15 : 0),
+    });
     createJustifiedGallery(container);
     const wide = rows(container);
     await resize(985);
@@ -253,6 +259,7 @@ describe("createJustifiedGallery", () => {
     expect(rows(container)).toEqual(narrow);
     await resize(985);
     expect(rows(container)).toEqual(narrow);
+    Reflect.deleteProperty(root, "clientWidth");
   });
 
   it("takes a ratio the page sets after the first layout", () => {

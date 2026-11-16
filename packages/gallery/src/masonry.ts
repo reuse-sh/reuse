@@ -1,5 +1,6 @@
 import { placeLanes } from "./lanes.js";
 import { claim, unclaim } from "./owners.js";
+import { resolveTolerance } from "./tolerance.js";
 
 export interface Masonry {
   /** Whether the browser lays the items out itself with `display: grid-lanes`. */
@@ -112,26 +113,6 @@ export function createMasonry(container: HTMLElement): Masonry {
     }
   }
 
-  // The stylesheet registers the property, so normal, infinite, a length, a
-  // percentage and their calc() compute to keywords, pixels and percentages.
-  // A negative tolerance is invalid natively and falls back to normal.
-  const tolerance = (styles: CSSStyleDeclaration, contentWidth: number) => {
-    const value = styles.getPropertyValue("--re-masonry-tolerance").trim();
-    const em = Number.parseFloat(styles.fontSize) || 16;
-    if (value === "infinite") return Number.POSITIVE_INFINITY;
-    let total = 0;
-    let found = false;
-    for (const [, sign, number, unit] of value.matchAll(
-      /([+-]\s+)?(-?[\d.]+(?:e-?\d+)?)(px|%)/g,
-    )) {
-      found = true;
-      const amount =
-        unit === "%" ? (Number(number) / 100) * contentWidth : Number(number);
-      total += sign?.trim() === "-" ? -amount : amount;
-    }
-    return found && total >= 0 ? total : em;
-  };
-
   const place = () => {
     if (destroyed) return;
     for (const item of [...owned.keys()]) {
@@ -213,7 +194,15 @@ export function createMasonry(container: HTMLElement): Masonry {
       })),
       lanes,
       Number.parseFloat(styles.rowGap) || 0,
-      tolerance(styles, contentWidth),
+      // The stylesheet registers the property, so it computes to a keyword,
+      // pixels, a percentage, or a math function of them. WebKit, the one
+      // engine shipping grid lanes, resolves a percentage here against zero;
+      // the WebKit parity test fails when that changes.
+      resolveTolerance(
+        styles.getPropertyValue("--re-masonry-tolerance"),
+        0,
+        Number.parseFloat(styles.fontSize) || 16,
+      ),
     );
     placements.forEach((placement, index) => {
       const item = items[index];

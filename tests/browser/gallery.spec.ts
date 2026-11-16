@@ -309,56 +309,80 @@ const flipping = [
   0.6078, 1.3813, 0.8423, 2.576, 1.0364, 0.6739,
 ];
 
-test("a justified gallery settles when its own height brings and removes the page scrollbar", async ({
-  playwright,
-  browserName,
-}) => {
-  test.skip(browserName !== "chromium", "classic scrollbars in Chromium only");
-  // Playwright starts Chromium with --hide-scrollbars; without it the page
-  // scrollbar takes 15px, as on desktops with classic scrollbars.
-  const browser = await playwright.chromium.launch({
-    ignoreDefaultArgs: ["--hide-scrollbars"],
-  });
-  try {
-    const page = await browser.newPage({
-      viewport: { width: 1000, height: 2661 },
-    });
-    await mount(
-      page,
-      `<div id="gallery" class="re-justified">${flipping
-        .map(
-          (ratio) =>
-            `<div style="--re-ratio:${ratio}"><div class="re-justified-media" style="background:#888"></div></div>`,
-        )
-        .join("")}</div>`,
-      ["gallery/styles.css"],
+// Ratios found by search: rows laid out at the full width bring a scrollbar
+// of this width, and rows laid out without its width take it away again.
+const scrollbarCases = [
+  {
+    scrollbar: 15,
+    height: 2661,
+    ratios: flipping,
+  },
+  {
+    // As wide as a classic scrollbar at 33% page zoom.
+    scrollbar: 50,
+    height: 3311,
+    ratios: [
+      0.6097, 0.6989, 1.0516, 2.0888, 1.807, 1.7029, 0.7117, 1.992, 0.7629,
+      2.0824, 1.5327, 2.1309, 1.9298, 1.3614, 2.3631, 1.4538, 0.8395, 0.752,
+      2.5194, 1.864, 0.9896, 1.6236, 1.056, 2.217, 2.0076, 2.4964, 0.8114,
+      2.4683, 1.0699, 1.4735, 1.3164, 0.8996, 1.231, 0.8448,
+    ],
+  },
+];
+
+for (const { scrollbar, height, ratios } of scrollbarCases) {
+  test(`a justified gallery settles when its own height brings and removes a ${scrollbar}px page scrollbar`, async ({
+    playwright,
+    browserName,
+  }) => {
+    test.skip(
+      browserName !== "chromium",
+      "classic scrollbars in Chromium only",
     );
-    await page.evaluate(async () => {
-      const element = document.getElementById("gallery") as HTMLElement;
-      const { createJustifiedGallery } = await import(
-        "/modules/gallery/index.js"
+    // Playwright starts Chromium with --hide-scrollbars; without it the page
+    // scrollbar takes space, as on desktops with classic scrollbars.
+    const browser = await playwright.chromium.launch({
+      ignoreDefaultArgs: ["--hide-scrollbars"],
+    });
+    try {
+      const page = await browser.newPage({ viewport: { width: 1000, height } });
+      await mount(
+        page,
+        `<style>::-webkit-scrollbar{width:${scrollbar}px;background:#eee}::-webkit-scrollbar-thumb{background:#999}</style><div id="gallery" class="re-justified">${ratios
+          .map(
+            (ratio) =>
+              `<div style="--re-ratio:${ratio}"><div class="re-justified-media" style="background:#888"></div></div>`,
+          )
+          .join("")}</div>`,
+        ["gallery/styles.css"],
       );
-      createJustifiedGallery(element);
-      let writes = 0;
-      new MutationObserver((records) => {
-        writes += records.length;
-      }).observe(element, { subtree: true, attributes: true });
-      Object.assign(window, { writes: () => writes });
-    });
-    const widths = await framesUntilIdle(
-      page,
-      "document.documentElement.clientWidth",
-      600,
-    );
-    expect(widths.length).toBeLessThanOrEqual(3);
-    const settled = await page.evaluate("writes()");
-    await page.waitForTimeout(500);
-    expect(await page.evaluate("writes()")).toBe(settled);
-    expect(await overflow(page)).toBe(0);
-  } finally {
-    await browser.close();
-  }
-});
+      await page.evaluate(async () => {
+        const element = document.getElementById("gallery") as HTMLElement;
+        const { createJustifiedGallery } = await import(
+          "/modules/gallery/index.js"
+        );
+        createJustifiedGallery(element);
+        let writes = 0;
+        new MutationObserver((records) => {
+          writes += records.length;
+        }).observe(element, { subtree: true, attributes: true });
+        Object.assign(window, { writes: () => writes });
+      });
+      const widths = await framesUntilIdle(
+        page,
+        "document.documentElement.clientWidth",
+        600,
+      );
+      expect(widths.length).toBeLessThanOrEqual(3);
+      const settled = await page.evaluate("writes()");
+      await page.waitForTimeout(500);
+      expect(await page.evaluate("writes()")).toBe(settled);
+      expect(await overflow(page)).toBe(0);
+    } finally {
+      await browser.close();
+    }
+  });
+}
 
 const heights = [
   67, 97, 134, 171, 215, 95, 132, 169, 213, 93, 130, 167, 211, 91, 128, 165,
@@ -456,6 +480,10 @@ test.describe("masonry", () => {
       "5%",
       "calc(1em + 30px)",
       "-20px",
+      "calc(5% - 100px)",
+      "min(10%, 40px)",
+      "max(5%, 10px)",
+      "clamp(0px, 10%, 40px)",
     ]) {
       // A font size other than the root's tells em, rem and the default apart.
       expect(await masonry(page, { tolerance, fontSize: 40 })).toBe(true);
