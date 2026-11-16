@@ -1,0 +1,156 @@
+{
+  "shared": [
+    "apps/site/app/layout.tsx",
+    "apps/site/app/globals.css",
+    "apps/site/app/styles/**",
+    "apps/site/components/ui/**",
+    "apps/site/components/shell/**",
+    "apps/site/components/site-frame.tsx",
+    "apps/site/components/icons.tsx",
+    "apps/site/lib/**",
+    "apps/site/package.json",
+    "packages/catalog/**",
+    "packages/core/**"
+  ],
+  "omit": {
+    "/[library]/guide.md": "Markdown agent guide, checked by tests/site/content.spec.ts",
+    "/agent.md": "Markdown agent guide, checked by tests/site/content.spec.ts",
+    "/llms.txt": "Plain-text index, checked by tests/site/content.spec.ts",
+    "/[library]/controls/[page]/frame": "Iframe document embedded by the controls pages, checked through them",
+    "/sitemap.xml": "Generated sitemap"
+  },
+  "features": [
+    {
+      "id": "home",
+      "title": "Home page",
+      "path": "/",
+      "route": "/",
+      "url": "^/$",
+      "proof": "role=heading[level=1][name=\"Parts you stop writing twice\"]",
+      "code": [
+        "apps/site/app/page.tsx",
+        "apps/site/components/home/**",
+        "apps/site/components/demos/**",
+        "apps/site/components/copy-control.tsx",
+        "apps/site/components/hold-label.tsx"
+      ]
+    },
+    {
+      "id": "library-menu",
+      "title": "Libraries menu",
+      "path": "/",
+      "steps": [{ "click": "role=button[name=\"Libraries\"]" }],
+      "route": "/",
+      "url": "^/$",
+      "proof": "role=navigation[name=\"Libraries\"] >> role=link[name=/Lightbox/]",
+      "code": [
+        "apps/site/components/shell/library-menu.tsx",
+        "apps/site/components/shell/library-peek.ts"
+      ]
+    },
+    {
+      "id": "for-agents",
+      "title": "Agent guides",
+      "path": "/for-agents",
+      "route": "/for-agents",
+      "url": "^/for-agents$",
+      "proof": "role=heading[level=1]",
+      "code": ["apps/site/app/for-agents/**"]
+    },
+    {
+      "id": "tools",
+      "title": "Tools",
+      "path": "/tools",
+      "route": "/tools",
+      "url": "^/tools$",
+      "proof": "role=heading[level=1]",
+      "code": ["apps/site/app/tools/**"]
+    },
+    {
+      "id": "not-found",
+      "title": "Missing page",
+      "path": "/no-such-page",
+      "status": 404,
+      "route": "/_not-found",
+      "url": "^/no-such-page$",
+      "proof": "role=heading[level=1]",
+      "code": ["apps/site/app/not-found.tsx"]
+    },
+    {
+      "id": "overview",
+      "title": "Library overview",
+      "expand": "^/(?<library>[^/]+)$",
+      "route": "/[library]",
+      "proof": "role=heading[level=1]",
+      "code": [
+        "apps/site/app/[library]/page.tsx",
+        "apps/site/app/[library]/layout.tsx",
+        "apps/site/components/docs/**",
+        "apps/site/components/demos/**",
+        "apps/site/components/library-demo.tsx",
+        "apps/site/examples/**"
+      ]
+    },
+    {
+      "id": "getting-started",
+      "title": "Getting started",
+      "expand": "^/(?<library>[^/]+)/getting-started$",
+      "route": "/[library]/getting-started",
+      "proof": "role=heading[level=1][name=\"Getting started\"]",
+      "code": [
+        "apps/site/app/[library]/getting-started/**",
+        "apps/site/app/[library]/layout.tsx",
+        "apps/site/components/docs/**"
+      ]
+    },
+    {
+      "id": "example",
+      "title": "Example",
+      "expand": "^/(?<library>[^/]+)/examples/(?<page>[^/]+)$",
+      "route": "/[library]/examples/[page]",
+      "proof": "role=heading[level=1]",
+      "code": [
+        "apps/site/app/[library]/examples/**",
+        "apps/site/app/[library]/layout.tsx",
+        "apps/site/components/docs/**",
+        "apps/site/examples/**"
+      ]
+    },
+    {
+      "id": "controls",
+      "title": "Lightbox controls style",
+      "expand": "^/(?<library>[^/]+)/controls/(?<page>[^/]+)$",
+      "route": "/[library]/controls/[page]",
+      "proof": "role=heading[level=1]",
+      "code": [
+        "apps/site/app/[library]/controls/**",
+        "apps/site/app/[library]/layout.tsx",
+        "apps/site/components/docs/**"
+      ]
+    },
+    {
+      "id": "guide",
+      "title": "Guide",
+      "expand": "^/(?<library>[^/]+)/guides/(?<page>[^/]+)$",
+      "route": "/[library]/guides/[page]",
+      "proof": "role=heading[level=1]",
+      "code": [
+        "apps/site/app/[library]/guides/**",
+        "apps/site/app/[library]/layout.tsx",
+        "apps/site/components/docs/**"
+      ]
+    },
+    {
+      "id": "api",
+      "title": "API reference",
+      "expand": "^/(?<library>[^/]+)/api$",
+      "route": "/[library]/api",
+      "proof": "role=heading[level=1]",
+      "code": [
+        "apps/site/app/[library]/api/**",
+        "apps/site/app/[library]/layout.tsx",
+        "apps/site/components/docs/**"
+      ]
+    }
+  ]
+}
