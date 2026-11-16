@@ -10,8 +10,6 @@
   initial-value: 1em;
 }
 
-/* Justified gallery. Without the controller the browser breaks the rows. */
-
 .re-justified {
   display: flex;
   flex-wrap: wrap;
@@ -47,8 +45,6 @@
   object-fit: cover;
 }
 
-/* With the controller, each full row is sized in percent of the container. */
-
 .re-justified[data-re-justified]::after {
   content: none;
 }
@@ -81,8 +77,6 @@
 .re-justified > [data-re-justified-hidden] {
   display: none;
 }
-
-/* Masonry. The browser's own grid lanes where it has them, a grid elsewhere. */
 
 .re-masonry {
   display: grid;
