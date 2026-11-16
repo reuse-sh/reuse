@@ -201,21 +201,26 @@ export function Stage({
 }
 export function ApiTable({ rows }: { rows: readonly Row[] }) {
   return (
-    <div className="overflow-x-auto rounded-panel bg-card p-4 shadow-raised">
-      <table className="w-full text-left text-ui">
-        <thead>
+    <div className="overflow-x-auto rounded-panel bg-card p-4 shadow-raised max-sm:px-5 max-sm:py-2">
+      <table className="w-full text-left text-ui max-sm:block">
+        <thead className="max-sm:sr-only">
           <tr className="border-b border-border text-subtle-foreground">
             <th className="p-3 font-medium">Name</th>
             <th className="p-3 font-medium">Description</th>
           </tr>
         </thead>
-        <tbody>
+        <tbody className="max-sm:block">
           {rows.map(([name, text]) => (
-            <tr key={name} className="border-b border-border last:border-0">
-              <th className="p-3 align-top font-mono text-caption font-normal text-foreground">
+            <tr
+              key={name}
+              className="border-b border-border last:border-0 max-sm:block max-sm:py-3"
+            >
+              <th className="p-3 align-top font-mono text-caption font-normal text-foreground max-sm:block max-sm:p-0 max-sm:pb-1">
                 <code>{name}</code>
               </th>
-              <td className="p-3 text-muted-foreground">{text}</td>
+              <td className="p-3 text-muted-foreground max-sm:block max-sm:p-0">
+                {text}
+              </td>
             </tr>
           ))}
         </tbody>

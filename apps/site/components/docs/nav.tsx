@@ -25,7 +25,7 @@ function Toc({
       key={path}
       href={docHref(library, path)}
       aria-current={pathname === docHref(library, path) ? "page" : undefined}
-      className="block text-sidebar-foreground transition-colors hover:text-muted-foreground aria-[current=page]:text-sidebar-active"
+      className="block text-sidebar-foreground transition-colors hover:text-sidebar-active aria-[current=page]:font-medium aria-[current=page]:text-sidebar-active"
     >
       {title}
     </DocLink>

@@ -294,7 +294,65 @@ test("chat composers fit inside narrow panels", async ({ page }) => {
     await expect(
       form.getByRole("button", { name: "Send", exact: true }),
     ).toBeVisible();
+    await form.getByRole("textbox").focus();
+    await page.keyboard.press("Shift+Tab");
+    await page.keyboard.press("Tab");
+    await expect(form).not.toHaveCSS("outline-style", "none");
   }
+});
+
+test("narrow API tables show every description without sideways scrolling", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 320, height: 900 });
+  await page.goto("/lightbox/api");
+  const table = page.locator('[data-slot="doc-content"] table');
+  const layout = await table.evaluate((element) => {
+    const frame = element.parentElement as HTMLElement;
+    const row = element.querySelector("tbody tr") as HTMLElement;
+    const [name, text] = [...row.children].map((cell) =>
+      cell.getBoundingClientRect(),
+    );
+    return {
+      overflow: frame.scrollWidth - frame.clientWidth,
+      textBelowName: text.top >= name.bottom,
+    };
+  });
+  expect(layout).toEqual({ overflow: 0, textBelowName: true });
+});
+
+test("the narrow panel style shows both caption lines", async ({ page }) => {
+  await page.setViewportSize({ width: 320, height: 900 });
+  await page.goto("/lightbox/controls/panel");
+  const text = page
+    .frameLocator("iframe")
+    .locator(".re-lightbox-style-panel-text");
+  const size = await text.evaluate((element) => ({
+    clipped: element.scrollHeight > element.clientHeight,
+    lines: Math.round(
+      element.clientHeight /
+        Number.parseFloat(getComputedStyle(element).lineHeight),
+    ),
+  }));
+  expect(size).toEqual({ clipped: false, lines: 2 });
+});
+
+test("the footer lines up with the documentation column and the page bottom", async ({
+  page,
+}) => {
+  await page.goto("/lightbox");
+  const content = await page.locator("main#main").boundingBox();
+  const footer = await page
+    .locator('footer [data-slot="container"]')
+    .boundingBox();
+  expect(footer?.x).toBe(content?.x);
+  expect(footer?.width).toBe(content?.width);
+  await page.goto("/no-such-page");
+  const bottom = await page.locator("footer").evaluate((element) => ({
+    footer: Math.round(element.getBoundingClientRect().bottom),
+    viewport: innerHeight,
+  }));
+  expect(bottom.footer).toBe(bottom.viewport);
 });
 
 test("404 navigation retains the framework after hydration", async ({
