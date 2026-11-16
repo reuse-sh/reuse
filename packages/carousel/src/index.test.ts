@@ -1321,6 +1321,13 @@ describe("one state for every control", () => {
       once: true,
     });
     carousel.next();
+    const seen: string[] = [];
+    carousel.subscribe((state) => {
+      if (state.index === 1) carousel.goTo(0, "instant");
+    });
+    carousel.subscribe((state) => seen.push(`${state.index}`));
+    carousel.goTo(1, "instant");
+    expect(seen.at(-1)).toBe("0");
     expect(events).toEqual([
       "play 0 true",
       "change 1 true",
@@ -1329,6 +1336,7 @@ describe("one state for every control", () => {
       "play 1 true",
       "pause 2 false",
       "change 2 true",
+      "change 0 false",
     ]);
   });
 
@@ -1375,7 +1383,11 @@ describe("one state for every control", () => {
     expect(carousel.getState().isPlaying).toBe(true);
     vi.advanceTimersByTime(1000);
     expect(carousel.getState().index).toBe(1);
+    vi.advanceTimersByTime(400);
     carousel.setOptions({ autoplay: undefined });
+    expect(
+      viewport.style.getPropertyValue("--re-carousel-autoplay-progress"),
+    ).toBe("");
     vi.advanceTimersByTime(3000);
     expect(carousel.getState()).toMatchObject({ index: 1, isPlaying: false });
     carousel.setOptions({ drag: false });

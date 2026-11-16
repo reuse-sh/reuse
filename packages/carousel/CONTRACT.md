@@ -39,7 +39,7 @@ DOM events on the viewport, bubbling, with the state in detail: re-carousel:chan
 
 A goTo while the strip does not overflow (a hidden tab, display: none, images not loaded) only sets the index; the first refresh that finds overflow scrolls to that slide at once. A later goTo replaces it.
 
-A div or span viewport without a role gets role="region" and aria-roledescription="carousel"; a div or span slide without a role gets role="group", aria-roledescription="slide" and, without its own label, aria-label from strings.slide. next(), prev() and the keys announce the slide they reach in a polite live region placed after the viewport when the carousel is created; autoplay, goTo from code, drags and swipes do not. destroy removes all of it.
+A div or span viewport without a role gets role="region" and aria-roledescription="carousel"; a div or span slide without a role gets role="group", aria-roledescription="slide" and, without its own label, aria-label from strings.slide. next(), prev() and the keys announce the slide they reach in a polite live region placed after the viewport when the carousel is created (on the first announcement for a viewport that had no parent then); autoplay, goTo from code, drags and swipes do not. destroy removes all of it.
 
 A touch, a mouse press, a wheel and a scroll from outside the carousel stop a running spring where it is, and the strip snaps to the nearest point.
 
@@ -61,11 +61,11 @@ Main entry: connectThumbnails(main: Carousel, thumbnails: Carousel): () => void 
 
 Entry point @reuse-sh/carousel/controls: bindCarouselControls(root: HTMLElement, carousel: Carousel, options?: { strings?: Partial<CarouselStrings>; dotsWindow?: number }): () => void binds, inside root and on elements whose data-carousel-controls is the viewport id:
 - [data-carousel-prev], [data-carousel-next]: click, disabled (aria-disabled on other elements) at the ends, aria-controls, a label from strings when the element has no text or label
-- [data-carousel-dots]: one button per page when it holds no buttons, its own buttons in page order otherwise; aria-current="true" on the active page; a click goes to the page, announced. dotsWindow: N shows at most N dots and moves the window only when the active dot would reach its outer two; on a side with more pages, the outermost shown dot gets data-edge="far" and the next data-edge="near"
+- [data-carousel-dots]: one button per page when it holds no buttons, its own buttons in page order otherwise; aria-current="true" on the active page; a click goes to the page, announced. dotsWindow: N shows at most N dots and moves the window only when the active dot would reach its outer two (for N of 3 or more) or leave it (N of 1 or 2); on a side with more pages, the outermost shown dot gets data-edge="far" and the next data-edge="near"
 - [data-carousel-counter]: one text node with strings.counter(index, count), written only when the text changes; with data-roll each new text rolls in over 200ms, up going forward and down going back, and without the roll under reduced motion
 - [data-carousel-play]: play() and pause() by the visitor, aria-pressed="true" and the strings.pause label while autoplay is requested, aria-pressed="false" and strings.play otherwise
 - [data-carousel-progress]: role="slider" over pages (aria-valuemin 1, aria-valuemax pageCount, aria-valuenow pageIndex + 1, aria-valuetext strings.slide), --re-carousel-progress with the strip progress, a pointer drag that goes to the nearest page, ArrowRight, ArrowUp and PageUp forward, ArrowLeft, ArrowDown and PageDown back (left and right swap in right-to-left layouts), Home and End
-Controls inside an element whose data-carousel-controls names another viewport are left to that one. Announcements use the carousel's strings. The binder gives the viewport a generated id when it has none. The returned function removes every listener, created element and attribute it added and restores the ones it changed.
+Controls inside an element within root whose data-carousel-controls names another viewport are left to that one. Announcements use the carousel's strings. The binder gives the viewport a generated id when it has none. The returned function removes every listener, created element and attribute it added and restores the ones it changed.
 
 ## Planned
 

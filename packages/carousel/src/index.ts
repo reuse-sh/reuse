@@ -522,14 +522,15 @@ export function createCarousel(
     ) {
       return;
     }
+    state = Object.freeze(next);
+    options.onChange?.(state);
+    for (const listener of listeners) listener(state);
+    // A listener that moves the carousel again publishes and reports the newer state itself.
     const from = emitted;
-    const to = Object.freeze(next);
-    state = to;
+    const to = state;
     emitted = to;
-    options.onChange?.(to);
-    for (const listener of listeners) listener(to);
     if (to.index !== from.index) emit("change", to);
-    if (to.isPlaying !== from.isPlaying)
+    if (emitted === to && to.isPlaying !== from.isPlaying)
       emit(to.isPlaying ? "play" : "pause", to);
   }
 

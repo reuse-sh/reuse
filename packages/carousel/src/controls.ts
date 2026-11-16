@@ -71,12 +71,14 @@ export function bindCarouselControls(
       for (const element of scope.querySelectorAll<T>(selector))
         found.add(element);
     }
-    return [...found].filter(
-      (element) =>
-        (element
-          .closest("[data-carousel-controls]")
-          ?.getAttribute("data-carousel-controls") ?? id) === id,
-    );
+    return [...found].filter((element) => {
+      const owner = element.closest("[data-carousel-controls]");
+      return (
+        !owner ||
+        owner.contains(root) ||
+        owner.getAttribute("data-carousel-controls") === id
+      );
+    });
   }
 
   function disable(element: HTMLElement, disabled: boolean) {
