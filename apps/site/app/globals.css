@@ -31,7 +31,7 @@
   --secondary-foreground: #2e2e2e;
   --muted: #f2f2f1;
   --muted-foreground: #5b5b5b;
-  --subtle-foreground: #858585;
+  --subtle-foreground: #737373;
   --accent: rgb(0 0 0 / 3%);
   --accent-foreground: #111;
   --border: rgb(0 0 0 / 8%);
@@ -43,7 +43,7 @@
   --success-foreground: #fff;
   --tooltip: #111;
   --tooltip-foreground: #fff;
-  --sidebar-foreground: rgb(18 18 18 / 40%);
+  --sidebar-foreground: rgb(18 18 18 / 58%);
   --sidebar-active: #121212;
   --frame: rgb(255 255 255 / 55%);
   --media: #ececea;

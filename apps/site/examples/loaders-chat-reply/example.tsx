@@ -69,7 +69,7 @@ export function Example() {
         })}
       </div>
       <form
-        className="mx-3 mb-3 flex items-center gap-2 rounded-2xl py-1 pr-1 pl-3.5 shadow-ring"
+        className="mx-3 mb-3 flex items-center gap-2 rounded-2xl py-1 pr-1 pl-3.5 shadow-ring has-[input:focus-visible]:outline-2 has-[input:focus-visible]:outline-offset-2 has-[input:focus-visible]:outline-ring"
         onSubmit={send}
       >
         <input

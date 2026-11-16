@@ -7,16 +7,20 @@ import { TooltipRoot } from "./shell/tooltip-root";
 
 export function SiteFrame({
   framework,
+  layout,
   children,
 }: {
   framework?: Framework;
+  layout?: "content" | "docs";
   children: ReactNode;
 }) {
   const content = (
     <>
-      <SiteHeader />
-      {children}
-      <SiteFooter />
+      <div className="flex min-h-screen flex-col">
+        <SiteHeader />
+        <div className="flex-1">{children}</div>
+        <SiteFooter layout={layout} />
+      </div>
       <TooltipRoot />
     </>
   );

@@ -90,7 +90,7 @@ export async function DocRoute({
       docBody(found.library, path, path === "" ? example : undefined)
     );
   return (
-    <SiteFrame framework={framework}>
+    <SiteFrame framework={framework} layout="docs">
       <LibraryFrame
         slug={slug}
         before={<FrameworkChooser framework={framework} pathname={pathname} />}

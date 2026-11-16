@@ -86,6 +86,9 @@
     outline: 0;
     @apply bg-transparent text-foreground text-ui;
   }
+  .re-compose:has(input:focus-visible) {
+    @apply outline-2 outline-offset-2 outline-ring;
+  }
   .re-compose button {
     @apply grid place-items-center w-7.5 h-7.5 p-0 border-0 rounded-full bg-primary text-primary-foreground cursor-pointer;
   }

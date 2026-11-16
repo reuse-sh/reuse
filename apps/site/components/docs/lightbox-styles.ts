@@ -278,7 +278,7 @@ const rules: readonly (readonly [(o: LightboxStyle) => boolean, string])[] = [
   [
     (o) => o.caption === "Panel",
     `@media (max-width: 559px) {
-  .re-lightbox-style { --re-lightbox-side: 0px; --re-lightbox-under: 112px; }
+  .re-lightbox-style { --re-lightbox-side: 0px; --re-lightbox-under: 120px; }
   .re-lightbox-style-panel {
     top: auto;
     left: 0;
