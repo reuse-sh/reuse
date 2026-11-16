@@ -59,6 +59,10 @@ const copyDescription =
   "A button that copies text, swaps its icon for a check and says what happened.";
 const avatarsDescription =
   "Photos and initials with badges and groups, cut out cleanly on any background.";
+const justifiedDescription =
+  "Rows of pictures that keep their proportions and fill the width edge to edge.";
+const masonryDescription =
+  "Cards stacked into columns without gaps between rows, natively where the browser can.";
 
 /** The rules every library in the collection follows. */
 export const collectionPrinciples: readonly Row[] = [
@@ -461,6 +465,216 @@ export const libraries: Library[] = [
         path: "api",
         title: "API",
         lead: "The browser module parses, renders and edits one annotation format. The React package wraps the image and the editor.",
+      },
+    ],
+  },
+  {
+    slug: "justified-gallery",
+    name: "Justified gallery",
+    description: justifiedDescription,
+    packageName: "@reuse-sh/gallery",
+    principles: [
+      [
+        "Rows fill the width",
+        "Every full row ends at the container's edge at any width, and no item reaches past it.",
+      ],
+      [
+        "Proportions are kept",
+        "A picture is never cropped or stretched; one row's pictures share one height.",
+      ],
+      [
+        "The row height is the picture's",
+        "A caption under a picture does not change breaks or picture height.",
+      ],
+      [
+        "Works before the script",
+        "Server-rendered markup with ratios already lays out in rows.",
+      ],
+      [
+        "A resize keeps rows while they fit",
+        "Breaks change only when a row leaves the height range, so a scrollbar appearing does not move pictures.",
+      ],
+      ["Hidden keeps its layout", "Width 0 never lays out."],
+      [
+        "Destroy puts back what it wrote",
+        "Destroy disconnects its observers and restores every custom property, attribute and inline style it wrote.",
+      ],
+    ],
+    api: [
+      [
+        "createJustifiedGallery(container, options?)",
+        "Lays out the children of a re-justified container in rows. Returns refresh and destroy.",
+      ],
+      [
+        "tolerance",
+        "How far a full row may settle from the target height, as a fraction of it. 0.25 by default.",
+      ],
+      [
+        "lastRow",
+        '"start", "center", "end", "justify" or "hide" for the last row that is not full. "start" by default, and "hide" never hides the only row.',
+      ],
+      [
+        "maxRows",
+        "Hides every row after this count. 0, every row, by default.",
+      ],
+      [
+        "refresh()",
+        "Reads the items, their proportions and the sizes again and lays out from scratch.",
+      ],
+      [
+        "destroy()",
+        "Disconnects the observers and restores what the controller wrote. Calling it twice is harmless.",
+      ],
+      [
+        "--re-ratio",
+        "An item's width divided by its height. It wins over the size of the image itself.",
+      ],
+      [
+        "--re-justified-row-height",
+        "The target row height. 240px by default, and a media query may change it.",
+      ],
+      [
+        "--re-justified-gap",
+        "The gap between pictures in a row. 8px by default.",
+      ],
+      [
+        "--re-justified-row-gap",
+        "The gap between rows. The same as the column gap by default.",
+      ],
+      [
+        "re-justified-media",
+        "Marks the picture inside a wrapper such as a figure, so a caption after it stays out of the row height.",
+      ],
+      [
+        "JustifiedGallery, useJustifiedGallery(options)",
+        "The React component and hook around the same controller. The component takes options and onReady.",
+      ],
+    ],
+    notes: [
+      "Give every image its width and height attributes or a --re-ratio. Without them the layout shifts when the image loads.",
+      "The controller writes custom properties and data-re-justified attributes on the container and its items, and removes them on destroy.",
+      "Items hidden by the page with display: none are left out of the rows. Adding, removing or reordering items lays out again.",
+    ],
+    pages: [
+      { path: "", title: "Overview", lead: justifiedDescription },
+      {
+        path: "getting-started",
+        title: "Getting started",
+        lead: "Install the package, import the stylesheet once, then lay out the pictures already in your markup.",
+      },
+      {
+        title: "Examples",
+        pages: [
+          {
+            path: "examples/captions",
+            title: "Captions",
+            lead: "Each print with its title and a line under it. Captions of any length leave the picture rows as they are.",
+            build: "a justified gallery with captions under the pictures",
+          },
+          {
+            path: "examples/lightbox",
+            title: "Lightbox",
+            lead: "Every picture opens in the lightbox, in gallery order, and closes back into its place in the row.",
+            build: "a justified gallery that opens in a lightbox",
+          },
+        ],
+      },
+      {
+        path: "api",
+        title: "API",
+        lead: "The browser module exports createJustifiedGallery. The React package adds JustifiedGallery and useJustifiedGallery.",
+      },
+    ],
+  },
+  {
+    slug: "masonry",
+    name: "Masonry",
+    description: masonryDescription,
+    packageName: "@reuse-sh/gallery",
+    principles: [
+      [
+        "The platform lays out first",
+        "Where display: grid-lanes exists, script writes nothing.",
+      ],
+      [
+        "The fallback places like the platform",
+        "Same CSS, same lanes and offsets as css-grid-3 §4.4, for spans that fit the columns.",
+      ],
+      ["Columns and gaps are CSS", "One stylesheet drives both paths."],
+      ["DOM order is reading order", "Items are never moved in the document."],
+      ["Hidden keeps its layout", "Width 0 never lays out."],
+      [
+        "Destroy puts back what it wrote",
+        "Destroy disconnects its observers and restores every inline style and attribute it wrote.",
+      ],
+    ],
+    api: [
+      [
+        "createMasonry(container)",
+        "Stacks the children of a re-masonry container into columns. Returns native, refresh and destroy.",
+      ],
+      [
+        "native",
+        "True when the browser lays the items out with display: grid-lanes and the controller writes nothing.",
+      ],
+      [
+        "refresh()",
+        "Measures the items again and places them. Does nothing when native.",
+      ],
+      [
+        "destroy()",
+        "Disconnects the observers and restores what the fallback wrote. Calling it twice is harmless.",
+      ],
+      [
+        "--re-masonry-columns",
+        "The number of equal columns. 3 by default. A page may set its own grid-template-columns instead.",
+      ],
+      ["--re-masonry-gap", "The gap between columns. 8px by default."],
+      [
+        "--re-masonry-row-gap",
+        "The gap between items in a column. The same as the column gap by default.",
+      ],
+      [
+        "--re-masonry-tolerance",
+        "How close to the shortest column a column must be to take the next item in order: normal (1em, the default), infinite, or a length.",
+      ],
+      [
+        "grid-column: span N",
+        "Lets an item span several columns, natively and in the fallback.",
+      ],
+      [
+        "Masonry, useMasonry()",
+        "The React component and hook around the same controller. The component takes onReady.",
+      ],
+    ],
+    notes: [
+      "Where the browser supports display: grid-lanes, the stylesheet uses it and the controller writes nothing. That is Safari 26.4 and later today.",
+      "Elsewhere the fallback writes grid-column and margin-top on each item and keeps every item in grid row 1, so column widths, gaps and right-to-left stay CSS.",
+      "Give images their width and height attributes, so a column does not shift when they load. The fallback places the items again whenever one changes height.",
+      "Keep a span within the column count, for example with a container query. Natively a wider span adds a column past the container's edge; the fallback narrows it to every column instead.",
+    ],
+    pages: [
+      { path: "", title: "Overview", lead: masonryDescription },
+      {
+        path: "getting-started",
+        title: "Getting started",
+        lead: "Install the package, import the stylesheet once, then stack the cards already in your markup.",
+      },
+      {
+        title: "Examples",
+        pages: [
+          {
+            path: "examples/spans",
+            title: "Spans",
+            lead: "As many columns as fit, and one featured card that spans two of them.",
+            build: "a masonry grid with a featured card that spans two columns",
+          },
+        ],
+      },
+      {
+        path: "api",
+        title: "API",
+        lead: "The browser module exports createMasonry. The React package adds Masonry and useMasonry.",
       },
     ],
   },

@@ -1434,6 +1434,803 @@ carousel.destroy();`,
       },
     ],
   },
+  "justified-gallery/getting-started": {
+    react: [
+      {
+        title: "Package styles",
+        blocks: [
+          {
+            kind: "prose",
+            text: "Import the package stylesheet once in your main CSS. The components layer lets Tailwind utilities adapt its presentation.",
+          },
+          {
+            kind: "code",
+            id: "justified-gallery-getting-started-package-styles",
+            language: "css",
+            code: '@import "@reuse-sh/gallery/styles.css" layer(components);',
+            role: "setup",
+          },
+        ],
+      },
+      {
+        title: "Usage",
+        blocks: [
+          {
+            kind: "prose",
+            text: "Every child is an item. Give each image its width and height and the same proportion as --re-ratio, so rows are right before the image loads and before the script runs. Set the target row height in CSS.",
+          },
+          {
+            kind: "code",
+            id: "justified-gallery-getting-started-react",
+            language: "tsx",
+            code: `"use client";
+
+import { JustifiedGallery } from "@reuse-sh/gallery/react";
+import type { CSSProperties } from "react";
+
+const prints = [
+  { src: "/images/coral-sky.jpg", alt: "Coral sky", width: 1600, height: 900 },
+  { src: "/images/blue-hour.jpg", alt: "Blue hour", width: 800, height: 1200 },
+  { src: "/images/amber.jpg", alt: "Amber", width: 1200, height: 1200 },
+];
+
+export function PrintRows() {
+  return <JustifiedGallery className="[--re-justified-row-height:180px] max-sm:[--re-justified-row-height:120px]">
+    {prints.map((print) => (
+      <img key={print.src} src={print.src} alt={print.alt} width={print.width} height={print.height}
+        style={{ "--re-ratio": print.width / print.height } as CSSProperties} />
+    ))}
+  </JustifiedGallery>;
+}`,
+            role: "usage",
+          },
+        ],
+      },
+      {
+        title: "Integration",
+        blocks: [
+          {
+            kind: "prose",
+            text: "Without the script the stylesheet already lays the items out in rows. The controller then chooses the row breaks and sizes every row in percent, so a row scales with its container. The React component owns initialization and teardown.",
+          },
+        ],
+      },
+    ],
+    html: [
+      {
+        title: "Usage",
+        blocks: [
+          {
+            kind: "prose",
+            text: "Every child is an item. Give each image its width and height and the same proportion as --re-ratio, so rows are right before the image loads and before the script runs.",
+          },
+          {
+            kind: "code",
+            id: "justified-gallery-getting-started-markup",
+            language: "html",
+            code: `<div id="prints" class="re-justified">
+  <img src="/images/coral-sky.jpg" alt="Coral sky" width="1600" height="900" style="--re-ratio: 1.7778" />
+  <img src="/images/blue-hour.jpg" alt="Blue hour" width="800" height="1200" style="--re-ratio: 0.6667" />
+  <img src="/images/amber.jpg" alt="Amber" width="1200" height="1200" style="--re-ratio: 1" />
+</div>`,
+            role: "usage",
+          },
+        ],
+      },
+      {
+        title: "Styles",
+        blocks: [
+          {
+            kind: "prose",
+            text: "Import the package stylesheet once. The target row height is CSS, so a media query can change it.",
+          },
+          {
+            kind: "code",
+            id: "justified-gallery-getting-started-css",
+            language: "css",
+            code: `@import "@reuse-sh/gallery/styles.css";
+
+#prints { --re-justified-row-height: 180px; }
+@media (max-width: 640px) { #prints { --re-justified-row-height: 120px; } }`,
+            role: "usage",
+          },
+        ],
+      },
+      {
+        title: "Initialize",
+        blocks: [
+          {
+            kind: "prose",
+            text: "Run this after the markup exists. Keep the returned controller for the lifetime of this content.",
+          },
+          {
+            kind: "code",
+            id: "justified-gallery-getting-started-initialize",
+            language: "javascript",
+            code: `import { createJustifiedGallery } from "@reuse-sh/gallery";
+
+const gallery = createJustifiedGallery(document.querySelector("#prints"));`,
+            role: "setup",
+          },
+        ],
+      },
+      {
+        title: "Integration",
+        blocks: [
+          {
+            kind: "prose",
+            text: "Without the script the stylesheet already lays the items out in rows. The controller then chooses the row breaks and sizes every row in percent, so a row scales with its container. Adding, removing or reordering items lays out again.",
+          },
+        ],
+      },
+      {
+        title: "Cleanup",
+        blocks: [
+          {
+            kind: "prose",
+            text: "Run this when the view is removed, before mounting another controller on the same element.",
+          },
+          {
+            kind: "code",
+            id: "justified-gallery-getting-started-cleanup",
+            language: "javascript",
+            code: "gallery.destroy();",
+            role: "cleanup",
+          },
+        ],
+      },
+    ],
+  },
+  "justified-gallery/examples/captions": {
+    react: [
+      {
+        title: "Package styles",
+        blocks: [
+          {
+            kind: "prose",
+            text: "Import the package stylesheet once in your main CSS. The components layer lets Tailwind utilities adapt its presentation.",
+          },
+          {
+            kind: "code",
+            id: "justified-gallery-examples-captions-package-styles",
+            language: "css",
+            code: '@import "@reuse-sh/gallery/styles.css" layer(components);',
+            role: "setup",
+          },
+        ],
+      },
+      {
+        title: "Usage",
+        blocks: [
+          {
+            kind: "prose",
+            text: "Wrap each image in a figure and mark the image with re-justified-media. The row height belongs to the picture, so a caption of any length sits under it without changing the rows. The last row is centered.",
+          },
+          {
+            kind: "code",
+            id: "justified-gallery-examples-captions-react",
+            language: "tsx",
+            code: `"use client";
+
+import { JustifiedGallery } from "@reuse-sh/gallery/react";
+import type { CSSProperties } from "react";
+
+const prints = [
+  { src: "/images/coral-sky.jpg", title: "Coral sky", note: "Coral, sand and blue", width: 1600, height: 900 },
+  { src: "/images/blue-hour.jpg", title: "Blue hour", note: "Blue, lilac and gold", width: 800, height: 1200 },
+  { src: "/images/amber.jpg", title: "Amber", note: "Orange, yellow and blue", width: 1200, height: 1200 },
+];
+
+export function CaptionedPrints() {
+  return <JustifiedGallery options={{ lastRow: "center" }}>
+    {prints.map((print) => (
+      <figure key={print.src} className="m-0" style={{ "--re-ratio": print.width / print.height } as CSSProperties}>
+        <img className="re-justified-media" src={print.src} alt="" width={print.width} height={print.height} />
+        <figcaption className="pt-2">
+          <strong className="block">{print.title}</strong>
+          <span>{print.note}</span>
+        </figcaption>
+      </figure>
+    ))}
+  </JustifiedGallery>;
+}`,
+            role: "usage",
+          },
+        ],
+      },
+      {
+        title: "Integration",
+        blocks: [
+          {
+            kind: "prose",
+            text: "Keep the figure margin at zero, since a margin adds to the item's width. The caption names the print, so the image alt stays empty.",
+          },
+        ],
+      },
+    ],
+    html: [
+      {
+        title: "Usage",
+        blocks: [
+          {
+            kind: "prose",
+            text: "Wrap each image in a figure and mark the image with re-justified-media. The row height belongs to the picture, so a caption of any length sits under it without changing the rows. The last row is centered.",
+          },
+          {
+            kind: "code",
+            id: "justified-gallery-examples-captions-markup",
+            language: "html",
+            code: `<div id="prints" class="re-justified">
+  <figure style="--re-ratio: 1.7778">
+    <img class="re-justified-media" src="/images/coral-sky.jpg" alt="" width="1600" height="900" />
+    <figcaption><strong>Coral sky</strong> Coral, sand and blue</figcaption>
+  </figure>
+  <figure style="--re-ratio: 0.6667">
+    <img class="re-justified-media" src="/images/blue-hour.jpg" alt="" width="800" height="1200" />
+    <figcaption><strong>Blue hour</strong> Blue, lilac and gold</figcaption>
+  </figure>
+  <figure style="--re-ratio: 1">
+    <img class="re-justified-media" src="/images/amber.jpg" alt="" width="1200" height="1200" />
+    <figcaption><strong>Amber</strong> Orange, yellow and blue</figcaption>
+  </figure>
+</div>`,
+            role: "usage",
+          },
+        ],
+      },
+      {
+        title: "Styles",
+        blocks: [
+          {
+            kind: "prose",
+            text: "Import the package stylesheet once. Keep the figure margin at zero, since a margin adds to the item's width.",
+          },
+          {
+            kind: "code",
+            id: "justified-gallery-examples-captions-css",
+            language: "css",
+            code: `@import "@reuse-sh/gallery/styles.css";
+
+#prints { --re-justified-row-height: 180px; }
+#prints figure { margin: 0; }
+#prints figcaption { padding-top: 8px; }
+#prints strong { display: block; }`,
+            role: "usage",
+          },
+        ],
+      },
+      {
+        title: "Initialize",
+        blocks: [
+          {
+            kind: "prose",
+            text: "Run this after the markup exists. Keep the returned controller for the lifetime of this content.",
+          },
+          {
+            kind: "code",
+            id: "justified-gallery-examples-captions-initialize",
+            language: "javascript",
+            code: `import { createJustifiedGallery } from "@reuse-sh/gallery";
+
+const gallery = createJustifiedGallery(document.querySelector("#prints"), { lastRow: "center" });`,
+            role: "setup",
+          },
+        ],
+      },
+      {
+        title: "Integration",
+        blocks: [
+          {
+            kind: "prose",
+            text: "The caption names the print, so the image alt stays empty. A caption that wraps to more lines makes only its own item taller.",
+          },
+        ],
+      },
+      {
+        title: "Cleanup",
+        blocks: [
+          {
+            kind: "prose",
+            text: "Run this when the view is removed, before mounting another controller on the same element.",
+          },
+          {
+            kind: "code",
+            id: "justified-gallery-examples-captions-cleanup",
+            language: "javascript",
+            code: "gallery.destroy();",
+            role: "cleanup",
+          },
+        ],
+      },
+    ],
+  },
+  "justified-gallery/examples/lightbox": {
+    react: [
+      {
+        title: "Package styles",
+        blocks: [
+          {
+            kind: "prose",
+            text: "Import both package stylesheets once in your main CSS. The components layer lets Tailwind utilities adapt their presentation.",
+          },
+          {
+            kind: "code",
+            id: "justified-gallery-examples-lightbox-package-styles",
+            language: "css",
+            code: `@import "@reuse-sh/gallery/styles.css" layer(components);
+@import "@reuse-sh/lightbox/styles.css" layer(components);`,
+            role: "setup",
+          },
+        ],
+      },
+      {
+        title: "Usage",
+        blocks: [
+          {
+            kind: "prose",
+            text: "Make each item a button around its image. A press opens the whole set in gallery order, and the pressed image is the origin the viewer grows out of and returns to.",
+          },
+          {
+            kind: "code",
+            id: "justified-gallery-examples-lightbox-react",
+            language: "tsx",
+            code: `"use client";
+
+import { JustifiedGallery } from "@reuse-sh/gallery/react";
+import { useLightbox } from "@reuse-sh/lightbox/react";
+import type { CSSProperties } from "react";
+
+const prints = [
+  { src: "/images/coral-sky.jpg", alt: "Coral sky", width: 1600, height: 900 },
+  { src: "/images/blue-hour.jpg", alt: "Blue hour", width: 800, height: 1200 },
+  { src: "/images/amber.jpg", alt: "Amber", width: 1200, height: 1200 },
+];
+
+export function PrintRows() {
+  const lightbox = useLightbox({});
+  return <JustifiedGallery>
+    {prints.map((print, index) => (
+      <button key={print.src} type="button" className="cursor-zoom-in"
+        style={{ "--re-ratio": print.width / print.height } as CSSProperties}
+        onClick={(event) => {
+          const origin = event.currentTarget.querySelector("img");
+          lightbox.open(prints.map((item) => ({ ...item, origin: item === print ? origin : null })), index);
+        }}>
+        <img className="re-justified-media" src={print.src} alt={print.alt} width={print.width} height={print.height} />
+      </button>
+    ))}
+  </JustifiedGallery>;
+}`,
+            role: "usage",
+          },
+        ],
+      },
+      {
+        title: "Integration",
+        blocks: [
+          {
+            kind: "prose",
+            text: "The image alt names each button. The native dialog keeps focus inside, Escape closes it, and close returns focus to the button that opened it. The React components destroy the gallery and the viewer on unmount.",
+          },
+        ],
+      },
+    ],
+    html: [
+      {
+        title: "Usage",
+        blocks: [
+          {
+            kind: "prose",
+            text: "Make each item a button around its image, then bind the gallery to the lightbox. A press opens the whole set in gallery order, and the pressed image is the origin the viewer grows out of and returns to.",
+          },
+          {
+            kind: "code",
+            id: "justified-gallery-examples-lightbox-markup",
+            language: "html",
+            code: `<div id="prints" class="re-justified">
+  <button type="button" style="--re-ratio: 1.7778">
+    <img class="re-justified-media" src="/images/coral-sky.jpg" alt="Coral sky" width="1600" height="900" />
+  </button>
+  <button type="button" style="--re-ratio: 0.6667">
+    <img class="re-justified-media" src="/images/blue-hour.jpg" alt="Blue hour" width="800" height="1200" />
+  </button>
+  <button type="button" style="--re-ratio: 1">
+    <img class="re-justified-media" src="/images/amber.jpg" alt="Amber" width="1200" height="1200" />
+  </button>
+</div>`,
+            role: "usage",
+          },
+        ],
+      },
+      {
+        title: "Styles",
+        blocks: [
+          {
+            kind: "prose",
+            text: "Import both package stylesheets once. Reset the button box, since padding and a border add to the item's size.",
+          },
+          {
+            kind: "code",
+            id: "justified-gallery-examples-lightbox-css",
+            language: "css",
+            code: `@import "@reuse-sh/gallery/styles.css";
+@import "@reuse-sh/lightbox/styles.css";
+
+#prints { --re-justified-row-height: 180px; }
+#prints button { padding: 0; border: 0; background: none; cursor: zoom-in; }`,
+            role: "usage",
+          },
+        ],
+      },
+      {
+        title: "Initialize",
+        blocks: [
+          {
+            kind: "prose",
+            text: "Run this after the markup exists. Keep both returned controllers for the lifetime of this content.",
+          },
+          {
+            kind: "code",
+            id: "justified-gallery-examples-lightbox-initialize",
+            language: "javascript",
+            code: `import { createJustifiedGallery } from "@reuse-sh/gallery";
+import { bindLightboxGallery } from "@reuse-sh/lightbox";
+
+const root = document.querySelector("#prints");
+const gallery = createJustifiedGallery(root);
+const viewer = bindLightboxGallery(root, {});`,
+            role: "setup",
+          },
+        ],
+      },
+      {
+        title: "Integration",
+        blocks: [
+          {
+            kind: "prose",
+            text: "The image alt names each button. The native dialog keeps focus inside, Escape closes it, and close returns focus to the button that opened it.",
+          },
+        ],
+      },
+      {
+        title: "Cleanup",
+        blocks: [
+          {
+            kind: "prose",
+            text: "Run this when the view is removed, before mounting other controllers on the same element.",
+          },
+          {
+            kind: "code",
+            id: "justified-gallery-examples-lightbox-cleanup",
+            language: "javascript",
+            code: `viewer.destroy();
+gallery.destroy();`,
+            role: "cleanup",
+          },
+        ],
+      },
+    ],
+  },
+  "masonry/getting-started": {
+    react: [
+      {
+        title: "Package styles",
+        blocks: [
+          {
+            kind: "prose",
+            text: "Import the package stylesheet once in your main CSS. The components layer lets Tailwind utilities adapt its presentation.",
+          },
+          {
+            kind: "code",
+            id: "masonry-getting-started-package-styles",
+            language: "css",
+            code: '@import "@reuse-sh/gallery/styles.css" layer(components);',
+            role: "setup",
+          },
+        ],
+      },
+      {
+        title: "Usage",
+        blocks: [
+          {
+            kind: "prose",
+            text: "Every child is an item. Set the column count with --re-masonry-columns, here three columns and two on narrow screens. Give images their width and height so a column does not shift when they load.",
+          },
+          {
+            kind: "code",
+            id: "masonry-getting-started-react",
+            language: "tsx",
+            code: `"use client";
+
+import { Masonry } from "@reuse-sh/gallery/react";
+
+const prints = [
+  { src: "/images/coral-sky.jpg", title: "Coral sky", text: "Coral, sand and blue.", width: 1600, height: 900 },
+  { src: "/images/blue-hour.jpg", title: "Blue hour", text: "Blue, lilac and gold.", width: 800, height: 1200 },
+  { src: "/images/amber.jpg", title: "Amber", text: "Orange, yellow and blue.", width: 1200, height: 1200 },
+];
+
+export function PrintCards() {
+  return <Masonry className="[--re-masonry-columns:3] [--re-masonry-gap:16px] max-md:[--re-masonry-columns:2]">
+    {prints.map((print) => (
+      <article key={print.src}>
+        <img className="block h-auto w-full" src={print.src} alt="" width={print.width} height={print.height} />
+        <h3>{print.title}</h3>
+        <p>{print.text}</p>
+      </article>
+    ))}
+  </Masonry>;
+}`,
+            role: "usage",
+          },
+        ],
+      },
+      {
+        title: "Integration",
+        blocks: [
+          {
+            kind: "prose",
+            text: "Where the browser has display: grid-lanes, it stacks the cards itself and the controller writes nothing. Elsewhere the controller places each card in a column and places them again when a card changes height. The React component owns initialization and teardown.",
+          },
+        ],
+      },
+    ],
+    html: [
+      {
+        title: "Usage",
+        blocks: [
+          {
+            kind: "prose",
+            text: "Every child is an item. Give images their width and height so a column does not shift when they load.",
+          },
+          {
+            kind: "code",
+            id: "masonry-getting-started-markup",
+            language: "html",
+            code: `<div id="prints" class="re-masonry">
+  <article>
+    <img src="/images/coral-sky.jpg" alt="" width="1600" height="900" />
+    <h3>Coral sky</h3>
+    <p>Coral, sand and blue.</p>
+  </article>
+  <article>
+    <img src="/images/blue-hour.jpg" alt="" width="800" height="1200" />
+    <h3>Blue hour</h3>
+    <p>Blue, lilac and gold.</p>
+  </article>
+  <article>
+    <img src="/images/amber.jpg" alt="" width="1200" height="1200" />
+    <h3>Amber</h3>
+    <p>Orange, yellow and blue.</p>
+  </article>
+</div>`,
+            role: "usage",
+          },
+        ],
+      },
+      {
+        title: "Styles",
+        blocks: [
+          {
+            kind: "prose",
+            text: "Import the package stylesheet once. Columns and gaps are CSS, so a media query can change them.",
+          },
+          {
+            kind: "code",
+            id: "masonry-getting-started-css",
+            language: "css",
+            code: `@import "@reuse-sh/gallery/styles.css";
+
+#prints { --re-masonry-columns: 3; --re-masonry-gap: 16px; }
+@media (max-width: 768px) { #prints { --re-masonry-columns: 2; } }
+#prints img { display: block; width: 100%; height: auto; }`,
+            role: "usage",
+          },
+        ],
+      },
+      {
+        title: "Initialize",
+        blocks: [
+          {
+            kind: "prose",
+            text: "Run this after the markup exists. Keep the returned controller for the lifetime of this content.",
+          },
+          {
+            kind: "code",
+            id: "masonry-getting-started-initialize",
+            language: "javascript",
+            code: `import { createMasonry } from "@reuse-sh/gallery";
+
+const masonry = createMasonry(document.querySelector("#prints"));`,
+            role: "setup",
+          },
+        ],
+      },
+      {
+        title: "Integration",
+        blocks: [
+          {
+            kind: "prose",
+            text: "Where the browser has display: grid-lanes, it stacks the cards itself and masonry.native is true. Elsewhere the controller places each card in a column and places them again when a card changes height. The cards stay in document order either way.",
+          },
+        ],
+      },
+      {
+        title: "Cleanup",
+        blocks: [
+          {
+            kind: "prose",
+            text: "Run this when the view is removed, before mounting another controller on the same element.",
+          },
+          {
+            kind: "code",
+            id: "masonry-getting-started-cleanup",
+            language: "javascript",
+            code: "masonry.destroy();",
+            role: "cleanup",
+          },
+        ],
+      },
+    ],
+  },
+  "masonry/examples/spans": {
+    react: [
+      {
+        title: "Package styles",
+        blocks: [
+          {
+            kind: "prose",
+            text: "Import the package stylesheet once in your main CSS. The components layer lets Tailwind utilities adapt its presentation.",
+          },
+          {
+            kind: "code",
+            id: "masonry-examples-spans-package-styles",
+            language: "css",
+            code: '@import "@reuse-sh/gallery/styles.css" layer(components);',
+            role: "setup",
+          },
+        ],
+      },
+      {
+        title: "Usage",
+        blocks: [
+          {
+            kind: "prose",
+            text: "Set your own grid-template-columns to fit as many columns as the width holds, and let the featured card span two of them once two fit. A container query keeps a single column from growing a second one for the span.",
+          },
+          {
+            kind: "code",
+            id: "masonry-examples-spans-react",
+            language: "tsx",
+            code: `"use client";
+
+import { Masonry } from "@reuse-sh/gallery/react";
+
+const prints = [
+  { src: "/images/coral-sky.jpg", title: "Coral sky", width: 2100, height: 900, featured: true },
+  { src: "/images/blue-hour.jpg", title: "Blue hour", width: 800, height: 1200, featured: false },
+  { src: "/images/amber.jpg", title: "Amber", width: 1200, height: 1200, featured: false },
+];
+
+export function FeaturedPrints() {
+  return <Masonry className="@container grid-cols-[repeat(auto-fill,minmax(180px,1fr))] [--re-masonry-gap:16px]">
+    {prints.map((print) => (
+      <article key={print.src} className={print.featured ? "@min-[376px]:col-span-2" : undefined}>
+        <img className="block h-auto w-full" src={print.src} alt="" width={print.width} height={print.height} />
+        <h3>{print.title}</h3>
+      </article>
+    ))}
+  </Masonry>;
+}`,
+            role: "usage",
+          },
+        ],
+      },
+      {
+        title: "Integration",
+        blocks: [
+          {
+            kind: "prose",
+            text: "The column count follows the width, and the controller reads the columns again after a resize. The featured card stays first in the document, so keyboard and reading order do not change.",
+          },
+        ],
+      },
+    ],
+    html: [
+      {
+        title: "Usage",
+        blocks: [
+          {
+            kind: "prose",
+            text: "Mark the featured card so it can span two columns once two fit.",
+          },
+          {
+            kind: "code",
+            id: "masonry-examples-spans-markup",
+            language: "html",
+            code: `<div id="prints" class="re-masonry">
+  <article class="featured">
+    <img src="/images/coral-sky.jpg" alt="" width="2100" height="900" />
+    <h3>Coral sky</h3>
+  </article>
+  <article>
+    <img src="/images/blue-hour.jpg" alt="" width="800" height="1200" />
+    <h3>Blue hour</h3>
+  </article>
+  <article>
+    <img src="/images/amber.jpg" alt="" width="1200" height="1200" />
+    <h3>Amber</h3>
+  </article>
+</div>`,
+            role: "usage",
+          },
+        ],
+      },
+      {
+        title: "Styles",
+        blocks: [
+          {
+            kind: "prose",
+            text: "Import the package stylesheet once. Your own grid-template-columns replaces the column count, here as many 180px columns as fit. The span waits until two columns fit, since a span wider than the columns adds one in browsers with native grid lanes.",
+          },
+          {
+            kind: "code",
+            id: "masonry-examples-spans-css",
+            language: "css",
+            code: `@import "@reuse-sh/gallery/styles.css";
+
+#prints { grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); --re-masonry-gap: 16px; container-type: inline-size; }
+@container (width >= 376px) { #prints .featured { grid-column: span 2; } }
+#prints img { display: block; width: 100%; height: auto; }`,
+            role: "usage",
+          },
+        ],
+      },
+      {
+        title: "Initialize",
+        blocks: [
+          {
+            kind: "prose",
+            text: "Run this after the markup exists. Keep the returned controller for the lifetime of this content.",
+          },
+          {
+            kind: "code",
+            id: "masonry-examples-spans-initialize",
+            language: "javascript",
+            code: `import { createMasonry } from "@reuse-sh/gallery";
+
+const masonry = createMasonry(document.querySelector("#prints"));`,
+            role: "setup",
+          },
+        ],
+      },
+      {
+        title: "Integration",
+        blocks: [
+          {
+            kind: "prose",
+            text: "The column count follows the width, and the controller reads the columns again after a resize. The featured card stays first in the document, so keyboard and reading order do not change.",
+          },
+        ],
+      },
+      {
+        title: "Cleanup",
+        blocks: [
+          {
+            kind: "prose",
+            text: "Run this when the view is removed, before mounting another controller on the same element.",
+          },
+          {
+            kind: "code",
+            id: "masonry-examples-spans-cleanup",
+            language: "javascript",
+            code: "masonry.destroy();",
+            role: "cleanup",
+          },
+        ],
+      },
+    ],
+  },
   "annotations/getting-started": {
     react: [
       {

@@ -43,6 +43,12 @@
       "modules": 1,
       "bytes": 67,
       "gzipBytes": 77
+    },
+    {
+      "name": "gallery",
+      "modules": 7,
+      "bytes": 35031,
+      "gzipBytes": 10575
     }
   ]
 }

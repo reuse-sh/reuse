@@ -1,7 +1,10 @@
 import { docHref, docPages, type Library, libraries } from "@reuse-sh/catalog";
 
 export const menuGroups = [
-  ["Media", ["lightbox", "carousel", "annotations"]],
+  [
+    "Media",
+    ["lightbox", "carousel", "annotations", "justified-gallery", "masonry"],
+  ],
   [
     "Interface",
     [
@@ -21,6 +24,8 @@ export const shortLines: Record<MenuSlug, string> = {
   lightbox: "Full-screen photos with zoom",
   carousel: "A scroll-snap strip of slides",
   annotations: "Marks and notes on images",
+  "justified-gallery": "Photo rows that fill the width",
+  masonry: "Cards stacked into columns",
   avatars: "Faces, badges and groups",
   "floating-tooltip": "A hint that follows the pointer",
   "moving-highlight": "A surface that follows focus",

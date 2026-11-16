@@ -31,6 +31,16 @@ const icons: Record<string, DocIconName[]> = {
   ],
   "hold-to-confirm": ["timer", "minus", "keyboard", "cursor", "code", "layers"],
   avatars: ["feather", "doc", "plus", "code", "resize", "layers"],
+  "justified-gallery": [
+    "resize",
+    "zoom",
+    "doc",
+    "feather",
+    "chevrons",
+    "minus",
+    "code",
+  ],
+  masonry: ["feather", "layers", "resize", "keyboard", "minus", "code"],
 };
 function Hint({ slug }: { slug: string }) {
   if (slug === "carousel")
@@ -52,6 +62,20 @@ function Hint({ slug }: { slug: string }) {
       <Keys>
         Move along the toolbar, or use <Kbd>Tab</Kbd> to reach it and{" "}
         <Kbd>Esc</Kbd> to hide the hint.
+      </Keys>
+    );
+  if (slug === "justified-gallery")
+    return (
+      <Keys>
+        Resize the window. Rows scale with it and break again only when one
+        leaves its height range.
+      </Keys>
+    );
+  if (slug === "masonry")
+    return (
+      <Keys>
+        Resize the window. The columns go from three to one, and the cards keep
+        their reading order.
       </Keys>
     );
   return null;

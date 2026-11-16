@@ -139,10 +139,36 @@ for (const [path, recipe] of Object.entries(usageRecipes)) {
         });
       expect(painted).toBe(true);
     }
+    if (path.startsWith("justified-gallery/"))
+      await expect(
+        page.locator(".re-justified[data-re-justified]"),
+      ).toHaveCount(1);
+    if (path === "justified-gallery/examples/lightbox") {
+      await page.locator("#prints button").first().click();
+      await expect(page.locator("dialog[open]")).toHaveCount(1);
+      await page.keyboard.press("Escape");
+      await expect(page.locator("dialog[open]")).toHaveCount(0);
+    }
+    if (path.startsWith("masonry/")) {
+      await expect(page.locator(".re-masonry[data-re-masonry]")).toHaveCount(1);
+      await expect
+        .poll(() =>
+          page
+            .locator(".re-masonry > :nth-child(2)")
+            .evaluate((element: HTMLElement) => element.style.gridColumn),
+        )
+        .not.toBe("");
+    }
     if (setup)
       await page.evaluate(() =>
         (window as unknown as { __usageCleanup: () => void }).__usageCleanup(),
       );
+    if (path.startsWith("justified-gallery/"))
+      await expect(page.locator("[data-re-justified]")).toHaveCount(0);
+    if (path === "justified-gallery/examples/lightbox")
+      await expect(page.locator("dialog")).toHaveCount(0);
+    if (path.startsWith("masonry/"))
+      await expect(page.locator("[data-re-masonry], [style]")).toHaveCount(0);
     if (path.startsWith("lightbox/"))
       await expect(page.locator("dialog")).toHaveCount(0);
     if (path.startsWith("loaders/"))

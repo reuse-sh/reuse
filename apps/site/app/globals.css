@@ -9,6 +9,7 @@
 @import "@reuse-sh/loaders/styles.css" layer(components);
 @import "@reuse-sh/interactions/styles.css" layer(components);
 @import "@reuse-sh/avatars/styles.css" layer(components);
+@import "@reuse-sh/gallery/styles.css" layer(components);
 @import "./styles/shell.css";
 @import "tailwindcss/utilities.css" layer(utilities) source(none);
 @source "../components";

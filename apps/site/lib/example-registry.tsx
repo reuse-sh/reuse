@@ -24,20 +24,25 @@ import { Example as Example21 } from "../examples/highlight-tabs/example";
 import { Example as Example22 } from "../examples/hold-delete-file/example";
 import { Example as Example23 } from "../examples/hold-settings/example";
 import { Example as Example24 } from "../examples/hold-start/example";
-import { Example as Example25 } from "../examples/lightbox-chat/example";
-import { Example as Example26 } from "../examples/lightbox-journal/example";
-import { Example as Example27 } from "../examples/lightbox-product/example";
-import { Example as Example28 } from "../examples/lightbox-start/example";
-import { Example as Example29 } from "../examples/loaders-chat-reply/example";
-import { Example as Example30 } from "../examples/loaders-figures/example";
-import { Example as Example31 } from "../examples/loaders-start/example";
-import { Example as Example32 } from "../examples/shadows-cards/example";
-import { Example as Example33 } from "../examples/shadows-scale/example";
-import { Example as Example34 } from "../examples/shadows-start/example";
-import { Example as Example35 } from "../examples/tooltip-links/example";
-import { Example as Example36 } from "../examples/tooltip-people/example";
-import { Example as Example37 } from "../examples/tooltip-shortcuts/example";
-import { Example as Example38 } from "../examples/tooltip-start/example";
+import { Example as Example25 } from "../examples/justified-captions/example";
+import { Example as Example26 } from "../examples/justified-lightbox/example";
+import { Example as Example27 } from "../examples/justified-start/example";
+import { Example as Example28 } from "../examples/lightbox-chat/example";
+import { Example as Example29 } from "../examples/lightbox-journal/example";
+import { Example as Example30 } from "../examples/lightbox-product/example";
+import { Example as Example31 } from "../examples/lightbox-start/example";
+import { Example as Example32 } from "../examples/loaders-chat-reply/example";
+import { Example as Example33 } from "../examples/loaders-figures/example";
+import { Example as Example34 } from "../examples/loaders-start/example";
+import { Example as Example35 } from "../examples/masonry-spans/example";
+import { Example as Example36 } from "../examples/masonry-start/example";
+import { Example as Example37 } from "../examples/shadows-cards/example";
+import { Example as Example38 } from "../examples/shadows-scale/example";
+import { Example as Example39 } from "../examples/shadows-start/example";
+import { Example as Example40 } from "../examples/tooltip-links/example";
+import { Example as Example41 } from "../examples/tooltip-people/example";
+import { Example as Example42 } from "../examples/tooltip-shortcuts/example";
+import { Example as Example43 } from "../examples/tooltip-start/example";
 
 export const examples: Record<string, ComponentType> = {
   "annotations-data-format": Example0,
@@ -65,18 +70,23 @@ export const examples: Record<string, ComponentType> = {
   "hold-delete-file": Example22,
   "hold-settings": Example23,
   "hold-start": Example24,
-  "lightbox-chat": Example25,
-  "lightbox-journal": Example26,
-  "lightbox-product": Example27,
-  "lightbox-start": Example28,
-  "loaders-chat-reply": Example29,
-  "loaders-figures": Example30,
-  "loaders-start": Example31,
-  "shadows-cards": Example32,
-  "shadows-scale": Example33,
-  "shadows-start": Example34,
-  "tooltip-links": Example35,
-  "tooltip-people": Example36,
-  "tooltip-shortcuts": Example37,
-  "tooltip-start": Example38,
+  "justified-captions": Example25,
+  "justified-lightbox": Example26,
+  "justified-start": Example27,
+  "lightbox-chat": Example28,
+  "lightbox-journal": Example29,
+  "lightbox-product": Example30,
+  "lightbox-start": Example31,
+  "loaders-chat-reply": Example32,
+  "loaders-figures": Example33,
+  "loaders-start": Example34,
+  "masonry-spans": Example35,
+  "masonry-start": Example36,
+  "shadows-cards": Example37,
+  "shadows-scale": Example38,
+  "shadows-start": Example39,
+  "tooltip-links": Example40,
+  "tooltip-people": Example41,
+  "tooltip-shortcuts": Example42,
+  "tooltip-start": Example43,
 };

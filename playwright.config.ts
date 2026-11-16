@@ -9,6 +9,16 @@ export default defineConfig({
   use: { ...devices["Desktop Chrome"], viewport: { width: 1000, height: 700 } },
   projects: [
     { name: "packages", testDir: "tests/browser" },
+    {
+      // Native grid lanes ship in WebKit only, so the gallery is also checked there.
+      name: "webkit",
+      testDir: "tests/browser",
+      testMatch: "gallery.spec.ts",
+      use: {
+        ...devices["Desktop Safari"],
+        viewport: { width: 1000, height: 700 },
+      },
+    },
     { name: "site", testDir: "tests/site", use: { baseURL: site } },
   ],
   webServer: {

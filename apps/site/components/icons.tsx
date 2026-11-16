@@ -8,6 +8,7 @@ import ComputerTerminal01Icon from "@hugeicons/core-free-icons/ComputerTerminal0
 import Copy01Icon from "@hugeicons/core-free-icons/Copy01Icon";
 import Cursor01Icon from "@hugeicons/core-free-icons/Cursor01Icon";
 import CursorInWindowIcon from "@hugeicons/core-free-icons/CursorInWindowIcon";
+import DashboardSquare02Icon from "@hugeicons/core-free-icons/DashboardSquare02Icon";
 import Delete02Icon from "@hugeicons/core-free-icons/Delete02Icon";
 import Edit02Icon from "@hugeicons/core-free-icons/Edit02Icon";
 import FavouriteIcon from "@hugeicons/core-free-icons/FavouriteIcon";
@@ -16,6 +17,7 @@ import Image02Icon from "@hugeicons/core-free-icons/Image02Icon";
 import InformationCircleIcon from "@hugeicons/core-free-icons/InformationCircleIcon";
 import JavaScriptIcon from "@hugeicons/core-free-icons/JavaScriptIcon";
 import Layers01Icon from "@hugeicons/core-free-icons/Layers01Icon";
+import Layout07Icon from "@hugeicons/core-free-icons/Layout07Icon";
 import Loading03Icon from "@hugeicons/core-free-icons/Loading03Icon";
 import ReactIcon from "@hugeicons/core-free-icons/ReactIcon";
 import Share08Icon from "@hugeicons/core-free-icons/Share08Icon";
@@ -35,6 +37,8 @@ export const iconData = {
   lightbox: Image02Icon,
   carousel: CarouselHorizontal02Icon,
   annotations: Edit02Icon,
+  "justified-gallery": Layout07Icon,
+  masonry: DashboardSquare02Icon,
   loaders: Loading03Icon,
   shadows: Layers01Icon,
   "floating-tooltip": InformationCircleIcon,

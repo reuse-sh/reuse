@@ -1,0 +1,8 @@
+@reference "../../app/globals.css";
+@layer components {
+  .re-masonry.re-mg-spans {
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    --re-masonry-gap: 12px;
+    --re-masonry-row-gap: 20px;
+  }
+}

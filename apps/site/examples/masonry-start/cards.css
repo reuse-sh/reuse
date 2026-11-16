@@ -1,0 +1,18 @@
+@reference "../../app/globals.css";
+@layer components {
+  .re-mg-cards {
+    --re-masonry-columns: 3;
+    --re-masonry-gap: 12px;
+    --re-masonry-row-gap: 20px;
+  }
+  @media (width <= 768px) {
+    .re-mg-cards {
+      --re-masonry-columns: 2;
+    }
+  }
+  @media (width <= 390px) {
+    .re-mg-cards {
+      --re-masonry-columns: 1;
+    }
+  }
+}
