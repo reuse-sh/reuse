@@ -86,6 +86,14 @@ function scrollPadding(viewport: HTMLElement, value: string): number {
   return padding;
 }
 
+// A list, a figure or a button keeps its own role; only a div or span takes the carousel's.
+function generic(element: HTMLElement) {
+  return (
+    !element.hasAttribute("role") &&
+    (element.localName === "div" || element.localName === "span")
+  );
+}
+
 function clamp(value: number, max: number): number {
   return Math.max(0, Math.min(value, max));
 }
@@ -278,7 +286,7 @@ export function createCarousel(
   let clockFrame = 0;
   let unsettled = false;
   let live: HTMLElement | undefined;
-  const ownsRole = !viewport.hasAttribute("role");
+  const ownsRole = generic(viewport);
   // Slides given a role by the carousel, and whether their label is the carousel's too.
   const roled = new Map<HTMLElement, boolean>();
   let state: CarouselState = Object.freeze({
@@ -1139,7 +1147,7 @@ export function createCarousel(
     }
     slides.forEach((slide, index) => {
       if (!roled.has(slide)) {
-        if (slide.hasAttribute("role")) return;
+        if (!generic(slide)) return;
         slide.setAttribute("role", "group");
         slide.setAttribute("aria-roledescription", "slide");
         roled.set(slide, !slide.hasAttribute("aria-label"));

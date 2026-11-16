@@ -39,7 +39,7 @@ DOM events on the viewport, bubbling, with the state in detail: re-carousel:chan
 
 A goTo while the strip does not overflow (a hidden tab, display: none, images not loaded) only sets the index; the first refresh that finds overflow scrolls to that slide at once. A later goTo replaces it.
 
-A viewport without a role gets role="region" and aria-roledescription="carousel"; a slide without a role gets role="group", aria-roledescription="slide" and, without its own label, aria-label from strings.slide. next(), prev() and the keys announce the slide they reach in a polite live region placed after the viewport; autoplay, goTo from code, drags and swipes do not. destroy removes all of it.
+A div or span viewport without a role gets role="region" and aria-roledescription="carousel"; a div or span slide without a role gets role="group", aria-roledescription="slide" and, without its own label, aria-label from strings.slide. next(), prev() and the keys announce the slide they reach in a polite live region placed after the viewport; autoplay, goTo from code, drags and swipes do not. destroy removes all of it.
 
 A touch, a mouse press, a wheel and a scroll from outside the carousel stop a running spring where it is, and the strip snaps to the nearest point.
 

@@ -1408,6 +1408,24 @@ describe("one state for every control", () => {
     expect(viewport.nextElementSibling).toBeNull();
   });
 
+  it("leaves the native roles of a list and of button slides alone", () => {
+    const list = document.createElement("ul");
+    list.innerHTML = "<li></li><li><button></button></li>";
+    const strip = document.createElement("div");
+    strip.innerHTML = "<button></button><button></button>";
+    document.body.append(list, strip);
+    list.scrollTo = strip.scrollTo = () => {};
+    const carousels = [createCarousel(list), createCarousel(strip)];
+    cleanups.push(...carousels.map((carousel) => carousel.destroy));
+    expect(list.hasAttribute("role")).toBe(false);
+    expect(strip.getAttribute("role")).toBe("region");
+    expect(
+      [...list.children, ...strip.children].map((slide) =>
+        slide.hasAttribute("role"),
+      ),
+    ).toEqual([false, false, false, false]);
+  });
+
   it("uses the strings option for slide labels", () => {
     const { viewport, slides } = fixture();
     const carousel = createCarousel(viewport, {
@@ -1567,7 +1585,7 @@ describe("controls binder", () => {
     viewport.dispatchEvent(new Event("scroll"));
     carousel.next();
     carousel.prev();
-    observer.takeRecords().forEach((record) => changes.push(record));
+    changes.push(...observer.takeRecords());
     expect(plain.firstChild).toBe(text);
     expect(changes.map((record) => record.type)).toEqual([
       "characterData",
