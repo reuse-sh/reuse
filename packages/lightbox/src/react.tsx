@@ -26,17 +26,16 @@ export function useLightbox(options: LightboxOptions = {}): LightboxHandle {
     chrome: "shown",
   });
   const handle = useMemo<LightboxController>(() => {
-    // The controller reads this object again at every open, so it carries the latest render's options.
-    const live: LightboxOptions = {};
+    const optionsAtOpen: LightboxOptions = {};
     const onChange = (next: LightboxState) => {
       setState(next);
       optionsRef.current.onChange?.(next);
     };
     const ensure = () => {
-      for (const key of Object.keys(live))
-        delete live[key as keyof LightboxOptions];
-      Object.assign(live, optionsRef.current, { onChange });
-      controller.current ??= createLightbox(live);
+      for (const key of Object.keys(optionsAtOpen))
+        delete optionsAtOpen[key as keyof LightboxOptions];
+      Object.assign(optionsAtOpen, optionsRef.current, { onChange });
+      controller.current ??= createLightbox(optionsAtOpen);
       return controller.current;
     };
     return {

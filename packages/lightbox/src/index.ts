@@ -298,7 +298,6 @@ function midpoint(points: Point[]): Point {
 }
 
 export function createLightbox(options: LightboxOptions = {}): Lightbox {
-  // Options are read again at every open, so a wrapper can change them between sessions.
   let settings: LightboxOptions = { ...options };
   let maxZoom = 4;
   let tapZoom = 2.5;
@@ -606,7 +605,6 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
       s.dialog.ownerDocument.defaultView?.getComputedStyle(s.viewport)
         .direction === "rtl";
     const start = Math.abs(s.viewport.scrollLeft);
-    // A looping strip shows each slide at the copy nearest the viewport, one cycle away at most.
     const span =
       s.carouselLoops && s.carousel.getState().isLooping
         ? s.slides.reduce((sum, slide) => sum + slide.offsetWidth, 0)
@@ -750,7 +748,6 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
     applyZoom(s);
   }
 
-  // Keeps the active thumbnail in the middle of an overflowing strip, at once on the first frame.
   function centerThumb(s: Session) {
     const strip = s.thumbStrip;
     const thumb = s.thumbs[state.index];
@@ -911,7 +908,6 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
     if (!s || state.isClosing || !Number.isFinite(index)) return;
     finishFade(s, true);
     const target = clamp(Math.floor(index), 0, items.length - 1);
-    // Without slides to cover the seam, a loop crosses it through the fade.
     const gap = Math.abs(target - state.index);
     const far =
       (looping() && s.carousel.getState().isLooping
@@ -1216,7 +1212,7 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
     });
   }
 
-  // The carousel takes loop once, so a change of loop or of a single image builds it again in place.
+  // The carousel reads loop only when created until its setOptions (VPF-255) lands.
   function reconnect(s: Session, index: number) {
     const syncing = syncingCarousel;
     syncingCarousel = true;
@@ -1563,7 +1559,6 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
     viewport.addEventListener("scrollend", () => trimSlides(s), {
       signal: abort.signal,
     });
-    // Paging settles once the strip stays still on a snapped slide; reads wait for the next frame.
     const win = doc.defaultView;
     const watch = () => {
       const motion = s.motion;
@@ -1662,7 +1657,6 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
       return;
     }
     finishFade(s, true);
-    // Each new item takes the slide of the same item object, or else of an unused one with its source.
     const taken = new Set<number>();
     const from = input.map((item) => {
       const old = sources.indexOf(item);
@@ -1704,7 +1698,6 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
     for (const [old, slide] of s.slides.entries())
       if (!taken.has(old)) slide.remove();
     if (kept) {
-      // The current slide stays in the DOM, so its image neither moves nor reloads.
       let anchor = slides[target];
       for (let j = target - 1; j >= 0; j--) {
         if (anchor.previousElementSibling !== slides[j])
