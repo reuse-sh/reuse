@@ -58,7 +58,7 @@ test("a short fast flick moves on to the next slide", async ({ page }) => {
   await setup(page);
   await page.mouse.move(400, 100);
   await page.mouse.down();
-  await page.mouse.move(340, 100, { steps: 3 });
+  await page.mouse.move(355, 100, { steps: 3 });
   await page.mouse.up();
   const values = await framesUntilIdle(page, scrollLeft);
   expect(values.at(-1)).toBe(300);

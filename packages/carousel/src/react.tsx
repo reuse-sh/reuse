@@ -41,6 +41,8 @@ export function useCarousel(options: CarouselOptions = {}) {
     autoplay,
     releaseMotion,
     releaseDuration,
+    moveMotion,
+    wheel,
   } = options;
   useEffect(() => {
     if (!viewport) return;
@@ -53,6 +55,8 @@ export function useCarousel(options: CarouselOptions = {}) {
       autoplay,
       releaseMotion,
       releaseDuration,
+      moveMotion,
+      wheel,
       onChange: (next) => {
         setState(next);
         onChange.current?.(next);
@@ -71,6 +75,8 @@ export function useCarousel(options: CarouselOptions = {}) {
     autoplay,
     releaseMotion,
     releaseDuration,
+    moveMotion,
+    wheel,
   ]);
   return { ref: setViewport, carousel, state };
 }

@@ -7,6 +7,8 @@ export interface CarouselOptions {
   autoplay?: number;
   releaseMotion?: "spring" | "native";
   releaseDuration?: number;
+  moveMotion?: "spring" | "native";
+  wheel?: "vertical";
   onChange?: (state: CarouselState) => void;
 }
 
@@ -74,6 +76,36 @@ const STRETCH = 0.55;
 const STRETCH_LIMIT = 120;
 const RELEASE_SAMPLE_WINDOW = 80;
 const MAX_SPRING_STEP = 64;
+const REST_DISTANCE = 0.5;
+const INPUT_WINDOW = 100;
+const SPEED_WINDOW = 64;
+const SLOW_SCROLL = 0.1;
+const FAST_SCROLL = 0.5;
+const SCROLL_QUIET = 150;
+const WHEEL_NOTCH = 50;
+
+// Solves (1 + u)e^-u = REST_DISTANCE / distance, so a spring from rest arrives after the duration.
+function settleFrequency(distance: number, duration: number) {
+  const ratio = Math.log(Math.max(Math.abs(distance) / REST_DISTANCE, 1));
+  let u = ratio;
+  for (let step = 0; step < 4; step++) u = ratio + Math.log(1 + u);
+  return Math.max(u, 1) / duration;
+}
+
+// Synthesized pointers, such as WebKit's touch emulation, are not active and cannot be captured.
+function capture(element: HTMLElement, id: number) {
+  try {
+    element.setPointerCapture?.(id);
+  } catch {}
+}
+
+const stateAttributes = [
+  "data-re-dragging",
+  "data-re-scrolling",
+  "data-re-static",
+  "data-re-at-start",
+  "data-re-at-end",
+];
 
 export function createCarousel(
   viewport: HTMLElement,
@@ -103,7 +135,18 @@ export function createCarousel(
   ) {
     throw new RangeError("Carousel releaseMotion must be spring or native.");
   }
+  if (
+    options.moveMotion !== undefined &&
+    options.moveMotion !== "spring" &&
+    options.moveMotion !== "native"
+  ) {
+    throw new RangeError("Carousel moveMotion must be spring or native.");
+  }
+  if (options.wheel !== undefined && options.wheel !== "vertical") {
+    throw new RangeError("Carousel wheel must be vertical.");
+  }
   const releaseDuration = options.releaseDuration ?? 260;
+  const moveDuration = options.releaseDuration ?? 500;
   if (!Number.isFinite(releaseDuration) || releaseDuration <= 0) {
     throw new RangeError("Carousel releaseDuration must be a positive time.");
   }
@@ -129,6 +172,7 @@ export function createCarousel(
   const internalHolds = new Set<string>();
   const cleanup: (() => void)[] = [];
   const reducedMotion = window.matchMedia?.("(prefers-reduced-motion: reduce)");
+  const finePointer = window.matchMedia?.("(hover: hover) and (pointer: fine)");
   let slides: HTMLElement[] = [];
   let targets: number[] = [];
   let max = 0;
@@ -143,6 +187,15 @@ export function createCarousel(
   let disabledPosition = 0;
   let stretch = 0;
   let lastScroll = Number.NEGATIVE_INFINITY;
+  let lastInput = Number.NEGATIVE_INFINITY;
+  let userScroll: { time: number; position: number } | null = null;
+  let quietTimer: ReturnType<typeof setTimeout> | undefined;
+  let written = 0;
+  let snapMode: "mandatory" | "proximity" | "none" = "mandatory";
+  let snapport = 0;
+  let dragReady = false;
+  let refreshFrame = 0;
+  let refreshQueued = false;
   let pointer: {
     id: number;
     x: number;
@@ -243,7 +296,7 @@ export function createCarousel(
 
   function updateCursor() {
     viewport.style.cursor =
-      enabled && options.drag !== false && max > 0 && !destroyed
+      enabled && dragReady && max > 0 && !destroyed
         ? pointer
           ? "grabbing"
           : "grab"
@@ -308,6 +361,9 @@ export function createCarousel(
   function publish(index = state.index) {
     if (destroyed) return;
     const current = position();
+    viewport.toggleAttribute("data-re-static", max <= 0);
+    viewport.toggleAttribute("data-re-at-start", !span && current < 1);
+    viewport.toggleAttribute("data-re-at-end", !span && current > max - 1);
     const next: CarouselState = {
       index,
       count: slides.length,
@@ -427,6 +483,10 @@ export function createCarousel(
 
   function springFrame(now: number) {
     if (!spring) return;
+    if (Math.abs(position() - written) > 1) {
+      yieldToScroll();
+      return;
+    }
     const dt = Math.min(Math.max(now - spring.time, 0), MAX_SPRING_STEP);
     const { frequency } = spring;
     const offset = spring.value - spring.target;
@@ -436,7 +496,7 @@ export function createCarousel(
     spring.velocity = (spring.velocity - frequency * slope * dt) * decay;
     spring.time = now;
     if (
-      Math.abs(spring.target - spring.value) < 0.5 &&
+      Math.abs(spring.target - spring.value) < REST_DISTANCE &&
       Math.abs(spring.velocity) < 0.02
     ) {
       const { target } = spring;
@@ -452,22 +512,37 @@ export function createCarousel(
     spring.frame = window.requestAnimationFrame(springFrame);
   }
 
-  function startSpring(target: number, velocity: number, flick: boolean) {
-    const value = position() + stretch;
+  function startSpring(
+    target: number,
+    velocity: number,
+    floor: number,
+    rest: number,
+    moving: typeof spring = null,
+  ) {
+    const value = moving?.value ?? position() + stretch;
     const distance = target - value;
-    const speed = Math.abs(distance) < 0.5 ? 0 : velocity;
-    const floor = flick ? 2 / GLIDE : 6 / releaseDuration;
+    const speed = Math.abs(distance) < REST_DISTANCE ? 0 : velocity;
     spring = {
-      frame: window.requestAnimationFrame(springFrame),
+      frame: moving?.frame ?? window.requestAnimationFrame(springFrame),
       value,
       velocity: speed,
       target,
-      time: window.performance.now(),
+      time: moving?.time ?? window.performance.now(),
       frequency:
         speed * distance > 0
           ? Math.max(floor, Math.abs((2 * speed) / distance))
-          : 6 / releaseDuration,
+          : rest,
     };
+  }
+
+  function yieldToScroll() {
+    stopSpring();
+    clearTimeout(settleTimer);
+    pendingIndex = undefined;
+    pendingPosition = undefined;
+    viewport.style.scrollSnapType = previousSnap;
+    settleTimer = setTimeout(settle, 180);
+    publish(nearestIndex());
   }
 
   function settle() {
@@ -489,11 +564,24 @@ export function createCarousel(
     // in one frame, so travel to the point first.
     if (
       enabled &&
+      snapMode === "mandatory" &&
       viewport.style.scrollSnapType === "none" &&
       previousSnap !== "none" &&
       Math.abs(position() - targetAt(index)) > 1
     ) {
       goTo(index, "smooth", undefined, 0);
+      return;
+    }
+    // Snap areas follow transforms, so snapping waits for a pressed slide to scale back.
+    if (
+      slides[index]
+        ?.getAnimations?.()
+        .some(
+          (animation) =>
+            (animation as CSSTransition).transitionProperty === "scale",
+        )
+    ) {
+      settleTimer = setTimeout(settle, 50);
       return;
     }
     scrolling = false;
@@ -536,6 +624,7 @@ export function createCarousel(
     }
     smoothTarget = undefined;
     deferredSmooth = undefined;
+    written = position();
     // Chrome drops a smooth scroll that starts in the same frame as an instant
     // scroll which interrupted another smooth scroll, so it waits a frame.
     if (interrupted && !instantFrame && window.requestAnimationFrame) {
@@ -560,7 +649,6 @@ export function createCarousel(
   ) {
     if (destroyed || !enabled || !slides.length || !Number.isFinite(index))
       return;
-    stopSpring();
     const rounded = Math.round(index);
     const next =
       span > 0
@@ -569,19 +657,43 @@ export function createCarousel(
     let target = targetAt(next, reference);
     if (span && direction === 1 && target <= reference + 0.5) target += span;
     if (span && direction === -1 && target >= reference - 0.5) target -= span;
-    pendingPosition = target;
-    pendingIndex = next;
+    travel(next, target, behavior, releaseSpeed, flick);
+  }
+
+  function travel(
+    index: number,
+    destination: number,
+    behavior: ScrollBehavior,
+    releaseSpeed?: number,
+    flick = false,
+  ) {
+    const motion =
+      releaseSpeed === undefined ? options.moveMotion : options.releaseMotion;
     const glide =
       !reducedMotion?.matches &&
       behavior === "smooth" &&
-      (stretch !== 0 ||
-        (releaseSpeed !== undefined && options.releaseMotion !== "native"));
+      (stretch !== 0 || motion !== "native");
+    const moving = glide && releaseSpeed === undefined ? spring : null;
+    if (!moving) stopSpring();
+    let target = destination;
+    pendingPosition = target;
+    pendingIndex = index;
     if (span && !glide && (target < 0 || target > max)) {
       target = loopPosition(target);
       pendingPosition = target;
     }
     viewport.style.scrollSnapType = "none";
-    if (glide) startSpring(target, releaseSpeed ?? 0, flick);
+    if (glide && releaseSpeed === undefined) {
+      const value = moving?.value ?? position() + stretch;
+      const frequency = settleFrequency(target - value, moveDuration);
+      startSpring(target, moving?.velocity ?? 0, frequency, frequency, moving);
+    } else if (glide)
+      startSpring(
+        target,
+        releaseSpeed ?? 0,
+        flick ? 2 / GLIDE : 6 / releaseDuration,
+        6 / releaseDuration,
+      );
     else {
       setStretch(0);
       scrollTo(target, behavior);
@@ -632,11 +744,13 @@ export function createCarousel(
   }
 
   function readSlides() {
+    const selector = options.slides ?? "[data-carousel-slide]";
     const selected = Array.from(
-      viewport.querySelectorAll<HTMLElement>(
-        options.slides ?? "[data-carousel-slide]",
-      ),
-    );
+      viewport.querySelectorAll<HTMLElement>(selector),
+    ).filter((slide) => {
+      const outer = slide.parentElement?.closest(selector);
+      return !outer || !viewport.contains(outer);
+    });
     if (options.slides || selected.length)
       return selected.filter((slide) => !spacers.includes(slide));
     return Array.from(viewport.children).filter(
@@ -645,13 +759,33 @@ export function createCarousel(
     );
   }
 
+  function requestRefresh() {
+    if (refreshFrame) refreshQueued = true;
+    else refresh();
+  }
+
   function refresh() {
     if (destroyed) return;
+    refreshQueued = false;
+    if (!refreshFrame)
+      refreshFrame = window.requestAnimationFrame(() => {
+        refreshFrame = 0;
+        if (refreshQueued) refresh();
+      });
     const active = slides[state.index];
     const before = position();
     const offset = active ? before - targetAt(state.index, before) : 0;
     const goal = pendingIndex === undefined ? undefined : slides[pendingIndex];
     const snap = viewport.style.scrollSnapType;
+    if (snap === previousSnap) {
+      const snapType = window.getComputedStyle(viewport).scrollSnapType;
+      snapMode =
+        snapType === "none"
+          ? "none"
+          : !snapType || snapType.includes("mandatory")
+            ? "mandatory"
+            : "proximity";
+    }
     viewport.style.scrollSnapType = "none";
     const viewportWidth = viewport.clientWidth;
     mutation?.disconnect();
@@ -669,6 +803,10 @@ export function createCarousel(
     const origin = offsetLeft(viewport) + viewport.clientLeft;
     const styles = window.getComputedStyle(viewport);
     const padding = scrollPadding(viewport, styles.scrollPaddingInlineStart);
+    snapport =
+      viewportWidth -
+      padding -
+      scrollPadding(viewport, styles.scrollPaddingInlineEnd);
     targets = slides.map((slide) => {
       if (!slide.classList.contains("re-carousel__slide")) {
         slide.classList.add("re-carousel__slide");
@@ -757,8 +895,18 @@ export function createCarousel(
     publish(retained);
     schedule();
     mutation?.observe(viewport, { childList: true, subtree: true });
-    if (goalIndex >= 0 && enabled) goTo(goalIndex);
+    if (goalIndex >= 0 && enabled && spring) {
+      const shift = position() - before;
+      spring.value += shift;
+      spring.target = targetAt(goalIndex, spring.target + shift);
+      pendingIndex = goalIndex;
+      pendingPosition = spring.target;
+      publish(goalIndex);
+      clearTimeout(settleTimer);
+      settleTimer = setTimeout(settle, 180);
+    } else if (goalIndex >= 0 && enabled) goTo(goalIndex);
     else if (moving) {
+      stopSpring();
       clearTimeout(settleTimer);
       settleTimer = setTimeout(settle, 180);
     }
@@ -784,6 +932,7 @@ export function createCarousel(
     const velocity = moved && snap ? dragVelocity(samples) : 0;
     const speed = moved && snap ? releaseVelocity(samples) : 0;
     pointer = null;
+    viewport.removeAttribute("data-re-dragging");
     if (viewport.hasPointerCapture?.(id)) viewport.releasePointerCapture(id);
     viewport.style.userSelect = previousUserSelect;
     updateCursor();
@@ -793,7 +942,16 @@ export function createCarousel(
     const stop = current + speed * GLIDE;
     const projected = nearestIndex(stop);
     const direction = velocity > 0 ? 1 : -1;
-    if (moved && snap && Math.abs(velocity) >= FLICK_VELOCITY) {
+    if (
+      moved &&
+      snap &&
+      (snapMode === "none" ||
+        (snapMode === "proximity" &&
+          Math.abs(targetAt(projected, stop) - stop) > snapport / 3))
+    ) {
+      const end = span ? stop : clamp(stop, max);
+      travel(nearestIndex(end), end, "smooth", speed, true);
+    } else if (moved && snap && Math.abs(velocity) >= FLICK_VELOCITY) {
       const end = targetAt(projected, stop);
       const blocked = firstStop(current, end, direction);
       if (blocked >= 0)
@@ -851,7 +1009,9 @@ export function createCarousel(
       destroyed = true;
       clearTimeout(timer);
       clearTimeout(settleTimer);
+      clearTimeout(quietTimer);
       window.cancelAnimationFrame(instantFrame);
+      window.cancelAnimationFrame(refreshFrame);
       stopSpring();
       observer?.disconnect();
       mutation?.disconnect();
@@ -859,6 +1019,7 @@ export function createCarousel(
       for (const remove of cleanup) remove();
       listeners.clear();
       if (!hadClass) viewport.classList.remove("re-carousel");
+      for (const name of stateAttributes) viewport.removeAttribute(name);
       const restoredPosition = span
         ? (targets[state.index] ?? span) - span
         : position();
@@ -887,7 +1048,7 @@ export function createCarousel(
   };
 
   const observer = window.ResizeObserver
-    ? new window.ResizeObserver(refresh)
+    ? new window.ResizeObserver(requestRefresh)
     : undefined;
   const mutation = window.MutationObserver
     ? new window.MutationObserver(() => {
@@ -897,7 +1058,7 @@ export function createCarousel(
           next.every((slide, index) => slide === slides[index])
         )
           return;
-        refresh();
+        requestRefresh();
       })
     : undefined;
   const intersection = window.IntersectionObserver
@@ -906,6 +1067,93 @@ export function createCarousel(
         { threshold: 0 },
       )
     : undefined;
+
+  function setScrolling(value: boolean) {
+    viewport.toggleAttribute("data-re-scrolling", value);
+  }
+
+  function trackScroll() {
+    const now = window.performance.now();
+    const current = position();
+    if (!userScroll) {
+      if (now - lastInput > INPUT_WINDOW) return;
+      userScroll = { time: now, position: current };
+      setScrolling(true);
+    } else if (now - userScroll.time >= SPEED_WINDOW) {
+      const speed =
+        Math.abs(current - userScroll.position) / (now - userScroll.time);
+      if (speed < SLOW_SCROLL) setScrolling(false);
+      else if (speed > FAST_SCROLL) setScrolling(true);
+      userScroll = { time: now, position: current };
+    }
+    clearTimeout(quietTimer);
+    quietTimer = setTimeout(() => {
+      userScroll = null;
+      setScrolling(false);
+    }, SCROLL_QUIET);
+  }
+
+  function moveDrag(event: Event) {
+    const input = event as PointerEvent;
+    if (!pointer || input.pointerId !== pointer.id) return;
+    const delta = input.clientX - pointer.x;
+    if (!pointer.moved && Math.abs(delta) < 5) return;
+    if (!pointer.moved) {
+      pointer.moved = true;
+      capture(viewport, pointer.id);
+      viewport.style.scrollSnapType = "none";
+      viewport.style.userSelect = "none";
+      viewport.setAttribute("data-re-dragging", "");
+    }
+    input.preventDefault();
+    const goal = pointer.position + (rtl ? delta : -delta);
+    const edge = clamp(goal, max);
+    scrollTo(edge, "instant");
+    if (!span && max > 0) setStretch(rubberBand(goal - edge));
+    pointer.samples.push({
+      time: input.timeStamp,
+      position: position() + stretch,
+    });
+    if (pointer.samples.length > 8) pointer.samples.shift();
+    recenterLoop();
+    renderLoop();
+    publish(nearestIndex());
+  }
+
+  function readyDrag() {
+    if (
+      dragReady ||
+      options.drag === false ||
+      max <= 0 ||
+      (finePointer && !finePointer.matches)
+    )
+      return;
+    dragReady = true;
+    listen(window, "pointermove", moveDrag);
+    listen(window, "pointerup", (event) => {
+      if ((event as PointerEvent).pointerId === pointer?.id) endDrag(true);
+    });
+    listen(window, "pointercancel", (event) => {
+      if ((event as PointerEvent).pointerId === pointer?.id) endDrag(false);
+    });
+    listen(window, "blur", () => endDrag(false));
+    listen(viewport, "lostpointercapture", () => endDrag(true));
+    listen(viewport, "dragstart", (event) => {
+      if (pointer) event.preventDefault();
+    });
+    listen(
+      viewport,
+      "click",
+      (event) => {
+        if (!suppressClick) return;
+        suppressClick = false;
+        event.preventDefault();
+        event.stopPropagation();
+      },
+      true,
+    );
+    updateCursor();
+  }
 
   viewport.classList.add("re-carousel");
   if (initialTabIndex === null) viewport.tabIndex = 0;
@@ -919,6 +1167,7 @@ export function createCarousel(
     if (pointer?.moved) recenterLoop();
     scrolling = true;
     lastScroll = window.performance.now();
+    trackScroll();
     renderLoop();
     publish(pendingIndex ?? nearestIndex());
     clearTimeout(settleTimer);
@@ -928,10 +1177,26 @@ export function createCarousel(
   listen(
     viewport,
     "wheel",
-    () => {
+    (event) => {
+      const wheel = event as WheelEvent;
+      lastInput = window.performance.now();
+      if (
+        options.wheel === "vertical" &&
+        enabled &&
+        !wheel.ctrlKey &&
+        !wheel.shiftKey &&
+        Math.abs(wheel.deltaY) > Math.abs(wheel.deltaX) &&
+        (wheel.deltaMode !== 0 || Math.abs(wheel.deltaY) >= WHEEL_NOTCH)
+      ) {
+        const direction = wheel.deltaY > 0 ? 1 : -1;
+        if (direction === 1 ? !state.canNext : !state.canPrev) return;
+        wheel.preventDefault();
+        step(direction);
+        return;
+      }
       if (pendingIndex !== undefined && !stretch) interrupt();
     },
-    { passive: true },
+    { passive: options.wheel !== "vertical" },
   );
   listen(viewport, "keydown", (event) => {
     const key = event as KeyboardEvent;
@@ -964,14 +1229,24 @@ export function createCarousel(
   });
   listen(document, "visibilitychange", schedule);
   if (reducedMotion) listen(reducedMotion, "change", schedule);
-  listen(window, "resize", refresh);
+  if (!observer) listen(window, "resize", requestRefresh);
+  listen(
+    viewport,
+    "pointermove",
+    (event) => {
+      if ((event as PointerEvent).buttons) lastInput = window.performance.now();
+      readyDrag();
+    },
+    { passive: true },
+  );
   listen(viewport, "pointerdown", (event) => {
     const input = event as PointerEvent;
+    const target = input.target as HTMLElement;
     if (
       !enabled ||
       options.drag === false ||
       input.button !== 0 ||
-      (input.target as HTMLElement).closest(
+      target.closest(
         "input, select, textarea, [contenteditable], [role=slider], [data-carousel-no-drag]",
       )
     ) {
@@ -984,6 +1259,11 @@ export function createCarousel(
       grabbedTouch = input.pointerId;
       return;
     }
+    const inner = target.closest(".re-carousel");
+    if (inner && inner !== viewport && inner.scrollWidth > inner.clientWidth)
+      return;
+    readyDrag();
+    if (!dragReady) return;
     const caught =
       spring !== null || window.performance.now() - lastScroll < 100;
     interrupt(false);
@@ -999,61 +1279,15 @@ export function createCarousel(
     updateCursor();
     internalHold("pointer", true);
   });
-  listen(window, "pointermove", (event) => {
-    const input = event as PointerEvent;
-    if (!pointer || input.pointerId !== pointer.id) return;
-    const delta = input.clientX - pointer.x;
-    if (!pointer.moved && Math.abs(delta) < 5) return;
-    if (!pointer.moved) {
-      pointer.moved = true;
-      viewport.setPointerCapture?.(pointer.id);
-      viewport.style.scrollSnapType = "none";
-      viewport.style.userSelect = "none";
-    }
-    input.preventDefault();
-    const goal = pointer.position + (rtl ? delta : -delta);
-    const edge = clamp(goal, max);
-    scrollTo(edge, "instant");
-    if (!span && max > 0) setStretch(rubberBand(goal - edge));
-    pointer.samples.push({
-      time: input.timeStamp,
-      position: position() + stretch,
-    });
-    if (pointer.samples.length > 8) pointer.samples.shift();
-    recenterLoop();
-    renderLoop();
-    publish(nearestIndex());
-  });
-  listen(viewport, "lostpointercapture", () => endDrag(true));
-  listen(window, "blur", () => endDrag(false));
+  // Touch pointers are captured by the element they pressed, so their release reaches the viewport.
   const releaseTouch = (event: Event) => {
     if ((event as PointerEvent).pointerId !== grabbedTouch) return;
     grabbedTouch = undefined;
     clearTimeout(settleTimer);
     settleTimer = setTimeout(settle, 180);
   };
-  listen(window, "pointerup", (event) => {
-    if ((event as PointerEvent).pointerId === pointer?.id) endDrag(true);
-    releaseTouch(event);
-  });
-  listen(window, "pointercancel", (event) => {
-    if ((event as PointerEvent).pointerId === pointer?.id) endDrag(false);
-    releaseTouch(event);
-  });
-  listen(viewport, "dragstart", (event) => {
-    if (pointer) event.preventDefault();
-  });
-  listen(
-    viewport,
-    "click",
-    (event) => {
-      if (!suppressClick) return;
-      suppressClick = false;
-      event.preventDefault();
-      event.stopPropagation();
-    },
-    true,
-  );
+  listen(viewport, "pointerup", releaseTouch);
+  listen(viewport, "pointercancel", releaseTouch);
   observer?.observe(viewport);
   refresh();
   mutation?.observe(viewport, { childList: true, subtree: true });

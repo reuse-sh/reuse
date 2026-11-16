@@ -1,7 +1,7 @@
 {
   "carousel": {
     "entries": { "carousel": "dist/index.js" },
-    "budgets": { "carousel.js": 5.9 }
+    "budgets": { "carousel.js": 6.9 }
   },
   "lightbox": {
     "entries": { "lightbox": "dist/index.js" },

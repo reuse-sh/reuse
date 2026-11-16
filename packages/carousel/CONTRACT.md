@@ -12,7 +12,9 @@ CarouselOptions:
 - group?: number | "page", default 1
 - autoplay?: number, milliseconds, off by default
 - releaseMotion?: "spring" | "native", default spring. A released mouse drag projects its speed 260ms ahead and travels to the snap point nearest that stop, at least one slide ahead after a flick, and never past the first slide on the way whose scroll-snap-stop is always. Spring starts at the drag speed and slows down without overshooting a target it moves toward; native uses the browser smooth scroll. Reduced motion jumps.
-- releaseDuration?: number, milliseconds, default 260, the spring time for a slow release and for the return from a stretched end
+- releaseDuration?: number, milliseconds, default 260 for a slow release and the return from a stretched end, and 500 for moves from code. A set value applies to both.
+- moveMotion?: "spring" | "native", default spring. next, prev, goTo, the arrow keys, Home and End travel on the same critically damped spring as a released drag, settling in 500ms. A move during a move redirects the spring, keeps its speed and counts from its target. The spring crosses the loop seam. native keeps the browser smooth scroll. goTo(index, "instant") and reduced motion jump.
+- wheel?: "vertical", off by default. A vertical mouse wheel (line or page deltaMode, or |deltaY| >= 50 per event) moves one slide per notch and lets the page scroll once the strip cannot move that way; trackpads stay native.
 - onChange?: (state: CarouselState) => void
 
 CarouselState: index, count, progress, canPrev, canNext, isPlaying, isDragging, isLooping. index is zero-based; progress is 0..1. isLooping is true only while the slides can cover the viewport and the loop actually repeats them. getState returns a stable snapshot until something actually changes.
@@ -27,6 +29,16 @@ Carousel methods:
 - play(), pause(), hold(reason: string, isHeld: boolean)
 - destroy(): void, idempotent, restore owned DOM/style/listeners and cancel all pending work
 
+A touch, a mouse press, a wheel and a scroll from outside the carousel stop a running spring where it is, and the strip snaps to the nearest point.
+
+Viewport attributes: data-re-dragging while a mouse drag moves the strip (past 5px), data-re-scrolling during a fast scroll by the user, data-re-static when the content does not overflow, data-re-at-start and data-re-at-end at the edges (never while looping). data-re-scrolling starts with a scroll that begins within 100ms of a wheel or a pressed pointer move, ends once the speed over a window of at least 64ms falls below 0.1 px/ms or 150ms after the last scroll event, and returns only above 0.5 px/ms. Moves from code never set it. The package CSS turns off pointer events on the slides while it is set, and hides [data-carousel-prev], [data-carousel-next] and [data-carousel-dots] inside the parent of a static strip. destroy removes every attribute.
+
+Custom properties: --re-carousel-press-scale (0.96, 1 turns it off) scales the slides while data-re-dragging is set, over --re-carousel-press-duration (300ms), and back over twice that. Snapping returns once the slides are back to full size, because snap areas follow transforms.
+
+Scroll snap type is read on refresh: mandatory snaps as before, proximity snaps a released drag only when its stop is within a third of the snapport of a snap point and otherwise glides and stops, none lets a released drag glide and stop, and next and prev step from the nearest slide start.
+
+A mouse drag that starts inside a nested strip with room to scroll moves that strip only; one that fits lets the outer strip move. Slides inside another slide belong to the nested strip. Mouse drag listeners are added on the first pointer move over an overflowing strip while (hover: hover) and (pointer: fine) matches; measuring and keys work at once. ResizeObserver, MutationObserver and, without ResizeObserver, the window resize event request a refresh, which runs at most once per animation frame. An explicit refresh() runs at once.
+
 A mouse drag past either end of a non-repeating strip stretches it with a rubber band curve through the slides' CSS translate, which replaces a slide's own translate while it lasts, and a spring brings it back after release or any interruption, native release included; reduced motion and an instant or auto goTo drop it at once. A wheel does not stop that return. A mouse press while the strip is visibly moving (a spring, or a scroll in the last 100ms) stops it and does not click. While a mouse drag can move the strip, the viewport cursor is grab, and grabbing during a drag; destroy restores both the transforms and the cursor.
 
 When disabled, the current viewport position stays stable. No global keyboard interception. Keyboard controls only handle events within the viewport and prevent their own handled event so modal owners do not act twice.
@@ -36,18 +48,6 @@ The React adapter belongs to the package and uses this same controller, not a du
 ## Planned
 
 The carousel and lightbox work in progress adds the names below. They are fixed now so the lightbox and the controls can be built against them. Each moves into the sections above once the code ships it.
-
-### One motion, DOM state and input
-
-CarouselOptions:
-- moveMotion?: "spring" | "native", default spring. next, prev, goTo, the arrow keys, Home and End travel on the same critically damped spring as a released drag, settling in 500ms; native keeps the browser smooth scroll. goTo(index, "instant") and reduced motion jump.
-- wheel?: "vertical", off by default. A vertical mouse wheel (line or page deltaMode, or |deltaY| >= 50 per event) moves one slide per notch; trackpads stay native.
-
-Viewport attributes: data-re-dragging while a mouse drag moves the strip (past 5px), data-re-scrolling during a fast scroll by the user, data-re-static when the content does not overflow, data-re-at-start and data-re-at-end at the edges (never while looping). The package CSS hides [data-carousel-prev], [data-carousel-next] and [data-carousel-dots] inside a container whose strip is static.
-
-Custom properties: --re-carousel-press-scale (0.96, 1 turns it off) and --re-carousel-press-duration.
-
-Scroll snap type is read on refresh: mandatory snaps as today, proximity snaps a released drag only near a snap point, none lets it glide and stop. Observers request a refresh, which runs at most once per animation frame; an explicit refresh() runs at once.
 
 ### Controls, state and events
 
