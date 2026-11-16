@@ -1,3 +1,4 @@
+import { claim, unclaim } from "./owners.js";
 import {
   breakRows,
   type LastRow,
@@ -41,6 +42,8 @@ const SHARE = "--re-justified-share";
 const COUNT = "--re-justified-count";
 const COLUMN_GAP = "--re-justified-column-gap";
 const DEFAULT_ROW_HEIGHT = 240;
+// Classic scrollbars are 12-17px wide, about 34 CSS px at 50% zoom.
+const SCROLLBAR_LIMIT = 40;
 
 /** What an item held before the controller wrote to it, and the ratio it wrote. */
 interface Owned {
@@ -132,15 +135,16 @@ export function createJustifiedGallery(
   const owned = new Map<HTMLElement, Owned>();
   let current: Layout | undefined;
   // Rows given up for others at a width, so a width that flips back and forth
-  // (a page scrollbar coming and going) does not flip the rows with it.
-  let abandoned: { rows: Row[]; width: number } | undefined;
-  let width = 0;
+  // by a scrollbar (one coming and going with the gallery's own height) does
+  // not flip the rows with it.
+  let abandoned: { rows: Row[]; width: number; next: number } | undefined;
   let pending = false;
   let destroyed = false;
 
   const own = (item: HTMLElement) => {
     let entry = owned.get(item);
     if (!entry) {
+      claim(item, release);
       entry = {
         style: item.hasAttribute("style"),
         ratio: item.style.getPropertyValue(RATIO),
@@ -154,10 +158,11 @@ export function createJustifiedGallery(
     return entry;
   };
 
-  const release = (item: HTMLElement) => {
+  function release(item: HTMLElement) {
     const entry = owned.get(item);
     if (!entry) return;
     owned.delete(item);
+    unclaim(item, release);
     const restore = (name: string, value: string) => {
       if (value) item.style.setProperty(name, value);
       else item.style.removeProperty(name);
@@ -177,7 +182,7 @@ export function createJustifiedGallery(
     if (!entry.style && !item.getAttribute("style")) {
       item.removeAttribute("style");
     }
-  };
+  }
 
   const readItems = () =>
     Array.from(container.children).filter(
@@ -187,9 +192,14 @@ export function createJustifiedGallery(
           view.getComputedStyle(child).display !== "none"),
     );
 
+  // Once the page sets the ratio itself, it is the page's from then on, even
+  // when it later sets a value the controller once wrote.
   const isOwnRatio = (item: HTMLElement) => {
-    const wrote = owned.get(item)?.wroteRatio;
-    return wrote !== undefined && item.style.getPropertyValue(RATIO) === wrote;
+    const entry = owned.get(item);
+    if (entry?.wroteRatio === undefined) return false;
+    if (item.style.getPropertyValue(RATIO) === entry.wroteRatio) return true;
+    entry.wroteRatio = undefined;
+    return false;
   };
 
   // A ratio the page declares wins. One the controller wrote is read again
@@ -260,17 +270,17 @@ export function createJustifiedGallery(
 
   const layout = (fresh: boolean) => {
     if (destroyed) return;
+    for (const item of [...owned.keys()]) {
+      if (item.parentElement !== container) release(item);
+    }
     const metrics = readMetrics();
     if (metrics.width <= 0) {
       pending = true;
+      mutation?.takeRecords();
       return;
     }
     pending = false;
-    width = metrics.width;
     const items = readItems();
-    for (const item of owned.keys()) {
-      if (item.parentElement !== container) release(item);
-    }
     const ratios = items.map(readRatio);
     const unchanged = !fresh && sameContent(items, ratios);
     const sameHeight = current?.metrics.rowHeight === metrics.rowHeight;
@@ -283,6 +293,7 @@ export function createJustifiedGallery(
       const flipsBack =
         abandoned !== undefined &&
         Math.abs(metrics.width - abandoned.width) < 1 &&
+        Math.abs(abandoned.next - abandoned.width) <= SCROLLBAR_LIMIT &&
         sameRows(optimal, abandoned.rows);
       if (
         kept &&
@@ -292,7 +303,7 @@ export function createJustifiedGallery(
         rows = kept.rows;
       } else {
         abandoned = kept
-          ? { rows: kept.rows, width: kept.metrics.width }
+          ? { rows: kept.rows, width: kept.metrics.width, next: metrics.width }
           : undefined;
         rows = optimal;
       }
@@ -319,8 +330,16 @@ export function createJustifiedGallery(
     if (frame) return;
     frame = view.requestAnimationFrame(() => {
       frame = 0;
-      const next = readMetrics().width;
-      if (next > 0 && (loaded || pending || next !== width)) {
+      const next = readMetrics();
+      const last = current?.metrics;
+      // A media query or an ancestor can change the gap or the row height
+      // without touching the container's own attributes.
+      const changed =
+        !last ||
+        next.width !== last.width ||
+        next.gap !== last.gap ||
+        next.rowHeight !== last.rowHeight;
+      if (next.width > 0 && (loaded || pending || changed)) {
         loaded = false;
         layout(false);
       }

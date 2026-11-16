@@ -455,6 +455,7 @@ test.describe("masonry", () => {
       "3vw",
       "5%",
       "calc(1em + 30px)",
+      "-20px",
     ]) {
       // A font size other than the root's tells em, rem and the default apart.
       expect(await masonry(page, { tolerance, fontSize: 40 })).toBe(true);

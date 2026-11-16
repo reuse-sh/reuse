@@ -1,33 +1,13 @@
 // @vitest-environment jsdom
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import {
+  FakeResizeObserver,
+  resized,
+} from "../../../tests/model/resize-observer.js";
 import { createMasonry } from "./masonry.js";
 
 let supported = false;
-const observers: { targets: Set<Element>; callback: () => void }[] = [];
-
-class FakeResizeObserver {
-  targets = new Set<Element>();
-  constructor(readonly callback: () => void) {
-    observers.push(this);
-  }
-  observe(target: Element) {
-    this.targets.add(target);
-  }
-  unobserve(target: Element) {
-    this.targets.delete(target);
-  }
-  disconnect() {
-    this.targets.clear();
-  }
-}
-
-async function resized(target: Element) {
-  for (const observer of observers) {
-    if (observer.targets.has(target)) observer.callback();
-  }
-  await new Promise((resolve) => requestAnimationFrame(resolve));
-}
 
 /** Every item in a lane stacks without overlapping the one before it. */
 function stacked(items: HTMLElement[], height: (item: HTMLElement) => number) {
@@ -78,7 +58,6 @@ const placed = (items: HTMLElement[]) =>
 
 beforeEach(() => {
   supported = false;
-  observers.length = 0;
   vi.stubGlobal("CSS", { supports: () => supported });
   vi.stubGlobal("ResizeObserver", FakeResizeObserver);
 });
@@ -217,5 +196,71 @@ describe("createMasonry", () => {
     gone.remove();
     await new Promise((resolve) => setTimeout(resolve));
     expect(gone.hasAttribute("style")).toBe(false);
+  });
+
+  it("measures each item in its own lane when lanes differ by a fraction of a pixel", () => {
+    const container = document.createElement("div");
+    container.style.gridTemplateColumns = "100px 100.4px";
+    container.style.rowGap = "0px";
+    Object.defineProperty(container, "clientWidth", { get: () => 200.4 });
+    const widthOf = (item: HTMLElement) => {
+      const start = Number.parseInt(item.style.gridColumn, 10) || 1;
+      return start === 2 ? 100.4 : 100;
+    };
+    for (let index = 0; index < 6; index++) {
+      const item = document.createElement("div");
+      // A 1:4 portrait: four times as tall as its lane is wide.
+      item.getBoundingClientRect = () =>
+        ({ height: widthOf(item) * 4 }) as DOMRect;
+      container.append(item);
+    }
+    document.body.append(container);
+    createMasonry(container);
+    const items = Array.from(container.children) as HTMLElement[];
+    expect(stacked(items, (item) => widthOf(item) * 4)).toBe(true);
+  });
+
+  it("places an item moved in from another gallery at its own offset", async () => {
+    const first = masonry([100, 50, 80]);
+    const second = masonry([30, 30, 30, 200, 40]);
+    const one = createMasonry(first.container);
+    createMasonry(second.container);
+    const moved = second.items()[4];
+    first.container.append(moved);
+    await new Promise((resolve) => setTimeout(resolve));
+    expect([moved.style.gridColumn, moved.style.marginTop]).toEqual([
+      "2 / span 1",
+      "60px",
+    ]);
+    one.destroy();
+    expect(moved.hasAttribute("style")).toBe(false);
+  });
+
+  it("puts back what it wrote on an item removed while the gallery is hidden", async () => {
+    const { container, items, setWidth } = masonry([100, 50, 80]);
+    createMasonry(container);
+    setWidth(0);
+    const gone = items()[0];
+    gone.remove();
+    await new Promise((resolve) => setTimeout(resolve));
+    expect(gone.hasAttribute("style")).toBe(false);
+  });
+
+  it("places the items again in the frame a picture loads", async () => {
+    const heights = new Map<Element, number>();
+    const { container, items } = masonry([100, 50, 80, 40]);
+    for (const [index, item] of items().entries()) {
+      heights.set(item, [100, 50, 80, 40][index]);
+      item.getBoundingClientRect = () =>
+        ({ height: heights.get(item) ?? 0 }) as DOMRect;
+    }
+    createMasonry(container);
+    const image = document.createElement("img");
+    items()[1].append(image);
+    await new Promise((resolve) => setTimeout(resolve));
+    heights.set(items()[1], 150);
+    image.dispatchEvent(new Event("load"));
+    await new Promise((resolve) => requestAnimationFrame(resolve));
+    expect(items()[3].style.gridColumn).toBe("3 / span 1");
   });
 });

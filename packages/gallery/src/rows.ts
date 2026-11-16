@@ -29,7 +29,8 @@ export function rowHeightAt(
   return (width - gap * (end - start - 1)) / sum;
 }
 
-function rowCost(
+/** A full row's cost; a row outside the height range costs more than every row inside it together when the penalty is the item count plus one. */
+export function rowCost(
   height: number,
   count: number,
   metrics: RowMetrics,
@@ -99,22 +100,6 @@ export function breakRows(
     rows.unshift({ start, end, full });
   }
   return rows;
-}
-
-/** The total cost of these rows at the given metrics. */
-export function rowsCost(
-  rows: readonly Row[],
-  ratios: readonly number[],
-  metrics: RowMetrics,
-): number {
-  const outsidePenalty = ratios.length + 1;
-  let total = 0;
-  for (const row of rows) {
-    if (!row.full) continue;
-    const height = rowHeightAt(ratios, row.start, row.end, metrics);
-    total += rowCost(height, row.end - row.start, metrics, outsidePenalty);
-  }
-  return total;
 }
 
 /**

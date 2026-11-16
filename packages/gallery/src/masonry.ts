@@ -1,4 +1,5 @@
 import { placeLanes } from "./lanes.js";
+import { claim, unclaim } from "./owners.js";
 
 export interface Masonry {
   /** Whether the browser lays the items out itself with `display: grid-lanes`. */
@@ -71,6 +72,7 @@ export function createMasonry(container: HTMLElement): Masonry {
   const own = (item: HTMLElement) => {
     let entry = owned.get(item);
     if (!entry) {
+      claim(item, release);
       entry = {
         style: item.hasAttribute("style"),
         column: item.style.gridColumn,
@@ -94,10 +96,11 @@ export function createMasonry(container: HTMLElement): Masonry {
     return entry;
   };
 
-  const release = (item: HTMLElement) => {
+  function release(item: HTMLElement) {
     const entry = owned.get(item);
     if (!entry) return;
     owned.delete(item);
+    unclaim(item, release);
     if (item.style.gridColumn === (entry.wroteColumn ?? entry.column)) {
       item.style.gridColumn = entry.column;
     }
@@ -107,10 +110,11 @@ export function createMasonry(container: HTMLElement): Masonry {
     if (!entry.style && !item.getAttribute("style")) {
       item.removeAttribute("style");
     }
-  };
+  }
 
-  // The stylesheet registers the property, so it computes to "normal",
-  // "infinite", pixels, a percentage, or a calc() of a percentage and pixels.
+  // The stylesheet registers the property, so normal, infinite, a length, a
+  // percentage and their calc() compute to keywords, pixels and percentages.
+  // A negative tolerance is invalid natively and falls back to normal.
   const tolerance = (styles: CSSStyleDeclaration, contentWidth: number) => {
     const value = styles.getPropertyValue("--re-masonry-tolerance").trim();
     const em = Number.parseFloat(styles.fontSize) || 16;
@@ -125,31 +129,34 @@ export function createMasonry(container: HTMLElement): Masonry {
         unit === "%" ? (Number(number) / 100) * contentWidth : Number(number);
       total += sign?.trim() === "-" ? -amount : amount;
     }
-    return found ? Math.max(0, total) : em;
+    return found && total >= 0 ? total : em;
   };
 
   const place = () => {
     if (destroyed) return;
-    const styles = view.getComputedStyle(container);
-    const contentWidth =
-      container.clientWidth -
-      (Number.parseFloat(styles.paddingLeft) || 0) -
-      (Number.parseFloat(styles.paddingRight) || 0);
-    if (contentWidth <= 0) return;
-    container.setAttribute(STATE, "");
-    const children = Array.from(container.children).filter(
-      (child): child is HTMLElement => child instanceof view.HTMLElement,
-    );
     for (const item of [...owned.keys()]) {
       if (item.parentElement !== container) release(item);
     }
-    // Hidden items stay observed: showing one changes its size.
     for (const item of [...observed]) {
       if (item.parentElement !== container) {
         resize?.unobserve(item);
         observed.delete(item);
       }
     }
+    const styles = view.getComputedStyle(container);
+    const contentWidth =
+      container.clientWidth -
+      (Number.parseFloat(styles.paddingLeft) || 0) -
+      (Number.parseFloat(styles.paddingRight) || 0);
+    if (contentWidth <= 0) {
+      mutation?.takeRecords();
+      return;
+    }
+    container.setAttribute(STATE, "");
+    const children = Array.from(container.children).filter(
+      (child): child is HTMLElement => child instanceof view.HTMLElement,
+    );
+    // Hidden items stay observed: showing one changes its size.
     for (const item of children) {
       if (!observed.has(item)) {
         observed.add(item);
@@ -183,7 +190,7 @@ export function createMasonry(container: HTMLElement): Masonry {
     const spans = authored.map((item) => Math.min(lanes, item.span));
     // An item's height depends on its lane's width, so lanes of different
     // widths measure every item at every start it could take.
-    const even = tracks.every((track) => Math.abs(track - tracks[0]) < 0.5);
+    const even = tracks.every((track) => track === tracks[0]);
     const sizes = items.map(() => [] as number[]);
     for (let start = 0; start < (even ? 1 : lanes); start++) {
       items.forEach((item, index) => {
@@ -221,15 +228,18 @@ export function createMasonry(container: HTMLElement): Masonry {
 
   // Placed on the next frame rather than inside the observer: placing changes
   // the container's height, which the observer would report again in the same
-  // frame. Items that change size in one frame share one placement.
+  // frame. Items that change size in one frame share one placement. A picture's
+  // load schedules from its own task, so the placement lands before the frame
+  // that would show the taller item paints.
+  const schedule = () => {
+    if (frame) return;
+    frame = view.requestAnimationFrame(() => {
+      frame = 0;
+      place();
+    });
+  };
   const resize = view.ResizeObserver
-    ? new view.ResizeObserver(() => {
-        if (frame) return;
-        frame = view.requestAnimationFrame(() => {
-          frame = 0;
-          place();
-        });
-      })
+    ? new view.ResizeObserver(schedule)
     : undefined;
   // Hiding, showing or re-spanning an item changes its size, which the resize
   // observer reports; only items coming and going need watching here.
@@ -237,9 +247,15 @@ export function createMasonry(container: HTMLElement): Masonry {
     ? new view.MutationObserver(() => place())
     : undefined;
 
+  const onLoad = (event: Event) => {
+    if (event.target !== container) schedule();
+  };
+
   place();
   resize?.observe(container);
   mutation?.observe(container, { childList: true });
+  container.addEventListener("load", onLoad, true);
+  container.addEventListener("loadedmetadata", onLoad, true);
 
   return {
     native,
@@ -252,6 +268,8 @@ export function createMasonry(container: HTMLElement): Masonry {
       view.cancelAnimationFrame(frame);
       resize?.disconnect();
       mutation?.disconnect();
+      container.removeEventListener("load", onLoad, true);
+      container.removeEventListener("loadedmetadata", onLoad, true);
       for (const item of [...owned.keys()]) release(item);
       observed.clear();
       if (previousState === null) container.removeAttribute(STATE);

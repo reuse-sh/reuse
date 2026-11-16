@@ -3,8 +3,8 @@ import {
   breakRows,
   type Row,
   type RowMetrics,
+  rowCost,
   rowHeightAt,
-  rowsCost,
   rowsHold,
   shownRows,
 } from "./rows.js";
@@ -47,6 +47,23 @@ function greedy(ratios: number[], at: RowMetrics): Row[] {
   if (start < ratios.length)
     rows.push({ start, end: ratios.length, full: false });
   return rows;
+}
+
+/** The cost breakRows minimises: full rows only, each penalised against the item count. */
+function rowsCost(rows: Row[], ratios: number[], at: RowMetrics) {
+  return rows
+    .filter((row) => row.full)
+    .reduce(
+      (total, row) =>
+        total +
+        rowCost(
+          rowHeightAt(ratios, row.start, row.end, at),
+          row.end - row.start,
+          at,
+          ratios.length + 1,
+        ),
+      0,
+    );
 }
 
 const meanDeviation = (values: number[], target: number) =>

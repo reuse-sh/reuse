@@ -1,34 +1,12 @@
 // @vitest-environment jsdom
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import {
+  FakeResizeObserver,
+  resized,
+} from "../../../tests/model/resize-observer.js";
 import { createJustifiedGallery } from "./justified.js";
 import { breakRows } from "./rows.js";
-
-const observers: FakeResizeObserver[] = [];
-
-class FakeResizeObserver {
-  targets = new Set<Element>();
-  constructor(readonly callback: ResizeObserverCallback) {
-    observers.push(this);
-  }
-  observe(target: Element) {
-    this.targets.add(target);
-  }
-  unobserve(target: Element) {
-    this.targets.delete(target);
-  }
-  disconnect() {
-    this.targets.clear();
-  }
-}
-
-function resized(target: Element) {
-  for (const observer of observers) {
-    if (observer.targets.has(target)) {
-      observer.callback([], observer as unknown as ResizeObserver);
-    }
-  }
-}
 
 const settle = () => new Promise((resolve) => setTimeout(resolve));
 const frame = () => new Promise((resolve) => requestAnimationFrame(resolve));
@@ -56,8 +34,7 @@ function gallery(ratios: number[], width = 1000) {
     items: () => Array.from(container.children) as HTMLElement[],
     async resize(next: number) {
       current = next;
-      resized(container);
-      await frame();
+      await resized(container);
     },
   };
 }
@@ -80,7 +57,6 @@ function rows(container: HTMLElement) {
 const shapes = [1.5, 0.67, 1, 1.78, 0.8, 2.4, 1.33, 0.56, 1.5, 1, 1.33, 0.75];
 
 beforeEach(() => {
-  observers.length = 0;
   vi.stubGlobal("ResizeObserver", FakeResizeObserver);
 });
 
@@ -309,5 +285,74 @@ describe("createJustifiedGallery", () => {
     gone.remove();
     await settle();
     expect(gone.hasAttribute("style")).toBe(false);
+  });
+
+  it("takes the best rows again after a resize wider than a scrollbar and back", async () => {
+    const squares = Array.from({ length: 12 }, () => 1);
+    const { container, resize } = gallery(squares);
+    createJustifiedGallery(container);
+    const wide = rows(container);
+    await resize(500);
+    expect(rows(container)).not.toEqual(wide);
+    await resize(1000);
+    expect(rows(container)).toEqual(wide);
+  });
+
+  it("keeps a ratio the page sets back to a value the controller once wrote", async () => {
+    const { container, items } = gallery([1, 1, 1]);
+    const image = items()[0].querySelector("img") as HTMLImageElement;
+    image.removeAttribute("width");
+    image.removeAttribute("height");
+    const instance = createJustifiedGallery(container);
+    items()[0].style.setProperty("--re-ratio", "2");
+    instance.refresh();
+    items()[0].style.setProperty("--re-ratio", "1");
+    Object.defineProperty(image, "naturalWidth", { get: () => 3000 });
+    Object.defineProperty(image, "naturalHeight", { get: () => 1000 });
+    instance.refresh();
+    expect(items()[0].style.getPropertyValue("--re-ratio")).toBe("1");
+    instance.destroy();
+    expect(items()[0].style.getPropertyValue("--re-ratio")).toBe("1");
+  });
+
+  it("puts back what it wrote on an item removed while the gallery is hidden", async () => {
+    const { container, items, resize } = gallery(shapes);
+    createJustifiedGallery(container);
+    await resize(0);
+    const gone = items()[0];
+    gone.remove();
+    await settle();
+    expect(gone.hasAttribute("style")).toBe(false);
+  });
+
+  it("lays out an item moved in from another gallery as its own", async () => {
+    const first = gallery(shapes);
+    const second = gallery(shapes);
+    const one = createJustifiedGallery(first.container);
+    createJustifiedGallery(second.container);
+    const moved = second.items()[3];
+    first.container.append(moved);
+    await settle();
+    const share = Number(moved.style.getPropertyValue("--re-justified-share"));
+    expect(rows(first.container).flat()).toContain(first.items().length - 1);
+    expect(share).toBeGreaterThan(0);
+    one.destroy();
+    expect(moved.hasAttribute("style")).toBe(false);
+  });
+
+  it("follows a gap a stylesheet changes without touching the container", async () => {
+    const { container, resize } = gallery(shapes);
+    container.style.removeProperty("column-gap");
+    container.className = "wide-gaps";
+    const sheet = document.createElement("style");
+    sheet.textContent = ".wide-gaps { column-gap: 8px; }";
+    document.head.append(sheet);
+    createJustifiedGallery(container);
+    sheet.textContent = ".wide-gaps { column-gap: 24px; }";
+    await resize(1000);
+    expect(container.style.getPropertyValue("--re-justified-column-gap")).toBe(
+      "24px",
+    );
+    sheet.remove();
   });
 });

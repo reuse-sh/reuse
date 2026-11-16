@@ -1,40 +1,17 @@
 // @vitest-environment jsdom
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { explore, type World } from "../../../tests/model/explore.js";
+import {
+  FakeResizeObserver,
+  resized,
+} from "../../../tests/model/resize-observer.js";
 import { createJustifiedGallery } from "./justified.js";
 import { placeLanes } from "./lanes.js";
 import { createMasonry } from "./masonry.js";
 
-const observers: { targets: Set<Element>; callback: () => void }[] = [];
-
-class FakeResizeObserver {
-  targets = new Set<Element>();
-  constructor(readonly callback: () => void) {
-    observers.push(this);
-  }
-  observe(target: Element) {
-    this.targets.add(target);
-  }
-  unobserve(target: Element) {
-    this.targets.delete(target);
-  }
-  disconnect() {
-    this.targets.clear();
-  }
-}
-
-const frame = () => new Promise((resolve) => requestAnimationFrame(resolve));
 const settle = () => new Promise((resolve) => setTimeout(resolve));
 
-async function resized(target: Element) {
-  for (const observer of observers) {
-    if (observer.targets.has(target)) observer.callback();
-  }
-  await frame();
-}
-
 beforeEach(() => {
-  observers.length = 0;
   vi.stubGlobal("ResizeObserver", FakeResizeObserver);
   vi.stubGlobal("CSS", { supports: () => false });
   vi.stubGlobal("requestAnimationFrame", (run: () => void) => setTimeout(run));
