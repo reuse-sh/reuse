@@ -1,5 +1,11 @@
 # @reuse-sh/gallery
 
+## 0.0.5
+
+### Patch Changes
+
+- 5e76f8c: The masonry fallback keeps every lane holding an item while it measures lanes of different widths, so `repeat(auto-fit, ...)` columns whose tracks round to fractional widths no longer collapse and leave gaps.
+
 ## 0.0.4
 
 ### Patch Changes
