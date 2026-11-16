@@ -83,3 +83,391 @@ export function photo(index: number) {
     `<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="800"><rect width="1200" height="800" fill="hsl(${hue} 60% 55%)"/></svg>`,
   )}`;
 }
+
+export type Point = { x: number; y: number };
+
+// WebKit reports no maxTouchPoints under touch emulation, so ask for a coarse pointer instead.
+async function hasTouch(page: Page) {
+  return page.evaluate(() => matchMedia("(pointer: coarse)").matches);
+}
+
+function isChromium(page: Page) {
+  return page.context().browser()?.browserType().name() === "chromium";
+}
+
+// Dispatches pointer and touch events in the page for engines without a trusted touch input.
+// They run the page's handlers but cannot scroll natively, because the browser ignores untrusted input.
+async function synthesizeTouches(
+  page: Page,
+  type: "start" | "move" | "end",
+  points: Point[],
+) {
+  await page.evaluate(
+    ([phase, fingers]) => {
+      const pointer = {
+        start: "pointerdown",
+        move: "pointermove",
+        end: "pointerup",
+      }[phase];
+      const touch = {
+        start: "touchstart",
+        move: "touchmove",
+        end: "touchend",
+      }[phase];
+      const target = document.elementFromPoint(fingers[0].x, fingers[0].y);
+      if (!target) return;
+      let touches: Touch[] = [];
+      try {
+        touches = fingers.map(
+          (finger, identifier) =>
+            new Touch({
+              identifier,
+              target,
+              clientX: finger.x,
+              clientY: finger.y,
+            }),
+        );
+      } catch {
+        // WebKit has no Touch constructor; its pages get the pointer events alone.
+      }
+      fingers.forEach((finger, index) => {
+        target.dispatchEvent(
+          new PointerEvent(pointer, {
+            bubbles: true,
+            cancelable: true,
+            composed: true,
+            pointerId: 100 + index,
+            pointerType: "touch",
+            isPrimary: index === 0,
+            clientX: finger.x,
+            clientY: finger.y,
+            buttons: phase === "end" ? 0 : 1,
+          }),
+        );
+      });
+      if (touches.length > 0)
+        target.dispatchEvent(
+          new TouchEvent(touch, {
+            bubbles: true,
+            cancelable: true,
+            composed: true,
+            touches: phase === "end" ? [] : touches,
+            targetTouches: phase === "end" ? [] : touches,
+            changedTouches: touches,
+          }),
+        );
+    },
+    [type, points] as const,
+  );
+}
+
+// Yields the share of `duration` that has passed, about once a frame, from 0 to 1.
+// Steps follow the clock, so the slower input calls of some engines do not slow the gesture.
+async function* timeline(page: Page, duration: number) {
+  const start = Date.now();
+  yield 0;
+  for (let share = 0; share < 1; ) {
+    await page.waitForTimeout(16);
+    share = Math.min(1, (Date.now() - start) / duration);
+    yield share;
+  }
+}
+
+// Presses, moves and releases one or two fingers. Chromium gets trusted touches through CDP,
+// which scroll natively; other engines get synthesized events.
+async function touchPath(
+  page: Page,
+  duration: number,
+  at: (share: number) => Point[],
+  hold: number,
+) {
+  const cdp = isChromium(page)
+    ? await page.context().newCDPSession(page)
+    : undefined;
+  const send = async (phase: "start" | "move" | "end", points: Point[]) => {
+    if (!cdp) return synthesizeTouches(page, phase, points);
+    const type = { start: "touchStart", move: "touchMove", end: "touchEnd" };
+    await cdp.send("Input.dispatchTouchEvent", {
+      type: type[phase],
+      touchPoints:
+        phase === "end" ? [] : points.map((point, id) => ({ ...point, id })),
+    });
+  };
+  for await (const share of timeline(page, duration))
+    await send(share === 0 ? "start" : "move", at(share));
+  if (hold > 0) await page.waitForTimeout(hold);
+  await send("end", at(1));
+  await cdp?.detach();
+}
+
+/**
+ * Drags from `from` to `to` at `speed` px/ms, then holds still for `hold` ms before
+ * releasing. A page with a coarse pointer gets a finger, any other page the mouse.
+ */
+export async function swipe(
+  page: Page,
+  from: Point,
+  to: Point,
+  { speed = 1, hold = 0 }: { speed?: number; hold?: number } = {},
+) {
+  const duration = Math.hypot(to.x - from.x, to.y - from.y) / speed;
+  const at = (share: number): Point => ({
+    x: from.x + (to.x - from.x) * share,
+    y: from.y + (to.y - from.y) * share,
+  });
+  if (await hasTouch(page)) {
+    await touchPath(page, duration, (share) => [at(share)], hold);
+    return;
+  }
+  for await (const share of timeline(page, duration)) {
+    const point = at(share);
+    await page.mouse.move(point.x, point.y);
+    if (share === 0) await page.mouse.down();
+  }
+  if (hold > 0) await page.waitForTimeout(hold);
+  await page.mouse.up();
+}
+
+/** Two fingers around `center`, moving from `from` to `to` px apart over `duration` ms. */
+export async function pinch(
+  page: Page,
+  center: Point,
+  { from, to, duration = 160 }: { from: number; to: number; duration?: number },
+) {
+  await touchPath(
+    page,
+    duration,
+    (share) => {
+      const gap = from + (to - from) * share;
+      return [
+        { x: center.x - gap / 2, y: center.y },
+        { x: center.x + gap / 2, y: center.y },
+      ];
+    },
+    0,
+  );
+}
+
+/** A wheel event with ctrlKey set, the way browsers report a trackpad pinch or Ctrl and the wheel. */
+export async function ctrlWheel(page: Page, point: Point, deltaY: number) {
+  if (await hasTouch(page)) {
+    await page.evaluate(
+      ([at, delta]) =>
+        document.elementFromPoint(at.x, at.y)?.dispatchEvent(
+          new WheelEvent("wheel", {
+            bubbles: true,
+            cancelable: true,
+            ctrlKey: true,
+            clientX: at.x,
+            clientY: at.y,
+            deltaY: delta,
+          }),
+        ),
+      [point, deltaY] as const,
+    );
+    return;
+  }
+  await page.mouse.move(point.x, point.y);
+  await page.keyboard.down("Control");
+  await page.mouse.wheel(0, deltaY);
+  await page.keyboard.up("Control");
+}
+
+/**
+ * Safari's trackpad pinch: gesturestart, gesturechange and gestureend with scale and rotation.
+ * The events are plain events that carry those fields as properties, the shape of a GestureEvent.
+ */
+export async function safariPinch(
+  page: Page,
+  point: Point,
+  { scale, steps = 10 }: { scale: number; steps?: number },
+) {
+  for (let step = 0; step <= steps + 1; step++) {
+    const type =
+      step === 0
+        ? "gesturestart"
+        : step > steps
+          ? "gestureend"
+          : "gesturechange";
+    const current = 1 + ((scale - 1) * Math.min(step, steps)) / steps;
+    await page.evaluate(
+      ([name, at, value]) => {
+        const event = new Event(name, { bubbles: true, cancelable: true });
+        Object.defineProperties(event, {
+          scale: { value },
+          rotation: { value: 0 },
+          clientX: { value: at.x },
+          clientY: { value: at.y },
+        });
+        document.elementFromPoint(at.x, at.y)?.dispatchEvent(event);
+      },
+      [type, point, current] as const,
+    );
+    if (step <= steps) await page.waitForTimeout(16);
+  }
+}
+
+export type LayoutReads = {
+  /** Calls to getBoundingClientRect and getComputedStyle since the page loaded. */
+  total: number;
+  /** Calls made while a listener for that event type ran. */
+  during: Record<string, number>;
+  /** Events of that type that reached at least one listener. */
+  events: Record<string, number>;
+};
+
+/**
+ * Counts getBoundingClientRect and getComputedStyle calls, and which of them run inside a
+ * pointermove, wheel or scroll listener. Call before mount, because it wraps listeners as
+ * they are added.
+ */
+export async function countLayoutReads(page: Page) {
+  await page.addInitScript(() => {
+    const watched = new Set(["pointermove", "wheel", "scroll"]);
+    const reads = {
+      total: 0,
+      during: {} as Record<string, number>,
+      events: {} as Record<string, number>,
+    };
+    const seen = new WeakSet<Event>();
+    let current: string | undefined;
+    const counted = <T extends (...args: never[]) => unknown>(read: T) =>
+      function (this: unknown, ...args: Parameters<T>) {
+        reads.total++;
+        if (current) reads.during[current] = (reads.during[current] ?? 0) + 1;
+        return read.apply(this, args);
+      };
+    Element.prototype.getBoundingClientRect = counted(
+      Element.prototype.getBoundingClientRect,
+    );
+    window.getComputedStyle = counted(window.getComputedStyle);
+    const wrappers = new WeakMap<object, Map<string, EventListener>>();
+    const wrapperOf = (
+      type: string,
+      listener: EventListenerOrEventListenerObject,
+    ) => {
+      const byType = wrappers.get(listener) ?? new Map<string, EventListener>();
+      wrappers.set(listener, byType);
+      let wrapper = byType.get(type);
+      if (!wrapper) {
+        wrapper = function (this: unknown, event: Event) {
+          if (!seen.has(event)) {
+            seen.add(event);
+            reads.events[type] = (reads.events[type] ?? 0) + 1;
+          }
+          const outer = current;
+          current = type;
+          try {
+            return typeof listener === "function"
+              ? listener.call(this, event)
+              : listener.handleEvent(event);
+          } finally {
+            current = outer;
+          }
+        };
+        byType.set(type, wrapper);
+      }
+      return wrapper;
+    };
+    const add = EventTarget.prototype.addEventListener;
+    const remove = EventTarget.prototype.removeEventListener;
+    EventTarget.prototype.addEventListener = function (
+      type,
+      listener,
+      options,
+    ) {
+      if (!listener || !watched.has(type))
+        return add.call(this, type, listener, options);
+      return add.call(this, type, wrapperOf(type, listener), options);
+    };
+    EventTarget.prototype.removeEventListener = function (
+      type,
+      listener,
+      options,
+    ) {
+      if (!listener || !watched.has(type))
+        return remove.call(this, type, listener, options);
+      return remove.call(this, type, wrapperOf(type, listener), options);
+    };
+    Object.assign(window, { __layoutReads: reads });
+  });
+  return {
+    read: () =>
+      page.evaluate(() =>
+        structuredClone(
+          (window as unknown as { __layoutReads: LayoutReads }).__layoutReads,
+        ),
+      ),
+  };
+}
+
+/** Records every animation frame's duration and, where the engine reports them, long tasks. */
+export async function recordFrames(page: Page) {
+  await page.evaluate(() => {
+    const record = {
+      frames: [] as number[],
+      longTasks: [] as number[],
+      on: true,
+    };
+    let last: number | undefined;
+    const tick = (time: number) => {
+      if (last !== undefined) record.frames.push(time - last);
+      last = time;
+      if (record.on) requestAnimationFrame(tick);
+    };
+    requestAnimationFrame(tick);
+    if (PerformanceObserver.supportedEntryTypes.includes("longtask"))
+      new PerformanceObserver((list) => {
+        for (const entry of list.getEntries())
+          record.longTasks.push(entry.duration);
+      }).observe({ type: "longtask" });
+    Object.assign(window, { __frames: record });
+  });
+  return {
+    stop: () =>
+      page.evaluate(() => {
+        const record = (
+          window as unknown as {
+            __frames: { frames: number[]; longTasks: number[]; on: boolean };
+          }
+        ).__frames;
+        record.on = false;
+        return { frames: record.frames, longTasks: record.longTasks };
+      }),
+  };
+}
+
+/**
+ * Replaces requestAnimationFrame with frames every `interval` ms, so a test can run the same
+ * motion at 60Hz and 120Hz. Call before mount.
+ */
+export async function frameInterval(page: Page, interval: number) {
+  await page.addInitScript((ms) => {
+    const queue = new Map<number, FrameRequestCallback>();
+    let id = 0;
+    let pending = false;
+    let next = performance.now() + ms;
+    const flush = () => {
+      pending = false;
+      const time = performance.now();
+      next = time + ms;
+      const callbacks = [...queue.values()];
+      queue.clear();
+      for (const callback of callbacks) callback(time);
+      if (queue.size > 0) schedule();
+    };
+    const schedule = () => {
+      if (pending) return;
+      pending = true;
+      setTimeout(flush, Math.max(0, next - performance.now()));
+    };
+    window.requestAnimationFrame = (callback) => {
+      queue.set(++id, callback);
+      schedule();
+      return id;
+    };
+    window.cancelAnimationFrame = (handle) => {
+      queue.delete(handle);
+    };
+  }, interval);
+}

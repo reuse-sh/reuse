@@ -10,6 +10,18 @@ Every library lists its principles in packages/catalog. They are the rules the c
 
 Do not change an entry to available until it has working code, a demo, usage, an agent guide, and verification. Do not publish packages or create a deployment as part of a local component change.
 
+## Browser tests
+
+`pnpm test:browser` runs Playwright. Untagged tests in tests/browser run in the `packages` project, desktop Chromium at 1000×700. Tag a test `@touch` to run it in `chromium-touch` and `webkit-touch`, phones at 390×844 with touch, and `@desktop` to run it in `chromium-desktop` and `firefox-desktop`, laptops at 1440×900 with a mouse. Run `pnpm exec playwright install chromium firefox webkit` once.
+
+tests/browser/harness.ts holds the shared helpers: `mount` serves the built packages to a test page, `swipe` drags a finger or the mouse at a given speed with a pause before release, `pinch` moves two fingers, `ctrlWheel` sends a wheel with ctrlKey, `safariPinch` sends Safari's gesture events, `countLayoutReads` counts getBoundingClientRect and getComputedStyle calls inside pointer move, wheel and scroll listeners, `recordFrames` records frame durations and long tasks, and `frameInterval` replaces requestAnimationFrame with a fixed frame rate. Chromium gets trusted touches; WebKit gets synthesized pointer events, which run handlers but cannot scroll natively.
+
+tests/model holds the worlds that the package tests explore under every order of steps.
+
+## Browser builds
+
+Carousel and Lightbox build `dist/browser/`, one minified ES module per entry with no imports by name. scripts/browser-builds.json lists each package's entries and the gzip budget of every file in KB. The package build fails when a file passes its budget or has none. A change that adds behavior raises the budget to its new size plus 10% and gives the size before and after in its pull request. A stylesheet named base.css goes in `@layer re.base`, theme.css and themes/ in `@layer re.theme`, each with a copy without the layer in `dist/unlayered/`.
+
 ## Releasing
 
 Packages publish through Changesets. Add a changeset with `pnpm changeset` in every pull request that changes a published package. The release workflow keeps a "chore: version packages" pull request open. Merging it bumps versions, writes each package's CHANGELOG.md, and publishes to npm with trusted publishing from GitHub Actions.
