@@ -388,4 +388,17 @@ describe("createJustifiedGallery", () => {
     expect(wide).not.toEqual(initial);
     expect(rows(container)).toEqual(initial);
   });
+
+  it("leaves out a child taken out of the flow, such as a spinner", () => {
+    const { container, items } = gallery(shapes);
+    const spinner = document.createElement("li");
+    spinner.style.position = "absolute";
+    container.append(spinner);
+    createJustifiedGallery(container);
+    expect(spinner.hasAttribute("style")).toBe(true);
+    expect(spinner.style.getPropertyValue("--re-justified-share")).toBe("");
+    expect(items()[0].style.getPropertyValue("--re-justified-share")).not.toBe(
+      "",
+    );
+  });
 });

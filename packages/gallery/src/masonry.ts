@@ -134,8 +134,11 @@ export function createMasonry(container: HTMLElement): Masonry {
       return;
     }
     container.setAttribute(STATE, "");
+    // A child out of the flow (a spinner, an overlay) takes no place in a lane.
     const children = Array.from(container.children).filter(
-      (child): child is HTMLElement => child instanceof view.HTMLElement,
+      (child): child is HTMLElement =>
+        child instanceof view.HTMLElement &&
+        !/^(absolute|fixed)$/.test(view.getComputedStyle(child).position),
     );
     // Hidden items stay observed: showing one changes its size.
     for (const item of children) {
