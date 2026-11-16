@@ -116,6 +116,19 @@ gallery.destroy();
 
 <!-- examples:end -->
 
+## Browser build
+
+For a page without a bundler or an import map, such as a theme or a plugin, copy `dist/browser/` and `dist/styles.css` from the package into your assets. `lightbox.js` is one minified ES module with a source map and no imports, with the carousel inside it.
+
+```html
+<link rel="stylesheet" href="/assets/lightbox/styles.css" />
+<script type="module">
+  import { bindLightboxGallery } from "/assets/lightbox/browser/lightbox.js";
+
+  const gallery = bindLightboxGallery(document.querySelector("#gallery"), {});
+</script>
+```
+
 ## Documentation
 
 - Examples and API: https://reuse.sh/lightbox

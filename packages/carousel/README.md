@@ -110,6 +110,19 @@ carousel.destroy();
 
 <!-- examples:end -->
 
+## Browser build
+
+For a page without a bundler or an import map, such as a theme or a plugin, copy `dist/browser/` and `dist/styles.css` from the package into your assets. `carousel.js` is one minified ES module with a source map and no imports.
+
+```html
+<link rel="stylesheet" href="/assets/carousel/styles.css" />
+<script type="module">
+  import { createCarousel } from "/assets/carousel/browser/carousel.js";
+
+  const carousel = createCarousel(document.querySelector("#prints"));
+</script>
+```
+
 ## Documentation
 
 - Examples and API: https://reuse.sh/carousel

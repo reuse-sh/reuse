@@ -33,13 +33,14 @@
       "import": "./dist/index.js"
     },
     "./styles.css": "./dist/styles.css",
+    "./browser/*": "./dist/browser/*",
     "./react": {
       "types": "./dist/react.d.ts",
       "import": "./dist/react.js"
     }
   },
   "scripts": {
-    "build": "node ../../scripts/clean-dist.mjs && tsc -p tsconfig.json && node ../../scripts/copy-styles.mjs",
+    "build": "node ../../scripts/clean-dist.mjs && tsc -p tsconfig.json && node ../../scripts/copy-styles.mjs && node ../../scripts/build-browser.mjs",
     "type-check": "tsc -p tsconfig.json --noEmit",
     "test": "vitest run"
   },
