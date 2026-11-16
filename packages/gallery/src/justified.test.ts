@@ -362,4 +362,30 @@ describe("createJustifiedGallery", () => {
     );
     sheet.remove();
   });
+
+  it("reads the ratio of an item moved in only after its old gallery lets go", async () => {
+    const first = gallery([1, 1, 1, 1]);
+    const second = gallery([1, 1, 1]);
+    createJustifiedGallery(first.container);
+    createJustifiedGallery(second.container);
+    const moved = second.items()[0];
+    const image = moved.querySelector("img") as HTMLImageElement;
+    image.setAttribute("width", "3000");
+    first.container.append(moved);
+    await settle();
+    expect(moved.style.getPropertyValue("--re-ratio")).toBe("3");
+  });
+
+  it("takes the best rows again after a gap goes there and back", async () => {
+    const { container } = gallery([...shapes, ...shapes]);
+    createJustifiedGallery(container);
+    const initial = rows(container);
+    container.style.columnGap = "40px";
+    await settle();
+    const wide = rows(container);
+    container.style.columnGap = "8px";
+    await settle();
+    expect(wide).not.toEqual(initial);
+    expect(rows(container)).toEqual(initial);
+  });
 });

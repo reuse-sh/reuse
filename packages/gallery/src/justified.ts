@@ -308,6 +308,9 @@ export function createJustifiedGallery(
     pending = false;
     const scrollbars = scrollbarsAround(container, view);
     const items = readItems();
+    // Owned first: an item moved in from another gallery is handed back by it
+    // before its ratio is read.
+    for (const item of items) own(item);
     const ratios = items.map(readRatio);
     const unchanged = !fresh && sameContent(items, ratios);
     const sameHeight = current?.metrics.rowHeight === metrics.rowHeight;
@@ -330,6 +333,8 @@ export function createJustifiedGallery(
       } else {
         const byScrollbar =
           kept !== undefined &&
+          kept.metrics.gap === metrics.gap &&
+          Math.abs(kept.metrics.width - metrics.width) >= 1 &&
           Math.abs(
             kept.metrics.width - metrics.width - (scrollbars - kept.scrollbars),
           ) < 1;
