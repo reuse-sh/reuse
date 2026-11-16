@@ -356,7 +356,7 @@ export const libraries: Library[] = [
       ],
       [
         "releaseDuration",
-        "How long the spring takes to settle, in milliseconds: 260 by default for a slow release or a stretched end, 500 for a move from code. A set value applies to both. A flick glides on with its own momentum.",
+        "How long the spring takes to settle a slow release or a stretched end, in milliseconds. 260 by default. A flick glides on with its own momentum.",
       ],
       [
         "next(), prev(), goTo(index, behavior?)",

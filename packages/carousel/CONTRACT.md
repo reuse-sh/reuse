@@ -12,7 +12,7 @@ CarouselOptions:
 - group?: number | "page", default 1
 - autoplay?: number, milliseconds, off by default
 - releaseMotion?: "spring" | "native", default spring. A released mouse drag projects its speed 260ms ahead and travels to the snap point nearest that stop, at least one slide ahead after a flick, and never past the first slide on the way whose scroll-snap-stop is always. Spring starts at the drag speed and slows down without overshooting a target it moves toward; native uses the browser smooth scroll. Reduced motion jumps.
-- releaseDuration?: number, milliseconds, default 260 for a slow release and the return from a stretched end, and 500 for moves from code. A set value applies to both.
+- releaseDuration?: number, milliseconds, default 260, the spring time for a slow release and for the return from a stretched end
 - moveMotion?: "spring" | "native", default spring. next, prev, goTo, the arrow keys, Home and End travel on the same critically damped spring as a released drag, settling in 500ms. A move during a move redirects the spring, keeps its speed and counts from its target. The spring crosses the loop seam. native keeps the browser smooth scroll. goTo(index, "instant") and reduced motion jump.
 - wheel?: "vertical", off by default. A vertical mouse wheel (line or page deltaMode, or |deltaY| >= 50 per event) moves one slide per notch and lets the page scroll once the strip cannot move that way; trackpads stay native.
 - onChange?: (state: CarouselState) => void

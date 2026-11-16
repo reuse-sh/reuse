@@ -89,6 +89,20 @@ test.describe("carousel spring", { tag: "@desktop" }, () => {
     expect(steps.slice(moving, third).filter((step) => step === 0)).toEqual([]);
   });
 
+  test("next() moves on from where a native scroll left the strip", async ({
+    page,
+  }) => {
+    await setup(page);
+    await page.evaluate(() =>
+      document
+        .getElementById("strip")
+        ?.scrollTo({ left: 600, behavior: "instant" }),
+    );
+    await page.waitForTimeout(300);
+    const values = await pressNext(page, [0]);
+    expect(values.at(-1)?.left).toBe(900);
+  });
+
   test("a wheel during a move stops the spring and the strip snaps to the point nearest where it stopped", async ({
     page,
   }) => {

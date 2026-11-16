@@ -77,6 +77,7 @@ const STRETCH_LIMIT = 120;
 const RELEASE_SAMPLE_WINDOW = 80;
 const MAX_SPRING_STEP = 64;
 const REST_DISTANCE = 0.5;
+const MOVE_DURATION = 500;
 const INPUT_WINDOW = 100;
 const SPEED_WINDOW = 64;
 const SLOW_SCROLL = 0.1;
@@ -146,7 +147,6 @@ export function createCarousel(
     throw new RangeError("Carousel wheel must be vertical.");
   }
   const releaseDuration = options.releaseDuration ?? 260;
-  const moveDuration = options.releaseDuration ?? 500;
   if (!Number.isFinite(releaseDuration) || releaseDuration <= 0) {
     throw new RangeError("Carousel releaseDuration must be a positive time.");
   }
@@ -519,6 +519,7 @@ export function createCarousel(
     rest: number,
     moving: typeof spring = null,
   ) {
+    if (!moving) written = position();
     const value = moving?.value ?? position() + stretch;
     const distance = target - value;
     const speed = Math.abs(distance) < REST_DISTANCE ? 0 : velocity;
@@ -685,7 +686,7 @@ export function createCarousel(
     viewport.style.scrollSnapType = "none";
     if (glide && releaseSpeed === undefined) {
       const value = moving?.value ?? position() + stretch;
-      const frequency = settleFrequency(target - value, moveDuration);
+      const frequency = settleFrequency(target - value, MOVE_DURATION);
       startSpring(target, moving?.velocity ?? 0, frequency, frequency, moving);
     } else if (glide)
       startSpring(
@@ -776,6 +777,10 @@ export function createCarousel(
     const before = position();
     const offset = active ? before - targetAt(state.index, before) : 0;
     const goal = pendingIndex === undefined ? undefined : slides[pendingIndex];
+    const glidingFree =
+      spring !== null &&
+      pendingIndex !== undefined &&
+      Math.abs(spring.target - targetAt(pendingIndex, spring.target)) > 1;
     const snap = viewport.style.scrollSnapType;
     if (snap === previousSnap) {
       const snapType = window.getComputedStyle(viewport).scrollSnapType;
@@ -898,7 +903,9 @@ export function createCarousel(
     if (goalIndex >= 0 && enabled && spring) {
       const shift = position() - before;
       spring.value += shift;
-      spring.target = targetAt(goalIndex, spring.target + shift);
+      spring.target = glidingFree
+        ? spring.target + shift
+        : targetAt(goalIndex, spring.target + shift);
       pendingIndex = goalIndex;
       pendingPosition = spring.target;
       publish(goalIndex);
@@ -1180,6 +1187,7 @@ export function createCarousel(
     (event) => {
       const wheel = event as WheelEvent;
       lastInput = window.performance.now();
+      if (wheel.defaultPrevented) return;
       if (
         options.wheel === "vertical" &&
         enabled &&

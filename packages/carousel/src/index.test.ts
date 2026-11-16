@@ -924,6 +924,19 @@ describe("one motion and strip state", () => {
     expect(vi.getTimerCount()).toBeLessThanOrEqual(2);
   });
 
+  it("moves from code after the strip was scrolled natively", () => {
+    const { viewport } = fixture([100, 100, 100, 100]);
+    const carousel = createCarousel(viewport);
+    cleanups.push(carousel.destroy);
+    viewport.scrollLeft = 100;
+    viewport.dispatchEvent(new Event("scroll"));
+    vi.advanceTimersByTime(200);
+    carousel.next();
+    vi.advanceTimersByTime(1000);
+    expect(viewport.scrollLeft).toBe(200);
+    expect(carousel.getState().index).toBe(2);
+  });
+
   it("lets a scroll from outside finish instead of pulling the strip back", () => {
     const { viewport } = fixture([100, 100, 100, 100]);
     const carousel = createCarousel(viewport);
@@ -954,6 +967,16 @@ describe("one motion and strip state", () => {
     expect(wheel(viewport, { deltaY: 100 }).defaultPrevented).toBe(false);
     vi.advanceTimersByTime(1000);
     expect(viewport.scrollLeft).toBe(200);
+    const outer = fixture();
+    const inner = fixture();
+    outer.slides[0].append(inner.viewport);
+    const outside = createCarousel(outer.viewport, { wheel: "vertical" });
+    const nested = createCarousel(inner.viewport, { wheel: "vertical" });
+    cleanups.push(outside.destroy, nested.destroy);
+    inner.viewport.dispatchEvent(
+      new WheelEvent("wheel", { deltaY: 100, bubbles: true, cancelable: true }),
+    );
+    expect([outside.getState().index, nested.getState().index]).toEqual([0, 1]);
     const plain = fixture();
     const native = createCarousel(plain.viewport);
     cleanups.push(native.destroy);
@@ -1040,6 +1063,17 @@ describe("one motion and strip state", () => {
     carousel.next();
     vi.advanceTimersByTime(1000);
     expect(viewport.scrollLeft).toBe((Math.round(rest / 100) + 1) * 100);
+    carousel.goTo(0, "instant");
+    pointer(viewport, "pointerdown", 300);
+    for (const x of [290, 275, 260]) {
+      vi.advanceTimersByTime(16);
+      pointer(window, "pointermove", x);
+    }
+    pointer(window, "pointerup", 260);
+    vi.advanceTimersByTime(48);
+    carousel.refresh();
+    vi.advanceTimersByTime(2000);
+    expect(viewport.scrollLeft).toBe(rest);
   });
 
   it("leaves a mouse drag that starts inside a nested strip with room to scroll to that strip", () => {

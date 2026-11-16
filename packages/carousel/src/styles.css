@@ -16,14 +16,20 @@
   flex: 0 0 var(--re-carousel-slide-width, 100%);
   min-width: 0;
   scroll-snap-align: var(--re-carousel-align, start);
+}
+
+:where(.re-carousel > .re-carousel__slide) {
   transition: scale calc(var(--re-carousel-press-duration, 300ms) * 2)
     cubic-bezier(0.37, 0, 0.25, 1);
 }
 
-.re-carousel[data-re-dragging] > .re-carousel__slide {
-  scale: var(--re-carousel-press-scale, 0.96);
+:where(.re-carousel[data-re-dragging] > .re-carousel__slide) {
   transition: scale var(--re-carousel-press-duration, 300ms)
     cubic-bezier(0.33, 1, 0.68, 1);
+}
+
+.re-carousel[data-re-dragging] > .re-carousel__slide {
+  scale: var(--re-carousel-press-scale, 0.96);
 }
 
 .re-carousel[data-re-scrolling] > .re-carousel__slide {
@@ -45,8 +51,7 @@
     scroll-behavior: auto;
   }
 
-  .re-carousel > .re-carousel__slide,
-  .re-carousel[data-re-dragging] > .re-carousel__slide {
+  :where(.re-carousel > .re-carousel__slide) {
     transition: none;
   }
 }
