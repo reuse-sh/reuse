@@ -39,7 +39,10 @@ const icons = {
   zoom: hugeicon(ZoomInAreaIcon as IconData),
 };
 
-const script = (chrome: string | null) => `
+const script = (chrome: string | null) => {
+  const slots = chrome?.includes("chromeSlots") ?? false;
+  const idle = chrome?.includes("hideWhenIdle") ?? false;
+  return `
 
     import { createLightbox } from "@reuse-sh/lightbox";
 
@@ -65,13 +68,15 @@ const script = (chrome: string | null) => `
     let index = 0;
     let lightbox = null;
     let unsubscribe = null;
+    let stopIdle = null;
 
 ${chrome ?? ""}
 
     function teardown() {
       unsubscribe?.();
+      stopIdle?.();
       lightbox?.destroy();
-      unsubscribe = lightbox = null;
+      unsubscribe = stopIdle = lightbox = null;
     }
 
     function onState(state) {
@@ -100,17 +105,18 @@ ${chrome ?? ""}
     function render({ animate = false } = {}) {
       teardown();
       again.hidden = true;
+      // The frame shares the page's session history, so Back stays with the docs page.
       lightbox = createLightbox({
         className,
         icons: ICONS,
         thumbnails: options.thumbnails,
         label: "Photos",
         padding: window.innerWidth < 560 ? 12 : 24,
-      });
+        history: false,${slots ? "\n        slots: chromeSlots(() => items, ICONS)," : ""}
+      });${idle ? "\n      stopIdle = hideWhenIdle(lightbox);" : ""}
       withoutFocus(() => lightbox.open(items, index));
       const dialog = document.querySelector("dialog.${LIGHTBOX_STYLE_CLASS}");
       if (!animate) for (const animation of dialog.getAnimations({ subtree: true })) animation.finish();
-      ${chrome ? "addChrome(lightbox, items);" : ""}
       unsubscribe = lightbox.subscribe(onState);
     }
 
@@ -119,6 +125,7 @@ ${chrome ?? ""}
     render();
     document.querySelector(".f-fallback").style.display = "none";
   `;
+};
 
 /** A standalone page that opens a real lightbox in one control style, for an iframe preview. */
 export function lightboxFrame(options: LightboxStyle) {
@@ -135,7 +142,8 @@ export function lightboxFrame(options: LightboxStyle) {
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex">
 <title>Lightbox preview</title>
-<link rel="stylesheet" href="/modules/lightbox/styles.css">
+<link rel="stylesheet" href="/modules/lightbox/base.css">
+<link rel="stylesheet" href="/modules/lightbox/theme.css">
 <link rel="stylesheet" href="/styles/site.css">
 <script type="importmap">{"imports":{"@reuse-sh/carousel":"/modules/carousel/index.js","@reuse-sh/lightbox":"/modules/lightbox/index.js"}}</script>
 <style>${lightboxStyleCss(options)}</style>

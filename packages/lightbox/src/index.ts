@@ -13,6 +13,80 @@ import {
 
 export type { Point, Rect, Size, Zoom } from "./geometry.js";
 
+export interface LightboxStrings {
+  dialog: string;
+  slide: (index: number, count: number) => string;
+  counter: (index: number, count: number) => string;
+  close: string;
+  previous: string;
+  next: string;
+  zoomIn: string;
+  zoomOut: string;
+  fullscreenEnter: string;
+  fullscreenExit: string;
+  download: string;
+  thumbnails: string;
+  thumbnail: (index: number, count: number) => string;
+  slideshowStart: string;
+  slideshowStop: string;
+  loading: string;
+  error: string;
+  retry: string;
+}
+
+const defaultStrings: LightboxStrings = {
+  dialog: "Image gallery",
+  slide: (index, count) => `Image ${index + 1} of ${count}`,
+  counter: (index, count) => `${index + 1} / ${count}`,
+  close: "Close gallery",
+  previous: "Previous image",
+  next: "Next image",
+  zoomIn: "Zoom in",
+  zoomOut: "Zoom out",
+  fullscreenEnter: "Enter full screen",
+  fullscreenExit: "Exit full screen",
+  download: "Download",
+  thumbnails: "Choose image",
+  thumbnail: (index) => `Show image ${index + 1}`,
+  slideshowStart: "Start slideshow",
+  slideshowStop: "Stop slideshow",
+  loading: "Loading",
+  error: "Image could not be loaded.",
+  retry: "Try again",
+};
+
+export type LightboxSlotName =
+  | "toolbarStart"
+  | "toolbarEnd"
+  | "footer"
+  | "aside";
+
+export type LightboxSlot = (context: {
+  lightbox: Lightbox;
+  document: Document;
+}) => {
+  node: Node;
+  update?: (state: LightboxState) => void;
+  destroy?: () => void;
+};
+
+export type LightboxEventName =
+  | "open"
+  | "opened"
+  | "change"
+  | "settle"
+  | "beforeclose"
+  | "closed";
+
+export interface LightboxEvent {
+  readonly type: LightboxEventName;
+  readonly index: number;
+  readonly slide: HTMLElement | null;
+  readonly defaultPrevented: boolean;
+  /** Keeps the viewer open when called during beforeclose; other events ignore it. */
+  preventDefault(): void;
+}
+
 export interface LightboxItem {
   src: string;
   previewSrc?: string;
@@ -27,9 +101,11 @@ export interface LightboxItem {
 export interface LightboxState {
   isOpen: boolean;
   isClosing: boolean;
+  isAnimating: boolean;
   index: number;
   count: number;
   zoom: Zoom;
+  chrome: "shown" | "hidden";
 }
 
 export interface LightboxContentContext {
@@ -53,6 +129,11 @@ export interface LightboxOptions {
   className?: string;
   icons?: Partial<Record<"close" | "prev" | "next" | "zoom", () => Node>>;
   renderContent?: (context: LightboxContentContext) => undefined | (() => void);
+  loop?: boolean;
+  history?: boolean;
+  strings?: Partial<LightboxStrings>;
+  slots?: Partial<Record<LightboxSlotName, LightboxSlot>>;
+  getOrigin?: (index: number) => HTMLElement | null;
   /** Reports discrete actions, completed pointer gestures, and wheel input after 150ms idle. */
   onChange?: (state: LightboxState) => void;
 }
@@ -69,6 +150,15 @@ export interface Lightbox {
   getState(): LightboxState;
   /** Subscribes to the settled changes reported by onChange. */
   subscribe(listener: (state: LightboxState) => void): () => void;
+  on(
+    type: LightboxEventName,
+    listener: (event: LightboxEvent) => void,
+  ): () => void;
+  append(items: readonly LightboxItem[]): void;
+  /** Keeps the current image when the new list still has it, otherwise shows index or the nearest image left. */
+  setItems(items: readonly LightboxItem[], index?: number): void;
+  setOptions(options: Pick<LightboxOptions, "loop">): void;
+  getSlide(index: number): HTMLElement | null;
   destroy(): void;
 }
 
@@ -86,6 +176,12 @@ type Session = {
   slides: HTMLDivElement[];
   loaded: Map<number, LoadedSlide>;
   carousel: Carousel;
+  carouselLoops: boolean;
+  strings: LightboxStrings;
+  slots: ReturnType<LightboxSlot>[];
+  motion?: { frame: number; left: number; still: number };
+  thumbStrip?: HTMLDivElement;
+  centeredThumb: number;
   abort: AbortController;
   animations: Set<Animation>;
   finishAnimations: Set<() => void>;
@@ -98,6 +194,8 @@ type Session = {
   next: HTMLButtonElement;
   zoomButton: HTMLButtonElement;
   thumbs: HTMLButtonElement[];
+  makeSlide: () => HTMLDivElement;
+  makeThumbs: () => void;
   pointers: Map<number, Point>;
   gesture?: {
     start: Point;
@@ -200,11 +298,15 @@ function midpoint(points: Point[]): Point {
 }
 
 export function createLightbox(options: LightboxOptions = {}): Lightbox {
-  const maxZoom = Math.max(1, options.maxZoom ?? 4);
-  const tapZoom = clamp(options.tapZoom ?? 2.5, 1, maxZoom);
-  const preload = clamp(Math.floor(options.preload ?? 1), 0, 2);
-  const padding = Math.max(0, options.padding ?? 32);
+  // Options are read again at every open, so a wrapper can change them between sessions.
+  let settings: LightboxOptions = { ...options };
+  let maxZoom = 4;
+  let tapZoom = 2.5;
+  let preload = 1;
+  let padding = 32;
+  let loop = Boolean(options.loop);
   let items: LightboxItem[] = [];
+  let sources: readonly LightboxItem[] = [];
   let session: Session | undefined;
   let destroyed = false;
   let syncingCarousel = false;
@@ -212,13 +314,32 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
   let state: LightboxState = {
     isOpen: false,
     isClosing: false,
+    isAnimating: false,
     index: 0,
     count: 0,
     zoom: { ...identity },
+    chrome: "shown",
   };
   const listeners = new Set<(state: LightboxState) => void>();
+  const handlers = new Map<
+    LightboxEventName,
+    Set<(event: LightboxEvent) => void>
+  >();
+  const historyKey = "reuseLightbox";
+  const historyId = Math.random().toString(36).slice(2);
+  let historyWindow: Window | undefined;
+  let backPending = false;
 
   let notifiedState = state;
+
+  function configure() {
+    settings = { ...options };
+    maxZoom = Math.max(1, settings.maxZoom ?? 4);
+    tapZoom = clamp(settings.tapZoom ?? 2.5, 1, maxZoom);
+    preload = clamp(Math.floor(settings.preload ?? 1), 0, 2);
+    padding = Math.max(0, settings.padding ?? 32);
+  }
+  configure();
 
   function updateState(update: Partial<LightboxState>) {
     state = { ...state, ...update };
@@ -229,16 +350,54 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
     if (
       state.isOpen === notifiedState.isOpen &&
       state.isClosing === notifiedState.isClosing &&
+      state.isAnimating === notifiedState.isAnimating &&
       state.index === notifiedState.index &&
       state.count === notifiedState.count &&
+      state.chrome === notifiedState.chrome &&
       state.zoom.scale === notifiedState.zoom.scale &&
       state.zoom.x === notifiedState.zoom.x &&
       state.zoom.y === notifiedState.zoom.y
     )
       return;
     notifiedState = state;
-    options.onChange?.(state);
+    settings.onChange?.(state);
     for (const listener of listeners) listener(state);
+    for (const slot of session?.slots ?? []) slot.update?.(state);
+  }
+
+  function emit(type: LightboxEventName, s = session) {
+    let prevented = false;
+    const event: LightboxEvent = {
+      type,
+      index: state.index,
+      slide: s?.slides[state.index] ?? null,
+      get defaultPrevented() {
+        return prevented;
+      },
+      preventDefault() {
+        if (type === "beforeclose") prevented = true;
+      },
+    };
+    for (const listener of [...(handlers.get(type) ?? [])]) listener(event);
+    return prevented;
+  }
+
+  function syncAnimating(s: Session) {
+    if (session !== s) return;
+    const busy = s.animations.size > 0 || Boolean(s.fade) || Boolean(s.motion);
+    if (busy !== state.isAnimating) publish({ isAnimating: busy });
+  }
+
+  function looping() {
+    return loop && items.length > 1;
+  }
+
+  function wrap(index: number) {
+    return ((index % items.length) + items.length) % items.length;
+  }
+
+  function originOf(index: number) {
+    return settings.getOrigin?.(index) ?? items[index]?.origin ?? null;
   }
 
   function view(s: Session): Size {
@@ -273,10 +432,10 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
     s.viewport.style.touchAction = state.zoom.scale > 1 ? "none" : "pan-x";
     s.zoomButton.setAttribute(
       "aria-label",
-      state.zoom.scale > 1 ? "Zoom out" : "Zoom in",
+      state.zoom.scale > 1 ? s.strings.zoomOut : s.strings.zoomIn,
     );
     s.zoomButton.setAttribute("aria-pressed", String(state.zoom.scale > 1));
-    if (!options.icons?.zoom)
+    if (!settings.icons?.zoom)
       s.zoomButton.textContent = state.zoom.scale > 1 ? "−" : "+";
     s.dialog.dataset.zoomed = String(state.zoom.scale > 1);
   }
@@ -289,7 +448,7 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
 
   function hideOrigin(s: Session) {
     restoreOrigin(s);
-    const origin = items[state.index]?.origin;
+    const origin = originOf(state.index);
     if (!origin?.isConnected) return;
     s.hiddenOrigin = { element: origin, visibility: origin.style.visibility };
     origin.style.visibility = "hidden";
@@ -313,6 +472,7 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
         fill: "both",
       });
       s.animations.add(animation);
+      syncAnimating(s);
       let settled = false;
       const finish = () => {
         if (settled) return;
@@ -320,6 +480,7 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
         clearTimeout(timer);
         s.animations.delete(animation);
         s.finishAnimations.delete(finish);
+        syncAnimating(s);
         // commitStyles throws on an element that is no longer rendered, such
         // as one inside a dialog the browser already closed.
         try {
@@ -353,13 +514,13 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
       clipPath: current.clipPath || "inset(0px round 0px)",
       opacity: current.opacity || "1",
     };
-    const origin = item.origin;
+    const origin = originOf(state.index);
     const rect = origin?.isConnected
       ? origin.getBoundingClientRect()
       : undefined;
     const viewport = view(s);
     const size = fit(state.index, s);
-    const duration = Math.max(0, options.duration ?? 280);
+    const duration = Math.max(0, settings.duration ?? 280);
     const visible =
       rect &&
       rect.width > 0 &&
@@ -445,14 +606,27 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
       s.dialog.ownerDocument.defaultView?.getComputedStyle(s.viewport)
         .direction === "rtl";
     const start = Math.abs(s.viewport.scrollLeft);
+    // A looping strip shows each slide at the copy nearest the viewport, one cycle away at most.
+    const span =
+      s.carouselLoops && s.carousel.getState().isLooping
+        ? s.slides.reduce((sum, slide) => sum + slide.offsetWidth, 0)
+        : 0;
     return s.slides.flatMap((slide, index) => {
-      const left = rtl
+      const base = rtl
         ? s.viewport.scrollWidth - slide.offsetLeft - slide.offsetWidth
         : slide.offsetLeft;
-      return left < start + width - 1 && left + slide.offsetWidth > start + 1
+      return (span ? [base - span, base, base + span] : [base]).some(
+        (left) =>
+          left < start + width - 1 && left + slide.offsetWidth > start + 1,
+      )
         ? [index]
         : [];
     });
+  }
+
+  function distanceTo(index: number) {
+    const gap = Math.abs(index - state.index);
+    return looping() ? Math.min(gap, items.length - gap) : gap;
   }
 
   // Unloads images outside the preload window, except those still on screen
@@ -461,8 +635,7 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
     if (session !== s) return;
     const visible = visibleRange(s);
     for (const [index, entry] of s.loaded) {
-      if (Math.abs(index - state.index) <= preload || visible.includes(index))
-        continue;
+      if (distanceTo(index) <= preload || visible.includes(index)) continue;
       entry.cancel();
       entry.frame.remove();
       s.loaded.delete(index);
@@ -471,12 +644,9 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
 
   function loadSlides(s: Session) {
     trimSlides(s);
-    for (
-      let index = Math.max(0, state.index - preload);
-      index <= Math.min(items.length - 1, state.index + preload);
-      index++
-    ) {
-      if (s.loaded.has(index)) continue;
+    for (let step = -preload; step <= preload; step++) {
+      const index = looping() ? wrap(state.index + step) : state.index + step;
+      if (index < 0 || index >= items.length || s.loaded.has(index)) continue;
       const item = items[index];
       const doc = s.dialog.ownerDocument;
       const frame = doc.createElement("div");
@@ -510,7 +680,7 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
           const error = doc.createElement("span");
           error.className = "re-lightbox-error";
           error.setAttribute("role", "status");
-          error.textContent = "Image could not be loaded.";
+          error.textContent = s.strings.error;
           frame.append(error);
         }
       };
@@ -538,7 +708,7 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
       loader.src = item.src;
       if (loader.complete && loader.naturalWidth)
         loader.onload(new Event("load"));
-      cleanup = options.renderContent?.({
+      cleanup = settings.renderContent?.({
         item,
         index,
         container: frame,
@@ -559,32 +729,63 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
     }
     publish({ index, zoom: { ...identity } });
     update(s);
+    emit("change", s);
   }
 
   function update(s: Session) {
     loadSlides(s);
     hideOrigin(s);
-    s.counter.value = `${state.index + 1} / ${items.length}`;
+    s.counter.value = s.strings.counter(state.index, items.length);
     s.caption.textContent = items[state.index].caption || "";
-    s.prev.disabled = state.index === 0;
-    s.next.disabled = state.index === items.length - 1;
+    s.prev.disabled = !looping() && state.index === 0;
+    s.next.disabled = !looping() && state.index === items.length - 1;
     for (const [index, slide] of s.slides.entries()) {
       slide.inert = index !== state.index;
       slide.setAttribute("aria-hidden", String(index !== state.index));
+      slide.setAttribute("aria-label", s.strings.slide(index, items.length));
     }
     for (const [index, thumb] of s.thumbs.entries())
       thumb.setAttribute("aria-current", String(index === state.index));
+    centerThumb(s);
     applyZoom(s);
+  }
+
+  // Keeps the active thumbnail in the middle of an overflowing strip, at once on the first frame.
+  function centerThumb(s: Session) {
+    const strip = s.thumbStrip;
+    const thumb = s.thumbs[state.index];
+    if (
+      !strip ||
+      !thumb ||
+      s.centeredThumb === state.index ||
+      strip.scrollWidth <= strip.clientWidth
+    )
+      return;
+    const reduced = s.dialog.ownerDocument.defaultView?.matchMedia?.(
+      "(prefers-reduced-motion: reduce)",
+    ).matches;
+    strip.scrollTo({
+      left: Math.max(
+        0,
+        thumb.offsetLeft - (strip.clientWidth - thumb.offsetWidth) / 2,
+      ),
+      behavior: s.centeredThumb < 0 || reduced ? "instant" : "smooth",
+    });
+    s.centeredThumb = state.index;
   }
 
   function teardown(s: Session) {
     if (session === s) session = undefined;
     s.abort.abort();
     clearTimeout(s.wheelTimer);
+    if (s.motion)
+      s.dialog.ownerDocument.defaultView?.cancelAnimationFrame(s.motion.frame);
+    s.motion = undefined;
     finishFade(s, false);
     cancelAnimations(s);
     s.carousel.destroy();
     for (const entry of s.loaded.values()) entry.cancel();
+    for (const slot of s.slots.splice(0)) slot.destroy?.();
     restoreOrigin(s);
     if (s.dialog.open) s.dialog.close();
     s.dialog.remove();
@@ -631,7 +832,7 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
         s,
         frame,
         [{ transform: live }, { transform: frame.style.transform }],
-        Math.min(220, Math.max(0, options.duration ?? 280)),
+        Math.min(220, Math.max(0, settings.duration ?? 280)),
       );
     }
   }
@@ -650,6 +851,7 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
     s.fade = undefined;
     fade.animation?.cancel();
     if (jump && !fade.jumped) fade.jump();
+    syncAnimating(s);
   }
 
   // Distant images fade through the backdrop instead of scrolling past
@@ -670,12 +872,13 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
     const reduced = s.dialog.ownerDocument.defaultView?.matchMedia?.(
       "(prefers-reduced-motion: reduce)",
     ).matches;
-    const duration = Math.min(240, Math.max(0, options.duration ?? 280));
+    const duration = Math.min(240, Math.max(0, settings.duration ?? 280));
     if (reduced || duration <= 0 || typeof s.viewport.animate !== "function") {
       fade.jump();
       return;
     }
     s.fade = fade;
+    syncAnimating(s);
     const fadeOut = s.viewport.animate([{ opacity: 1 }, { opacity: 0 }], {
       duration: duration * 0.45,
       easing: "ease-in",
@@ -693,7 +896,9 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
         fade.animation = fadeIn;
         fadeOut.cancel();
         const done = () => {
-          if (s.fade === fade) s.fade = undefined;
+          if (s.fade !== fade) return;
+          s.fade = undefined;
+          syncAnimating(s);
         };
         fadeIn.finished.then(done, done);
       },
@@ -706,12 +911,22 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
     if (!s || state.isClosing || !Number.isFinite(index)) return;
     finishFade(s, true);
     const target = clamp(Math.floor(index), 0, items.length - 1);
-    const far = Math.abs(target - state.index) > 1;
+    // Without slides to cover the seam, a loop crosses it through the fade.
+    const gap = Math.abs(target - state.index);
+    const far =
+      (looping() && s.carousel.getState().isLooping
+        ? Math.min(gap, items.length - gap)
+        : gap) > 1;
     syncingCarousel = true;
     activeChanged(s, target);
     if (!far) s.carousel.goTo(target, "smooth");
     syncingCarousel = false;
     if (far) fadeTo(s, target);
+  }
+
+  function step(direction: 1 | -1) {
+    const index = state.index + direction;
+    goTo(looping() ? wrap(index) : index);
   }
 
   function isSettled(s: Session) {
@@ -885,7 +1100,7 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
         const previous = s.lastTap;
         const current = point(event);
         if (
-          options.doubleTapZoom !== false &&
+          settings.doubleTapZoom !== false &&
           previous &&
           now - previous.time < 300 &&
           Math.hypot(
@@ -897,7 +1112,7 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
           s.lastTap = undefined;
         } else {
           s.lastTap = { time: now, point: current };
-          if (options.imageClick === "close") void close();
+          if (settings.imageClick === "close") void close();
         }
         s.suppressClickUntil = now + 400;
       }
@@ -936,8 +1151,8 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
           void close();
           return;
         }
-        if (options.imageClick === "close") void close();
-        else if (options.imageClick !== "none" && isSettled(s))
+        if (settings.imageClick === "close") void close();
+        else if (settings.imageClick !== "none" && isSettled(s))
           toggleZoom(focus({ x: event.clientX, y: event.clientY }));
       },
       { signal },
@@ -990,70 +1205,189 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
     );
   }
 
+  function connect(viewport: HTMLDivElement) {
+    return createCarousel(viewport, {
+      drag: true,
+      loop: looping(),
+      onChange: (value) => {
+        if (!syncingCarousel && session?.viewport === viewport)
+          activeChanged(session, value.index);
+      },
+    });
+  }
+
+  // The carousel takes loop once, so a change of loop or of a single image builds it again in place.
+  function reconnect(s: Session, index: number) {
+    const syncing = syncingCarousel;
+    syncingCarousel = true;
+    s.carousel.destroy();
+    s.carousel = connect(s.viewport);
+    s.carouselLoops = looping();
+    s.carousel.goTo(index, "instant");
+    syncingCarousel = syncing;
+  }
+
+  function ownsHistory(win: Window) {
+    const current: unknown = win.history.state;
+    return (
+      typeof current === "object" &&
+      current !== null &&
+      (current as Record<string, unknown>)[historyKey] === historyId
+    );
+  }
+
+  function pushHistory(win: Window) {
+    const current: unknown = win.history.state;
+    win.history.pushState(
+      {
+        ...(typeof current === "object" && current !== null ? current : {}),
+        [historyKey]: historyId,
+      },
+      "",
+      win.location.href,
+    );
+  }
+
+  function enterHistory(win: Window) {
+    if (settings.history === false) return;
+    if (historyWindow !== win) {
+      historyWindow?.removeEventListener("popstate", onPopState);
+      historyWindow = win;
+      win.addEventListener("popstate", onPopState);
+    }
+    // While a back is still on its way, its popstate restores the entry.
+    if (!backPending && !ownsHistory(win)) pushHistory(win);
+  }
+
+  function leaveHistory() {
+    const win = historyWindow;
+    if (!win) return;
+    if (ownsHistory(win)) {
+      backPending = true;
+      win.history.back();
+    } else releaseHistory();
+  }
+
+  function releaseHistory() {
+    if (backPending || session) return;
+    historyWindow?.removeEventListener("popstate", onPopState);
+    historyWindow = undefined;
+  }
+
+  function onPopState() {
+    const win = historyWindow;
+    if (!win) return;
+    if (backPending) {
+      backPending = false;
+      if (session && !state.isClosing && !ownsHistory(win)) pushHistory(win);
+      releaseHistory();
+      return;
+    }
+    if (session && !state.isClosing && !ownsHistory(win))
+      void closeSession(true);
+  }
+
+  function mountSlots(
+    s: Session,
+    places: Record<LightboxSlotName, (node: Node) => void>,
+  ) {
+    const doc = s.dialog.ownerDocument;
+    for (const name of Object.keys(places) as LightboxSlotName[]) {
+      const slot = settings.slots?.[name];
+      if (!slot) continue;
+      const instance = slot({ lightbox: controller, document: doc });
+      places[name](instance.node);
+      s.slots.push(instance);
+      instance.update?.(state);
+    }
+  }
+
   function open(input: readonly LightboxItem[], index = 0) {
     if (destroyed) throw new Error("This lightbox has been destroyed.");
     const nextItems = validateItems(input);
     if (!Number.isFinite(index))
       throw new TypeError("Image index must be finite.");
+    configure();
     const doc =
-      options.container?.ownerDocument ??
+      settings.container?.ownerDocument ??
       (typeof document === "undefined" ? undefined : document);
     if (!doc?.body)
       throw new Error("Opening a lightbox needs a browser document.");
     if (session) teardown(session);
     items = nextItems;
+    sources = [...input];
     closePromise = undefined;
+    const strings = { ...defaultStrings, ...settings.strings };
     const dialog = doc.createElement("dialog");
     if (typeof dialog.showModal !== "function")
       throw new Error("Lightbox requires native dialog support.");
-    dialog.className = ["re-lightbox", options.className]
+    dialog.className = ["re-lightbox", settings.className]
       .filter(Boolean)
       .join(" ");
-    dialog.setAttribute("aria-label", options.label || "Image gallery");
+    dialog.setAttribute("aria-label", settings.label || strings.dialog);
+    dialog.dataset.chrome = "shown";
     const viewport = doc.createElement("div");
     viewport.className = "re-lightbox-viewport";
     viewport.tabIndex = 0;
-    viewport.setAttribute("aria-label", "Images");
-    const slides = items.map((_item, imageIndex) => {
+    viewport.setAttribute("aria-label", settings.label || strings.dialog);
+    const makeSlide = () => {
       const slide = doc.createElement("div");
       slide.className = "re-lightbox-slide";
       slide.dataset.carouselSlide = "";
       slide.setAttribute("role", "group");
-      slide.setAttribute("aria-label", `${imageIndex + 1} of ${items.length}`);
-      viewport.append(slide);
       return slide;
-    });
+    };
+    const slides = items.map(() => makeSlide());
+    viewport.append(...slides);
     const backdrop = doc.createElement("div");
     backdrop.className = "re-lightbox-backdrop";
     backdrop.setAttribute("aria-hidden", "true");
-    dialog.append(backdrop, viewport);
+    const toolbar = doc.createElement("div");
+    toolbar.className = "re-lightbox-toolbar";
+    const toolbarStart = doc.createElement("div");
+    toolbarStart.className = "re-lightbox-toolbar-start";
+    const toolbarEnd = doc.createElement("div");
+    toolbarEnd.className = "re-lightbox-toolbar-end";
+    toolbar.append(toolbarStart, toolbarEnd);
+    dialog.append(backdrop, viewport, toolbar);
     const abort = new AbortController();
     const button = (
       name: "close" | "prev" | "next" | "zoom",
       label: string,
       text: string,
       action: () => void,
+      parent: HTMLElement,
     ) => {
       const element = doc.createElement("button");
       element.type = "button";
       element.className = `re-lightbox-button re-lightbox-${name}`;
       element.setAttribute("aria-label", label);
-      const icon = options.icons?.[name]?.();
+      const icon = settings.icons?.[name]?.();
       if (icon) element.append(icon);
       else element.textContent = text;
       element.addEventListener("click", action, { signal: abort.signal });
-      dialog.append(element);
+      parent.append(element);
       return element;
     };
-    const closeButton = button("close", "Close gallery", "×", () => {
-      void close();
-    });
-    closeButton.autofocus = true;
-    const prev = button("prev", "Previous image", "‹", () =>
-      goTo(state.index - 1),
+    const zoomButton = button(
+      "zoom",
+      strings.zoomIn,
+      "+",
+      () => toggleZoom(),
+      toolbarEnd,
     );
-    const next = button("next", "Next image", "›", () => goTo(state.index + 1));
-    const zoomButton = button("zoom", "Zoom in", "+", () => toggleZoom());
+    const closeButton = button(
+      "close",
+      strings.close,
+      "×",
+      () => {
+        void close();
+      },
+      toolbarEnd,
+    );
+    closeButton.autofocus = true;
+    const prev = button("prev", strings.previous, "‹", () => step(-1), dialog);
+    const next = button("next", strings.next, "›", () => step(1), dialog);
     const footer = doc.createElement("div");
     footer.className = "re-lightbox-footer";
     const counter = doc.createElement("output");
@@ -1064,34 +1398,42 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
     footer.append(caption, counter);
     dialog.append(footer);
     const thumbs: HTMLButtonElement[] = [];
-    if (options.thumbnails) {
-      const strip = doc.createElement("div");
-      strip.className = "re-lightbox-thumbnails";
-      strip.setAttribute("role", "group");
-      strip.setAttribute("aria-label", "Choose image");
-      items.forEach((item, i) => {
-        const thumb = doc.createElement("button");
-        thumb.type = "button";
-        thumb.setAttribute("aria-label", `Show image ${i + 1}`);
-        const thumbnailSrc = item.thumbnailSrc || item.previewSrc;
-        if (thumbnailSrc) {
-          const image = doc.createElement("img");
-          image.src = thumbnailSrc;
-          image.alt = "";
-          image.loading = "lazy";
-          thumb.append(image);
-        } else thumb.textContent = String(i + 1);
-        thumb.addEventListener("click", () => goTo(i), {
-          signal: abort.signal,
-        });
-        strip.append(thumb);
-        thumbs.push(thumb);
-      });
-      footer.append(strip);
+    let thumbStrip: HTMLDivElement | undefined;
+    if (settings.thumbnails) {
+      thumbStrip = doc.createElement("div");
+      thumbStrip.className = "re-lightbox-thumbnails";
+      thumbStrip.setAttribute("role", "group");
+      thumbStrip.setAttribute("aria-label", strings.thumbnails);
+      footer.append(thumbStrip);
     }
+    const makeThumbs = () => {
+      if (!thumbStrip) return;
+      thumbs.length = 0;
+      thumbStrip.replaceChildren(
+        ...items.map((item, i) => {
+          const thumb = doc.createElement("button");
+          thumb.type = "button";
+          thumb.setAttribute("aria-label", strings.thumbnail(i, items.length));
+          const thumbnailSrc = item.thumbnailSrc || item.previewSrc;
+          if (thumbnailSrc) {
+            const image = doc.createElement("img");
+            image.src = thumbnailSrc;
+            image.alt = "";
+            image.loading = "lazy";
+            thumb.append(image);
+          } else thumb.textContent = String(i + 1);
+          thumb.addEventListener("click", () => goTo(i), {
+            signal: abort.signal,
+          });
+          thumbs.push(thumb);
+          return thumb;
+        }),
+      );
+    };
+    makeThumbs();
     const previousFocus =
       doc.activeElement instanceof HTMLElement ? doc.activeElement : null;
-    (options.container ?? doc.body).append(dialog);
+    (settings.container ?? doc.body).append(dialog);
     const restoreScroll = lockScroll(doc);
     try {
       dialog.showModal();
@@ -1100,20 +1442,18 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
       dialog.remove();
       throw error;
     }
-    const carousel = createCarousel(viewport, {
-      drag: true,
-      onChange: (value) => {
-        if (!syncingCarousel && session?.dialog === dialog)
-          activeChanged(session, value.index);
-      },
-    });
     const s: Session = {
       dialog,
       viewport,
       backdrop,
       slides,
       loaded: new Map(),
-      carousel,
+      carousel: connect(viewport),
+      carouselLoops: looping(),
+      strings,
+      slots: [],
+      thumbStrip,
+      centeredThumb: -1,
       abort,
       animations: new Set(),
       finishAnimations: new Set(),
@@ -1125,19 +1465,35 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
       next,
       zoomButton,
       thumbs,
+      makeSlide,
+      makeThumbs,
       pointers: new Map(),
       suppressClickUntil: 0,
     };
     session = s;
+    if (doc.defaultView) enterHistory(doc.defaultView);
     publish({
       isOpen: true,
       isClosing: false,
+      isAnimating: false,
       index: clamp(Math.floor(index), 0, items.length - 1),
       count: items.length,
       zoom: { ...identity },
+      chrome: "shown",
     });
     update(s);
-    carousel.goTo(state.index, "instant");
+    s.carousel.goTo(state.index, "instant");
+    mountSlots(s, {
+      toolbarStart: (node) => toolbarStart.append(node),
+      toolbarEnd: (node) => closeButton.before(node),
+      footer: (node) => caption.after(node),
+      aside: (node) => {
+        const aside = doc.createElement("div");
+        aside.className = "re-lightbox-aside";
+        aside.append(node);
+        dialog.append(aside);
+      },
+    });
     dialog.addEventListener(
       "cancel",
       (event) => {
@@ -1149,10 +1505,16 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
     dialog.addEventListener(
       "close",
       () => {
-        if (session === s) {
-          teardown(s);
-          publish({ isOpen: false, isClosing: false, zoom: { ...identity } });
-        }
+        if (session !== s) return;
+        teardown(s);
+        publish({
+          isOpen: false,
+          isClosing: false,
+          isAnimating: false,
+          zoom: { ...identity },
+        });
+        leaveHistory();
+        emit("closed", undefined);
       },
       { signal: abort.signal },
     );
@@ -1169,11 +1531,11 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
           return;
         if (event.key === "ArrowLeft") {
           event.preventDefault();
-          goTo(state.index - 1);
+          step(-1);
         }
         if (event.key === "ArrowRight") {
           event.preventDefault();
-          goTo(state.index + 1);
+          step(1);
         }
         if (event.key === "+" || event.key === "=") {
           event.preventDefault();
@@ -1201,23 +1563,65 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
     viewport.addEventListener("scrollend", () => trimSlides(s), {
       signal: abort.signal,
     });
+    // Paging settles once the strip stays still on a snapped slide; reads wait for the next frame.
+    const win = doc.defaultView;
+    const watch = () => {
+      const motion = s.motion;
+      if (!motion || session !== s || !win) return;
+      const left = viewport.scrollLeft;
+      motion.still = left === motion.left ? motion.still + 1 : 0;
+      motion.left = left;
+      if ((motion.still >= 3 && isSettled(s)) || motion.still >= 30) {
+        s.motion = undefined;
+        trimSlides(s);
+        syncAnimating(s);
+        emit("settle", s);
+        return;
+      }
+      motion.frame = win.requestAnimationFrame(watch);
+    };
+    viewport.addEventListener(
+      "scroll",
+      () => {
+        if (s.motion || session !== s || !win) return;
+        s.motion = {
+          frame: win.requestAnimationFrame(watch),
+          left: Number.NaN,
+          still: 0,
+        };
+        syncAnimating(s);
+      },
+      { signal: abort.signal, passive: true },
+    );
     installGestures(s);
     closeButton.focus({ preventScroll: true });
+    emit("open", s);
     void Promise.all([
       morph(s, false),
       animate(
         s,
         s.backdrop,
         [{ opacity: 0 }, { opacity: 1 }],
-        Math.max(0, options.duration ?? 280),
+        Math.max(0, settings.duration ?? 280),
       ),
-    ]);
+    ]).then(() => {
+      if (session === s && !state.isClosing) emit("opened", s);
+    });
   }
 
   function close(): Promise<void> {
+    return closeSession(false);
+  }
+
+  function closeSession(fromHistory: boolean): Promise<void> {
     const s = session;
     if (!s) return Promise.resolve();
     if (closePromise) return closePromise;
+    if (emit("beforeclose", s)) {
+      if (fromHistory && historyWindow) pushHistory(historyWindow);
+      return Promise.resolve();
+    }
+    if (session !== s || closePromise) return closePromise ?? Promise.resolve();
     cancelAnimations(s);
     publish({ isClosing: true });
     closePromise = (async () => {
@@ -1227,22 +1631,123 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
           s,
           s.backdrop,
           [{ opacity: 1 }, { opacity: 0 }],
-          Math.max(0, options.duration ?? 280),
+          Math.max(0, settings.duration ?? 280),
         ),
       ]);
       if (session !== s) return;
       teardown(s);
       closePromise = undefined;
-      publish({ isOpen: false, isClosing: false, zoom: { ...identity } });
+      publish({
+        isOpen: false,
+        isClosing: false,
+        isAnimating: false,
+        zoom: { ...identity },
+      });
+      if (!fromHistory) leaveHistory();
+      else releaseHistory();
+      emit("closed", undefined);
     })();
     return closePromise;
   }
 
-  return {
+  function setItems(input: readonly LightboxItem[], index?: number) {
+    if (destroyed) throw new Error("This lightbox has been destroyed.");
+    const nextItems = validateItems(input);
+    if (index !== undefined && !Number.isFinite(index))
+      throw new TypeError("Image index must be finite.");
+    const s = session;
+    if (!s || state.isClosing) {
+      items = nextItems;
+      sources = [...input];
+      return;
+    }
+    finishFade(s, true);
+    // Each new item takes the slide of the same item object, or else of an unused one with its source.
+    const taken = new Set<number>();
+    const from = input.map((item) => {
+      const old = sources.indexOf(item);
+      if (old < 0 || taken.has(old)) return -1;
+      taken.add(old);
+      return old;
+    });
+    for (const [j, item] of nextItems.entries()) {
+      if (from[j] >= 0) continue;
+      const old = items.findIndex(
+        (candidate, i) => !taken.has(i) && candidate.src === item.src,
+      );
+      if (old < 0) continue;
+      taken.add(old);
+      from[j] = old;
+    }
+    let target = from.indexOf(state.index);
+    const kept = target >= 0;
+    if (!kept && index !== undefined)
+      target = clamp(Math.floor(index), 0, nextItems.length - 1);
+    for (let gap = 1; target < 0 && gap < items.length; gap++) {
+      target = from.indexOf(state.index + gap);
+      if (target < 0) target = from.indexOf(state.index - gap);
+    }
+    if (target < 0) target = clamp(state.index, 0, nextItems.length - 1);
+    const slides = nextItems.map((item, j) => {
+      const old = from[j];
+      if (old < 0) return s.makeSlide();
+      item.width ??= items[old].width;
+      item.height ??= items[old].height;
+      return s.slides[old];
+    });
+    const loaded = new Map<number, LoadedSlide>();
+    for (const [old, entry] of s.loaded) {
+      const j = from.indexOf(old);
+      if (j >= 0) loaded.set(j, entry);
+      else entry.cancel();
+    }
+    for (const [old, slide] of s.slides.entries())
+      if (!taken.has(old)) slide.remove();
+    if (kept) {
+      // The current slide stays in the DOM, so its image neither moves nor reloads.
+      let anchor = slides[target];
+      for (let j = target - 1; j >= 0; j--) {
+        if (anchor.previousElementSibling !== slides[j])
+          anchor.before(slides[j]);
+        anchor = slides[j];
+      }
+      anchor = slides[target];
+      for (let j = target + 1; j < slides.length; j++) {
+        if (anchor.nextElementSibling !== slides[j]) anchor.after(slides[j]);
+        anchor = slides[j];
+      }
+    } else {
+      cancelAnimations(s);
+      s.viewport.append(...slides);
+    }
+    items = nextItems;
+    sources = [...input];
+    s.slides = slides;
+    s.loaded = loaded;
+    s.makeThumbs();
+    s.centeredThumb = Number.NaN;
+    const changed = target !== state.index;
+    syncingCarousel = true;
+    if (s.carouselLoops !== looping()) reconnect(s, target);
+    else {
+      s.carousel.refresh();
+      if (!kept) s.carousel.goTo(target, "instant");
+    }
+    syncingCarousel = false;
+    publish({
+      index: target,
+      count: items.length,
+      ...(kept ? {} : { zoom: { ...identity } }),
+    });
+    update(s);
+    if (changed) emit("change", s);
+  }
+
+  const controller: Lightbox = {
     open,
     close,
-    next: () => goTo(state.index + 1),
-    prev: () => goTo(state.index - 1),
+    next: () => step(1),
+    prev: () => step(-1),
     goTo,
     zoomTo,
     toggleZoom,
@@ -1253,15 +1758,51 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
         listeners.delete(listener);
       };
     },
+    on: (type, listener) => {
+      const set = handlers.get(type) ?? new Set();
+      handlers.set(type, set);
+      set.add(listener);
+      return () => {
+        set.delete(listener);
+      };
+    },
+    append: (input) => setItems([...sources, ...input]),
+    setItems,
+    setOptions: (next) => {
+      if (!("loop" in next)) return;
+      loop = Boolean(next.loop);
+      const s = session;
+      if (!s || state.isClosing) return;
+      if (s.carouselLoops !== looping()) {
+        reconnect(s, state.index);
+        applyZoom(s);
+      }
+      update(s);
+    },
+    getSlide: (index) => session?.slides[index] ?? null,
     destroy: () => {
       if (destroyed) return;
       destroyed = true;
-      if (session) teardown(session);
+      const s = session;
+      if (s) teardown(s);
       closePromise = undefined;
-      publish({ isOpen: false, isClosing: false, zoom: { ...identity } });
+      publish({
+        isOpen: false,
+        isClosing: false,
+        isAnimating: false,
+        zoom: { ...identity },
+      });
+      if (s) emit("closed", undefined);
+      const win = historyWindow;
+      if (win && ownsHistory(win)) win.history.back();
+      win?.removeEventListener("popstate", onPopState);
+      historyWindow = undefined;
+      backPending = false;
       listeners.clear();
+      handlers.clear();
     },
   };
+  return controller;
 }
 
 export function lightboxItemFromImage(
@@ -1283,6 +1824,10 @@ export function bindLightboxGallery(
   options: LightboxOptions & {
     selector?: string;
     getItem?: (image: HTMLImageElement) => LightboxItem;
+    /** Images open only with the images of the same group, data-lightbox-group by default. */
+    group?: (image: HTMLImageElement) => string;
+    /** Replaces the images in root as the list; a click opens at the item whose origin is the image. */
+    items?: (root: HTMLElement) => readonly LightboxItem[];
   } = {},
 ) {
   const controller = createLightbox(options);
@@ -1301,15 +1846,31 @@ export function bindLightboxGallery(
     const images = [
       ...root.querySelectorAll<HTMLImageElement>(options.selector || "img"),
     ];
-    const index = images.findIndex(
-      (image) =>
-        image === target || image.closest("a, button")?.contains(target),
+    const image = images.find(
+      (candidate) =>
+        candidate === target ||
+        candidate.closest("a, button")?.contains(target),
     );
-    if (index < 0) return;
+    if (!image) return;
     event.preventDefault();
+    if (options.items) {
+      const list = options.items(root);
+      const index = list.findIndex((item) => item.origin === image);
+      controller.open(list, index < 0 ? images.indexOf(image) : index);
+      return;
+    }
+    const group =
+      options.group ??
+      ((element: HTMLImageElement) =>
+        element.closest<HTMLElement>("[data-lightbox-group]")?.dataset
+          .lightboxGroup ?? "");
+    const name = group(image);
+    const members = images.filter((candidate) => group(candidate) === name);
     controller.open(
-      images.map((image) => (options.getItem || lightboxItemFromImage)(image)),
-      index,
+      members.map((member) =>
+        (options.getItem || lightboxItemFromImage)(member),
+      ),
+      members.indexOf(image),
     );
   };
   root.addEventListener("click", click);

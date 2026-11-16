@@ -1,0 +1,177 @@
+import { expect, type Page, test } from "@playwright/test";
+import { mount, photo } from "./harness";
+
+type Window = typeof globalThis & {
+  lightbox: {
+    open(items: unknown[], index?: number): void;
+    close(): Promise<void>;
+    next(): void;
+    append(items: unknown[]): void;
+    setOptions(options: { loop?: boolean }): void;
+    getState(): { index: number; count: number; isOpen: boolean };
+  };
+  destroyed: number;
+};
+
+async function open(
+  page: Page,
+  count: number,
+  index: number,
+  options: Record<string, unknown> = {},
+) {
+  await mount(page, "", ["lightbox/base.css", "lightbox/theme.css"]);
+  await page.evaluate(
+    async ([total, start, extra]) => {
+      const { createLightbox } = await import("/modules/lightbox/index.js");
+      const photo = (i: number) =>
+        `data:image/svg+xml,${encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="800"><rect width="1200" height="800" fill="hsl(${i * 47} 60% 55%)"/></svg>`)}`;
+      const items = (from: number, length: number) =>
+        Array.from({ length }, (_, i) => ({
+          src: photo(from + i),
+          width: 1200,
+          height: 800,
+          alt: `Photo ${from + i + 1}`,
+        }));
+      const lightbox = createLightbox(extra);
+      Object.assign(window, { lightbox, items });
+      lightbox.open(items(0, total), start);
+    },
+    [count, index, options] as const,
+  );
+  await page.waitForTimeout(400);
+}
+
+const current = (page: Page) =>
+  page.locator('.re-lightbox-slide[aria-hidden="false"] .re-lightbox-frame');
+
+test("loop pages from the last photo to the first, and turning it off disables next", async ({
+  page,
+}) => {
+  await open(page, 3, 2, { loop: true });
+  await page.evaluate(() => (window as Window).lightbox.next());
+  await expect
+    .poll(() =>
+      page.evaluate(() => (window as Window).lightbox.getState().index),
+    )
+    .toBe(0);
+  await page.waitForTimeout(700);
+  const box = await current(page).boundingBox();
+  expect(box && box.x > 0 && box.x + box.width < 1000).toBe(true);
+  await expect(page.getByRole("button", { name: "Next image" })).toBeEnabled();
+  await page.evaluate(() => (window as Window).lightbox.next());
+  await page.evaluate(() => (window as Window).lightbox.next());
+  await expect
+    .poll(() =>
+      page.evaluate(() => (window as Window).lightbox.getState().index),
+    )
+    .toBe(2);
+  await page.evaluate(() =>
+    (window as Window).lightbox.setOptions({ loop: false }),
+  );
+  await expect(page.getByRole("button", { name: "Next image" })).toBeDisabled();
+  await expect(
+    page.getByRole("button", { name: "Previous image" }),
+  ).toBeEnabled();
+});
+
+test("append keeps the current photo where it is and counts the new ones", async ({
+  page,
+}) => {
+  await open(page, 10, 4);
+  const before = await current(page).boundingBox();
+  await page.evaluate(() => {
+    const { lightbox, items } = window as Window & {
+      items: (from: number, length: number) => unknown[];
+    };
+    lightbox.append(items(10, 10));
+  });
+  await page.waitForTimeout(100);
+  expect(
+    await page.evaluate(() => (window as Window).lightbox.getState()),
+  ).toMatchObject({ index: 4, count: 20 });
+  await expect(page.locator(".re-lightbox-counter")).toHaveText("5 / 20");
+  expect(await current(page).boundingBox()).toEqual(before);
+});
+
+test("a toolbarEnd slot button shows, takes focus by Tab, hides with the controls and is destroyed once", async ({
+  page,
+}) => {
+  await mount(page, "", ["lightbox/base.css", "lightbox/theme.css"]);
+  await page.evaluate(async (src) => {
+    const { createLightbox } = await import("/modules/lightbox/index.js");
+    Object.assign(window, { destroyed: 0 });
+    const lightbox = createLightbox({
+      history: false,
+      slots: {
+        toolbarEnd: ({ document }) => {
+          const button = document.createElement("button");
+          button.type = "button";
+          button.className = "re-lightbox-button";
+          button.textContent = "S";
+          button.setAttribute("aria-label", "Share");
+          return {
+            node: button,
+            destroy: () => {
+              (window as Window).destroyed++;
+            },
+          };
+        },
+      },
+    });
+    Object.assign(window, { lightbox });
+    lightbox.open([{ src, width: 1200, height: 800 }]);
+  }, photo(1));
+  const share = page.getByRole("button", { name: "Share" });
+  await expect(share).toBeVisible();
+  await page.getByRole("button", { name: "Zoom in" }).focus();
+  await page.keyboard.press("Tab");
+  await expect(share).toBeFocused();
+  await page.locator("dialog").evaluate((dialog) => {
+    dialog.dataset.chrome = "hidden";
+  });
+  expect(
+    await share.evaluate((button) =>
+      button.checkVisibility({ opacityProperty: true }),
+    ),
+  ).toBe(false);
+  await page.keyboard.press("Escape");
+  await expect(page.locator("dialog")).toHaveCount(0);
+  await page.evaluate(() => (window as Window).lightbox.open([{ src: "x" }]));
+  await page.keyboard.press("Escape");
+  await expect(page.locator("dialog")).toHaveCount(0);
+  expect(await page.evaluate(() => (window as Window).destroyed)).toBe(2);
+});
+
+test("Back closes the lightbox without leaving the page, and a close removes the entry", async ({
+  page,
+}) => {
+  await open(page, 3, 0);
+  await page.evaluate(() => Object.assign(window, { marker: true }));
+  const length = await page.evaluate(() => history.length);
+  const url = page.url();
+  await page.goBack();
+  await expect(page.locator("dialog")).toHaveCount(0);
+  expect(page.url()).toBe(url);
+  await page.evaluate(() =>
+    (
+      window as Window & { items: (from: number, length: number) => unknown[] }
+    ).lightbox.open(
+      (
+        window as Window & {
+          items: (from: number, length: number) => unknown[];
+        }
+      ).items(0, 3),
+    ),
+  );
+  await expect(page.locator("dialog[open]")).toHaveCount(1);
+  await page.getByRole("button", { name: "Close gallery" }).click();
+  await expect(page.locator("dialog")).toHaveCount(0);
+  await page.waitForTimeout(200);
+  expect(await page.evaluate(() => history.length)).toBe(length);
+  expect(page.url()).toBe(url);
+  expect(
+    await page.evaluate(
+      () => "marker" in window && !history.state?.reuseLightbox,
+    ),
+  ).toBe(true);
+});

@@ -87,15 +87,13 @@ export function LightboxStylePage({ style }: { style: string }) {
         {code.chrome ? (
           <Section title="Add the control layout helper">
             <Text>
-              Save this as <C>lightbox-chrome.js</C>. The setup above calls it
-              after each opening. It{" "}
-              {options.thumbnails
-                ? "keeps the active thumbnail in view"
-                : options.caption === "Panel"
-                  ? "updates the side panel when the image changes"
-                  : options.autoHide
-                    ? "hides idle controls and reveals them on input"
-                    : "moves the package controls into a toolbar"}
+              Save this as <C>lightbox-chrome.js</C>. The setup above passes it
+              to the lightbox. It{" "}
+              {options.caption === "Panel"
+                ? "fills the aside slot with a side panel for the current image"
+                : options.autoHide
+                  ? "listens to the open and closed events, hides idle controls and reveals them on input"
+                  : "fills the footer slot with a toolbar of its own controls"}
               .
             </Text>
             <CodeBlock
@@ -111,18 +109,22 @@ export function LightboxStylePage({ style }: { style: string }) {
             <Text>
               <C>useLightbox</C> destroys its controller when the component
               unmounts.
-              {code.chrome
-                ? " The helper unsubscribes when the dialog closes or the controller is destroyed."
-                : ""}
+              {options.autoHide
+                ? " The effect cleanup removes the idle listeners."
+                : code.chrome
+                  ? " The lightbox removes the slots when the dialog closes."
+                  : ""}
             </Text>
           </FrameworkOnly>
           <FrameworkOnly value="html">
             <Text>
               Run this when your view is removed to release the gallery
               listener, dialog and scroll lock.
-              {code.chrome
-                ? " The helper releases its own subscription when the dialog closes or the controller is destroyed."
-                : ""}
+              {options.autoHide
+                ? " stopIdle() removes the idle listeners."
+                : code.chrome
+                  ? " The lightbox removes the slots when the dialog closes."
+                  : ""}
             </Text>
             <CodeBlock
               tabs={{ code: code.cleanup, lang: "ts" }}

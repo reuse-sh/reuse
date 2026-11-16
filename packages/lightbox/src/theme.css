@@ -1,0 +1,100 @@
+.re-lightbox {
+  --re-lightbox-background: rgb(15 15 17 / 96%);
+  --re-lightbox-foreground: #fff;
+  --re-lightbox-control: rgb(35 35 38 / 96%);
+  --re-lightbox-control-hover: rgb(58 58 62 / 98%);
+  --re-lightbox-panel: rgb(24 24 27 / 96%);
+  --re-lightbox-button-size: 44px;
+  --re-lightbox-button-padding: 10px;
+  --re-lightbox-button-radius: 50%;
+  --re-lightbox-icon-size: 24px;
+  --re-lightbox-inset: 16px;
+  --re-lightbox-gap: 10px;
+  --re-lightbox-arrow-inset: 16px;
+  --re-lightbox-footer-inset: 72px;
+  --re-lightbox-counter-radius: 20px;
+  --re-lightbox-caption-radius: 4px;
+  --re-lightbox-thumbnail-size: 44px;
+  --re-lightbox-thumbnail-radius: 5px;
+  --re-lightbox-thumbnail-gap: 8px;
+  --re-lightbox-aside-width: 320px;
+  --re-lightbox-aside-height: 40%;
+  color: var(--re-lightbox-foreground);
+  font-family: inherit;
+}
+.re-lightbox-backdrop {
+  background: var(--re-lightbox-background);
+}
+.re-lightbox-button {
+  width: var(--re-lightbox-button-size);
+  height: var(--re-lightbox-button-size);
+  padding: var(--re-lightbox-button-padding);
+  border: 0;
+  border-radius: var(--re-lightbox-button-radius);
+  background: var(--re-lightbox-control);
+  color: inherit;
+  font: inherit;
+  font-size: 26px;
+  line-height: 1;
+  backdrop-filter: blur(16px);
+}
+.re-lightbox-button svg {
+  width: var(--re-lightbox-icon-size);
+  height: var(--re-lightbox-icon-size);
+}
+.re-lightbox-button:hover {
+  background: var(--re-lightbox-control-hover);
+}
+.re-lightbox-button:disabled {
+  opacity: 0.3;
+}
+.re-lightbox-button:focus-visible,
+.re-lightbox-thumbnails button:focus-visible {
+  outline: 2px solid currentColor;
+  outline-offset: 3px;
+}
+.re-lightbox-counter {
+  padding: 6px 12px;
+  border-radius: var(--re-lightbox-counter-radius);
+  background: var(--re-lightbox-control);
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+  backdrop-filter: blur(16px);
+}
+.re-lightbox-caption {
+  padding: 4px 10px;
+  border-radius: var(--re-lightbox-caption-radius);
+  background: var(--re-lightbox-background);
+  font-size: 14px;
+  line-height: 1.5;
+  text-align: center;
+}
+.re-lightbox-thumbnails {
+  gap: var(--re-lightbox-thumbnail-gap);
+  padding: 4px;
+}
+.re-lightbox-thumbnails button {
+  width: var(--re-lightbox-thumbnail-size);
+  height: var(--re-lightbox-thumbnail-size);
+  padding: 0;
+  border: 2px solid transparent;
+  border-radius: var(--re-lightbox-thumbnail-radius);
+  background: none;
+  opacity: 0.6;
+}
+.re-lightbox-thumbnails button[aria-current="true"] {
+  border-color: var(--re-lightbox-foreground);
+  opacity: 1;
+}
+.re-lightbox-aside {
+  background: var(--re-lightbox-panel);
+}
+.re-lightbox-error {
+  padding: 24px;
+}
+@media (max-width: 480px) {
+  .re-lightbox {
+    --re-lightbox-arrow-inset: 8px;
+    --re-lightbox-footer-inset: 16px;
+  }
+}

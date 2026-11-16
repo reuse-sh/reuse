@@ -32,7 +32,9 @@
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js"
     },
-    "./styles.css": "./dist/styles.css",
+    "./base.css": "./dist/base.css",
+    "./theme.css": "./dist/theme.css",
+    "./unlayered/*": "./dist/unlayered/*",
     "./browser/*": "./dist/browser/*",
     "./react": {
       "types": "./dist/react.d.ts",

@@ -10,9 +10,10 @@ for (const [name, options] of Object.entries(lightboxStyles)) {
     page,
   }) => {
     const code = lightboxCode(options);
+    expect(code.chrome ?? "").not.toContain("querySelector");
     const errors: string[] = [];
     page.on("pageerror", (error) => errors.push(error.message));
-    await mount(page, code.html, ["lightbox/styles.css"]);
+    await mount(page, code.html, ["lightbox/base.css", "lightbox/theme.css"]);
     await page.route("http://reuse.test/photos/**", (route) =>
       route.fulfill({
         contentType: "image/svg+xml",
@@ -23,13 +24,10 @@ for (const [name, options] of Object.entries(lightboxStyles)) {
     await page.addStyleTag({ content: code.css });
     const setup = code.js
       .replace(/^import ["'][^"']+\.css["'];\n?/gm, "")
-      .replace(
-        /^import \{ addChrome \} from "\.\/lightbox-chrome.js";\n?/m,
-        "",
-      );
+      .replace(/^import \{ [^}]+ \} from "\.\/lightbox-chrome\.js";\n?/m, "");
     await page.addScriptTag({
       type: "module",
-      content: `${code.chrome?.replace("export function", "function") ?? ""}\n${setup}\nwindow.__destroy = () => { ${code.cleanup} };\nwindow.__ready = true;`,
+      content: `${code.chrome?.replaceAll("export function", "function") ?? ""}\n${setup}\nwindow.__destroy = () => { ${code.cleanup} };\nwindow.__ready = true;`,
     });
     await expect
       .poll(() =>

@@ -1,0 +1,226 @@
+.re-lightbox {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  max-width: none;
+  height: 100%;
+  max-height: none;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  border: 0;
+  background: transparent;
+  overscroll-behavior: contain;
+}
+.re-lightbox::backdrop {
+  background: transparent;
+}
+.re-lightbox-backdrop {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+.re-lightbox-viewport {
+  --re-carousel-press-scale: 1;
+  --re-carousel-press-duration: 0s;
+  position: relative;
+  display: flex;
+  width: 100%;
+  height: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scroll-snap-type: x mandatory;
+  overscroll-behavior: contain;
+  scrollbar-width: none;
+  touch-action: pan-x;
+  outline-offset: -4px;
+}
+.re-lightbox-viewport::-webkit-scrollbar {
+  display: none;
+}
+.re-lightbox-slide {
+  position: relative;
+  display: grid;
+  flex: 0 0 100%;
+  width: 100%;
+  height: 100%;
+  place-items: center;
+  scroll-snap-align: start;
+  scroll-snap-stop: always;
+  overflow: hidden;
+}
+.re-lightbox-frame {
+  position: relative;
+  flex: none;
+  transform-origin: center;
+  cursor: zoom-in;
+}
+.re-lightbox[data-zoomed="true"] .re-lightbox-frame {
+  cursor: grab;
+}
+.re-lightbox[data-zoomed="true"] .re-lightbox-frame:active {
+  cursor: grabbing;
+}
+.re-lightbox-image {
+  display: block;
+  width: 100%;
+  height: 100%;
+  max-width: none;
+  object-fit: contain;
+  user-select: none;
+  -webkit-user-drag: none;
+}
+.re-lightbox-button {
+  display: grid;
+  flex: none;
+  place-items: center;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+.re-lightbox-button:disabled {
+  cursor: default;
+}
+.re-lightbox-toolbar {
+  position: absolute;
+  z-index: 2;
+  top: 0;
+  right: 0;
+  left: 0;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--re-lightbox-gap, 10px);
+  padding: max(var(--re-lightbox-inset, 16px), env(safe-area-inset-top))
+    max(var(--re-lightbox-inset, 16px), env(safe-area-inset-right)) 0
+    max(var(--re-lightbox-inset, 16px), env(safe-area-inset-left));
+  pointer-events: none;
+}
+.re-lightbox-toolbar-start,
+.re-lightbox-toolbar-end {
+  display: flex;
+  align-items: center;
+  gap: var(--re-lightbox-gap, 10px);
+}
+.re-lightbox-toolbar-start > *,
+.re-lightbox-toolbar-end > * {
+  pointer-events: auto;
+}
+.re-lightbox-prev,
+.re-lightbox-next {
+  position: absolute;
+  z-index: 2;
+  top: calc(50% - var(--re-lightbox-button-size, 44px) / 2);
+}
+.re-lightbox-prev {
+  left: max(var(--re-lightbox-arrow-inset, 16px), env(safe-area-inset-left));
+}
+.re-lightbox-next {
+  right: max(var(--re-lightbox-arrow-inset, 16px), env(safe-area-inset-right));
+}
+.re-lightbox-footer {
+  position: absolute;
+  z-index: 2;
+  right: var(--re-lightbox-footer-inset, 72px);
+  bottom: max(var(--re-lightbox-inset, 16px), env(safe-area-inset-bottom));
+  left: var(--re-lightbox-footer-inset, 72px);
+  display: grid;
+  justify-items: center;
+  gap: var(--re-lightbox-gap, 10px);
+  pointer-events: none;
+}
+.re-lightbox-footer > :not(.re-lightbox-counter) {
+  pointer-events: auto;
+}
+.re-lightbox-caption {
+  max-width: 60ch;
+  max-height: 20vh;
+  margin: 0;
+  overflow: auto;
+  overflow-wrap: anywhere;
+}
+.re-lightbox-caption:empty {
+  display: none;
+}
+.re-lightbox-thumbnails {
+  position: relative;
+  display: flex;
+  max-width: 100%;
+  overflow-x: auto;
+}
+.re-lightbox-thumbnails button {
+  flex: none;
+  overflow: hidden;
+  cursor: pointer;
+}
+.re-lightbox-thumbnails img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.re-lightbox-aside {
+  position: absolute;
+  z-index: 1;
+  top: 0;
+  bottom: 0;
+  inset-inline-end: 0;
+  width: var(--re-lightbox-aside-width, 320px);
+  max-width: 100%;
+  overflow: auto;
+}
+.re-lightbox:has(> .re-lightbox-aside) .re-lightbox-viewport {
+  width: calc(100% - var(--re-lightbox-aside-width, 320px));
+}
+.re-lightbox-error {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  text-align: center;
+}
+.re-lightbox[data-chrome="hidden"]
+  :is(
+    .re-lightbox-toolbar,
+    .re-lightbox-prev,
+    .re-lightbox-next,
+    .re-lightbox-footer,
+    .re-lightbox-aside
+  ) {
+  opacity: 0;
+}
+.re-lightbox[data-chrome="hidden"]
+  :is(
+    .re-lightbox-toolbar,
+    .re-lightbox-prev,
+    .re-lightbox-next,
+    .re-lightbox-footer,
+    .re-lightbox-aside
+  ),
+.re-lightbox[data-chrome="hidden"]
+  :is(.re-lightbox-toolbar, .re-lightbox-footer, .re-lightbox-aside)
+  * {
+  pointer-events: none;
+}
+@media (max-width: 719.98px) {
+  .re-lightbox-aside {
+    top: auto;
+    left: 0;
+    right: 0;
+    width: auto;
+    height: var(--re-lightbox-aside-height, 40%);
+  }
+  .re-lightbox:has(> .re-lightbox-aside) .re-lightbox-viewport {
+    width: 100%;
+    height: calc(100% - var(--re-lightbox-aside-height, 40%));
+  }
+  .re-lightbox:has(> .re-lightbox-aside) .re-lightbox-footer {
+    bottom: calc(
+      var(--re-lightbox-aside-height, 40%) +
+      var(--re-lightbox-inset, 16px)
+    );
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .re-lightbox-viewport {
+    scroll-behavior: auto;
+  }
+}

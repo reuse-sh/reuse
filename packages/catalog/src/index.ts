@@ -127,7 +127,8 @@ export const libraries: Library[] = [
       ],
       [
         "Leave the page as it was",
-        "Destroy restores the page scroll, the hidden thumbnail, and every style and listener the viewer touched.",
+        "Destroy restores the page scroll, the hidden thumbnail, and every style and listener the viewer touched. Back closes the viewer, and its one history entry leaves without a navigation.",
+        "tests/browser/lightbox-api.spec.ts",
       ],
       [
         "Behave like the platform's photo viewer",
@@ -165,11 +166,11 @@ export const libraries: Library[] = [
     api: [
       [
         "createLightbox(options?)",
-        "Creates a viewer. Options include thumbnails, imageClick, doubleTapZoom, maxZoom, padding, className and icons.",
+        "Creates a viewer. Options include loop, history, strings, slots, thumbnails, imageClick, doubleTapZoom, maxZoom, padding, className and icons, read again at every open.",
       ],
       [
         "bindLightboxGallery(root, options?)",
-        "Opens every image inside root in the viewer, in page order. Its destroy also removes the click listener.",
+        "Opens the images inside root in the viewer, in page order, only those of the clicked image's data-lightbox-group or group(image). items(root) supplies the list instead. Its destroy also removes the click listener.",
       ],
       [
         "open(items, index?)",
@@ -185,7 +186,19 @@ export const libraries: Library[] = [
       ],
       [
         "getState(), subscribe(listener)",
-        "Reads and listens to the index, zoom and open state.",
+        "Reads and listens to the index, zoom, open, animation and controls state.",
+      ],
+      [
+        "on(type, listener)",
+        "Listens to open, opened, change, settle, beforeclose and closed. preventDefault() in beforeclose keeps the viewer open.",
+      ],
+      [
+        "append(items), setItems(items, index?)",
+        "Adds images at the end or replaces the list while the viewer is open, without moving the current image.",
+      ],
+      [
+        "setOptions({ loop }), getSlide(index)",
+        "Turns the loop on or off while open, and returns the element of a slide.",
       ],
       ["destroy()", "Removes listeners and restores the page."],
     ],

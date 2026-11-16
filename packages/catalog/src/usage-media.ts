@@ -8,13 +8,14 @@ export const mediaUsage: Readonly<Record<string, UsageRecipe>> = {
         blocks: [
           {
             kind: "prose",
-            text: "Import the package stylesheet once in your main CSS. The components layer lets Tailwind utilities adapt its presentation.",
+            text: "Import the package stylesheets once in your main CSS: base.css holds the layout and theme.css the default theme. The components layer lets Tailwind utilities adapt their presentation.",
           },
           {
             kind: "code",
             id: "lightbox-getting-started-package-styles",
             language: "css",
-            code: '@import "@reuse-sh/lightbox/styles.css" layer(components);',
+            code: `@import "@reuse-sh/lightbox/base.css" layer(components);
+@import "@reuse-sh/lightbox/theme.css" layer(components);`,
             role: "setup",
           },
         ],
@@ -90,13 +91,14 @@ export function Gallery() {
         blocks: [
           {
             kind: "prose",
-            text: "Import the package stylesheet once. Keep application layout styles scoped to this integration.",
+            text: "Import the package stylesheets once: base.css holds the layout and theme.css the default theme. Keep application layout styles scoped to this integration.",
           },
           {
             kind: "code",
             id: "lightbox-getting-started-css",
             language: "css",
-            code: '@import "@reuse-sh/lightbox/styles.css";',
+            code: `@import "@reuse-sh/lightbox/base.css";
+@import "@reuse-sh/lightbox/theme.css";`,
             role: "usage",
           },
         ],
@@ -153,13 +155,14 @@ const gallery = bindLightboxGallery(document.querySelector("#gallery"), {});`,
         blocks: [
           {
             kind: "prose",
-            text: "Import the package stylesheet once in your main CSS. The components layer lets Tailwind utilities adapt its presentation.",
+            text: "Import the package stylesheets once in your main CSS: base.css holds the layout and theme.css the default theme. The components layer lets Tailwind utilities adapt their presentation.",
           },
           {
             kind: "code",
             id: "lightbox-examples-product-package-styles",
             language: "css",
-            code: '@import "@reuse-sh/lightbox/styles.css" layer(components);',
+            code: `@import "@reuse-sh/lightbox/base.css" layer(components);
+@import "@reuse-sh/lightbox/theme.css" layer(components);`,
             role: "setup",
           },
         ],
@@ -237,13 +240,14 @@ export function ProductGallery() {
         blocks: [
           {
             kind: "prose",
-            text: "Import the package stylesheet once. Keep application layout styles scoped to this integration.",
+            text: "Import the package stylesheets once: base.css holds the layout and theme.css the default theme. Keep application layout styles scoped to this integration.",
           },
           {
             kind: "code",
             id: "lightbox-examples-product-css",
             language: "css",
-            code: '@import "@reuse-sh/lightbox/styles.css";',
+            code: `@import "@reuse-sh/lightbox/base.css";
+@import "@reuse-sh/lightbox/theme.css";`,
             role: "usage",
           },
         ],
@@ -300,13 +304,14 @@ const gallery = bindLightboxGallery(document.querySelector("#gallery"), { thumbn
         blocks: [
           {
             kind: "prose",
-            text: "Import the package stylesheet once in your main CSS. The components layer lets Tailwind utilities adapt its presentation.",
+            text: "Import the package stylesheets once in your main CSS: base.css holds the layout and theme.css the default theme. The components layer lets Tailwind utilities adapt their presentation.",
           },
           {
             kind: "code",
             id: "lightbox-examples-chat-package-styles",
             language: "css",
-            code: '@import "@reuse-sh/lightbox/styles.css" layer(components);',
+            code: `@import "@reuse-sh/lightbox/base.css" layer(components);
+@import "@reuse-sh/lightbox/theme.css" layer(components);`,
             role: "setup",
           },
         ],
@@ -379,13 +384,14 @@ export function MessageAttachments({ sources }: { sources: string[] }) {
         blocks: [
           {
             kind: "prose",
-            text: "Import the package stylesheet once. Keep application layout styles scoped to this integration.",
+            text: "Import the package stylesheets once: base.css holds the layout and theme.css the default theme. Keep application layout styles scoped to this integration.",
           },
           {
             kind: "code",
             id: "lightbox-examples-chat-css",
             language: "css",
-            code: '@import "@reuse-sh/lightbox/styles.css";',
+            code: `@import "@reuse-sh/lightbox/base.css";
+@import "@reuse-sh/lightbox/theme.css";`,
             role: "usage",
           },
         ],
@@ -444,13 +450,14 @@ const gallery = { destroy: () => galleries.forEach((entry) => entry.destroy()) }
         blocks: [
           {
             kind: "prose",
-            text: "Import the package stylesheet once in your main CSS. The components layer lets Tailwind utilities adapt its presentation.",
+            text: "Import the package stylesheets once in your main CSS: base.css holds the layout and theme.css the default theme. The components layer lets Tailwind utilities adapt their presentation.",
           },
           {
             kind: "code",
             id: "lightbox-examples-journal-package-styles",
             language: "css",
-            code: '@import "@reuse-sh/lightbox/styles.css" layer(components);',
+            code: `@import "@reuse-sh/lightbox/base.css" layer(components);
+@import "@reuse-sh/lightbox/theme.css" layer(components);`,
             role: "setup",
           },
         ],
@@ -526,13 +533,14 @@ export function Gallery() {
         blocks: [
           {
             kind: "prose",
-            text: "Import the package stylesheet once. Keep application layout styles scoped to this integration.",
+            text: "Import the package stylesheets once: base.css holds the layout and theme.css the default theme. Keep application layout styles scoped to this integration.",
           },
           {
             kind: "code",
             id: "lightbox-examples-journal-css",
             language: "css",
-            code: '@import "@reuse-sh/lightbox/styles.css";',
+            code: `@import "@reuse-sh/lightbox/base.css";
+@import "@reuse-sh/lightbox/theme.css";`,
             role: "usage",
           },
         ],
@@ -611,13 +619,14 @@ const gallery = bindLightboxGallery(document.querySelector("#gallery"), { imageC
         blocks: [
           {
             kind: "prose",
-            text: "Import the package stylesheet once in your main CSS. The components layer lets Tailwind utilities adapt its presentation.",
+            text: "Import the package stylesheets once in your main CSS: base.css holds the layout and theme.css the default theme. The components layer lets Tailwind utilities adapt their presentation.",
           },
           {
             kind: "code",
             id: "lightbox-guides-media-package-styles",
             language: "css",
-            code: '@import "@reuse-sh/lightbox/styles.css" layer(components);',
+            code: `@import "@reuse-sh/lightbox/base.css" layer(components);
+@import "@reuse-sh/lightbox/theme.css" layer(components);`,
             role: "setup",
           },
         ],
@@ -748,7 +757,8 @@ export function ImageLink() {
             kind: "code",
             id: "lightbox-guides-media-css",
             language: "css",
-            code: '@import "@reuse-sh/lightbox/styles.css";',
+            code: `@import "@reuse-sh/lightbox/base.css";
+@import "@reuse-sh/lightbox/theme.css";`,
             role: "usage",
           },
         ],
@@ -1758,7 +1768,8 @@ const gallery = createJustifiedGallery(document.querySelector("#prints"), { last
             id: "justified-gallery-examples-lightbox-package-styles",
             language: "css",
             code: `@import "@reuse-sh/gallery/styles.css" layer(components);
-@import "@reuse-sh/lightbox/styles.css" layer(components);`,
+@import "@reuse-sh/lightbox/base.css" layer(components);
+@import "@reuse-sh/lightbox/theme.css" layer(components);`,
             role: "setup",
           },
         ],
@@ -1854,7 +1865,8 @@ export function PrintRows() {
             id: "justified-gallery-examples-lightbox-css",
             language: "css",
             code: `@import "@reuse-sh/gallery/styles.css";
-@import "@reuse-sh/lightbox/styles.css";
+@import "@reuse-sh/lightbox/base.css";
+@import "@reuse-sh/lightbox/theme.css";
 
 #prints { --re-justified-row-height: 180px; }
 #prints button { padding: 0; border: 0; background: none; cursor: zoom-in; }`,

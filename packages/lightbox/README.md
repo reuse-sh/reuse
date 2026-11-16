@@ -13,7 +13,7 @@ These are the rules the code keeps. An adaptation on any framework keeps them to
 - **Load only what is near.** Only the current and neighboring images load, and a long jump skips the pages in between.
 - **Zoom around the point you touch.** Pinch, wheel and double-tap zoom around the pointer or fingers, and panning stops at the image's edges.
 - **Keep focus inside and give it back.** The viewer is a native modal dialog, and closing it returns focus to the element that opened it.
-- **Leave the page as it was.** Destroy restores the page scroll, the hidden thumbnail, and every style and listener the viewer touched.
+- **Leave the page as it was.** Destroy restores the page scroll, the hidden thumbnail, and every style and listener the viewer touched. Back closes the viewer, and its one history entry leaves without a navigation.
 - **Behave like the platform's photo viewer.** Gestures, keys and timing match iOS Photos, macOS Photos and Google Photos unless a recorded decision says otherwise.
 - **Dismiss like a photos app.** A vertical swipe carries the photo, fades the backdrop and the controls with it, and closes past a distance or a speed. A cancelled pointer never closes.
 - **Let the photo lead.** Controls fade in after the photo starts moving and leave before it. They hide while zoomed and after a still pointer, never while hovered or focused.
@@ -33,10 +33,11 @@ npm install @reuse-sh/lightbox
 
 ## Browser build
 
-For a page without a bundler or an import map, such as a theme or a plugin, copy `dist/browser/` and `dist/styles.css` from the package into your assets. `lightbox.js` is one minified ES module with a source map and no imports, with the carousel inside it.
+For a page without a bundler or an import map, such as a theme or a plugin, copy `dist/browser/`, `dist/base.css` and `dist/theme.css` from the package into your assets. `lightbox.js` is one minified ES module with a source map and no imports, with the carousel inside it. `base.css` holds the layout in `@layer re.base` and `theme.css` the default theme in `@layer re.theme`; `dist/unlayered/` holds both without layers for a site whose own unlayered styles would win.
 
 ```html
-<link rel="stylesheet" href="/assets/lightbox/styles.css" />
+<link rel="stylesheet" href="/assets/lightbox/base.css" />
+<link rel="stylesheet" href="/assets/lightbox/theme.css" />
 <script type="module">
   import { bindLightboxGallery } from "/assets/lightbox/browser/lightbox.js";
 
@@ -54,10 +55,11 @@ For a page without a bundler or an import map, such as a theme or a plugin, copy
 
 #### Package styles
 
-Import the package stylesheet once in your main CSS. The components layer lets Tailwind utilities adapt its presentation.
+Import the package stylesheets once in your main CSS: base.css holds the layout and theme.css the default theme. The components layer lets Tailwind utilities adapt their presentation.
 
 ```css
-@import "@reuse-sh/lightbox/styles.css" layer(components);
+@import "@reuse-sh/lightbox/base.css" layer(components);
+@import "@reuse-sh/lightbox/theme.css" layer(components);
 ```
 
 #### Usage
@@ -107,10 +109,11 @@ Keep a real image link as the trigger, then enhance the gallery with bindLightbo
 
 #### Styles
 
-Import the package stylesheet once. Keep application layout styles scoped to this integration.
+Import the package stylesheets once: base.css holds the layout and theme.css the default theme. Keep application layout styles scoped to this integration.
 
 ```css
-@import "@reuse-sh/lightbox/styles.css";
+@import "@reuse-sh/lightbox/base.css";
+@import "@reuse-sh/lightbox/theme.css";
 ```
 
 #### Initialize

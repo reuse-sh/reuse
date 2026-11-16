@@ -18,10 +18,9 @@ const tiles = Array.from(
 async function browseTenPhotos(
   page: Page,
   ready: () => Promise<unknown> = async () => {},
+  styles = ["lightbox/base.css", "lightbox/theme.css"],
 ) {
-  await mount(page, `<div id="gallery">${tiles}</div>`, [
-    "lightbox/styles.css",
-  ]);
+  await mount(page, `<div id="gallery">${tiles}</div>`, styles);
   await page.evaluate(async () => {
     const { bindLightboxGallery } = await import("/modules/lightbox/index.js");
     const gallery = bindLightboxGallery(
@@ -96,6 +95,15 @@ test.describe("lightbox performance", { tag: "@desktop" }, () => {
     expect(longTasks).toEqual([]);
   });
 
+  test("pages ten photos and zooms with base.css alone", async ({ page }) => {
+    const { index, zoomed } = await browseTenPhotos(page, async () => {}, [
+      "lightbox/base.css",
+    ]);
+    expect(index).toBe(count - 1);
+    expect(zoomed).toBeGreaterThan(1);
+    await expect(page.locator("dialog")).toHaveCount(0);
+  });
+
   test("reads no layout inside a pointer move or scroll listener", async ({
     page,
   }) => {
@@ -114,7 +122,7 @@ test.describe("lightbox performance", { tag: "@desktop" }, () => {
     page,
   }) => {
     const reads = await countLayoutReads(page);
-    await mount(page, "", ["lightbox/styles.css"]);
+    await mount(page, "", ["lightbox/base.css", "lightbox/theme.css"]);
     await page.evaluate(async (src) => {
       const { createLightbox } = await import("/modules/lightbox/index.js");
       createLightbox().open([{ src, width: 1200, height: 800 }]);
