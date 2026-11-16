@@ -150,45 +150,6 @@ test.describe("justified gallery", () => {
     expect(await rects()).toEqual(before);
   });
 
-  test("writes nothing when its own height brings the page scrollbar", async ({
-    page,
-  }) => {
-    // Headless browsers draw overlay scrollbars; a styled one takes 15px, as on
-    // desktops with classic scrollbars. 24 of these pictures break differently
-    // at 1000px and 985px when laid out fresh.
-    await mount(
-      page,
-      `<style>html::-webkit-scrollbar{width:15px}html::-webkit-scrollbar-thumb{background:#888}</style><div id="spacer"></div><div id="gallery" class="re-justified">${justifiedItems(24, false)}</div>`,
-      ["gallery/styles.css"],
-    );
-    await page.evaluate(async () => {
-      const root = document.documentElement;
-      root.style.overflow = "hidden";
-      const element = document.getElementById("gallery") as HTMLElement;
-      const { createJustifiedGallery } = await import(
-        "/modules/gallery/index.js"
-      );
-      Object.assign(window, { gallery: createJustifiedGallery(element) });
-      // Taller than the window by 10px at full width, so the scrollbar comes.
-      const spacer = document.getElementById("spacer") as HTMLElement;
-      spacer.style.height = `${innerHeight - element.getBoundingClientRect().height + 10}px`;
-      let writes = 0;
-      new MutationObserver((records) => {
-        writes += records.length;
-      }).observe(element, { subtree: true, attributes: true });
-      Object.assign(window, { writes: () => writes });
-      root.style.overflow = "";
-    });
-    const widths = await framesUntilIdle(
-      page,
-      "document.documentElement.clientWidth",
-      600,
-    );
-    expect(widths.length).toBeLessThanOrEqual(2);
-    expect(await page.evaluate("writes()")).toBe(0);
-    expect(await overflow(page)).toBe(0);
-  });
-
   test("lays the last row out as asked", async ({ page }) => {
     await justified(page, { count: 14, options: '{"lastRow":"center"}' });
     const centered = (await lines(page)).at(-1);
@@ -312,6 +273,91 @@ test.describe("justified gallery", () => {
     expect(after.html).toBe(before);
     expect(after.writes).toBe(0);
   });
+  test("sizes a picture element like an image", async ({ page }) => {
+    await mount(
+      page,
+      `<div id="frame" style="width:1000px"><div id="gallery" class="re-justified">${Array.from(
+        { length: 12 },
+        (_, index) => {
+          const ratio = shapes[index];
+          return `<picture><img src="${picture(ratio, index)}" width="${Math.round(ratio * 1000)}" height="1000" alt=""></picture>`;
+        },
+      ).join("")}</div></div>`,
+      ["gallery/styles.css"],
+    );
+    await page.evaluate(async () => {
+      const { createJustifiedGallery } = await import(
+        "/modules/gallery/index.js"
+      );
+      createJustifiedGallery(document.getElementById("gallery") as HTMLElement);
+    });
+    for (const line of await lines(page)) {
+      if (!line.open) expect(Math.abs(line.right)).toBeLessThan(0.1);
+      expect(line.spread).toBeLessThan(0.1);
+    }
+    expect(await overflow(page)).toBe(0);
+  });
+});
+
+// Rows A at 1000px are taller than this window and bring the scrollbar; at
+// 985px a row of A leaves the range and rows B, shorter than the window, win;
+// at 1000px a row of B leaves the range and A would win again.
+const flipping = [
+  2.4824, 0.7227, 2.5838, 0.7185, 2.609, 1.9347, 0.8785, 0.6872, 1.4271, 1.5132,
+  0.8345, 0.5968, 2.5427, 0.6159, 0.5604, 1.5632, 1.8899, 1.0763, 0.6991,
+  1.3407, 0.7356, 1.6317, 1.4227, 1.0856, 0.8084, 0.8408, 1.0763, 2.6232,
+  0.6078, 1.3813, 0.8423, 2.576, 1.0364, 0.6739,
+];
+
+test("a justified gallery settles when its own height brings and removes the page scrollbar", async ({
+  playwright,
+  browserName,
+}) => {
+  test.skip(browserName !== "chromium", "classic scrollbars in Chromium only");
+  // Playwright starts Chromium with --hide-scrollbars; without it the page
+  // scrollbar takes 15px, as on desktops with classic scrollbars.
+  const browser = await playwright.chromium.launch({
+    ignoreDefaultArgs: ["--hide-scrollbars"],
+  });
+  try {
+    const page = await browser.newPage({
+      viewport: { width: 1000, height: 2661 },
+    });
+    await mount(
+      page,
+      `<div id="gallery" class="re-justified">${flipping
+        .map(
+          (ratio) =>
+            `<div style="--re-ratio:${ratio}"><div class="re-justified-media" style="background:#888"></div></div>`,
+        )
+        .join("")}</div>`,
+      ["gallery/styles.css"],
+    );
+    await page.evaluate(async () => {
+      const element = document.getElementById("gallery") as HTMLElement;
+      const { createJustifiedGallery } = await import(
+        "/modules/gallery/index.js"
+      );
+      createJustifiedGallery(element);
+      let writes = 0;
+      new MutationObserver((records) => {
+        writes += records.length;
+      }).observe(element, { subtree: true, attributes: true });
+      Object.assign(window, { writes: () => writes });
+    });
+    const widths = await framesUntilIdle(
+      page,
+      "document.documentElement.clientWidth",
+      600,
+    );
+    expect(widths.length).toBeLessThanOrEqual(3);
+    const settled = await page.evaluate("writes()");
+    await page.waitForTimeout(500);
+    expect(await page.evaluate("writes()")).toBe(settled);
+    expect(await overflow(page)).toBe(0);
+  } finally {
+    await browser.close();
+  }
 });
 
 const heights = [
@@ -349,11 +395,11 @@ const nativeRects = [
 
 async function masonry(
   page: Page,
-  { tolerance = "1em", forceFallback = false } = {},
+  { tolerance = "1em", forceFallback = false, fontSize = 16 } = {},
 ) {
   await mount(
     page,
-    `<style>#masonry{width:620px;font-size:16px;--re-masonry-columns:4;--re-masonry-gap:10px;--re-masonry-row-gap:12px;--re-masonry-tolerance:${tolerance}}${forceFallback ? "#masonry.re-masonry{display:grid}" : ""}#masonry>div{background:#ccc}</style>
+    `<style>#masonry{width:620px;font-size:${fontSize}px;--re-masonry-columns:4;--re-masonry-gap:10px;--re-masonry-row-gap:12px;--re-masonry-tolerance:${tolerance}}${forceFallback ? "#masonry.re-masonry{display:grid}" : ""}#masonry>div{background:#ccc}</style>
 <div id="masonry" class="re-masonry">${heights
       .map(
         (height, index) =>
@@ -400,11 +446,21 @@ test.describe("masonry", () => {
     browserName,
   }) => {
     test.skip(browserName !== "webkit", "grid lanes ship in WebKit only");
-    for (const tolerance of ["1em", "0px", "40px", "infinite"]) {
-      expect(await masonry(page, { tolerance })).toBe(true);
+    for (const tolerance of [
+      "1em",
+      "0px",
+      "40px",
+      "infinite",
+      "1rem",
+      "3vw",
+      "5%",
+      "calc(1em + 30px)",
+    ]) {
+      // A font size other than the root's tells em, rem and the default apart.
+      expect(await masonry(page, { tolerance, fontSize: 40 })).toBe(true);
       const native = await masonryRects(page);
-      await masonry(page, { tolerance, forceFallback: true });
-      expect(await masonryRects(page)).toEqual(native);
+      await masonry(page, { tolerance, forceFallback: true, fontSize: 40 });
+      expect(await masonryRects(page), tolerance).toEqual(native);
     }
   });
 

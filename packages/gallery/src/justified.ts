@@ -1,9 +1,9 @@
 import {
   breakRows,
   type LastRow,
+  openRowsFit,
   type Row,
   type RowMetrics,
-  rowsCost,
   rowsHold,
   sameRows,
   shownRows,
@@ -42,13 +42,15 @@ const COUNT = "--re-justified-count";
 const COLUMN_GAP = "--re-justified-column-gap";
 const DEFAULT_ROW_HEIGHT = 240;
 
-interface Written {
+/** What an item held before the controller wrote to it, and the ratio it wrote. */
+interface Owned {
   style: boolean;
   ratio: string;
   share: string;
   count: string;
   row: string | null;
   hidden: string | null;
+  wroteRatio?: string;
 }
 
 interface Layout {
@@ -76,20 +78,21 @@ function picture(element: Element | null): Element | null {
   return element;
 }
 
-function naturalRatio(element: Element | null): number {
+/** The size the markup declares first, so a picture that loads at a slightly other size does not move. */
+function mediaRatio(element: Element | null): number {
   const source = picture(element);
   if (!source) return 0;
+  const declaredWidth = Number(source.getAttribute("width"));
+  const declaredHeight = Number(source.getAttribute("height"));
+  if (declaredWidth > 0 && declaredHeight > 0) {
+    return declaredWidth / declaredHeight;
+  }
   const image = source as HTMLImageElement & HTMLVideoElement;
   const width =
     source.tagName === "VIDEO" ? image.videoWidth : image.naturalWidth;
   const height =
     source.tagName === "VIDEO" ? image.videoHeight : image.naturalHeight;
-  if (width > 0 && height > 0) return width / height;
-  const attributeWidth = Number(source.getAttribute("width"));
-  const attributeHeight = Number(source.getAttribute("height"));
-  return attributeWidth > 0 && attributeHeight > 0
-    ? attributeWidth / attributeHeight
-    : 0;
+  return width > 0 && height > 0 ? width / height : 0;
 }
 
 function lengthOf(value: string, base: number): number {
@@ -126,24 +129,54 @@ export function createJustifiedGallery(
   const previousState = container.getAttribute(STATE);
   const previousGap = container.style.getPropertyValue(COLUMN_GAP);
   const hadStyle = container.hasAttribute("style");
-  const written = new Map<HTMLElement, Written>();
-  const seen = new WeakSet<HTMLElement>();
-  const authored = new WeakSet<HTMLElement>();
+  const owned = new Map<HTMLElement, Owned>();
   let current: Layout | undefined;
+  // Rows given up for others at a width, so a width that flips back and forth
+  // (a page scrollbar coming and going) does not flip the rows with it.
+  let abandoned: { rows: Row[]; width: number } | undefined;
   let width = 0;
   let pending = false;
   let destroyed = false;
 
-  const write = (item: HTMLElement) => {
-    if (written.has(item)) return;
-    written.set(item, {
-      style: item.hasAttribute("style"),
-      ratio: item.style.getPropertyValue(RATIO),
-      share: item.style.getPropertyValue(SHARE),
-      count: item.style.getPropertyValue(COUNT),
-      row: item.getAttribute(ROW),
-      hidden: item.getAttribute(HIDDEN),
-    });
+  const own = (item: HTMLElement) => {
+    let entry = owned.get(item);
+    if (!entry) {
+      entry = {
+        style: item.hasAttribute("style"),
+        ratio: item.style.getPropertyValue(RATIO),
+        share: item.style.getPropertyValue(SHARE),
+        count: item.style.getPropertyValue(COUNT),
+        row: item.getAttribute(ROW),
+        hidden: item.getAttribute(HIDDEN),
+      };
+      owned.set(item, entry);
+    }
+    return entry;
+  };
+
+  const release = (item: HTMLElement) => {
+    const entry = owned.get(item);
+    if (!entry) return;
+    owned.delete(item);
+    const restore = (name: string, value: string) => {
+      if (value) item.style.setProperty(name, value);
+      else item.style.removeProperty(name);
+    };
+    // A ratio the page set since is the page's, not one to put back.
+    if (
+      item.style.getPropertyValue(RATIO) === (entry.wroteRatio ?? entry.ratio)
+    ) {
+      restore(RATIO, entry.ratio);
+    }
+    restore(SHARE, entry.share);
+    restore(COUNT, entry.count);
+    if (entry.row === null) item.removeAttribute(ROW);
+    else item.setAttribute(ROW, entry.row);
+    if (entry.hidden === null) item.removeAttribute(HIDDEN);
+    else item.setAttribute(HIDDEN, entry.hidden);
+    if (!entry.style && !item.getAttribute("style")) {
+      item.removeAttribute("style");
+    }
   };
 
   const readItems = () =>
@@ -154,18 +187,18 @@ export function createJustifiedGallery(
           view.getComputedStyle(child).display !== "none"),
     );
 
-  const declaredRatio = (item: HTMLElement) =>
-    Number.parseFloat(view.getComputedStyle(item).getPropertyValue(RATIO));
+  const isOwnRatio = (item: HTMLElement) => {
+    const wrote = owned.get(item)?.wroteRatio;
+    return wrote !== undefined && item.style.getPropertyValue(RATIO) === wrote;
+  };
 
   // A ratio the page declares wins. One the controller wrote is read again
   // from the picture each time, since the picture may have loaded since.
   const readRatio = (item: HTMLElement) => {
-    if (!seen.has(item)) {
-      seen.add(item);
-      if (declaredRatio(item) > 0) authored.add(item);
-    }
-    const declared = authored.has(item) ? declaredRatio(item) : 0;
-    return declared > 0 ? declared : naturalRatio(media(item)) || 1;
+    const declared = isOwnRatio(item)
+      ? 0
+      : Number.parseFloat(view.getComputedStyle(item).getPropertyValue(RATIO));
+    return declared > 0 ? declared : mediaRatio(media(item)) || 1;
   };
 
   const readMetrics = (): RowMetrics => {
@@ -196,9 +229,15 @@ export function createJustifiedGallery(
       }
       for (let index = row.start; index < row.end; index++) {
         const item = layout.items[index];
-        write(item);
-        if (!authored.has(item)) {
-          item.style.setProperty(RATIO, String(layout.ratios[index]));
+        const entry = own(item);
+        const declared =
+          !isOwnRatio(item) &&
+          Number.parseFloat(
+            view.getComputedStyle(item).getPropertyValue(RATIO),
+          ) > 0;
+        if (!declared) {
+          entry.wroteRatio = String(layout.ratios[index]);
+          item.style.setProperty(RATIO, entry.wroteRatio);
         }
         item.style.setProperty(SHARE, String(layout.ratios[index] / sum));
         item.style.setProperty(COUNT, String(row.end - row.start));
@@ -229,23 +268,36 @@ export function createJustifiedGallery(
     pending = false;
     width = metrics.width;
     const items = readItems();
+    for (const item of owned.keys()) {
+      if (item.parentElement !== container) release(item);
+    }
     const ratios = items.map(readRatio);
     const unchanged = !fresh && sameContent(items, ratios);
     const sameHeight = current?.metrics.rowHeight === metrics.rowHeight;
     const kept = unchanged && sameHeight ? current : undefined;
-    let rows = kept?.rows;
-    if (!kept || !rowsHold(kept.rows, ratios, metrics)) {
+    let rows: Row[];
+    if (kept && rowsHold(kept.rows, ratios, metrics)) {
+      rows = kept.rows;
+    } else {
       const optimal = breakRows(ratios, metrics, lastRow);
+      const flipsBack =
+        abandoned !== undefined &&
+        Math.abs(metrics.width - abandoned.width) < 1 &&
+        sameRows(optimal, abandoned.rows);
       if (
-        !kept ||
-        (!sameRows(optimal, kept.rows) &&
-          rowsCost(optimal, ratios, metrics) <
-            rowsCost(kept.rows, ratios, metrics))
+        kept &&
+        (sameRows(optimal, kept.rows) ||
+          (flipsBack && openRowsFit(kept.rows, ratios, metrics)))
       ) {
+        rows = kept.rows;
+      } else {
+        abandoned = kept
+          ? { rows: kept.rows, width: kept.metrics.width }
+          : undefined;
         rows = optimal;
       }
     }
-    const next = { items, ratios, rows: rows ?? [], metrics };
+    const next = { items, ratios, rows, metrics };
     if (kept && rows === kept.rows) {
       if (kept.metrics.gap !== metrics.gap) {
         container.style.setProperty(COLUMN_GAP, `${metrics.gap}px`);
@@ -259,20 +311,27 @@ export function createJustifiedGallery(
 
   // Laid out on the next frame rather than inside the observer: the layout
   // changes the container's height, which the observer would report again in
-  // the same frame. Until then the rows scale with the container.
+  // the same frame. Until then the rows scale with the container. Pictures
+  // that load in one frame share one layout.
   let frame = 0;
+  let loaded = false;
+  const schedule = () => {
+    if (frame) return;
+    frame = view.requestAnimationFrame(() => {
+      frame = 0;
+      const next = readMetrics().width;
+      if (next > 0 && (loaded || pending || next !== width)) {
+        loaded = false;
+        layout(false);
+      }
+    });
+  };
   const resize = view.ResizeObserver
-    ? new view.ResizeObserver(() => {
-        if (frame) return;
-        frame = view.requestAnimationFrame(() => {
-          frame = 0;
-          const next = readMetrics().width;
-          if (next > 0 && (pending || next !== width)) layout(false);
-        });
-      })
+    ? new view.ResizeObserver(schedule)
     : undefined;
-  // Item style, class and hidden can show, hide or re-ratio an item; a picture's
-  // size attributes and source can change its ratio at any depth.
+  // The container's style and class can change the row height or the gap.
+  // Item style, class and hidden can show, hide or re-ratio an item; a
+  // picture's size attributes and source can change its ratio at any depth.
   const mutation = view.MutationObserver
     ? new view.MutationObserver((records) => {
         const relevant = records.some(
@@ -281,13 +340,16 @@ export function createJustifiedGallery(
             record.attributeName === "width" ||
             record.attributeName === "height" ||
             record.attributeName === "src" ||
+            record.target === container ||
             (record.target as Element).parentElement === container,
         );
         if (relevant) layout(false);
       })
     : undefined;
   const onLoad = (event: Event) => {
-    if (event.target !== container) layout(false);
+    if (event.target === container) return;
+    loaded = true;
+    schedule();
   };
 
   if (!hadClass) container.classList.add("re-justified");
@@ -314,23 +376,7 @@ export function createJustifiedGallery(
       mutation?.disconnect();
       container.removeEventListener("load", onLoad, true);
       container.removeEventListener("loadedmetadata", onLoad, true);
-      for (const [item, original] of written) {
-        const restore = (name: string, value: string) => {
-          if (value) item.style.setProperty(name, value);
-          else item.style.removeProperty(name);
-        };
-        restore(RATIO, original.ratio);
-        restore(SHARE, original.share);
-        restore(COUNT, original.count);
-        if (original.row === null) item.removeAttribute(ROW);
-        else item.setAttribute(ROW, original.row);
-        if (original.hidden === null) item.removeAttribute(HIDDEN);
-        else item.setAttribute(HIDDEN, original.hidden);
-        if (!original.style && !item.getAttribute("style")) {
-          item.removeAttribute("style");
-        }
-      }
-      written.clear();
+      for (const item of [...owned.keys()]) release(item);
       if (previousGap) container.style.setProperty(COLUMN_GAP, previousGap);
       else container.style.removeProperty(COLUMN_GAP);
       if (!hadStyle && !container.getAttribute("style")) {

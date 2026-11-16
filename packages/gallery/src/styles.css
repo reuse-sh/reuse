@@ -5,9 +5,9 @@
 }
 
 @property --re-masonry-tolerance {
-  syntax: "<length-percentage> | infinite";
+  syntax: "<length-percentage> | normal | infinite";
   inherits: true;
-  initial-value: 1em;
+  initial-value: normal;
 }
 
 .re-justified {
@@ -29,7 +29,7 @@
     calc(var(--re-ratio, 1) * var(--re-justified-row-height));
 }
 
-.re-justified > :is(img, video),
+.re-justified > :is(img, video, picture),
 .re-justified .re-justified-media {
   display: block;
   width: 100%;
@@ -38,6 +38,7 @@
   object-fit: cover;
 }
 
+.re-justified > picture > img,
 .re-justified .re-justified-media > :is(img, video) {
   display: block;
   width: 100%;

@@ -2,6 +2,7 @@
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createJustifiedGallery } from "./justified.js";
+import { breakRows } from "./rows.js";
 
 const observers: FakeResizeObserver[] = [];
 
@@ -154,7 +155,7 @@ describe("createJustifiedGallery", () => {
     expect(extra.style.getPropertyValue("--re-justified-share")).not.toBe("");
   });
 
-  it("takes a picture's ratio once it has loaded", () => {
+  it("takes a picture's ratio once it has loaded", async () => {
     const { container, items } = gallery([1, 1, 1, 1, 1]);
     const image = items()[0].querySelector("img") as HTMLImageElement;
     image.removeAttribute("width");
@@ -164,6 +165,7 @@ describe("createJustifiedGallery", () => {
     Object.defineProperty(image, "naturalWidth", { get: () => 2000 });
     Object.defineProperty(image, "naturalHeight", { get: () => 1000 });
     image.dispatchEvent(new Event("load"));
+    await frame();
     expect(items()[0].style.getPropertyValue("--re-ratio")).toBe("2");
   });
 
@@ -236,5 +238,76 @@ describe("createJustifiedGallery", () => {
         "--re-ratio",
       ),
     ).toBe("1.5");
+  });
+
+  it("breaks a last row again once it no longer fits at the target height", async () => {
+    const { container, resize } = gallery([1, 1, 1.25, 1.25], 608);
+    createJustifiedGallery(container);
+    await resize(368);
+    const expected = breakRows([1, 1, 1.25, 1.25], {
+      width: 368,
+      gap: 8,
+      rowHeight: 240,
+      tolerance: 0.25,
+    }).map((row) =>
+      Array.from({ length: row.end - row.start }, (_, i) => row.start + i),
+    );
+    expect(rows(container)).toEqual(expected);
+  });
+
+  it("does not flip back to rows it just gave up when the width flips back", async () => {
+    const ratios = [
+      2.4824, 0.7227, 2.5838, 0.7185, 2.609, 1.9347, 0.8785, 0.6872, 1.4271,
+      1.5132, 0.8345, 0.5968, 2.5427, 0.6159, 0.5604, 1.5632, 1.8899, 1.0763,
+      0.6991, 1.3407, 0.7356, 1.6317, 1.4227, 1.0856, 0.8084, 0.8408, 1.0763,
+      2.6232, 0.6078, 1.3813, 0.8423, 2.576, 1.0364, 0.6739,
+    ];
+    const { container, items, resize } = gallery(ratios);
+    items().forEach((item, index) => {
+      item.style.setProperty("--re-ratio", String(ratios[index]));
+    });
+    createJustifiedGallery(container);
+    const wide = rows(container);
+    await resize(985);
+    const narrow = rows(container);
+    // These pictures leave the range both ways, which is what loops a page
+    // whose scrollbar comes and goes with them.
+    expect(narrow).not.toEqual(wide);
+    await resize(1000);
+    expect(rows(container)).toEqual(narrow);
+    await resize(985);
+    expect(rows(container)).toEqual(narrow);
+  });
+
+  it("takes a ratio the page sets after the first layout", () => {
+    const { container, items } = gallery([1, 1, 1]);
+    const instance = createJustifiedGallery(container);
+    items()[0].style.setProperty("--re-ratio", "2");
+    instance.refresh();
+    expect(items()[0].style.getPropertyValue("--re-ratio")).toBe("2");
+    expect(
+      Number(items()[0].style.getPropertyValue("--re-justified-share")),
+    ).toBeCloseTo(0.5, 6);
+    instance.destroy();
+    expect(items()[0].style.getPropertyValue("--re-ratio")).toBe("2");
+  });
+
+  it("follows a gap the page changes on the container", async () => {
+    const { container } = gallery(shapes);
+    createJustifiedGallery(container);
+    container.style.columnGap = "32px";
+    await settle();
+    expect(container.style.getPropertyValue("--re-justified-column-gap")).toBe(
+      "32px",
+    );
+  });
+
+  it("puts back what it wrote on an item that leaves the gallery", async () => {
+    const { container, items } = gallery(shapes);
+    createJustifiedGallery(container);
+    const gone = items()[0];
+    gone.remove();
+    await settle();
+    expect(gone.hasAttribute("style")).toBe(false);
   });
 });

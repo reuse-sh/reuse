@@ -135,6 +135,19 @@ export function rowsHold(
   });
 }
 
+/** Whether every row that is not full still fits at the target height, so it does not wrap. */
+export function openRowsFit(
+  rows: readonly Row[],
+  ratios: readonly number[],
+  metrics: RowMetrics,
+): boolean {
+  return rows.every(
+    (row) =>
+      row.full ||
+      fitsAtTarget(rowHeightAt(ratios, row.start, row.end, metrics), metrics),
+  );
+}
+
 /** How many rows are shown. `hide` drops a last row that is not full, unless it is the only one. */
 export function shownRows(
   rows: readonly Row[],

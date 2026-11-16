@@ -1,6 +1,6 @@
 export interface LaneItem {
-  /** Outer size along the lanes, margins included. */
-  size: number;
+  /** Outer size along the lanes, margins included; by start lane when lanes differ in width. */
+  size: number | readonly number[];
   /** Lanes the item spans, at least 1. */
   span: number;
 }
@@ -54,8 +54,10 @@ export function placeLanes(
     }
     const lane = chosen < 0 ? first : chosen;
     const offset = positions[lane];
+    const size =
+      typeof item.size === "number" ? item.size : (item.size[lane] ?? 0);
     for (let index = lane; index < lane + span; index++) {
-      running[index] = offset + Math.max(0, item.size) + gap;
+      running[index] = offset + Math.max(0, size) + gap;
     }
     cursor = lane + span;
     placements.push({ lane, span, offset });

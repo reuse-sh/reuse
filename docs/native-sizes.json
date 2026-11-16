@@ -5,20 +5,20 @@
     {
       "name": "carousel",
       "modules": 1,
-      "bytes": 37029,
-      "gzipBytes": 8468
+      "bytes": 24035,
+      "gzipBytes": 5368
     },
     {
       "name": "lightbox",
       "modules": 3,
-      "bytes": 79772,
-      "gzipBytes": 18122
+      "bytes": 62942,
+      "gzipBytes": 14100
     },
     {
       "name": "annotations",
       "modules": 4,
-      "bytes": 53816,
-      "gzipBytes": 14451
+      "bytes": 53864,
+      "gzipBytes": 14454
     },
     {
       "name": "loaders",
@@ -28,15 +28,15 @@
     },
     {
       "name": "interactions",
-      "modules": 5,
-      "bytes": 37902,
-      "gzipBytes": 9952
+      "modules": 4,
+      "bytes": 22655,
+      "gzipBytes": 5817
     },
     {
       "name": "avatars",
       "modules": 1,
-      "bytes": 13158,
-      "gzipBytes": 3332
+      "bytes": 12620,
+      "gzipBytes": 3093
     },
     {
       "name": "shadows",
@@ -47,8 +47,8 @@
     {
       "name": "gallery",
       "modules": 5,
-      "bytes": 25628,
-      "gzipBytes": 7726
+      "bytes": 28588,
+      "gzipBytes": 8523
     }
   ]
 }
