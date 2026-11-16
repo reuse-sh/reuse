@@ -175,3 +175,78 @@ test("Back closes the lightbox without leaving the page, and a close removes the
     ),
   ).toBe(true);
 });
+
+test("close resolves after its history entry is gone, so a navigation right after it stays", async ({
+  page,
+}) => {
+  await open(page, 3, 0);
+  await page.evaluate(async () => {
+    await (window as Window).lightbox.close();
+    history.pushState(null, "", "/next");
+  });
+  await page.waitForTimeout(500);
+  expect(new URL(page.url()).pathname).toBe("/next");
+});
+
+test("with two photos in a loop, previous moves the strip backward", async ({
+  page,
+}) => {
+  await open(page, 2, 0, { loop: true });
+  await page.waitForTimeout(300);
+  const start = await page.evaluate(
+    () => document.querySelector(".re-lightbox-viewport")?.scrollLeft ?? 0,
+  );
+  await page.evaluate(() =>
+    (window as Window & { lightbox: { prev(): void } }).lightbox.prev(),
+  );
+  await page.waitForTimeout(100);
+  const moving = await page.evaluate(
+    () => document.querySelector(".re-lightbox-viewport")?.scrollLeft ?? 0,
+  );
+  expect(moving).toBeLessThan(start);
+});
+
+test("in RTL an aside keeps the arrow and the footer beside it, and the active thumbnail is centered", async ({
+  page,
+}) => {
+  await mount(page, "", ["lightbox/base.css", "lightbox/theme.css"]);
+  await page.evaluate(() =>
+    document.documentElement.setAttribute("dir", "rtl"),
+  );
+  await page.evaluate(async (src) => {
+    const { createLightbox } = await import("/modules/lightbox/index.js");
+    const lightbox = createLightbox({
+      history: false,
+      thumbnails: true,
+      slots: {
+        aside: ({ document }) => ({ node: document.createElement("p") }),
+      },
+    });
+    lightbox.open(
+      Array.from({ length: 40 }, () => ({
+        src,
+        previewSrc: src,
+        width: 1200,
+        height: 800,
+      })),
+      25,
+    );
+  }, photo(3));
+  await page.waitForTimeout(400);
+  const aside = await page.locator(".re-lightbox-aside").boundingBox();
+  const prev = await page.locator(".re-lightbox-prev").boundingBox();
+  const footer = await page.locator(".re-lightbox-footer").boundingBox();
+  const strip = await page.locator(".re-lightbox-thumbnails").boundingBox();
+  const thumb = await page
+    .locator('.re-lightbox-thumbnails [aria-current="true"]')
+    .boundingBox();
+  if (!aside || !prev || !footer || !strip || !thumb)
+    throw new Error("Missing part");
+  const outside = (box: { x: number; width: number }) =>
+    box.x + box.width <= aside.x || box.x >= aside.x + aside.width;
+  expect(outside(prev)).toBe(true);
+  expect(outside(footer)).toBe(true);
+  expect(
+    Math.abs(thumb.x + thumb.width / 2 - (strip.x + strip.width / 2)),
+  ).toBeLessThan(2);
+});

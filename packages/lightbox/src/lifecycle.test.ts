@@ -905,6 +905,66 @@ describe("lightbox public API", () => {
     ]);
   });
 
+  it("closes once when beforeclose calls close, and reports closed when open replaces a viewer", async () => {
+    const controller = create({ history: false });
+    const events: string[] = [];
+    for (const type of ["open", "beforeclose", "closed"] as const)
+      controller.on(type, (event) => events.push(event.type));
+    controller.on("beforeclose", () => {
+      void controller.close();
+    });
+    controller.open(gallery, 0);
+    controller.open(gallery, 1);
+    await controller.close();
+    expect(document.querySelector("dialog")).toBeNull();
+    expect(events).toEqual(["open", "closed", "open", "beforeclose", "closed"]);
+  });
+
+  it("puts a pulled photo back when beforeclose keeps the dialog", () => {
+    const controller = create({ history: false });
+    controller.on("beforeclose", (event) => event.preventDefault());
+    controller.open(gallery);
+    const viewport = dialog().querySelector<HTMLElement>(
+      ".re-lightbox-viewport",
+    );
+    if (!viewport) throw new Error("Missing viewport");
+    const pointer = (type: string, y: number) => {
+      const event = new MouseEvent(type, {
+        bubbles: true,
+        cancelable: true,
+        button: 0,
+        clientX: 512,
+        clientY: y,
+      });
+      Object.defineProperties(event, {
+        pointerId: { value: 1 },
+        pointerType: { value: "touch" },
+      });
+      viewport.dispatchEvent(event);
+    };
+    pointer("pointerdown", 300);
+    pointer("pointermove", 500);
+    pointer("pointerup", 500);
+    expect(controller.getState()).toMatchObject({
+      isOpen: true,
+      isClosing: false,
+      zoom: { scale: 1, x: 0, y: 0 },
+    });
+  });
+
+  it("drops the zoom when setItems moves the current image", () => {
+    const controller = create({ history: false });
+    const items = gallery.slice(0, 5);
+    controller.open(items, 2);
+    controller.zoomTo(2);
+    controller.setItems([gallery[5], ...items]);
+    expect(controller.getState()).toMatchObject({
+      index: 3,
+      zoom: { scale: 1 },
+    });
+    expect(dialog().dataset.zoomed).toBe("false");
+  });
+
   it("mounts slots in their places, updates them with the state and destroys them once", async () => {
     const updates: number[] = [];
     let destroyed = 0;

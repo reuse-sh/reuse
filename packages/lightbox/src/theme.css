@@ -12,11 +12,15 @@
   --re-lightbox-gap: 10px;
   --re-lightbox-arrow-inset: 16px;
   --re-lightbox-footer-inset: 72px;
+  --re-lightbox-counter-padding: 6px 12px;
   --re-lightbox-counter-radius: 20px;
+  --re-lightbox-caption-padding: 4px 10px;
   --re-lightbox-caption-radius: 4px;
   --re-lightbox-thumbnail-size: 44px;
   --re-lightbox-thumbnail-radius: 5px;
   --re-lightbox-thumbnail-gap: 8px;
+  --re-lightbox-thumbnails-padding: 4px;
+  --re-lightbox-error-padding: 24px;
   --re-lightbox-aside-width: 320px;
   --re-lightbox-aside-height: 40%;
   color: var(--re-lightbox-foreground);
@@ -54,7 +58,7 @@
   outline-offset: 3px;
 }
 .re-lightbox-counter {
-  padding: 6px 12px;
+  padding: var(--re-lightbox-counter-padding);
   border-radius: var(--re-lightbox-counter-radius);
   background: var(--re-lightbox-control);
   font-size: 13px;
@@ -62,7 +66,7 @@
   backdrop-filter: blur(16px);
 }
 .re-lightbox-caption {
-  padding: 4px 10px;
+  padding: var(--re-lightbox-caption-padding);
   border-radius: var(--re-lightbox-caption-radius);
   background: var(--re-lightbox-background);
   font-size: 14px;
@@ -71,7 +75,7 @@
 }
 .re-lightbox-thumbnails {
   gap: var(--re-lightbox-thumbnail-gap);
-  padding: 4px;
+  padding: var(--re-lightbox-thumbnails-padding);
 }
 .re-lightbox-thumbnails button {
   width: var(--re-lightbox-thumbnail-size);
@@ -90,7 +94,7 @@
   background: var(--re-lightbox-panel);
 }
 .re-lightbox-error {
-  padding: 24px;
+  padding: var(--re-lightbox-error-padding);
 }
 @media (max-width: 480px) {
   .re-lightbox {

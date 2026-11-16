@@ -170,6 +170,24 @@
 .re-lightbox:has(> .re-lightbox-aside) .re-lightbox-viewport {
   width: calc(100% - var(--re-lightbox-aside-width, 320px));
 }
+.re-lightbox:has(> .re-lightbox-aside) .re-lightbox-next:dir(ltr) {
+  right: calc(
+    var(--re-lightbox-aside-width, 320px) +
+    var(--re-lightbox-arrow-inset, 16px)
+  );
+}
+.re-lightbox:has(> .re-lightbox-aside) .re-lightbox-prev:dir(rtl) {
+  left: calc(
+    var(--re-lightbox-aside-width, 320px) +
+    var(--re-lightbox-arrow-inset, 16px)
+  );
+}
+.re-lightbox:has(> .re-lightbox-aside) .re-lightbox-footer {
+  inset-inline-end: calc(
+    var(--re-lightbox-aside-width, 320px) +
+    var(--re-lightbox-footer-inset, 72px)
+  );
+}
 .re-lightbox-error {
   position: absolute;
   inset: 0;
@@ -212,7 +230,17 @@
     width: 100%;
     height: calc(100% - var(--re-lightbox-aside-height, 40%));
   }
+  .re-lightbox:has(> .re-lightbox-aside) .re-lightbox-next:dir(ltr) {
+    right: max(
+      var(--re-lightbox-arrow-inset, 16px),
+      env(safe-area-inset-right)
+    );
+  }
+  .re-lightbox:has(> .re-lightbox-aside) .re-lightbox-prev:dir(rtl) {
+    left: max(var(--re-lightbox-arrow-inset, 16px), env(safe-area-inset-left));
+  }
   .re-lightbox:has(> .re-lightbox-aside) .re-lightbox-footer {
+    inset-inline-end: var(--re-lightbox-footer-inset, 72px);
     bottom: calc(
       var(--re-lightbox-aside-height, 40%) +
       var(--re-lightbox-inset, 16px)

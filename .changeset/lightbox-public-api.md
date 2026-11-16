@@ -2,7 +2,7 @@
 "@reuse-sh/lightbox": minor
 ---
 
-Breaking: `@reuse-sh/lightbox/styles.css` is gone. Import `@reuse-sh/lightbox/base.css`, the required layout and states in `@layer re.base`, and `@reuse-sh/lightbox/theme.css`, the default dark theme in `@layer re.theme`. Every theme value is a `--re-lightbox-*` custom property, and `@reuse-sh/lightbox/unlayered/` has both files without layers. Close and zoom now sit in a top bar, `.re-lightbox-toolbar`, so `.re-lightbox-button` no longer positions a button.
+Breaking: `@reuse-sh/lightbox/styles.css` is gone. Import `@reuse-sh/lightbox/base.css`, the required layout and states in `@layer re.base`, and `@reuse-sh/lightbox/theme.css`, the default dark theme in `@layer re.theme`. The theme's colors, radii, sizes, insets and paddings are `--re-lightbox-*` custom properties, and `@reuse-sh/lightbox/unlayered/` has both files without layers. Close and zoom now sit in a top bar, `.re-lightbox-toolbar`, so `.re-lightbox-button` no longer positions a button.
 
 Breaking: with the new `history` option on by default, opening the viewer adds one history entry without changing the URL, and Back closes it. Any other close removes that entry again. Pass `history: false` to keep the old behavior.
 

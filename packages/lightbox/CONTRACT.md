@@ -25,7 +25,7 @@ LightboxOptions:
 - getOrigin?: (index: number) => HTMLElement | null, the tile for an index, before item.origin
 - onChange?: (state: LightboxState) => void, discrete actions, completed pointer gestures, and wheel input after 150ms idle
 
-Every option is read again at each open; setOptions changes loop while the viewer is open.
+Every option except loop is read again at each open. loop is read when the controller is created and changed by setOptions, also while the viewer is open.
 
 LightboxItem: src, previewSrc?, width?, height?, alt?, caption?, thumbnailSrc?, origin? (HTMLElement | null).
 
@@ -39,7 +39,7 @@ LightboxSlot: (context: { lightbox: Lightbox; document: Document }) => { node: N
 
 LightboxEventName: "open" | "opened" | "change" | "settle" | "beforeclose" | "closed".
 
-LightboxEvent: { type, index, slide: HTMLElement | null, defaultPrevented, preventDefault() }. open runs in open(), opened once the flight ends, change when the index changes, settle once paging stops, beforeclose synchronously before the close flight is measured, and closed once the dialog is removed. preventDefault in beforeclose keeps the dialog open; other events ignore it.
+LightboxEvent: { type, index, slide: HTMLElement | null, defaultPrevented, preventDefault() }. open runs in open(), opened once the flight ends, change when the index changes, settle once paging stops, beforeclose synchronously before the close flight is measured, and closed once the dialog is removed, also when open() replaces an open viewer. close() and closed wait until the history entry is gone, so a navigation right after them stays. preventDefault in beforeclose keeps the dialog open; other events ignore it.
 
 Lightbox methods:
 - open(items: readonly LightboxItem[], index?: number): void
@@ -59,7 +59,7 @@ bindLightboxGallery(root: HTMLElement, options?: LightboxOptions & { selector?: 
 
 lightboxItemFromImage(image: HTMLImageElement, source?: string): LightboxItem, reads data-lightbox-src, the current source, the natural size, alt and the image as origin.
 
-CSS files: @reuse-sh/lightbox/base.css holds the layout and states (positions, sizes, control visibility, cursors, reduced motion) without colors or fonts in @layer re.base, and is required. @reuse-sh/lightbox/theme.css holds the default dark theme in @layer re.theme. Theme values are --re-lightbox-* custom properties. dist/unlayered/ holds both files without layers.
+CSS files: @reuse-sh/lightbox/base.css holds the layout and states (positions, sizes, control visibility, cursors, reduced motion) without colors or fonts in @layer re.base, and is required. @reuse-sh/lightbox/theme.css holds the default dark theme in @layer re.theme. Theme colors, radii, sizes, insets and paddings are --re-lightbox-* custom properties. dist/unlayered/ holds both files without layers.
 
 The viewer is a native modal dialog paged by @reuse-sh/carousel. Escape closes it. Keys act only while it is open. The React hook useLightbox(options) returns the same controller with its state; it belongs to the package and adds no second implementation. It applies changed options at the next open and a changed loop at once.
 

@@ -272,27 +272,37 @@ function lockScroll(doc: Document) {
 
 // history.back() lands asynchronously, so a lightbox that opens or closes before it lands must
 // not push or go back again; the pending back is shared by every lightbox of the window.
-const historyBacks = new WeakMap<Window, (event: Event) => void>();
+const historyBacks = new WeakMap<
+  Window,
+  { drain: (event: Event) => void; land: () => void; landing: Promise<void> }
+>();
 const landings = new WeakSet<Event>();
 
 function landed(win: Window, event: Event) {
   if (landings.has(event)) return true;
-  const drain = historyBacks.get(win);
-  if (!drain) return false;
+  const back = historyBacks.get(win);
+  if (!back) return false;
   landings.add(event);
-  win.removeEventListener("popstate", drain);
+  win.removeEventListener("popstate", back.drain);
   historyBacks.delete(win);
+  back.land();
   return true;
 }
 
 function goBack(win: Window) {
-  if (historyBacks.has(win)) return;
+  const pending = historyBacks.get(win);
+  if (pending) return pending.landing;
+  let land = () => {};
+  const landing = new Promise<void>((resolve) => {
+    land = resolve;
+  });
   const drain = (event: Event) => {
     landed(win, event);
   };
-  historyBacks.set(win, drain);
+  historyBacks.set(win, { drain, land, landing });
   win.addEventListener("popstate", drain);
   win.history.back();
+  return landing;
 }
 
 function validateItems(items: readonly LightboxItem[]) {
@@ -352,6 +362,7 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
   const historyKey = "reuseLightbox";
   const historyId = Math.random().toString(36).slice(2);
   let historyWindow: Window | undefined;
+  let vetting = false;
 
   let notifiedState = state;
 
@@ -785,10 +796,16 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
     const reduced = s.dialog.ownerDocument.defaultView?.matchMedia?.(
       "(prefers-reduced-motion: reduce)",
     ).matches;
+    // An RTL strip scrolls through negative positions, where offsetLeft already lies.
+    const max = strip.scrollWidth - strip.clientWidth;
+    const rtl =
+      s.dialog.ownerDocument.defaultView?.getComputedStyle(strip).direction ===
+      "rtl";
     strip.scrollTo({
-      left: Math.max(
-        0,
+      left: clamp(
         thumb.offsetLeft - (strip.clientWidth - thumb.offsetWidth) / 2,
+        rtl ? -max : 0,
+        rtl ? 0 : max,
       ),
       behavior: s.centeredThumb < 0 || reduced ? "instant" : "smooth",
     });
@@ -927,7 +944,7 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
     );
   }
 
-  function goTo(index: number) {
+  function goTo(index: number, direction?: 1 | -1) {
     const s = session;
     if (!s || state.isClosing || !Number.isFinite(index)) return;
     finishFade(s, true);
@@ -939,14 +956,16 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
         : gap) > 1;
     syncingCarousel = true;
     activeChanged(s, target);
-    if (!far) s.carousel.goTo(target, "smooth");
-    syncingCarousel = false;
     if (far) fadeTo(s, target);
+    else if (direction && looping() && s.carousel.getState().isLooping)
+      s.carousel[direction > 0 ? "next" : "prev"]();
+    else s.carousel.goTo(target, "smooth");
+    syncingCarousel = false;
   }
 
   function step(direction: 1 | -1) {
     const index = state.index + direction;
-    goTo(looping() ? wrap(index) : index);
+    goTo(looping() ? wrap(index) : index, direction);
   }
 
   function isSettled(s: Session) {
@@ -1108,7 +1127,7 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
         Math.abs(state.zoom.y) > 120
       ) {
         void close();
-        return;
+        if (state.isClosing || session !== s) return;
       }
       if (
         event.type === "pointerup" &&
@@ -1279,11 +1298,15 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
     if (!historyBacks.has(win) && !ownsHistory(win)) pushHistory(win);
   }
 
+  // Resolves once the back has landed, so a navigation after close() is not undone by it.
   function leaveHistory() {
     const win = historyWindow;
-    if (!win) return;
-    if (ownsHistory(win)) goBack(win);
+    if (!win) return Promise.resolve();
+    const landing = ownsHistory(win)
+      ? goBack(win)
+      : (historyBacks.get(win)?.landing ?? Promise.resolve());
     releaseHistory();
+    return landing;
   }
 
   function releaseHistory() {
@@ -1329,7 +1352,10 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
       (typeof document === "undefined" ? undefined : document);
     if (!doc?.body)
       throw new Error("Opening a lightbox needs a browser document.");
-    if (session) teardown(session);
+    if (session) {
+      teardown(session);
+      emit("closed", undefined);
+    }
     items = nextItems;
     sources = [...input];
     closePromise = undefined;
@@ -1497,8 +1523,6 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
       zoom: { ...identity },
       chrome: "shown",
     });
-    update(s);
-    s.carousel.goTo(state.index, "instant");
     mountSlots(s, {
       toolbarStart: (node) => toolbarStart.append(node),
       toolbarEnd: (node) => closeButton.before(node),
@@ -1510,6 +1534,8 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
         dialog.append(aside);
       },
     });
+    update(s);
+    s.carousel.goTo(state.index, "instant");
     dialog.addEventListener(
       "cancel",
       (event) => {
@@ -1632,7 +1658,15 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
     const s = session;
     if (!s) return Promise.resolve();
     if (closePromise) return closePromise;
-    if (emit("beforeclose", s)) {
+    if (vetting) return Promise.resolve();
+    vetting = true;
+    let prevented: boolean;
+    try {
+      prevented = emit("beforeclose", s);
+    } finally {
+      vetting = false;
+    }
+    if (prevented) {
       if (fromHistory && historyWindow) pushHistory(historyWindow);
       return Promise.resolve();
     }
@@ -1658,8 +1692,8 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
         isAnimating: false,
         zoom: { ...identity },
       });
-      if (!fromHistory) leaveHistory();
-      else releaseHistory();
+      if (fromHistory) releaseHistory();
+      else await leaveHistory();
       emit("closed", undefined);
     })();
     return closePromise;
@@ -1740,6 +1774,10 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
     s.makeThumbs();
     s.centeredThumb = Number.NaN;
     const changed = target !== state.index;
+    if ((changed || !kept) && state.zoom.scale > 1) {
+      updateState({ zoom: { ...identity } });
+      applyZoom(s);
+    }
     syncingCarousel = true;
     if (s.carouselLoops !== looping()) reconnect(s, target);
     else {
@@ -1747,11 +1785,7 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
       if (!kept) s.carousel.goTo(target, "instant");
     }
     syncingCarousel = false;
-    publish({
-      index: target,
-      count: items.length,
-      ...(kept ? {} : { zoom: { ...identity } }),
-    });
+    publish({ index: target, count: items.length });
     update(s);
     if (changed) emit("change", s);
   }
