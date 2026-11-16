@@ -25,11 +25,11 @@ async function setup(browser: Browser, interval: number) {
   return page;
 }
 
-// Polls with timers, not frames, from `start` until the strip has not moved for 200ms.
-// Returns the slide it rests on and when it last moved.
-function settle(page: Page, start: "now" | "pointerup") {
+const stillFor = 200;
+
+function waitForRest(page: Page, start: "now" | "pointerup") {
   return page.evaluate(
-    (from) =>
+    ([from, quiet]) =>
       new Promise<{ index: number; time: number }>((resolve) => {
         const strip = document.getElementById("strip") as HTMLElement;
         const watch = (begin: number) => {
@@ -41,7 +41,7 @@ function settle(page: Page, start: "now" | "pointerup") {
               position = strip.scrollLeft;
               moved = now;
             }
-            if (now - moved > 200)
+            if (now - moved > quiet)
               resolve({
                 index: (
                   window as unknown as {
@@ -60,19 +60,25 @@ function settle(page: Page, start: "now" | "pointerup") {
             once: true,
           });
       }),
-    start,
+    [start, stillFor] as const,
   );
 }
 
+const stillBeforeRelease = 150;
+
 const motions = {
   "a released drag": async (page: Page) => {
-    const settled = settle(page, "pointerup");
-    // Holding still before the release makes its speed zero, so only the frames differ.
-    await swipe(page, { x: 500, y: 100 }, { x: 300, y: 100 }, { hold: 150 });
+    const settled = waitForRest(page, "pointerup");
+    await swipe(
+      page,
+      { x: 500, y: 100 },
+      { x: 300, y: 100 },
+      { hold: stillBeforeRelease },
+    );
     return settled;
   },
   "next()": async (page: Page) => {
-    const settled = settle(page, "now");
+    const settled = waitForRest(page, "now");
     await page.evaluate(() =>
       (window as unknown as { carousel: { next(): void } }).carousel.next(),
     );

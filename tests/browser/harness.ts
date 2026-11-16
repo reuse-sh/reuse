@@ -95,8 +95,6 @@ function isChromium(page: Page) {
   return page.context().browser()?.browserType().name() === "chromium";
 }
 
-// Dispatches pointer and touch events in the page for engines without a trusted touch input.
-// They run the page's handlers but cannot scroll natively, because the browser ignores untrusted input.
 async function synthesizeTouches(
   page: Page,
   type: "start" | "move" | "end",
@@ -161,8 +159,7 @@ async function synthesizeTouches(
   );
 }
 
-// Yields the share of `duration` that has passed, about once a frame, from 0 to 1.
-// Steps follow the clock, so the slower input calls of some engines do not slow the gesture.
+// Steps follow the clock because some engines' input calls take longer than a frame.
 async function* timeline(page: Page, duration: number) {
   const start = Date.now();
   yield 0;
@@ -173,8 +170,7 @@ async function* timeline(page: Page, duration: number) {
   }
 }
 
-// Presses, moves and releases one or two fingers. Chromium gets trusted touches through CDP,
-// which scroll natively; other engines get synthesized events.
+// Only CDP touches are trusted, and browsers scroll natively only for trusted input.
 async function touchPath(
   page: Page,
   duration: number,
@@ -200,10 +196,6 @@ async function touchPath(
   await cdp?.detach();
 }
 
-/**
- * Drags from `from` to `to` at `speed` px/ms, then holds still for `hold` ms before
- * releasing. A page with a coarse pointer gets a finger, any other page the mouse.
- */
 export async function swipe(
   page: Page,
   from: Point,
@@ -228,7 +220,6 @@ export async function swipe(
   await page.mouse.up();
 }
 
-/** Two fingers around `center`, moving from `from` to `to` px apart over `duration` ms. */
 export async function pinch(
   page: Page,
   center: Point,
@@ -248,7 +239,7 @@ export async function pinch(
   );
 }
 
-/** A wheel event with ctrlKey set, the way browsers report a trackpad pinch or Ctrl and the wheel. */
+// Browsers report a trackpad pinch as a wheel event with ctrlKey set.
 export async function ctrlWheel(page: Page, point: Point, deltaY: number) {
   if (await hasTouch(page)) {
     await page.evaluate(
@@ -273,10 +264,7 @@ export async function ctrlWheel(page: Page, point: Point, deltaY: number) {
   await page.keyboard.up("Control");
 }
 
-/**
- * Safari's trackpad pinch: gesturestart, gesturechange and gestureend with scale and rotation.
- * The events are plain events that carry those fields as properties, the shape of a GestureEvent.
- */
+// Safari reports a trackpad pinch as gesture events; plain events carry their fields here.
 export async function safariPinch(
   page: Page,
   point: Point,
@@ -308,33 +296,28 @@ export async function safariPinch(
 }
 
 export type LayoutReads = {
-  /** Calls to getBoundingClientRect and getComputedStyle since the page loaded. */
   total: number;
-  /** Calls made while a listener for that event type ran. */
-  during: Record<string, number>;
-  /** Events of that type that reached at least one listener. */
-  events: Record<string, number>;
+  insideListener: Record<string, number>;
+  eventsHandled: Record<string, number>;
 };
 
-/**
- * Counts getBoundingClientRect and getComputedStyle calls, and which of them run inside a
- * pointermove, wheel or scroll listener. Call before mount, because it wraps listeners as
- * they are added.
- */
+// Call before mount: it wraps listeners as the page adds them.
 export async function countLayoutReads(page: Page) {
   await page.addInitScript(() => {
     const watched = new Set(["pointermove", "wheel", "scroll"]);
     const reads = {
       total: 0,
-      during: {} as Record<string, number>,
-      events: {} as Record<string, number>,
+      insideListener: {} as Record<string, number>,
+      eventsHandled: {} as Record<string, number>,
     };
     const seen = new WeakSet<Event>();
     let current: string | undefined;
     const counted = <T extends (...args: never[]) => unknown>(read: T) =>
       function (this: unknown, ...args: Parameters<T>) {
         reads.total++;
-        if (current) reads.during[current] = (reads.during[current] ?? 0) + 1;
+        if (current)
+          reads.insideListener[current] =
+            (reads.insideListener[current] ?? 0) + 1;
         return read.apply(this, args);
       };
     Element.prototype.getBoundingClientRect = counted(
@@ -353,7 +336,7 @@ export async function countLayoutReads(page: Page) {
         wrapper = function (this: unknown, event: Event) {
           if (!seen.has(event)) {
             seen.add(event);
-            reads.events[type] = (reads.events[type] ?? 0) + 1;
+            reads.eventsHandled[type] = (reads.eventsHandled[type] ?? 0) + 1;
           }
           const outer = current;
           current = type;
@@ -401,7 +384,6 @@ export async function countLayoutReads(page: Page) {
   };
 }
 
-/** Records every animation frame's duration and, where the engine reports them, long tasks. */
 export async function recordFrames(page: Page) {
   await page.evaluate(() => {
     const record = {
@@ -437,10 +419,7 @@ export async function recordFrames(page: Page) {
   };
 }
 
-/**
- * Replaces requestAnimationFrame with frames every `interval` ms, so a test can run the same
- * motion at 60Hz and 120Hz. Call before mount.
- */
+// Call before mount, so the page's first frame already runs on the fixed interval.
 export async function frameInterval(page: Page, interval: number) {
   await page.addInitScript((ms) => {
     const queue = new Map<number, FrameRequestCallback>();

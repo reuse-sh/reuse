@@ -5,8 +5,7 @@ import { photo } from "./harness";
 
 const packages = join(import.meta.dirname, "../../packages");
 
-// A page the way a theme or a plugin writes it: files and module scripts, no import map.
-test("the browser builds run from plain files without an import map", async ({
+test("the browser builds run on a theme page with plain files and no import map", async ({
   page,
 }) => {
   await page.route("http://theme.test/**", async (route) => {

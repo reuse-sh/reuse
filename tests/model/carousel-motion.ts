@@ -30,12 +30,6 @@ function pointer(target: EventTarget, type: string, x: number, kind: string) {
   target.dispatchEvent(event);
 }
 
-/**
- * The carousel moved by every input the motion work touches: a mouse drag and its release,
- * next, goTo, a wheel, a touch, refresh, destroy and the passing of time. jsdom has no
- * scrolling, so the world plays the browser: a scroll that ends while snapping is on lands
- * on the nearest snap point.
- */
 export function carouselMotion(): World {
   vi.useFakeTimers();
   vi.stubGlobal("matchMedia", () =>
@@ -73,7 +67,7 @@ export function carouselMotion(): World {
   let held: number | undefined;
   let destroyed = false;
   const snapping = () => viewport.style.scrollSnapType !== "none";
-  // The browser: with snapping on and nothing held, a resting strip sits on a snap point.
+  // jsdom has no scroll snapping, so a resting strip is moved to the nearest snap point here.
   const settle = () => {
     if (destroyed || held !== undefined || !snapping()) return;
     if (viewport.scrollLeft === nearest(viewport.scrollLeft)) return;

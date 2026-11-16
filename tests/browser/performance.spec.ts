@@ -15,9 +15,7 @@ const tiles = Array.from(
     `<a href="${photo(index)}"><img src="${photo(index)}" alt="Photo ${index + 1}" width="120" height="80"></a>`,
 ).join("");
 
-// Opens the lightbox from its first tile, pages through ten photos with mouse drags,
-// zooms in and out with Ctrl and the wheel, and closes with Escape.
-async function session(
+async function browseTenPhotos(
   page: Page,
   ready: () => Promise<unknown> = async () => {},
 ) {
@@ -84,7 +82,7 @@ test.describe("lightbox performance", { tag: "@desktop" }, () => {
       "Frame budgets and long tasks are measured in Chromium.",
     );
     let recording: Awaited<ReturnType<typeof recordFrames>> | undefined;
-    const { index, zoomed } = await session(page, async () => {
+    const { index, zoomed } = await browseTenPhotos(page, async () => {
       recording = await recordFrames(page);
     });
     const { frames, longTasks } = (await recording?.stop()) ?? {
@@ -102,12 +100,12 @@ test.describe("lightbox performance", { tag: "@desktop" }, () => {
     page,
   }) => {
     const reads = await countLayoutReads(page);
-    await session(page);
-    const { during, events } = await reads.read();
-    expect(events.pointermove).toBeGreaterThan(0);
-    expect(events.scroll).toBeGreaterThan(0);
-    expect(during.pointermove ?? 0).toBe(0);
-    expect(during.scroll ?? 0).toBe(0);
+    await browseTenPhotos(page);
+    const { insideListener, eventsHandled } = await reads.read();
+    expect(eventsHandled.pointermove).toBeGreaterThan(0);
+    expect(eventsHandled.scroll).toBeGreaterThan(0);
+    expect(insideListener.pointermove ?? 0).toBe(0);
+    expect(insideListener.scroll ?? 0).toBe(0);
   });
 
   test("reads no layout inside a wheel listener", async ({ page }) => {
@@ -127,8 +125,8 @@ test.describe("lightbox performance", { tag: "@desktop" }, () => {
       await ctrlWheel(page, middle, delta);
       await page.waitForTimeout(16);
     }
-    const { during, events } = await reads.read();
-    expect(events.wheel).toBeGreaterThan(0);
-    expect(during.wheel ?? 0).toBe(0);
+    const { insideListener, eventsHandled } = await reads.read();
+    expect(eventsHandled.wheel).toBeGreaterThan(0);
+    expect(insideListener.wheel ?? 0).toBe(0);
   });
 });

@@ -21,8 +21,7 @@ type Seen = {
   scale?: number;
 };
 
-// A full-page target that records pointer, wheel and gesture events.
-async function target(page: Page) {
+async function recordingPad(page: Page) {
   await mount(
     page,
     `<div id="pad" style="position:fixed;inset:0;touch-action:none"></div>`,
@@ -86,7 +85,7 @@ test.describe("harness", { tag: ["@touch", "@desktop"] }, () => {
   test("swipe moves at the asked speed and holds before release", async ({
     page,
   }) => {
-    const seen = await target(page);
+    const seen = await recordingPad(page);
     const touch = await page.evaluate(
       () => matchMedia("(pointer: coarse)").matches,
     );
@@ -113,7 +112,7 @@ test.describe("harness", { tag: ["@touch", "@desktop"] }, () => {
   });
 
   test("pinch moves two fingers apart around the center", async ({ page }) => {
-    const seen = await target(page);
+    const seen = await recordingPad(page);
     test.skip(
       !(await page.evaluate(() => matchMedia("(pointer: coarse)").matches)),
       "A desktop pinch is a trackpad, which ctrlWheel and safariPinch cover.",
@@ -133,7 +132,7 @@ test.describe("harness", { tag: ["@touch", "@desktop"] }, () => {
   });
 
   test("ctrlWheel reports a wheel with ctrlKey", async ({ page }) => {
-    const seen = await target(page);
+    const seen = await recordingPad(page);
     await ctrlWheel(page, { x: 200, y: 200 }, -40);
     const wheel = (await seen()).find((event) => event.type === "wheel");
     expect(wheel?.ctrl).toBe(true);
@@ -143,7 +142,7 @@ test.describe("harness", { tag: ["@touch", "@desktop"] }, () => {
   test("safariPinch reports Safari's gesture events up to the scale", async ({
     page,
   }) => {
-    const seen = await target(page);
+    const seen = await recordingPad(page);
     await safariPinch(page, { x: 200, y: 200 }, { scale: 2 });
     const events = await seen();
     expect(events[0].type).toBe("gesturestart");
@@ -155,17 +154,17 @@ test.describe("harness", { tag: ["@touch", "@desktop"] }, () => {
     page,
   }) => {
     const reads = await countLayoutReads(page);
-    await target(page);
+    await recordingPad(page);
     await page.evaluate(() => {
       const pad = document.getElementById("pad") as HTMLElement;
       pad.addEventListener("pointermove", () => pad.getBoundingClientRect());
       getComputedStyle(pad);
     });
     await swipe(page, { x: 300, y: 200 }, { x: 200, y: 200 });
-    const { total, during, events } = await reads.read();
-    expect(events.pointermove).toBeGreaterThan(0);
-    expect(during.pointermove).toBe(events.pointermove);
-    expect(total).toBe(events.pointermove + 1);
+    const { total, insideListener, eventsHandled } = await reads.read();
+    expect(eventsHandled.pointermove).toBeGreaterThan(0);
+    expect(insideListener.pointermove).toBe(eventsHandled.pointermove);
+    expect(total).toBe(eventsHandled.pointermove + 1);
   });
 
   test("recordFrames records frame durations", async ({ page }) => {

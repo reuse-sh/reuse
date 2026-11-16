@@ -11,7 +11,7 @@ const routes = libraries.flatMap((library) =>
     .filter(
       (page) =>
         page.path === "getting-started" ||
-        page.path.startsWith("examples/") ||
+        (page.path.startsWith("examples/") && page.build !== undefined) ||
         page.path.startsWith("guides/"),
     )
     .map((page) => `${library.slug}/${page.path}`),

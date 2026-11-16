@@ -2,8 +2,11 @@ import type { UsagePlatform } from "./usage-types.js";
 /** A name and its explanation: an API entry or a principle. */
 export type Row = readonly [name: string, text: string];
 
-/** A principle, and the repository path of the test that keeps it once one does. */
-export type Principle = readonly [name: string, text: string, test?: string];
+export type Principle = readonly [
+  name: string,
+  text: string,
+  testPath?: string,
+];
 
 /** One documentation page. The path is relative to the library, "" for its overview. */
 export interface DocPage {

@@ -62,13 +62,8 @@ function stubBrowser() {
   });
 }
 
-/**
- * A page of six tiles and one lightbox, driven by open, close, a swipe to the next photo,
- * zoom, a window resize, destroy and the passing of time, in any order. Close is not awaited,
- * so every later step can land while it is still running.
- */
 export function lightboxSession(): World {
-  // jsdom decodes images on setImmediate, which the lightbox never calls, so it stays real.
+  // jsdom decodes images on setImmediate, so it stays real.
   vi.useFakeTimers({
     toFake: [
       "setTimeout",
@@ -106,7 +101,6 @@ export function lightboxSession(): World {
   };
   return {
     steps: {
-      // A destroyed lightbox refuses to open by design, so the step stops there.
       open: () => {
         if (!destroyed) lightbox.open(items, 2);
       },

@@ -26,7 +26,6 @@ export default defineConfig({
         viewport: { width: 1000, height: 700 },
       },
     },
-    // Tests tagged @touch run on both phones, tests tagged @desktop on both laptops.
     {
       name: "chromium-touch",
       testDir: "tests/browser",
