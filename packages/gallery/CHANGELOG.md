@@ -1,5 +1,11 @@
 # @reuse-sh/gallery
 
+## 0.0.4
+
+### Patch Changes
+
+- d77de64: The masonry fallback measures items in their own lane under `repeat(auto-fit, ...)` columns instead of across the whole width, and reads a percentage row gap as no gap, as native grid lanes do.
+
 ## 0.0.3
 
 ### Patch Changes
