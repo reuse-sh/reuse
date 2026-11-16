@@ -1,6 +1,6 @@
 {
   "name": "@reuse-sh/gallery",
-  "version": "0.0.4",
+  "version": "0.0.5",
   "description": "Justified rows and masonry for galleries, sized by CSS, with native grid-lanes where the browser has it.",
   "keywords": [
     "reuse",
