@@ -210,13 +210,14 @@ export function createJustifiedGallery(
     }
   }
 
+  // A child out of the flow (a spinner, an overlay) takes no place in a row.
   const readItems = () =>
-    Array.from(container.children).filter(
-      (child): child is HTMLElement =>
-        child instanceof view.HTMLElement &&
-        (child.hasAttribute(HIDDEN) ||
-          view.getComputedStyle(child).display !== "none"),
-    );
+    Array.from(container.children).filter((child): child is HTMLElement => {
+      if (!(child instanceof view.HTMLElement)) return false;
+      const styles = view.getComputedStyle(child);
+      if (/^(absolute|fixed)$/.test(styles.position)) return false;
+      return child.hasAttribute(HIDDEN) || styles.display !== "none";
+    });
 
   // Once the page sets the ratio itself, it is the page's from then on, even
   // when it later sets a value the controller once wrote.

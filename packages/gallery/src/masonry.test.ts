@@ -263,4 +263,14 @@ describe("createMasonry", () => {
     await new Promise((resolve) => requestAnimationFrame(resolve));
     expect(items()[3].style.gridColumn).toBe("3 / span 1");
   });
+
+  it("leaves out a child taken out of the flow, such as a spinner", () => {
+    const { container, items } = masonry([100, 50, 80]);
+    const spinner = document.createElement("li");
+    spinner.style.position = "absolute";
+    container.prepend(spinner);
+    createMasonry(container);
+    expect(spinner.style.gridColumn).toBe("");
+    expect(items()[1].style.gridColumn).toBe("1 / span 1");
+  });
 });

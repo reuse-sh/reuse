@@ -2,6 +2,7 @@
 
 import {
   type ComponentPropsWithoutRef,
+  forwardRef,
   type Ref,
   useCallback,
   useEffect,
@@ -77,18 +78,18 @@ function useReady<T>(instance: T | null, onReady?: (instance: T) => void) {
 
 export interface JustifiedGalleryProps extends ComponentPropsWithoutRef<"div"> {
   options?: JustifiedGalleryOptions;
-  ref?: Ref<HTMLDivElement>;
   onReady?: (gallery: JustifiedGalleryController) => void;
 }
 
-export function JustifiedGallery({
-  options,
+// forwardRef rather than a ref prop, so the components run on React 18, the
+// version WordPress ships, as well as on 19.
+export const JustifiedGallery = forwardRef<
+  HTMLDivElement,
+  JustifiedGalleryProps
+>(function JustifiedGallery(
+  { options, onReady, className, children, ...props },
   ref,
-  onReady,
-  className,
-  children,
-  ...props
-}: JustifiedGalleryProps) {
+) {
   const { ref: setElement, gallery } = useJustifiedGallery(options);
   useReady(gallery, onReady);
   const mergedRef = useMergedRef(setElement, ref);
@@ -101,30 +102,25 @@ export function JustifiedGallery({
       {children}
     </div>
   );
-}
+});
 
 export interface MasonryProps extends ComponentPropsWithoutRef<"div"> {
-  ref?: Ref<HTMLDivElement>;
   onReady?: (masonry: MasonryController) => void;
 }
 
-export function Masonry({
-  ref,
-  onReady,
-  className,
-  children,
-  ...props
-}: MasonryProps) {
-  const { ref: setElement, masonry } = useMasonry();
-  useReady(masonry, onReady);
-  const mergedRef = useMergedRef(setElement, ref);
-  return (
-    <div
-      {...props}
-      ref={mergedRef}
-      className={["re-masonry", className].filter(Boolean).join(" ")}
-    >
-      {children}
-    </div>
-  );
-}
+export const Masonry = forwardRef<HTMLDivElement, MasonryProps>(
+  function Masonry({ onReady, className, children, ...props }, ref) {
+    const { ref: setElement, masonry } = useMasonry();
+    useReady(masonry, onReady);
+    const mergedRef = useMergedRef(setElement, ref);
+    return (
+      <div
+        {...props}
+        ref={mergedRef}
+        className={["re-masonry", className].filter(Boolean).join(" ")}
+      >
+        {children}
+      </div>
+    );
+  },
+);
