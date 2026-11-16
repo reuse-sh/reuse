@@ -493,6 +493,46 @@ test.describe("masonry", () => {
     }
   });
 
+  test("measures items in their own lane under auto-fit, and reads a percentage row gap as none", async ({
+    page,
+  }) => {
+    const layout = async (columns: string, rowGap: string) => {
+      await mount(
+        page,
+        `<style>#masonry{width:800px;column-gap:10px;row-gap:${rowGap};grid-template-columns:${columns}}#masonry>div{background:#ccc}#masonry img{display:block;width:100%;height:auto}</style>
+<div id="masonry" class="re-masonry">${heights
+          .slice(0, 12)
+          .map(
+            (height, index) =>
+              `<div><img alt="" width="200" height="${height + (index % 3) * 40}" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='${height + (index % 3) * 40}'/%3E"></div>`,
+          )
+          .join("")}</div>`,
+        ["gallery/styles.css"],
+      );
+      await page.evaluate(async () => {
+        await Promise.all(
+          Array.from(document.images).map((image) =>
+            image.decode().catch(() => undefined),
+          ),
+        );
+        CSS.supports = () => false;
+        const { createMasonry } = await import("/modules/gallery/index.js");
+        createMasonry(document.getElementById("masonry") as HTMLElement);
+        await new Promise((resolve) =>
+          requestAnimationFrame(() => requestAnimationFrame(resolve)),
+        );
+      });
+      return masonryRects(page);
+    };
+    const filled = await layout("repeat(auto-fill, minmax(150px, 1fr))", "0px");
+    expect(await layout("repeat(auto-fit, minmax(150px, 1fr))", "0px")).toEqual(
+      filled,
+    );
+    expect(await layout("repeat(auto-fill, minmax(150px, 1fr))", "5%")).toEqual(
+      filled,
+    );
+  });
+
   test("places the items again when a picture grows and when items change", async ({
     page,
   }) => {
