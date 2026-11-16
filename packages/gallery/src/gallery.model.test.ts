@@ -9,13 +9,26 @@ import { createJustifiedGallery } from "./justified.js";
 import { placeLanes } from "./lanes.js";
 import { createMasonry } from "./masonry.js";
 
-const settle = () => new Promise((resolve) => setTimeout(resolve));
+// Mutation records are delivered as a microtask, and so is a frame here.
+const settle = async () => {
+  for (let turn = 0; turn < 3; turn++) await Promise.resolve();
+};
 
 beforeEach(() => {
   vi.stubGlobal("ResizeObserver", FakeResizeObserver);
   vi.stubGlobal("CSS", { supports: () => false });
-  vi.stubGlobal("requestAnimationFrame", (run: () => void) => setTimeout(run));
-  vi.stubGlobal("cancelAnimationFrame", (id: number) => clearTimeout(id));
+  // Frames run as microtasks: thousands of worlds wait on them, and the order
+  // of events is what is explored, not the time between them.
+  const cancelled = new Set<number>();
+  let frames = 0;
+  vi.stubGlobal("requestAnimationFrame", (run: (time: number) => void) => {
+    const id = ++frames;
+    queueMicrotask(() => {
+      if (!cancelled.delete(id)) run(0);
+    });
+    return id;
+  });
+  vi.stubGlobal("cancelAnimationFrame", (id: number) => cancelled.add(id));
 });
 
 afterEach(() => {
@@ -57,7 +70,8 @@ function justifiedWorld(): World {
     image.setAttribute("height", "100");
     container.append(image);
   };
-  for (const ratio of [1.5, 0.67, 1, 1.78, 0.8, 2.4, 1.33, 0.56, 1.5, 1]) {
+  // Two full rows and a last one that is not: every row kind, few items.
+  for (const ratio of [1.5, 0.67, 1.78, 2.4, 1.33, 0.8]) {
     add(ratio);
   }
   document.body.append(container);
@@ -73,8 +87,10 @@ function justifiedWorld(): World {
   };
   return {
     steps: {
-      "scrollbar appears": () => resize(visible - 15),
-      "window widens": () => resize(visible + 400),
+      // Absolute widths, so a width the run comes back to is the same state.
+      "scrollbar appears": () => resize(985),
+      "scrollbar goes": () => resize(1000),
+      "window widens": () => resize(1400),
       hide: async () => {
         hiddenAs ??= snapshot(container);
         hidden = true;
@@ -157,9 +173,9 @@ function masonryWorld(): World {
   let hiddenAs: Map<Element, string> | undefined;
   return {
     steps: {
-      "first item grows": async () => {
+      "first item changes height": async () => {
         const first = container.firstElementChild as Element;
-        sizes.set(first, (sizes.get(first) ?? 0) + 60);
+        sizes.set(first, sizes.get(first) === 160 ? 100 : 160);
         await resized(first);
       },
       "item added": async () => {
@@ -221,8 +237,9 @@ function masonryWorld(): World {
   };
 }
 
-// Every order of four steps is a few thousand jsdom worlds: both together
-// measured 11.1s locally, past vitest's 5s default.
+// Every order of four steps is several hundred jsdom worlds: both together
+// measured 6.0s locally and 25.7s on the release runner beside the other
+// packages' tests, past vitest's 5s default.
 const exhaustive = { timeout: 30_000 };
 
 it(
