@@ -65,7 +65,7 @@ Entry point @reuse-sh/carousel/controls: bindCarouselControls(root: HTMLElement,
 - [data-carousel-counter]: one text node with strings.counter(index, count), written only when the text changes; with data-roll each new text rolls in over 200ms, up going forward and down going back, and without the roll under reduced motion
 - [data-carousel-play]: play() and pause() by the visitor, aria-pressed="true" and the strings.pause label while autoplay is requested, aria-pressed="false" and strings.play otherwise
 - [data-carousel-progress]: role="slider" over pages (aria-valuemin 1, aria-valuemax pageCount, aria-valuenow pageIndex + 1, aria-valuetext strings.slide), --re-carousel-progress with the strip progress, a pointer drag that goes to the nearest page, ArrowRight, ArrowUp and PageUp forward, ArrowLeft, ArrowDown and PageDown back (left and right swap in right-to-left layouts), Home and End
-Controls inside an element within root whose data-carousel-controls names another viewport are left to that one. Announcements use the carousel's strings. The binder gives the viewport a generated id when it has none. The returned function removes every listener, created element and attribute it added and restores the ones it changed.
+Controls inside an element whose data-carousel-controls names another viewport are left to that one, unless that element also holds root. Announcements use the carousel's strings. The binder gives the viewport a generated id when it has none. The returned function removes every listener, created element and attribute it added and restores the ones it changed.
 
 ## Planned
 

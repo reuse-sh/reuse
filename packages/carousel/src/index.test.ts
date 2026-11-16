@@ -1334,10 +1334,43 @@ describe("one state for every control", () => {
       "settle 1 true",
       "pause 1 false",
       "play 1 true",
-      "pause 2 false",
       "change 2 true",
+      "pause 2 false",
       "change 0 false",
     ]);
+  });
+
+  it("reports every change in order when a change handler moves the carousel again", () => {
+    for (const [react, expected, playing] of [
+      [
+        (carousel: ReturnType<typeof createCarousel>) => carousel.goTo(0),
+        ["change 7 true", "play 7 true", "change 0 true"],
+        true,
+      ],
+      [
+        (carousel: ReturnType<typeof createCarousel>) => carousel.pause(),
+        ["change 7 true", "play 7 true", "pause 7 false"],
+        false,
+      ],
+    ] as const) {
+      const { viewport, slides } = fixture(Array(8).fill(100), 100);
+      for (const slide of slides.slice(0, 7)) slide.remove();
+      const carousel = createCarousel(viewport, { autoplay: 5000 });
+      cleanups.push(carousel.destroy);
+      const events: string[] = [];
+      for (const type of ["change", "play", "pause"])
+        viewport.addEventListener(`re-carousel:${type}`, (event) => {
+          const { detail } = event as CustomEvent;
+          events.push(`${type} ${detail.index} ${detail.isPlaying}`);
+        });
+      viewport.addEventListener("re-carousel:change", () => react(carousel), {
+        once: true,
+      });
+      viewport.prepend(...slides.slice(0, 7));
+      carousel.refresh();
+      expect(events).toEqual(expected);
+      expect(carousel.getState().isPlaying).toBe(playing);
+    }
   });
 
   it("keeps a goTo on a hidden strip for the first refresh that finds overflow", () => {
@@ -1690,6 +1723,14 @@ describe("controls binder", () => {
       Array(8).fill(100),
       100,
     );
+    const wrapper = document.createElement("div");
+    wrapper.dataset.carouselControls = "thumbs";
+    root.before(wrapper);
+    wrapper.append(root);
+    root.insertAdjacentHTML(
+      "beforeend",
+      "<button data-carousel-prev></button>",
+    );
     const outside = document.createElement("div");
     outside.dataset.carouselControls = "photos";
     outside.innerHTML = "<div data-carousel-dots></div>";
@@ -1707,6 +1748,9 @@ describe("controls binder", () => {
     expect(shown()).toBe("0 1 2 3n 4f");
     click(root.querySelector("[data-carousel-next]"));
     expect(carousel.getState().index).toBe(0);
+    expect(
+      root.querySelector<HTMLButtonElement>("[data-carousel-prev]")?.disabled,
+    ).toBe(true);
     carousel.goTo(3, "instant");
     expect(shown()).toBe("0 1 2 3 4f");
     carousel.goTo(4, "instant");

@@ -307,6 +307,8 @@ export function createCarousel(
     autoplayProgress: 0,
   });
   let emitted = state;
+  const events: [string, CarouselState][] = [];
+  let dispatching = false;
 
   function listen(
     target: EventTarget,
@@ -525,13 +527,17 @@ export function createCarousel(
     state = Object.freeze(next);
     options.onChange?.(state);
     for (const listener of listeners) listener(state);
-    // A listener that moves the carousel again publishes and reports the newer state itself.
     const from = emitted;
     const to = state;
     emitted = to;
-    if (to.index !== from.index) emit("change", to);
-    if (emitted === to && to.isPlaying !== from.isPlaying)
-      emit(to.isPlaying ? "play" : "pause", to);
+    if (to.index !== from.index) events.push(["change", to]);
+    if (to.isPlaying !== from.isPlaying)
+      events.push([to.isPlaying ? "play" : "pause", to]);
+    if (dispatching) return;
+    dispatching = true;
+    for (let event = events.shift(); event; event = events.shift())
+      emit(...event);
+    dispatching = false;
   }
 
   function tick() {
