@@ -30,6 +30,7 @@ A page error, a console error, a failed request for the site's own assets or an 
 - The site has no sign-in and no data store. Runtime state (pid, log, screenshots without `--out`) lives in a temp directory keyed by the checkout path.
 - Playwright and its Chromium come from the repository's own `@playwright/test`.
 - Library pages come from `packages/catalog`. `features.json` maps each route pattern to one feature kind with an `expand` regex, and the CLI expands it against `/sitemap.xml`, so a new library or page needs no map change. A new route file does, and `map` reports it.
+- `pnpm build` and `next dev` share `apps/site/.next`. When `check` reports a reload loop, stop the server, delete `apps/site/.next/dev`, and start again.
 - In `next dev`, Next.js adds its own portal to the tab order. Ignore `nextjs-portal` in focus findings.
 
 ## Seed

@@ -590,6 +590,14 @@ async function check(args) {
       }
       const page = await context.newPage();
       const errors = [];
+      let loads = 0;
+      page.on("load", () => {
+        loads++;
+        if (loads === 4)
+          errors.push(
+            "reload loop: the page reloaded 3 times, clear apps/site/.next/dev and start again",
+          );
+      });
       page.on("pageerror", (error) =>
         errors.push(`page error: ${error.message}`),
       );
@@ -652,10 +660,12 @@ async function check(args) {
           for (const [kind, count] of Object.entries(counts))
             console.log(`warn ${feature.id} ${kind} ${count}`);
         }
-        await page.screenshot({ path: shot, fullPage: full });
+        await page.screenshot({ path: shot, fullPage: full, timeout: 30_000 });
       } catch (error) {
         errors.push(error.message.split("\n")[0]);
-        await page.screenshot({ path: shot, fullPage: full }).catch(() => {});
+        await page
+          .screenshot({ path: shot, fullPage: full, timeout: 30_000 })
+          .catch(() => {});
       }
       if (errors.length) {
         console.log(`fail ${feature.id} ${errors.join(" | ")} ${shot}`);
