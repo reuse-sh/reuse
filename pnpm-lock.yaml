@@ -59,6 +59,9 @@ importers:
       '@reuse-sh/core':
         specifier: workspace:*
         version: link:../../packages/core
+      '@reuse-sh/gallery':
+        specifier: workspace:*
+        version: link:../../packages/gallery
       '@reuse-sh/gradients':
         specifier: workspace:*
         version: link:../../packages/gradients

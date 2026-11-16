@@ -1,0 +1,11 @@
+@reference "../../app/globals.css";
+@layer components {
+  .re-jg-rows {
+    --re-justified-row-height: 180px;
+  }
+  @media (width <= 640px) {
+    .re-jg-rows {
+      --re-justified-row-height: 120px;
+    }
+  }
+}

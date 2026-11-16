@@ -60,6 +60,46 @@ function stage(slug: MenuSlug, cleanups: (() => void)[]) {
         el("span", "pk-ann-label", "Boathouse"),
         el("span", "pk-ann-pin", "1"),
       );
+    case "justified-gallery":
+      return el(
+        "div",
+        "pk pk-jg",
+        ...[
+          [1.78, 0.67, 1.5],
+          [1, 2.33],
+          [0.75, 1.33, 1.5],
+        ].map((ratios, row) =>
+          el(
+            "span",
+            "pk-jg-row",
+            ...ratios.map((ratio, i) => {
+              const image = img((row * 3 + i) % photos.length);
+              image.style.setProperty("--pk-ratio", String(ratio));
+              return image;
+            }),
+          ),
+        ),
+      );
+    case "masonry":
+      return el(
+        "div",
+        "pk pk-mas",
+        ...[
+          [52, 38, 24],
+          [30, 56, 30],
+          [44, 28, 46],
+        ].map((heights, lane) =>
+          el(
+            "span",
+            "pk-mas-lane",
+            ...heights.map((height, i) => {
+              const image = img((lane * 3 + i) % photos.length);
+              image.style.setProperty("--pk-height", `${height}px`);
+              return image;
+            }),
+          ),
+        ),
+      );
     case "avatars": {
       const single = el("span");
       const group = el("div", "pk-av-group");

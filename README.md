@@ -30,6 +30,8 @@ What carries from one product to the next is not the code but the rules behind i
 - [Lightbox](https://reuse.sh/lightbox), an image viewer that grows out of the thumbnail and zooms into the detail.
 - [Carousel](https://reuse.sh/carousel), a scroll-snap strip with drag, loop and autoplay, built on your own markup.
 - [Annotations](https://reuse.sh/annotations), areas, arrows and notes on an image, kept in one format your tools can share.
+- [Justified gallery](https://reuse.sh/justified-gallery), rows of pictures that keep their proportions and fill the width edge to edge.
+- [Masonry](https://reuse.sh/masonry), cards stacked into columns, natively with grid lanes where the browser has them.
 
 ### Interface
 

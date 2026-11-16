@@ -13,6 +13,7 @@ const names = [
   "interactions",
   "avatars",
   "shadows",
+  "gallery",
 ];
 const results = [];
 for (const name of names) {

@@ -1,6 +1,6 @@
 # Selected collection
 
-The public collection is limited to eleven libraries: Lightbox, Carousel, Annotations, Loaders with ThinkingDots, Shadows with card patterns, Easing gradients with a fade edge for horizontal scrollers, Floating tooltip, Moving highlight, Hold to confirm, Copy button, and Avatars. The /tools page lists the outside interface tools we trust, from typed data in packages/catalog. The original 54-entry candidate list is superseded.
+The public collection is limited to thirteen libraries: Lightbox, Carousel, Annotations, Justified gallery, Masonry, Loaders with ThinkingDots, Shadows with card patterns, Easing gradients with a fade edge for horizontal scrollers, Floating tooltip, Moving highlight, Hold to confirm, Copy button, and Avatars. The /tools page lists the outside interface tools we trust, from typed data in packages/catalog. The original 54-entry candidate list is superseded.
 
 ## Architecture
 
@@ -12,6 +12,6 @@ Choose a real consumer, keep platform behavior, implement the repeated mechanics
 
 ## Known boundaries
 
-Repeat needs enough content to cover the viewport and largest slide without cloning original interactive DOM. Images are the lightbox media baseline. Rich media, product-specific widget presentation, and annotation scene cloning require separate adapters. Easing gradients covers linear and radial gradients between two colors and the fade edge. Multi-color ramps remain candidates until a concrete usage is selected.
+Repeat needs enough content to cover the viewport and largest slide without cloning original interactive DOM. Images are the lightbox media baseline. Rich media, product-specific widget presentation, and annotation scene cloning require separate adapters. Easing gradients covers linear and radial gradients between two colors and the fade edge. Multi-color ramps remain candidates until a concrete usage is selected. Justified gallery needs every picture's proportions before its image loads, from width and height attributes or --re-ratio, or the rows shift when it loads. Masonry's fallback places items the way css-grid-3 §4.4 does and nothing more; native grid lanes ship only in Safari 26.4 and later.
 
 Existing products are source and integration references. These new packages are not yet installed in those products. The current task creates the shared implementations and proves standalone/React use; it does not perform production migrations.
