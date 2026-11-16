@@ -103,6 +103,27 @@ test.describe("carousel spring", { tag: "@desktop" }, () => {
     expect(values.at(-1)?.left).toBe(900);
   });
 
+  test("next() during a native smooth scroll takes over from it", async ({
+    page,
+  }) => {
+    await setup(page);
+    await page.evaluate(() => {
+      const { carousel } = window as unknown as { carousel: Strip };
+      carousel.goTo(2);
+      return new Promise((resolve) => setTimeout(resolve, 800));
+    });
+    await page.evaluate(() => {
+      document
+        .getElementById("strip")
+        ?.scrollTo({ left: 300, behavior: "smooth" });
+      return new Promise((resolve) => setTimeout(resolve, 60));
+    });
+    const values = await pressNext(page, [0]);
+    const rest = values.at(-1)?.left ?? 0;
+    expect(rest % 300).toBe(0);
+    expect(rest).toBeGreaterThanOrEqual(600);
+  });
+
   test("a wheel during a move stops the spring and the strip snaps to the point nearest where it stopped", async ({
     page,
   }) => {

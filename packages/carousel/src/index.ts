@@ -215,6 +215,7 @@ export function createCarousel(
     target: number;
     time: number;
     frequency: number;
+    fresh: boolean;
   } | null = null;
   let scrolling = false;
   let suppressClick = false;
@@ -483,7 +484,11 @@ export function createCarousel(
 
   function springFrame(now: number) {
     if (!spring) return;
-    if (Math.abs(position() - written) > 1) {
+    // A native scroll can still run when a spring starts; the spring's first write ends it.
+    if (spring.fresh) {
+      spring.value = position() + stretch;
+      spring.fresh = false;
+    } else if (Math.abs(position() - written) > 1) {
       yieldToScroll();
       return;
     }
@@ -519,7 +524,6 @@ export function createCarousel(
     rest: number,
     moving: typeof spring = null,
   ) {
-    if (!moving) written = position();
     const value = moving?.value ?? position() + stretch;
     const distance = target - value;
     const speed = Math.abs(distance) < REST_DISTANCE ? 0 : velocity;
@@ -529,6 +533,7 @@ export function createCarousel(
       velocity: speed,
       target,
       time: moving?.time ?? window.performance.now(),
+      fresh: moving?.fresh ?? true,
       frequency:
         speed * distance > 0
           ? Math.max(floor, Math.abs((2 * speed) / distance))
@@ -903,9 +908,11 @@ export function createCarousel(
     if (goalIndex >= 0 && enabled && spring) {
       const shift = position() - before;
       spring.value += shift;
-      spring.target = glidingFree
-        ? spring.target + shift
-        : targetAt(goalIndex, spring.target + shift);
+      spring.target = !glidingFree
+        ? targetAt(goalIndex, spring.target + shift)
+        : span
+          ? spring.target + shift
+          : clamp(spring.target + shift, max);
       pendingIndex = goalIndex;
       pendingPosition = spring.target;
       publish(goalIndex);

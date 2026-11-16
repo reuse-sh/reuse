@@ -28,6 +28,7 @@
 }
 .re-lightbox-viewport {
   --re-carousel-press-scale: 1;
+  --re-carousel-press-duration: 0s;
   position: relative;
   display: flex;
   width: 100%;

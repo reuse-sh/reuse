@@ -1076,6 +1076,29 @@ describe("one motion and strip state", () => {
     expect(viewport.scrollLeft).toBe(rest);
   });
 
+  it("keeps a free glide inside the strip when a refresh during it shrinks the scroll range", () => {
+    const { viewport, slides } = fixture(Array(10).fill(300), 1000);
+    viewport.style.scrollSnapType = "none";
+    const carousel = createCarousel(viewport);
+    cleanups.push(carousel.destroy);
+    carousel.goTo(5, "instant");
+    vi.advanceTimersByTime(500);
+    pointer(viewport, "pointerdown", 300);
+    for (const x of [290, 270, 250]) {
+      vi.advanceTimersByTime(16);
+      pointer(window, "pointermove", x);
+    }
+    pointer(window, "pointerup", 250);
+    vi.advanceTimersByTime(48);
+    Object.defineProperty(viewport, "clientWidth", { get: () => 1150 });
+    carousel.refresh();
+    vi.advanceTimersByTime(5000);
+    expect(slides.map((slide) => slide.style.translate)).toEqual(
+      Array(10).fill(""),
+    );
+    expect(viewport.scrollLeft).toBeLessThanOrEqual(1850);
+  });
+
   it("leaves a mouse drag that starts inside a nested strip with room to scroll to that strip", () => {
     const outer = fixture([100, 100, 100]);
     const inner = document.createElement("div");
