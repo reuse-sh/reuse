@@ -1,5 +1,9 @@
+import { fileURLToPath } from "node:url";
 import { type BrowserContext, expect, test } from "@playwright/test";
 
+const publicDir = fileURLToPath(
+  new URL("../../apps/site/public", import.meta.url),
+);
 const viewports = [
   { width: 320, height: 640 },
   { width: 1280, height: 800 },
@@ -10,6 +14,11 @@ async function problems(context: BrowserContext, path: string) {
   const page = await context.newPage();
   await page.route("https://cdn.visitors.now/v.js", (route) =>
     route.fulfill({ contentType: "application/javascript", body: "" }),
+  );
+  await page.route("https://reuse.sh/images/**", (route) =>
+    route.fulfill({
+      path: `${publicDir}${new URL(route.request().url()).pathname}`,
+    }),
   );
   const found: string[] = [];
   page.on("console", (message) => {
