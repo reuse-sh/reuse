@@ -759,6 +759,7 @@ export function createCarousel(
     mutation?.observe(viewport, { childList: true, subtree: true });
     if (goalIndex >= 0 && enabled) goTo(goalIndex);
     else if (moving) {
+      clearTimeout(settleTimer);
       settleTimer = setTimeout(settle, 180);
     }
   }
