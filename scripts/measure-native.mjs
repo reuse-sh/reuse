@@ -72,5 +72,5 @@ for (const name of names) {
 console.table(results);
 await writeFile(
   resolve(root, "docs/native-sizes.json"),
-  `${JSON.stringify({ measured: "2026-11-01", method: "Sum of individually gzipped, unminified native ESM modules reachable from each entry. Includes shared internal dependencies. Excludes CSS, React adapters, images, and fonts. No external runtime imports allowed.", results }, null, 2)}\n`,
+  `${JSON.stringify({ measured: new Date().toISOString().slice(0, 10), method: "Sum of individually gzipped, unminified native ESM modules reachable from each entry. Includes shared internal dependencies. Excludes CSS, React adapters, images, and fonts. No external runtime imports allowed.", results }, null, 2)}\n`,
 );
