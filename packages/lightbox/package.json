@@ -36,6 +36,10 @@
     "./theme.css": "./dist/theme.css",
     "./unlayered/*": "./dist/unlayered/*",
     "./browser/*": "./dist/browser/*",
+    "./carousel": {
+      "types": "./dist/carousel.d.ts",
+      "import": "./dist/carousel.js"
+    },
     "./react": {
       "types": "./dist/react.d.ts",
       "import": "./dist/react.js"

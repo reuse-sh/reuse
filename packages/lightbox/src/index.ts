@@ -101,7 +101,7 @@ export interface LightboxItem {
   alt?: string;
   caption?: string;
   thumbnailSrc?: string;
-  origin?: HTMLElement | null;
+  origin?: HTMLElement | null | (() => HTMLElement | null);
 }
 
 export interface LightboxState {
@@ -201,8 +201,10 @@ type Session = {
   animations: Set<Animation>;
   finishAnimations: Set<() => void>;
   previousFocus: HTMLElement | null;
+  input?: "keyboard" | "pointer";
   restoreScroll: () => void;
   hiddenOrigin?: { element: HTMLElement; visibility: string };
+  landing?: HTMLImageElement;
   counter: HTMLSpanElement;
   counterText: string;
   status: HTMLDivElement;
@@ -368,6 +370,14 @@ function releaseSpeed(
   const first = samples.find((sample) => sample.time >= time - SPEED_WINDOW);
   if (!first || time - first.time <= 0) return 0;
   return (y - first.y) / (time - first.time);
+}
+
+function matches(element: Element, selector: string) {
+  try {
+    return element.matches(selector);
+  } catch {
+    return false;
+  }
 }
 
 function distance(points: Point[]) {
@@ -574,7 +584,15 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
   }
 
   function originOf(index: number) {
-    return settings.getOrigin?.(index) ?? items[index]?.origin ?? null;
+    const origin = settings.getOrigin?.(index) ?? items[index]?.origin;
+    return (typeof origin === "function" ? origin() : origin) ?? null;
+  }
+
+  function rendered(element: HTMLElement) {
+    if (!element.isConnected || element.checkVisibility?.() === false)
+      return undefined;
+    const rect = element.getBoundingClientRect();
+    return rect.width > 0 && rect.height > 0 ? rect : undefined;
   }
 
   function view(s: Session): Size {
@@ -692,13 +710,13 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
       : duration;
   }
 
-  function flight(s: Session, closing: boolean) {
+  function flight(s: Session, closing: boolean, landing = false) {
     const from = closing
       ? s.dialog.ownerDocument.defaultView?.getComputedStyle(s.backdrop)
           .opacity || "1"
       : "0";
-    return Promise.all([
-      morph(s, closing),
+    const flying = Promise.all([
+      morph(s, closing, landing),
       animate(
         s,
         s.backdrop,
@@ -707,9 +725,46 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
         s.timing.ease,
       ),
     ]);
+    // The timeline's time stands still within a task, so a start taken from it would skip the
+    // work this close already did; the time origin is the document timeline's zero.
+    const now = s.dialog.ownerDocument.defaultView?.performance.now();
+    if (closing && now !== undefined)
+      for (const animation of s.animations) animation.startTime = now;
+    return flying;
   }
 
-  function morph(s: Session, closing: boolean) {
+  function landingCopy(
+    s: Session,
+    image: HTMLImageElement,
+    origin: HTMLElement,
+    size: Size,
+    box: DOMRect,
+  ) {
+    const doc = s.dialog.ownerDocument;
+    const src = image.currentSrc || image.src;
+    if (
+      origin.ownerDocument !== doc ||
+      !origin.parentNode ||
+      !src ||
+      !image.complete ||
+      !image.naturalWidth
+    )
+      return undefined;
+    const copy = doc.createElement("img");
+    copy.className = "re-lightbox-landing";
+    copy.alt = "";
+    copy.setAttribute("aria-hidden", "true");
+    copy.draggable = false;
+    copy.src = src;
+    copy.style.cssText = `position:absolute;left:0;top:0;right:auto;bottom:auto;display:block;box-sizing:content-box;width:${size.width}px;height:${size.height}px;min-width:0;min-height:0;max-width:none;max-height:none;margin:0;padding:0;border:0;border-radius:0;box-shadow:none;outline:0;object-fit:fill;opacity:1;visibility:visible;filter:none;transition:none;animation:none;translate:none;rotate:none;scale:none;transform-origin:center;pointer-events:none`;
+    origin.after(copy);
+    const at = copy.getBoundingClientRect();
+    copy.style.left = `${box.left + (box.width - size.width) / 2 - at.left}px`;
+    copy.style.top = `${box.top + (box.height - size.height) / 2 - at.top}px`;
+    return copy;
+  }
+
+  function morph(s: Session, closing: boolean, landing: boolean) {
     const entry = s.loaded.get(state.index);
     const item = items[state.index];
     if (!entry || !item) return Promise.resolve();
@@ -721,13 +776,16 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
     const live = {
       transform:
         current.transform === "none" ? resting : current.transform || resting,
-      clipPath: current.clipPath || "inset(0px round 0px)",
+      clipPath:
+        current.clipPath && current.clipPath !== "none"
+          ? current.clipPath
+          : "inset(0px round 0px)",
       opacity: current.opacity || "1",
     };
     const origin = originOf(state.index);
-    const rect = origin?.isConnected
-      ? origin.getBoundingClientRect()
-      : undefined;
+    const rect = origin ? rendered(origin) : undefined;
+    const box = s.viewport.getBoundingClientRect();
+    const slide = s.slides[state.index]?.getBoundingClientRect();
     const viewport = view(s);
     const size = fit(state.index, s);
     const duration = flightDuration(s, closing);
@@ -744,8 +802,9 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
       );
     const visible =
       rect &&
-      rect.width > 0 &&
-      rect.height > 0 &&
+      slide &&
+      Math.abs(slide.left - box.left) <= 1 &&
+      Math.abs(slide.right - box.right) <= 1 &&
       rect.bottom > 0 &&
       rect.right > 0 &&
       rect.top < viewport.height &&
@@ -803,13 +862,24 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
       clipPath: "inset(0px round 0px)",
       opacity: 1,
     };
-    return animate(
-      s,
-      entry.frame,
-      closing ? [live, clipped] : [clipped, expanded],
-      duration,
-      ease,
-    );
+    if (!closing)
+      return animate(s, entry.frame, [clipped, expanded], duration, ease);
+    const copy =
+      landing && duration > 0
+        ? landingCopy(s, entry.image, origin, size, box)
+        : undefined;
+    if (!copy) return animate(s, entry.frame, [live, clipped], duration, ease);
+    s.landing = copy;
+    return Promise.all([
+      animate(
+        s,
+        entry.frame,
+        [live, { ...clipped, opacity: 0 }],
+        duration,
+        ease,
+      ),
+      animate(s, copy, [{ ...live, opacity: 1 }, clipped], duration, ease),
+    ]);
   }
 
   function layout(s: Session) {
@@ -1094,11 +1164,55 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
     for (const entry of s.loaded.values()) entry.cancel();
     for (const slot of s.slots.splice(0)) slot.destroy?.();
     restoreOrigin(s);
+    s.landing?.remove();
+    s.landing = undefined;
     if (s.dialog.open) s.dialog.close();
     s.dialog.remove();
     s.restoreScroll();
-    if (s.previousFocus?.isConnected)
-      s.previousFocus.focus({ preventScroll: true });
+    returnFocus(s);
+  }
+
+  function returnFocus(s: Session) {
+    const origin = originOf(state.index);
+    const tile = origin && rendered(origin) ? origin : null;
+    const quiet = s.input === "pointer";
+    const options: FocusOptions = { preventScroll: true };
+    if (s.input) options.focusVisible = !quiet;
+    for (const target of [
+      tile,
+      tile?.closest<HTMLElement>("a[href], button"),
+      s.previousFocus,
+    ]) {
+      if (!target?.isConnected) continue;
+      // Firefox's dialog close already restored focus here without a ring, and focus() on the
+      // focused element changes nothing.
+      if (
+        s.input === "keyboard" &&
+        target.ownerDocument.activeElement === target &&
+        !matches(target, ":focus-visible")
+      )
+        target.blur();
+      target.focus(options);
+      if (target.ownerDocument.activeElement !== target) continue;
+      if (quiet && matches(target, ":focus-visible")) quietFocus(target);
+      return;
+    }
+  }
+
+  // Focus that still shows a ring after a pointer close, from an engine without focusVisible or
+  // the dialog's own focus restore, gets an attribute the theme hides the ring by.
+  function quietFocus(target: HTMLElement) {
+    const stop = new AbortController();
+    const clear = () => {
+      target.removeAttribute("data-re-focus-quiet");
+      stop.abort();
+    };
+    target.setAttribute("data-re-focus-quiet", "");
+    target.ownerDocument.defaultView?.addEventListener("keydown", clear, {
+      capture: true,
+      signal: stop.signal,
+    });
+    target.addEventListener("blur", clear, { signal: stop.signal });
   }
 
   function setZoom(scale: number, focus: Point, notify: boolean) {
@@ -2025,6 +2139,17 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
       { signal: abort.signal, passive: true },
     );
     installGestures(s);
+    for (const [type, input] of [
+      ["keydown", "keyboard"],
+      ["pointerdown", "pointer"],
+    ] as const)
+      win?.addEventListener(
+        type,
+        () => {
+          s.input = input;
+        },
+        { signal: abort.signal, capture: true, passive: true },
+      );
     dialog.addEventListener(
       "pointermove",
       (event) => {
@@ -2078,6 +2203,20 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
     return closeSession(false);
   }
 
+  function pinToPage(s: Session) {
+    const win = s.dialog.ownerDocument.defaultView;
+    if (!win) return;
+    const box = s.dialog.getBoundingClientRect();
+    Object.assign(s.dialog.style, {
+      position: "absolute",
+      inset: "auto",
+      top: `${box.top + win.scrollY}px`,
+      left: `${box.left + win.scrollX}px`,
+      width: `${box.width}px`,
+      height: `${box.height}px`,
+    });
+  }
+
   // closed waits for the history back, unless open() or destroy() comes first.
   function reportClosed(landing: Promise<void>) {
     let reported = false;
@@ -2108,6 +2247,8 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
       return Promise.resolve();
     }
     if (session !== s || closePromise) return closePromise ?? Promise.resolve();
+    const landing = s.phase !== "entering" && s.phase !== "opening";
+    if (fromHistory) s.input = "pointer";
     cancelAnimations(s);
     clearTimeout(s.tapTimer);
     s.tapTimer = undefined;
@@ -2115,9 +2256,11 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
     publish({ isClosing: true });
     s.dialog.style.removeProperty("--re-lightbox-chrome-opacity");
     setPhase(s, "closing");
+    s.restoreScroll();
+    pinToPage(s);
     let closing: Promise<void> | undefined;
     closing = (async () => {
-      await flight(s, true);
+      await flight(s, true, landing);
       if (session !== s) return;
       teardown(s);
       publish({
@@ -2337,7 +2480,11 @@ export function bindLightboxGallery(
     event.preventDefault();
     if (options.items) {
       const list = options.items(root);
-      const index = list.findIndex((item) => item.origin === image);
+      const index = list.findIndex(
+        (item) =>
+          (typeof item.origin === "function" ? item.origin() : item.origin) ===
+          image,
+      );
       controller.open(list, index < 0 ? images.indexOf(image) : index);
       return;
     }

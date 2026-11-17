@@ -9,10 +9,10 @@ An image viewer that opens from a thumbnail, including a cropped one, and return
 These are the rules the code keeps. An adaptation on any framework keeps them too.
 
 - **Page with native scroll snap.** Pages are a scroll-snap strip from the carousel, so touch and trackpads keep the system's momentum.
-- **Open from the thumbnail and return to it.** The image grows out of its cropped preview and goes back to the same place on close.
+- **Open from the thumbnail and return to it.** The image grows out of its cropped preview and shrinks back into the current photo's tile on close.
 - **Load only what is near.** Only the current and neighboring images load, and a long jump skips the pages in between.
 - **Zoom around the point you touch.** Pinch, wheel and double-tap zoom around the pointer or fingers, and panning stops at the image's edges.
-- **Keep focus inside and give it back.** The viewer is a native modal dialog, and closing it returns focus to the element that opened it.
+- **Keep focus inside and give it back.** The viewer is a native modal dialog, and closing it returns focus to the current photo's tile, or else to the element that opened it.
 - **Leave the page as it was.** Destroy restores the page scroll, the hidden thumbnail, and every style and listener the viewer touched. Back closes the viewer, and its one history entry leaves without a navigation.
 - **Behave like the platform's photo viewer.** Gestures, keys and timing match iOS Photos, macOS Photos and Google Photos unless a recorded decision says otherwise.
 - **Dismiss like a photos app.** A vertical swipe carries the photo, fades the backdrop and the controls with it, and closes past a distance or a speed. A cancelled pointer never closes.
@@ -91,7 +91,7 @@ export function Gallery() {
 
 #### Integration
 
-Links still open the image without JavaScript. The native dialog keeps focus inside, Escape closes it, and close restores the opening element. The React hook destroys its viewer on unmount.
+Links still open the image without JavaScript. The native dialog keeps focus inside, Escape closes it, and close returns focus to the current photo's tile. The React hook destroys its viewer on unmount.
 
 ### HTML + JavaScript
 
@@ -128,7 +128,7 @@ const gallery = bindLightboxGallery(document.querySelector("#gallery"), {});
 
 #### Integration
 
-Links still open the image without JavaScript. The native dialog keeps focus inside, Escape closes it, and close restores the opening element.
+Links still open the image without JavaScript. The native dialog keeps focus inside, Escape closes it, and close returns focus to the current photo's tile.
 
 #### Cleanup
 

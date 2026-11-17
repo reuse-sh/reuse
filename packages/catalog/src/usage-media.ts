@@ -60,7 +60,7 @@ export function Gallery() {
         blocks: [
           {
             kind: "prose",
-            text: "Links still open the image without JavaScript. The native dialog keeps focus inside, Escape closes it, and close restores the opening element. The React hook destroys its viewer on unmount.",
+            text: "Links still open the image without JavaScript. The native dialog keeps focus inside, Escape closes it, and close returns focus to the current photo's tile. The React hook destroys its viewer on unmount.",
           },
         ],
       },
@@ -126,7 +126,7 @@ const gallery = bindLightboxGallery(document.querySelector("#gallery"), {});`,
         blocks: [
           {
             kind: "prose",
-            text: "Links still open the image without JavaScript. The native dialog keeps focus inside, Escape closes it, and close restores the opening element.",
+            text: "Links still open the image without JavaScript. The native dialog keeps focus inside, Escape closes it, and close returns focus to the current photo's tile.",
           },
         ],
       },
@@ -210,7 +210,7 @@ export function ProductGallery() {
         blocks: [
           {
             kind: "prose",
-            text: "The small item list describes the two actual product assets. Keep image dimensions and alt text with each asset. Native gallery binding collects images in DOM order. Links still open the image without JavaScript. The native dialog keeps focus inside, Escape closes it, and close restores the opening element. The React hook destroys its viewer on unmount.",
+            text: "The small item list describes the two actual product assets. Keep image dimensions and alt text with each asset. Native gallery binding collects images in DOM order. Links still open the image without JavaScript. The native dialog keeps focus inside, Escape closes it, and close returns focus to the current photo's tile. The React hook destroys its viewer on unmount.",
           },
         ],
       },
@@ -275,7 +275,7 @@ const gallery = bindLightboxGallery(document.querySelector("#gallery"), { thumbn
         blocks: [
           {
             kind: "prose",
-            text: "The small item list describes the two actual product assets. Keep image dimensions and alt text with each asset. Native gallery binding collects images in DOM order. Links still open the image without JavaScript. The native dialog keeps focus inside, Escape closes it, and close restores the opening element.",
+            text: "The small item list describes the two actual product assets. Keep image dimensions and alt text with each asset. Native gallery binding collects images in DOM order. Links still open the image without JavaScript. The native dialog keeps focus inside, Escape closes it, and close returns focus to the current photo's tile.",
           },
         ],
       },
@@ -352,7 +352,7 @@ export function MessageAttachments({ sources }: { sources: string[] }) {
         blocks: [
           {
             kind: "prose",
-            text: "Mount the message component for every message rather than passing every conversation attachment to a global viewer. Destroy the binding when a message is removed. Links still open the image without JavaScript. The native dialog keeps focus inside, Escape closes it, and close restores the opening element. The React hook destroys its viewer on unmount.",
+            text: "Mount the message component for every message rather than passing every conversation attachment to a global viewer. Destroy the binding when a message is removed. Links still open the image without JavaScript. The native dialog keeps focus inside, Escape closes it, and close returns focus to the current photo's tile. The React hook destroys its viewer on unmount.",
           },
         ],
       },
@@ -421,7 +421,7 @@ const gallery = { destroy: () => galleries.forEach((entry) => entry.destroy()) }
         blocks: [
           {
             kind: "prose",
-            text: "Bind each message gallery instead of passing every conversation attachment to a global viewer. Destroy the binding when a message is removed. Links still open the image without JavaScript. The native dialog keeps focus inside, Escape closes it, and close restores the opening element.",
+            text: "Bind each message gallery instead of passing every conversation attachment to a global viewer. Destroy the binding when a message is removed. Links still open the image without JavaScript. The native dialog keeps focus inside, Escape closes it, and close returns focus to the current photo's tile.",
           },
         ],
       },
@@ -502,7 +502,7 @@ export function Gallery() {
         blocks: [
           {
             kind: "prose",
-            text: "A cropped article thumbnail does not constrain the full-size viewer image. Use descriptive captions through the image data-caption attribute, and keep nearby article text outside the gallery root if it contains unrelated images. Links still open the image without JavaScript. The native dialog keeps focus inside, Escape closes it, and close restores the opening element. The React hook destroys its viewer on unmount.",
+            text: "A cropped article thumbnail does not constrain the full-size viewer image. Use descriptive captions through the image data-caption attribute, and keep nearby article text outside the gallery root if it contains unrelated images. Links still open the image without JavaScript. The native dialog keeps focus inside, Escape closes it, and close returns focus to the current photo's tile. The React hook destroys its viewer on unmount.",
           },
         ],
       },
@@ -568,7 +568,7 @@ const gallery = bindLightboxGallery(document.querySelector("#gallery"), { imageC
         blocks: [
           {
             kind: "prose",
-            text: "A cropped article thumbnail does not constrain the full-size viewer image. Use descriptive captions through the image data-caption attribute, and keep nearby article text outside the gallery root if it contains unrelated images. Links still open the image without JavaScript. The native dialog keeps focus inside, Escape closes it, and close restores the opening element.",
+            text: "A cropped article thumbnail does not constrain the full-size viewer image. Use descriptive captions through the image data-caption attribute, and keep nearby article text outside the gallery root if it contains unrelated images. Links still open the image without JavaScript. The native dialog keeps focus inside, Escape closes it, and close returns focus to the current photo's tile.",
           },
         ],
       },

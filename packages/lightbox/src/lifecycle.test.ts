@@ -959,6 +959,45 @@ describe("lightbox public API", () => {
     ]);
   });
 
+  it("returns focus to the current photo's tile, read after beforeclose, else to the opener", async () => {
+    const [opener, first, second, swapped, picked] = Array.from(
+      { length: 5 },
+      () => document.createElement("button"),
+    );
+    document.body.append(opener, first, second, swapped, picked);
+    opener.focus();
+    let tile = second;
+    const controller = create({
+      history: false,
+      getOrigin: (index) => (index === 2 ? picked : null),
+    });
+    controller.on("beforeclose", () => {
+      tile = swapped;
+    });
+    const items = [
+      { ...gallery[0], origin: first },
+      { ...gallery[1], origin: () => tile },
+      gallery[2],
+      gallery[3],
+    ];
+    controller.open(items, 1);
+    expect(second.style.visibility).toBe("hidden");
+    await controller.close();
+    expect(document.activeElement).toBe(swapped);
+    expect(second.style.visibility).toBe("");
+
+    opener.focus();
+    controller.open(items, 2);
+    expect(picked.style.visibility).toBe("hidden");
+    await controller.close();
+    expect(document.activeElement).toBe(picked);
+
+    opener.focus();
+    controller.open(items, 3);
+    await controller.close();
+    expect(document.activeElement).toBe(opener);
+  });
+
   it("closes once when beforeclose calls close, and reports closed when open replaces a viewer", async () => {
     const controller = create({ history: false });
     const events: string[] = [];
@@ -1121,7 +1160,7 @@ describe("lightbox public API", () => {
     ).toEqual(["b1", "b3", "b4"]);
   });
 
-  it("opens the list items(root) returns at the clicked image", () => {
+  it("opens the list items(root) returns at the clicked image, origin functions included", () => {
     const root = document.createElement("div");
     root.innerHTML = `<img src="https://example.test/0.jpg"><img src="https://example.test/1.jpg">`;
     document.body.append(root);
@@ -1132,12 +1171,14 @@ describe("lightbox public API", () => {
       items: () => [
         { src: "https://example.test/hidden.jpg" },
         { src: "https://example.test/1-large.jpg", origin: second },
-        { src: "https://example.test/0-large.jpg", origin: first },
+        { src: "https://example.test/0-large.jpg", origin: () => first },
       ],
     });
     controllers.push(controller);
     second.click();
     expect(controller.getState()).toMatchObject({ count: 3, index: 1 });
+    first.click();
+    expect(controller.getState()).toMatchObject({ count: 3, index: 2 });
   });
 
   it("adds one history entry, closes on Back and goes back after another close", async () => {
