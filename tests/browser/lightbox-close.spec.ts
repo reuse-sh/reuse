@@ -162,6 +162,12 @@ test("after paging to photo 3, close brings the strip to slide 3 and lands on it
   expectOn(landing.frame, tile);
   expectOn(landing.copy, tile);
   expect(landing.frameOpacity).toBe(0);
+  expect(
+    await page.evaluate(() => ({
+      slides: (document.getElementById("strip") as HTMLElement).children.length,
+      count: (window as Window).carousel.getState().count,
+    })),
+  ).toEqual({ slides: 6, count: 6 });
   await finishClose(page);
   expect(
     await page.evaluate(() => ({

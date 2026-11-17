@@ -661,7 +661,6 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
     frames: Keyframe[],
     duration: number,
     easing = ZOOM_EASE,
-    start?: number,
   ) {
     if (duration <= 0 || typeof node.animate !== "function")
       return Promise.resolve();
@@ -671,7 +670,6 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
     } catch {
       return Promise.resolve();
     }
-    if (start !== undefined) animation.startTime = start;
     return new Promise<void>((resolve) => {
       s.animations.add(animation);
       syncAnimating(s);
@@ -713,19 +711,22 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
       ? s.dialog.ownerDocument.defaultView?.getComputedStyle(s.backdrop)
           .opacity || "1"
       : "0";
-    const time = closing ? s.dialog.ownerDocument.timeline?.currentTime : null;
-    const start = typeof time === "number" ? time : undefined;
-    return Promise.all([
-      morph(s, closing, landing, start),
+    const flying = Promise.all([
+      morph(s, closing, landing),
       animate(
         s,
         s.backdrop,
         [{ opacity: from }, { opacity: closing ? 0 : 1 }],
         flightDuration(s, closing),
         s.timing.ease,
-        start,
       ),
     ]);
+    // The timeline's time stands still within a task, so a start taken from it would skip the
+    // work this close already did; the time origin is the document timeline's zero.
+    const now = s.dialog.ownerDocument.defaultView?.performance.now();
+    if (closing && now !== undefined)
+      for (const animation of s.animations) animation.startTime = now;
+    return flying;
   }
 
   function landingCopy(
@@ -739,7 +740,7 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
     const src = image.currentSrc || image.src;
     if (
       origin.ownerDocument !== doc ||
-      !origin.parentNode ||
+      !doc.body ||
       !src ||
       !image.complete ||
       !image.naturalWidth
@@ -752,19 +753,14 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
     copy.draggable = false;
     copy.src = src;
     copy.style.cssText = `position:absolute;left:0;top:0;right:auto;bottom:auto;display:block;box-sizing:content-box;width:${size.width}px;height:${size.height}px;min-width:0;min-height:0;max-width:none;max-height:none;margin:0;padding:0;border:0;border-radius:0;box-shadow:none;outline:0;object-fit:fill;opacity:1;visibility:visible;filter:none;transition:none;animation:none;translate:none;rotate:none;scale:none;transform-origin:center;pointer-events:none`;
-    origin.after(copy);
+    doc.body.append(copy);
     const at = copy.getBoundingClientRect();
     copy.style.left = `${box.left + (box.width - size.width) / 2 - at.left}px`;
     copy.style.top = `${box.top + (box.height - size.height) / 2 - at.top}px`;
     return copy;
   }
 
-  function morph(
-    s: Session,
-    closing: boolean,
-    landing: boolean,
-    start: number | undefined,
-  ) {
+  function morph(s: Session, closing: boolean, landing: boolean) {
     const entry = s.loaded.get(state.index);
     const item = items[state.index];
     if (!entry || !item) return Promise.resolve();
@@ -799,7 +795,6 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
           : [{ opacity: 0 }, { opacity: 1 }],
         duration,
         "ease",
-        start,
       );
     const visible =
       rect &&
@@ -828,7 +823,6 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
             ],
         duration,
         ease,
-        start,
       );
     }
     const style = win.getComputedStyle(origin);
@@ -870,8 +864,7 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
       landing && duration > 0
         ? landingCopy(s, entry.image, origin, size, box)
         : undefined;
-    if (!copy)
-      return animate(s, entry.frame, [live, clipped], duration, ease, start);
+    if (!copy) return animate(s, entry.frame, [live, clipped], duration, ease);
     s.landing = copy;
     return Promise.all([
       animate(
@@ -880,16 +873,8 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
         [live, { ...clipped, opacity: 0 }],
         duration,
         ease,
-        start,
       ),
-      animate(
-        s,
-        copy,
-        [{ ...live, opacity: 1 }, clipped],
-        duration,
-        ease,
-        start,
-      ),
+      animate(s, copy, [{ ...live, opacity: 1 }, clipped], duration, ease),
     ]);
   }
 
@@ -2491,7 +2476,11 @@ export function bindLightboxGallery(
     event.preventDefault();
     if (options.items) {
       const list = options.items(root);
-      const index = list.findIndex((item) => item.origin === image);
+      const index = list.findIndex(
+        (item) =>
+          (typeof item.origin === "function" ? item.origin() : item.origin) ===
+          image,
+      );
       controller.open(list, index < 0 ? images.indexOf(image) : index);
       return;
     }

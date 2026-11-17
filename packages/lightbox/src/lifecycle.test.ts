@@ -1130,7 +1130,7 @@ describe("lightbox public API", () => {
     ).toEqual(["b1", "b3", "b4"]);
   });
 
-  it("opens the list items(root) returns at the clicked image", () => {
+  it("opens the list items(root) returns at the clicked image, origin functions included", () => {
     const root = document.createElement("div");
     root.innerHTML = `<img src="https://example.test/0.jpg"><img src="https://example.test/1.jpg">`;
     document.body.append(root);
@@ -1141,12 +1141,14 @@ describe("lightbox public API", () => {
       items: () => [
         { src: "https://example.test/hidden.jpg" },
         { src: "https://example.test/1-large.jpg", origin: second },
-        { src: "https://example.test/0-large.jpg", origin: first },
+        { src: "https://example.test/0-large.jpg", origin: () => first },
       ],
     });
     controllers.push(controller);
     second.click();
     expect(controller.getState()).toMatchObject({ count: 3, index: 1 });
+    first.click();
+    expect(controller.getState()).toMatchObject({ count: 3, index: 2 });
   });
 
   it("adds one history entry, closes on Back and goes back after another close", async () => {

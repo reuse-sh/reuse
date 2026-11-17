@@ -4,7 +4,10 @@
     "budgets": { "carousel.js": 6.95 }
   },
   "lightbox": {
-    "entries": { "lightbox": "dist/index.js", "carousel": "dist/carousel.js" },
-    "budgets": { "lightbox.js": 19.55, "carousel.js": 0.29 }
+    "entries": {
+      "lightbox": "dist/index.js",
+      "carousel-link": "dist/carousel.js"
+    },
+    "budgets": { "lightbox.js": 19.55, "carousel-link.js": 0.29 }
   }
 }
