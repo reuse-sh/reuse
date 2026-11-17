@@ -69,10 +69,12 @@ export function carouselMotion(): World {
   const carousel = createCarousel(viewport);
   let held: number | undefined;
   let destroyed = false;
+  let driver: { setPosition(px: number): void; release(): void } | undefined;
+  let driven = 0;
   const snapOn = () => viewport.style.scrollSnapType !== "none";
   // jsdom has no scroll snapping, so a resting strip is moved to the nearest snap point here.
   const settle = () => {
-    if (destroyed || held !== undefined || !snapOn()) return;
+    if (destroyed || held !== undefined || driver || !snapOn()) return;
     if (viewport.scrollLeft === nearest(viewport.scrollLeft)) return;
     scrollTo(nearest(viewport.scrollLeft));
     viewport.dispatchEvent(new Event("scrollend"));
@@ -111,10 +113,26 @@ export function carouselMotion(): World {
         viewport.dispatchEvent(new Event("scrollend"));
       }),
       refresh: step(() => carousel.refresh()),
+      marquee: step(() => {
+        if (held !== undefined || destroyed) return;
+        driver ??= carousel.take("marquee", {
+          onInterrupt: () => {
+            driver = undefined;
+          },
+        });
+        driven += 100;
+        driver.setPosition(driven);
+      }),
+      "release marquee": step(() => {
+        driver?.release();
+        driver = undefined;
+        driven = 0;
+      }),
       destroy: step(() => {
         carousel.destroy();
         destroyed = true;
         held = undefined;
+        driver = undefined;
       }),
       time: step(() => {
         vi.advanceTimersToNextTimer();
@@ -154,9 +172,12 @@ export function carouselMotion(): World {
       },
       "the strip shows dragging only while a mouse is held": () =>
         held !== undefined || !viewport.hasAttribute("data-re-dragging"),
+      "a driver holds the strip with snapping off": () =>
+        !driver || destroyed || viewport.style.scrollSnapType === "none",
       "a strip at rest sits on a snap point": () =>
         destroyed ||
         held !== undefined ||
+        driver !== undefined ||
         vi.getTimerCount() > 0 ||
         snaps.includes(viewport.scrollLeft),
     },
@@ -167,6 +188,8 @@ export function carouselMotion(): World {
         vi.getTimerCount(),
         held,
         destroyed,
+        driven,
+        driver === undefined,
         viewport.getAttribute("style"),
       ].join("|"),
     teardown: () => {

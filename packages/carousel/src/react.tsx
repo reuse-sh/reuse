@@ -28,6 +28,7 @@ const emptyState: CarouselState = Object.freeze({
   pageIndex: 0,
   visible: Object.freeze([]),
   autoplayProgress: 0,
+  seamSlides: Object.freeze([]),
 });
 
 export function useCarousel(options: CarouselOptions = {}) {

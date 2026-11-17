@@ -12,13 +12,15 @@ These are the rules the code keeps. An adaptation on any framework keeps them to
 - **Never let a drag click.** A mouse drag, or the mouse press that stops a moving strip, never opens the link under it. An ordinary click still works, and touch stays native.
 - **Drag like a trackpad.** A released mouse drag keeps its speed and glides to the slide nearest where it would stop, or to the stop itself when the strip does not snap there, never past a slide that asks to stop. Past either end it stretches and springs back.
 - **Keep the slide it was sent to.** When the last slides share one scroll position, the active index stays the slide that goTo, a dot or a lightbox chose.
-- **Repeat without clones.** The loop moves the original slides, so ids, links and buttons stay unique, and it turns on only when the slides can cover the viewport.
+- **Repeat without clones.** The loop moves the original slides through a CSS variable, so ids, links, buttons and each slide's own transform stay as they are, and it turns on only when every slide has a width and the slides can cover the viewport.
 - **Let autoplay wait for people.** Autoplay pauses for hover, focus, dragging, hidden pages, strips less than half in view and reduced motion, keeps the rest of its wait, and stays paused after the visitor pauses it.
 - **Keep keys local.** Arrow keys act only inside the focused strip and swap sides in right-to-left layouts.
 - **Put back what it moved.** Destroy cancels timers and restores the styles, transforms and listeners it added.
 - **Move the same way every time.** Next, dots, goTo and a released drag use one motion, so browsers do not differ.
 - **Hold hover while the strip moves.** Slides ignore hover during a fast swipe or wheel scroll and respond again once it slows down.
 - **Publish one state.** Index, pages, visible slides and autoplay progress come from one source that every control reads.
+- **Swipe by the group the buttons use.** With group set, only the first slide of each group and the slide a move was sent to snap, so a swipe and a released drag move a group like next() does.
+- **Give the strip back to the visitor.** A drag or a touch takes the position from a driver such as a marquee, and the strip snaps again once the driver lets go.
 
 <!-- principles:end -->
 
