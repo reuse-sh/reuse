@@ -1635,12 +1635,14 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
         }
       }
       const limit = panLimits(scale, content, viewport);
-      s.pinned = {
-        index: state.index,
-        zoom: target,
-        left: target.x >= limit.x - 0.5,
-        right: target.x <= -limit.x + 0.5,
-      };
+      if (pinched) s.pinned = undefined;
+      else if (gesture.moved)
+        s.pinned = {
+          index: state.index,
+          zoom: target,
+          left: target.x >= limit.x - 0.5,
+          right: target.x <= -limit.x + 0.5,
+        };
     }
     if (target.scale <= 1) s.pinned = undefined;
     moveZoom(s, target, reduced ? 0 : GLIDE_DURATION, s.timing.ease);

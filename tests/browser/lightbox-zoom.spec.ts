@@ -269,20 +269,48 @@ test.describe("lightbox zoom with a mouse, wheel and trackpad", {
       const frame = document.querySelector(
         '.re-lightbox-slide[aria-hidden="false"] .re-lightbox-frame',
       ) as HTMLElement;
+      const zooming = () =>
+        frame
+          .getAnimations()
+          .filter(
+            (animation) =>
+              animation.playState === "running" &&
+              (animation.effect as KeyframeEffect)
+                .getKeyframes()
+                .some((key) => String(key.transform).includes("scale(3)")),
+          ).length;
       (window as Window).lightbox.zoomTo(3);
       await new Promise((resolve) => setTimeout(resolve, 60));
+      const before = zooming();
       void (window as Window).lightbox.close();
-      return frame
-        .getAnimations()
-        .filter(
-          (animation) =>
-            animation.playState === "running" &&
-            (animation.effect as KeyframeEffect)
-              .getKeyframes()
-              .some((frame) => String(frame.transform).includes("scale(3)")),
-        ).length;
+      return [before, zooming()];
     });
-    expect(running).toBe(0);
+    expect(running).toEqual([1, 0]);
+  });
+
+  test("a mouse drag at the edge of a zoomed photo pans and never pages", async ({
+    page,
+  }) => {
+    await open(page, [
+      [4000, 3000],
+      [4000, 3000],
+      [4000, 3000],
+    ]);
+    await zoomTo(page, 10, { x: 5000, y: 0 });
+    for (let drag = 0; drag < 2; drag++) {
+      await swipe(
+        page,
+        { x: 1000, y: 450 },
+        { x: 400, y: 450 },
+        {
+          speed: 1,
+          hold: 150,
+        },
+      );
+      await still(page);
+    }
+    expect((await state(page)).index).toBe(0);
+    expect((await state(page)).zoom.scale).toBeGreaterThan(1);
   });
 
   test("Safari's gesture events zoom to their scale", async ({ page }) => {
@@ -340,7 +368,8 @@ test.describe("lightbox zoom with fingers", { tag: "@touch" }, () => {
       { x: box.x + box.width * 0.3, y },
       { speed: 0.5, hold: 200 },
     );
-    await page.waitForTimeout(60);
+    const stretched = await photo(page);
+    expect(stretched.x + stretched.width).toBeLessThan(box.x + box.width - 5);
     await tap(page, { x: box.x + box.width / 2, y });
     await still(page);
     const frame = await photo(page);
@@ -397,6 +426,8 @@ test.describe("lightbox zoom with fingers", { tag: "@touch" }, () => {
     const y = box.y + box.height / 2;
     const from = { x: box.x + box.width * 0.7, y };
     const to = { x: box.x + box.width * 0.3, y };
+    await tap(page, { x: box.x + box.width / 2, y });
+    await page.waitForTimeout(400);
     await swipe(page, from, to, { speed: 0.5, hold: 150 });
     await still(page);
     expect((await state(page)).index).toBe(0);
