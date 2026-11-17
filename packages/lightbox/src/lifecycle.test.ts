@@ -134,7 +134,7 @@ describe("lightbox lifecycle", () => {
     expect(document.querySelector("dialog")).toBeNull();
   });
 
-  it("pages with mouse drag over an image without turning the drag into zoom", () => {
+  it("pages with a mouse drag beside the image without turning the drag into zoom", () => {
     vi.useFakeTimers({
       toFake: ["requestAnimationFrame", "cancelAnimationFrame", "performance"],
     });
@@ -143,8 +143,8 @@ describe("lightbox lifecycle", () => {
     const viewport = dialog().querySelector<HTMLElement>(
       ".re-lightbox-viewport",
     );
-    const image = dialog().querySelector(".re-lightbox-image");
-    if (!viewport || !image) throw new Error("Missing image");
+    const slide = dialog().querySelector(".re-lightbox-slide");
+    if (!viewport || !slide) throw new Error("Missing slide");
     const pointer = (target: EventTarget, type: string, x: number) => {
       const event = new MouseEvent(type, {
         bubbles: true,
@@ -159,7 +159,7 @@ describe("lightbox lifecycle", () => {
       });
       target.dispatchEvent(event);
     };
-    pointer(image, "pointerdown", 850);
+    pointer(slide, "pointerdown", 850);
     pointer(window, "pointermove", 150);
     pointer(window, "pointerup", 150);
     viewport.dispatchEvent(new Event("scrollend"));
@@ -173,6 +173,45 @@ describe("lightbox lifecycle", () => {
     expect(dialog().querySelector(".re-lightbox-counter")?.textContent).toBe(
       "2 / 6",
     );
+  });
+
+  it("stops a paging move under a touch on the photo, and leaves a mouse press on it to the file drag", () => {
+    vi.useFakeTimers({
+      toFake: ["requestAnimationFrame", "cancelAnimationFrame", "performance"],
+    });
+    const controller = create();
+    controller.open(gallery);
+    const viewport = dialog().querySelector<HTMLElement>(
+      ".re-lightbox-viewport",
+    );
+    const image = dialog().querySelector(".re-lightbox-image");
+    if (!viewport || !image) throw new Error("Missing image");
+    const press = (pointerType: string) => {
+      const event = new MouseEvent("pointerdown", {
+        bubbles: true,
+        cancelable: true,
+        clientX: 512,
+        clientY: 384,
+        button: 0,
+      });
+      Object.defineProperties(event, {
+        pointerId: { value: 1 },
+        pointerType: { value: pointerType },
+      });
+      image.dispatchEvent(event);
+    };
+    press("mouse");
+    expect(image.hasAttribute("data-carousel-no-drag")).toBe(true);
+    window.dispatchEvent(new MouseEvent("pointerup", { button: 0 }));
+    controller.next();
+    vi.advanceTimersByTime(48);
+    press("touch");
+    const held = viewport.scrollLeft;
+    vi.advanceTimersByTime(1000);
+    vi.useRealTimers();
+    expect(held).toBeGreaterThan(0);
+    expect(held).toBeLessThan(1024);
+    expect(viewport.scrollLeft).toBe(held);
   });
 
   it("jumps directly to distant images without traversing unloaded pages in either direction", () => {
@@ -1644,15 +1683,21 @@ describe("lightbox chrome, taps and keys", () => {
     expect(controller.getState().index).toBe(3);
   });
 
-  it("drops the zoom at once on a resize and when the photo changes", () => {
+  it("keeps the zoom across a resize and drops it when the photo changes", () => {
+    vi.useFakeTimers({
+      toFake: ["requestAnimationFrame", "cancelAnimationFrame"],
+    });
     const controller = create();
     controller.open(gallery, 2);
     controller.zoomTo(2, { x: 100, y: 50 });
+    const zoomed = controller.getState().zoom;
     window.dispatchEvent(new Event("resize"));
-    expect(controller.getState().zoom).toEqual({ scale: 1, x: 0, y: 0 });
+    window.dispatchEvent(new Event("resize"));
+    vi.advanceTimersByTime(32);
+    vi.useRealTimers();
+    expect(controller.getState().zoom).toEqual(zoomed);
+    expect(zoomed.scale).toBe(2);
     const frame = dialog().querySelectorAll<HTMLElement>(".re-lightbox-frame");
-    expect(frame[1].style.transform).toBe("translate(0px, 0px) scale(1)");
-    controller.zoomTo(2, { x: 100, y: 50 });
     controller.next();
     expect(frame[1].style.transform).toBe("");
     expect(controller.getState().zoom).toEqual({ scale: 1, x: 0, y: 0 });

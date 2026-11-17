@@ -291,9 +291,10 @@ test("closing while a mouse drag holds the strip between two photos fades in pla
 }) => {
   await stripPage(page);
   await openAt(page, 1);
-  await page.mouse.move(500, 350);
+  // A mouse drag that starts on the photo drags the file out, so this one starts above it.
+  await page.mouse.move(500, 20);
   await page.mouse.down();
-  for (let x = 480; x >= 300; x -= 20) await page.mouse.move(x, 350);
+  for (let x = 480; x >= 300; x -= 20) await page.mouse.move(x, 20);
   const landing = await closeAtLastFrame(page);
   await page.mouse.up();
   expect(landing.copy).toBeNull();

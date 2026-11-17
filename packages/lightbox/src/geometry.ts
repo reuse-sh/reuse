@@ -30,6 +30,23 @@ export function contain(image: Size, viewport: Size, padding = 32): Size {
   return { width: image.width * scale, height: image.height * scale };
 }
 
+export function widthFit(image: Size, viewport: Size, padding = 32): Size {
+  const width = Math.max(1, viewport.width - padding * 2);
+  const scale = Math.min(width / image.width, 1);
+  return { width: image.width * scale, height: image.height * scale };
+}
+
+export type Shape = "tall" | "wide" | "regular";
+
+export function shapeOf(image: Size, viewport: Size, padding = 32): Shape {
+  if (
+    image.height > 2 * image.width &&
+    widthFit(image, viewport, padding).height > 2 * viewport.height
+  )
+    return "tall";
+  return image.width > 3 * image.height ? "wide" : "regular";
+}
+
 export function zoomAround(from: Zoom, scale: number, focus: Point): Zoom {
   const ratio = scale / from.scale;
   return {
@@ -50,8 +67,8 @@ export function boundZoom(zoom: Zoom, content: Size, viewport: Size): Zoom {
   const limit = panLimits(zoom.scale, content, viewport);
   return {
     scale: zoom.scale,
-    x: clamp(zoom.x, -limit.x, limit.x),
-    y: clamp(zoom.y, -limit.y, limit.y),
+    x: clamp(zoom.x, -limit.x, limit.x) || 0,
+    y: clamp(zoom.y, -limit.y, limit.y) || 0,
   };
 }
 
@@ -77,19 +94,24 @@ export function elasticZoom(zoom: Zoom, content: Size, viewport: Size): Zoom {
 }
 
 export interface ZoomLimits {
+  min: number;
   max: number;
   tap: number;
 }
 
 export function zoomLimits({
   fileWidth,
-  fittedWidth,
+  image,
+  viewport,
+  padding,
   svg,
   maxZoom,
   tapZoom,
 }: {
   fileWidth: number | undefined;
-  fittedWidth: number;
+  image: Size;
+  viewport: Size;
+  padding: number;
   svg: boolean;
   maxZoom: number | undefined;
   tapZoom: number;
@@ -98,15 +120,25 @@ export function zoomLimits({
     maxZoom !== undefined && Number.isFinite(maxZoom) && maxZoom > 0
       ? maxZoom
       : fallback;
+  const shape = shapeOf(image, viewport, padding);
+  const whole = contain(image, viewport, padding);
+  const fitted = shape === "tall" ? widthFit(image, viewport, padding) : whole;
+  const min = shape === "tall" ? whole.width / fitted.width : 1;
+  const preferred = (max: number, fallback: number) =>
+    shape === "tall"
+      ? min
+      : shape === "wide"
+        ? clamp(viewport.height / fitted.height, 1, max)
+        : clamp(fallback, 1, max);
   const tap = Number.isFinite(tapZoom) ? tapZoom : 1;
   if (svg) {
     const max = Math.max(1, factor(4));
-    return { max, tap: clamp(tap, 1, max) };
+    return { min, max, tap: preferred(max, tap) };
   }
-  const natural = fileWidth && fittedWidth > 0 ? fileWidth / fittedWidth : 0;
-  if (natural <= 1 + 1e-3) return { max: 1, tap: 1 };
+  const natural = fileWidth ? fileWidth / fitted.width : 0;
+  if (natural <= 1 + 1e-3) return { min, max: 1, tap: preferred(1, 1) };
   const max = Math.max(1, natural * factor(1));
-  return { max, tap: clamp(Math.max(tap, natural), 1, max) };
+  return { min, max, tap: preferred(max, Math.max(tap, natural)) };
 }
 
 export function cover(
