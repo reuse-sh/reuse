@@ -1,0 +1,14 @@
+.re-lightbox {
+  --re-lightbox-background: #fff;
+  --re-lightbox-foreground: #1d1d1f;
+  --re-lightbox-control: rgb(255 255 255 / 80%);
+  --re-lightbox-control-hover: rgb(242 242 247 / 90%);
+  --re-lightbox-panel: rgb(249 249 249 / 94%);
+  --re-lightbox-placeholder: rgb(0 0 0 / 4%);
+  --re-lightbox-media-background: #fff;
+  --re-lightbox-background-duration: 300ms;
+}
+.re-lightbox[data-chrome="hidden"] {
+  --re-lightbox-background: #000;
+  --re-lightbox-foreground: #8e8e93;
+}

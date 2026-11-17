@@ -91,9 +91,7 @@ export function LightboxStylePage({ style }: { style: string }) {
               to the lightbox. It{" "}
               {options.caption === "Panel"
                 ? "fills the aside slot with a side panel for the current image"
-                : options.autoHide
-                  ? "listens to the open and closed events, hides idle controls and reveals them on input"
-                  : "fills the footer slot with a toolbar of its own controls"}
+                : "fills the footer slot with a toolbar of its own controls"}
               .
             </Text>
             <CodeBlock
@@ -109,22 +107,18 @@ export function LightboxStylePage({ style }: { style: string }) {
             <Text>
               <C>useLightbox</C> destroys its controller when the component
               unmounts.
-              {options.autoHide
-                ? " The effect cleanup removes the idle listeners."
-                : code.chrome
-                  ? " The lightbox removes the slots when the dialog closes."
-                  : ""}
+              {code.chrome
+                ? " The lightbox removes the slots when the dialog closes."
+                : ""}
             </Text>
           </FrameworkOnly>
           <FrameworkOnly value="html">
             <Text>
               Run this when your view is removed to release the gallery
               listener, dialog and scroll lock.
-              {options.autoHide
-                ? " stopIdle() removes the idle listeners."
-                : code.chrome
-                  ? " The lightbox removes the slots when the dialog closes."
-                  : ""}
+              {code.chrome
+                ? " The lightbox removes the slots when the dialog closes."
+                : ""}
             </Text>
             <CodeBlock
               tabs={{ code: code.cleanup, lang: "ts" }}

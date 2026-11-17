@@ -590,6 +590,365 @@ const gallery = bindLightboxGallery(document.querySelector("#gallery"), { imageC
       },
     ],
   },
+  "lightbox/examples/carousel": {
+    react: [
+      {
+        title: "Package styles",
+        blocks: [
+          {
+            kind: "prose",
+            text: "Install @reuse-sh/carousel beside the lightbox. Import the package stylesheets once in your main CSS: the carousel's styles.css, then the lightbox's base.css for the layout and theme.css for the default theme. The components layer lets Tailwind utilities adapt their presentation.",
+          },
+          {
+            kind: "code",
+            id: "lightbox-examples-carousel-package-styles",
+            language: "css",
+            code: `@import "@reuse-sh/carousel/styles.css" layer(components);
+@import "@reuse-sh/lightbox/base.css" layer(components);
+@import "@reuse-sh/lightbox/theme.css" layer(components);`,
+            role: "setup",
+          },
+        ],
+      },
+      {
+        title: "Usage",
+        blocks: [
+          {
+            kind: "prose",
+            text: "Each slide opens the viewer at its own index. connectCarousel moves the strip to the photo the viewer settles on and holds its autoplay while the viewer is open, so the close flies back into a tile that is already in view. getOrigin gives the tile for each index.",
+          },
+          {
+            kind: "code",
+            id: "lightbox-examples-carousel-react",
+            language: "tsx",
+            code: `"use client";
+
+import { useCarousel } from "@reuse-sh/carousel/react";
+import { connectCarousel } from "@reuse-sh/lightbox/carousel";
+import { useLightbox } from "@reuse-sh/lightbox/react";
+import { useEffect, useRef } from "react";
+
+const photos = [
+  { src: "/photos/coast.jpg", alt: "Coast at noon", width: 1600, height: 1200 },
+  { src: "/photos/dunes.jpg", alt: "Dunes after rain", width: 1600, height: 1200 },
+  { src: "/photos/harbor.jpg", alt: "Harbor at dusk", width: 1600, height: 1200 },
+];
+
+export function PhotoStrip() {
+  const images = useRef<(HTMLImageElement | null)[]>([]);
+  const lightbox = useLightbox({ getOrigin: (index) => images.current[index] ?? null });
+  const viewer = useRef(lightbox);
+  viewer.current = lightbox;
+  const { ref, carousel } = useCarousel();
+  useEffect(() => {
+    if (carousel) return connectCarousel(viewer.current, carousel);
+  }, [carousel]);
+  return <div ref={ref} className="re-carousel" aria-label="Photos">
+    {photos.map((photo, index) => (
+      <button key={photo.src} type="button" className="re-carousel__slide basis-1/2" onClick={() => lightbox.open(photos, index)}>
+        <img ref={(image) => { images.current[index] = image; }} src={photo.src} alt={photo.alt} width={photo.width} height={photo.height} />
+      </button>
+    ))}
+  </div>;
+}`,
+            role: "usage",
+          },
+        ],
+      },
+      {
+        title: "Integration",
+        blocks: [
+          {
+            kind: "prose",
+            text: "Pass slideOf to connectCarousel when the strip holds a different number of slides than the viewer holds photos, such as one slide per pair. The carousel suppresses the click that ends a mouse drag, so dragging the strip does not open the viewer. The native dialog keeps focus inside, Escape closes it, and close returns focus to the current photo's slide. The React hooks destroy their controllers on unmount, and connectCarousel's return value disconnects the two.",
+          },
+        ],
+      },
+    ],
+    html: [
+      {
+        title: "Usage",
+        blocks: [
+          {
+            kind: "prose",
+            text: "Each slide is a link to its photo, so it still opens without JavaScript. The gallery binding opens the slides as one set and connectCarousel keeps the strip on the photo the viewer shows.",
+          },
+          {
+            kind: "code",
+            id: "lightbox-examples-carousel-markup",
+            language: "html",
+            code: `<div id="photos" class="re-carousel" tabindex="0" aria-label="Photos">
+  <a class="re-carousel__slide" href="/photos/coast.jpg"><img src="/photos/coast.jpg" alt="Coast at noon" width="1600" height="1200" /></a>
+  <a class="re-carousel__slide" href="/photos/dunes.jpg"><img src="/photos/dunes.jpg" alt="Dunes after rain" width="1600" height="1200" /></a>
+  <a class="re-carousel__slide" href="/photos/harbor.jpg"><img src="/photos/harbor.jpg" alt="Harbor at dusk" width="1600" height="1200" /></a>
+</div>`,
+            role: "usage",
+          },
+        ],
+      },
+      {
+        title: "Styles",
+        blocks: [
+          {
+            kind: "prose",
+            text: "Install @reuse-sh/carousel beside the lightbox. Import the package stylesheets once: the carousel's styles.css, then the lightbox's base.css for the layout and theme.css for the default theme. Keep application layout styles scoped to this integration.",
+          },
+          {
+            kind: "code",
+            id: "lightbox-examples-carousel-css",
+            language: "css",
+            code: `@import "@reuse-sh/carousel/styles.css";
+@import "@reuse-sh/lightbox/base.css";
+@import "@reuse-sh/lightbox/theme.css";
+
+#photos { --re-carousel-slide-width: 45%; }
+#photos img { display: block; width: 100%; height: auto; }`,
+            role: "usage",
+          },
+        ],
+      },
+      {
+        title: "Initialize",
+        blocks: [
+          {
+            kind: "prose",
+            text: "Run this after the markup exists. Keep the returned controllers for the lifetime of this content.",
+          },
+          {
+            kind: "code",
+            id: "lightbox-examples-carousel-initialize",
+            language: "javascript",
+            code: `import { createCarousel } from "@reuse-sh/carousel";
+import { bindLightboxGallery } from "@reuse-sh/lightbox";
+import { connectCarousel } from "@reuse-sh/lightbox/carousel";
+
+const strip = document.querySelector("#photos");
+const carousel = createCarousel(strip);
+const gallery = bindLightboxGallery(strip);
+const disconnect = connectCarousel(gallery, carousel);`,
+            role: "setup",
+          },
+        ],
+      },
+      {
+        title: "Integration",
+        blocks: [
+          {
+            kind: "prose",
+            text: "Pass slideOf to connectCarousel when the strip holds a different number of slides than the viewer holds photos. The carousel suppresses the click that ends a mouse drag, so dragging the strip does not open the viewer. The native dialog keeps focus inside, Escape closes it, and close returns focus to the current photo's slide.",
+          },
+        ],
+      },
+      {
+        title: "Cleanup",
+        blocks: [
+          {
+            kind: "prose",
+            text: "Run this when the view is removed, before mounting other controllers on the same element.",
+          },
+          {
+            kind: "code",
+            id: "lightbox-examples-carousel-cleanup",
+            language: "javascript",
+            code: `disconnect();
+gallery.destroy();
+carousel.destroy();`,
+            role: "cleanup",
+          },
+        ],
+      },
+    ],
+  },
+  "lightbox/examples/album": {
+    react: [
+      {
+        title: "Package styles",
+        blocks: [
+          {
+            kind: "prose",
+            text: "Import the package stylesheets once in your main CSS: base.css holds the layout and theme.css the default theme. The components layer lets Tailwind utilities adapt their presentation.",
+          },
+          {
+            kind: "code",
+            id: "lightbox-examples-album-package-styles",
+            language: "css",
+            code: `@import "@reuse-sh/lightbox/base.css" layer(components);
+@import "@reuse-sh/lightbox/theme.css" layer(components);`,
+            role: "setup",
+          },
+        ],
+      },
+      {
+        title: "Usage",
+        blocks: [
+          {
+            kind: "prose",
+            text: "One viewer opens every photo in the conversation as one sequence. An album shows its first four photos and puts the count of the rest on the fourth tile. getOrigin returns that tile for each photo it stands for, so a close on a photo without a tile shrinks into it.",
+          },
+          {
+            kind: "code",
+            id: "lightbox-examples-album-react",
+            language: "tsx",
+            code: `"use client";
+
+import { useLightbox } from "@reuse-sh/lightbox/react";
+import { useRef } from "react";
+
+type Photo = { src: string; alt: string };
+type Message = { id: string; text?: string; photos: Photo[] };
+const shown = 4;
+
+export function Conversation({ messages }: { messages: Message[] }) {
+  const photos = messages.flatMap((message) => message.photos);
+  const tiles = useRef<(HTMLButtonElement | null)[]>([]);
+  const lightbox = useLightbox({ getOrigin: (index) => tiles.current[index] ?? null });
+  let start = 0;
+  return <div>{messages.map((message) => {
+    const first = start;
+    start += message.photos.length;
+    const hidden = message.photos.length - shown;
+    return <article key={message.id}>
+      {message.text ? <p>{message.text}</p> : null}
+      <div className={message.photos.length > 1 ? "grid grid-cols-2 gap-1" : "grid"}>
+        {message.photos.slice(0, shown).map((photo, index) => (
+          <button key={photo.src} type="button" className="relative" ref={(tile) => {
+            const last = index === shown - 1 ? message.photos.length : index + 1;
+            for (let at = index; at < last; at++) tiles.current[first + at] = tile;
+          }} onClick={() => lightbox.open(photos, first + index)}>
+            <img src={photo.src} alt={photo.alt} width="160" height="160" />
+            {index === shown - 1 && hidden > 0 ? <span className="absolute inset-0 grid place-items-center">+{hidden}</span> : null}
+          </button>
+        ))}
+      </div>
+    </article>;
+  })}</div>;
+}`,
+            role: "usage",
+          },
+        ],
+      },
+      {
+        title: "Integration",
+        blocks: [
+          {
+            kind: "prose",
+            text: "While the viewer shows a photo, its tile is hidden, so the +3 tile stays hidden for each of the three photos it stands for. The native dialog keeps focus inside, Escape closes it, and close returns focus to the current photo's tile. The React hook destroys its viewer on unmount.",
+          },
+        ],
+      },
+    ],
+    html: [
+      {
+        title: "Usage",
+        blocks: [
+          {
+            kind: "prose",
+            text: "Every photo in the conversation is a link to its file. The photos an album does not show are hidden links after its fourth tile, which carries the count of the rest.",
+          },
+          {
+            kind: "code",
+            id: "lightbox-examples-album-markup",
+            language: "html",
+            code: `<div id="conversation">
+  <article>
+    <p>The view from the cliff</p>
+    <a href="/photos/cliff.jpg"><img src="/photos/cliff.jpg" alt="Cliff at dawn" width="320" height="180" /></a>
+  </article>
+  <article class="album">
+    <p>And the whole roll from the beach</p>
+    <a href="/photos/beach-1.jpg"><img src="/photos/beach-1.jpg" alt="Beach, photo 1" width="160" height="160" /></a>
+    <a href="/photos/beach-2.jpg"><img src="/photos/beach-2.jpg" alt="Beach, photo 2" width="160" height="160" /></a>
+    <a href="/photos/beach-3.jpg"><img src="/photos/beach-3.jpg" alt="Beach, photo 3" width="160" height="160" /></a>
+    <a href="/photos/beach-4.jpg"><img src="/photos/beach-4.jpg" alt="Beach, photo 4" width="160" height="160" /><span>+3</span></a>
+    <a href="/photos/beach-5.jpg" hidden><img src="/photos/beach-5.jpg" alt="Beach, photo 5" loading="lazy" /></a>
+    <a href="/photos/beach-6.jpg" hidden><img src="/photos/beach-6.jpg" alt="Beach, photo 6" loading="lazy" /></a>
+    <a href="/photos/beach-7.jpg" hidden><img src="/photos/beach-7.jpg" alt="Beach, photo 7" loading="lazy" /></a>
+  </article>
+</div>`,
+            role: "usage",
+          },
+        ],
+      },
+      {
+        title: "Styles",
+        blocks: [
+          {
+            kind: "prose",
+            text: "Import the package stylesheets once: base.css holds the layout and theme.css the default theme. Keep application layout styles scoped to this integration.",
+          },
+          {
+            kind: "code",
+            id: "lightbox-examples-album-css",
+            language: "css",
+            code: `@import "@reuse-sh/lightbox/base.css";
+@import "@reuse-sh/lightbox/theme.css";
+
+.album { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; }
+.album p { grid-column: 1 / -1; }
+.album a { position: relative; }
+.album span { position: absolute; inset: 0; display: grid; place-items: center; }`,
+            role: "usage",
+          },
+        ],
+      },
+      {
+        title: "Initialize",
+        blocks: [
+          {
+            kind: "prose",
+            text: "Run this after the markup exists. A hidden link takes the visible tile before it as its origin, so the close lands on the +3 tile.",
+          },
+          {
+            kind: "code",
+            id: "lightbox-examples-album-initialize",
+            language: "javascript",
+            code: `import { createLightbox } from "@reuse-sh/lightbox";
+
+const conversation = document.querySelector("#conversation");
+const links = [...conversation.querySelectorAll("a[href]")];
+let tile = null;
+const tiles = links.map((link) => (tile = link.hidden ? tile : link));
+const items = links.map((link) => ({ src: link.href, alt: link.querySelector("img").alt }));
+const lightbox = createLightbox({ getOrigin: (index) => tiles[index] });
+const onClick = (event) => {
+  const link = event.target.closest("a[href]");
+  if (!link || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+  event.preventDefault();
+  lightbox.open(items, links.indexOf(link));
+};
+conversation.addEventListener("click", onClick);`,
+            role: "setup",
+          },
+        ],
+      },
+      {
+        title: "Integration",
+        blocks: [
+          {
+            kind: "prose",
+            text: "Links still open the photo without JavaScript. While the viewer shows a photo, its tile is hidden, so the +3 tile stays hidden for each of the three photos it stands for. The native dialog keeps focus inside, Escape closes it, and close returns focus to the current photo's tile.",
+          },
+        ],
+      },
+      {
+        title: "Cleanup",
+        blocks: [
+          {
+            kind: "prose",
+            text: "Run this when the view is removed, before mounting another controller on the same element.",
+          },
+          {
+            kind: "code",
+            id: "lightbox-examples-album-cleanup",
+            language: "javascript",
+            code: `conversation.removeEventListener("click", onClick);
+lightbox.destroy();`,
+            role: "cleanup",
+          },
+        ],
+      },
+    ],
+  },
   "lightbox/guides/media": {
     react: [
       {

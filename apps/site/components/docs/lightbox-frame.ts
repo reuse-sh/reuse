@@ -41,7 +41,6 @@ const icons = {
 
 const script = (chrome: string | null) => {
   const slots = chrome?.includes("chromeSlots") ?? false;
-  const idle = chrome?.includes("hideWhenIdle") ?? false;
   return `
 
     import { createLightbox } from "@reuse-sh/lightbox";
@@ -68,15 +67,13 @@ const script = (chrome: string | null) => {
     let index = 0;
     let lightbox = null;
     let unsubscribe = null;
-    let stopIdle = null;
 
 ${chrome ?? ""}
 
     function teardown() {
       unsubscribe?.();
-      stopIdle?.();
       lightbox?.destroy();
-      unsubscribe = stopIdle = lightbox = null;
+      unsubscribe = lightbox = null;
     }
 
     function onState(state) {
@@ -109,10 +106,10 @@ ${chrome ?? ""}
         className,
         icons: ICONS,
         thumbnails: options.thumbnails ? "bottom" : false,
-        autoHide: false,
+        autoHide: options.autoHide ? 2000 : undefined,
         label: "Photos",
         padding: window.innerWidth < 560 ? 12 : 24,${slots ? "\n        slots: chromeSlots(() => items, ICONS)," : ""}
-      });${idle ? "\n      stopIdle = hideWhenIdle(lightbox);" : ""}
+      });
       withoutFocus(() => lightbox.open(items, index));
       const dialog = document.querySelector("dialog.${LIGHTBOX_STYLE_CLASS}");
       if (!animate) for (const animation of dialog.getAnimations({ subtree: true })) animation.finish();

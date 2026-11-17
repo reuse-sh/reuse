@@ -1,0 +1,12 @@
+@reference "../../app/globals.css";
+@layer components {
+  .re-lc-strip {
+    --re-carousel-gap: calc(var(--spacing) * 3.5);
+    --re-carousel-slide-width: calc((100% - var(--re-carousel-gap)) / 1.6);
+  }
+  @media (min-width: 48rem) {
+    .re-lc-strip {
+      --re-carousel-slide-width: calc((100% - var(--re-carousel-gap) * 2) / 3);
+    }
+  }
+}

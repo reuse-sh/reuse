@@ -17,6 +17,7 @@
     "/agent.md": "Markdown agent guide, checked by tests/site/content.spec.ts",
     "/llms.txt": "Plain-text index, checked by tests/site/content.spec.ts",
     "/[library]/controls/[page]/frame": "Iframe document embedded by the controls pages, checked through them",
+    "/[library]/themes/[theme]/frame": "Iframe document embedded by the themes page, checked through it",
     "/sitemap.xml": "Generated sitemap"
   },
   "features": [
@@ -136,6 +137,32 @@
       "proof": "role=heading[level=1]",
       "code": [
         "apps/site/app/[library]/guides/**",
+        "apps/site/app/[library]/layout.tsx",
+        "apps/site/components/docs/**"
+      ]
+    },
+    {
+      "id": "themes",
+      "title": "Lightbox themes",
+      "expand": "^/(?<library>[^/]+)/themes$",
+      "route": "/[library]/themes",
+      "proof": "role=heading[level=1][name=\"Themes\"]",
+      "code": [
+        "apps/site/app/[library]/themes/**",
+        "apps/site/app/[library]/layout.tsx",
+        "apps/site/components/docs/**",
+        "packages/lightbox/src/theme.css",
+        "packages/lightbox/src/themes/**"
+      ]
+    },
+    {
+      "id": "gestures",
+      "title": "Lightbox gestures",
+      "expand": "^/(?<library>[^/]+)/gestures$",
+      "route": "/[library]/gestures",
+      "proof": "role=heading[level=1][name=\"Gestures\"]",
+      "code": [
+        "apps/site/app/[library]/gestures/**",
         "apps/site/app/[library]/layout.tsx",
         "apps/site/components/docs/**"
       ]
