@@ -178,6 +178,34 @@ test("after paging to photo 3, close brings the strip to slide 3 and lands on it
   ).toEqual({ visibility: "", copies: 0, dialogs: 0 });
 });
 
+test("a close right after paging still lands on the new photo's tile", async ({
+  page,
+}) => {
+  await stripPage(page);
+  await openAt(page, 0);
+  await page.evaluate(
+    () =>
+      new Promise((resolve) => {
+        Object.assign(window, { pagedAt: performance.now() });
+        (window as Window).lightbox.next();
+        requestAnimationFrame(resolve);
+      }),
+  );
+  const landing = await closeAtLastFrame(page);
+  const tile = await tileBox(page, 1);
+  expect(
+    await page.evaluate(
+      () =>
+        performance.now() - (window as Window & { pagedAt: number }).pagedAt,
+    ),
+  ).toBeLessThan(200);
+  expect(
+    await page.evaluate(() => (window as Window).carousel.getState().index),
+  ).toBe(1);
+  expectOn(landing.frame, tile);
+  expectOn(landing.copy, tile);
+});
+
 test("a close during the open flight turns back from where the photo is, with one copy", async ({
   page,
 }) => {

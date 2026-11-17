@@ -260,7 +260,7 @@ export const libraries: Library[] = [
       "Every visible and spoken text comes from the strings option, such as counter(index, count) and close, with English defaults, so a translation passes only the strings it changes.",
       "Slots add your own controls: toolbarStart, toolbarEnd, footer and aside each take a function that returns a node with optional update(state) and destroy(). Slot buttons take the theme's look with the re-lightbox-button class and hide with the other controls. Share is not built in; build it as a slot.",
       "Events: on(type, listener) reports open, opened, change, settle, beforeclose and closed. beforeclose runs before the close flight is measured, and preventDefault() keeps the viewer open.",
-      "connectCarousel(lightbox, carousel, { slideOf }) from @reuse-sh/lightbox/carousel moves a carousel on the page to the current photo on every settle and holds its autoplay while the viewer is open, so close returns to a tile that is already in view.",
+      "connectCarousel(lightbox, carousel, { slideOf }) from @reuse-sh/lightbox/carousel moves a carousel on the page to the current photo on every settle and before close, and holds its autoplay while the viewer is open, so close returns to a tile that is already in view.",
     ],
     pages: [
       { path: "", title: "Overview", lead: lightboxDescription },
