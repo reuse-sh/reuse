@@ -761,7 +761,11 @@ describe("native carousel", () => {
     expect(viewport.querySelectorAll("[data-carousel-spacer]")).toHaveLength(2);
     viewport.scrollLeft = 590;
     viewport.dispatchEvent(new Event("scroll"));
-    expect(slides[0].style.transform).toBe("translateX(300px)");
+    expect(slides[0].style.getPropertyValue("--re-carousel-shift")).toBe(
+      "300px",
+    );
+    expect(slides[0].dataset.reCycle).toBe("1");
+    expect(slides[1].style.transform).toBe("scale(0.9)");
     viewport.scrollLeft = 600;
     viewport.dispatchEvent(new Event("scrollend"));
     expect(viewport.scrollLeft).toBe(300);
@@ -787,6 +791,8 @@ describe("native carousel", () => {
     expect(Array.from(viewport.children)).toEqual(slides);
     expect(slides[0].style.transform).toBe("");
     expect(slides[1].style.transform).toBe("scale(0.9)");
+    expect(slides[0].getAttribute("style")).toBe("");
+    expect(slides[0].hasAttribute("data-re-cycle")).toBe(false);
   });
 
   it("repeats in RTL and recenters continuous mouse movement without reversing it", () => {
@@ -1486,6 +1492,209 @@ describe("one state for every control", () => {
     });
     cleanups.push(carousel.destroy);
     expect(slides[0].getAttribute("aria-label")).toBe("Photo 1/3");
+  });
+});
+
+describe("effects, groups and drivers", () => {
+  const eight = () => fixture(Array(8).fill(100), 300);
+  const offset = (slide: HTMLElement) =>
+    Number(slide.style.getPropertyValue("--re-carousel-offset"));
+  const shown = (viewport: HTMLElement, slide: HTMLElement) =>
+    slide.offsetLeft +
+    (Number.parseFloat(slide.style.getPropertyValue("--re-carousel-shift")) ||
+      0) -
+    viewport.scrollLeft;
+
+  it("shifts looped slides through a custom property and gives each slide its offset from the active one", () => {
+    const { viewport, slides } = eight();
+    slides[7].style.transform = "scale(0.9)";
+    const carousel = createCarousel(viewport, { loop: true });
+    cleanups.push(carousel.destroy);
+    carousel.goTo(6, "instant");
+    expect(slides.map(offset)).toEqual([2, 3, 4, 5, -2, -1, 0, 1]);
+    const cycles = slides.map((slide) => Number(slide.dataset.reCycle));
+    expect(cycles.map((cycle) => cycle - cycles[7])).toEqual([
+      1, 1, 1, 1, 0, 0, 0, 0,
+    ]);
+    carousel.next();
+    vi.advanceTimersByTime(1000);
+    carousel.next();
+    vi.advanceTimersByTime(1000);
+    expect(carousel.getState().index).toBe(0);
+    carousel.prev();
+    vi.advanceTimersByTime(1000);
+    expect(carousel.getState().index).toBe(7);
+    expect(offset(slides[7])).toBe(0);
+    expect(offset(slides[0])).toBe(1);
+    expect(Number(slides[0].dataset.reCycle)).toBe(
+      Number(slides[7].dataset.reCycle) + 1,
+    );
+    expect(slides[0].style.getPropertyValue("--re-carousel-shift")).not.toBe(
+      "0px",
+    );
+    expect(shown(viewport, slides[0])).toBe(shown(viewport, slides[7]) + 100);
+    expect(slides[7].style.transform).toBe("scale(0.9)");
+    expect(slides[0].style.transform).toBe("");
+  });
+
+  it("counts offsets toward the end of the strip in right-to-left layouts", () => {
+    const { viewport, slides } = fixture([100, 100, 100, 100], 100, true);
+    const carousel = createCarousel(viewport);
+    cleanups.push(carousel.destroy);
+    carousel.goTo(1, "instant");
+    expect(slides.map(offset)).toEqual([-1, 0, 1, 2]);
+    expect(slides[0].hasAttribute("data-re-cycle")).toBe(false);
+  });
+
+  it("lists the slides seen across the loop seam and turns the loop off for a slide without width", () => {
+    const { viewport } = eight();
+    const carousel = createCarousel(viewport, { loop: true });
+    cleanups.push(carousel.destroy);
+    expect(carousel.getState().seamSlides).toEqual([0, 1, 2, 5, 6, 7]);
+    const seam = carousel.getState().seamSlides;
+    carousel.refresh();
+    expect(carousel.getState().seamSlides).toBe(seam);
+    carousel.setOptions({ loop: false });
+    expect(carousel.getState().seamSlides).toEqual([]);
+    const empty = fixture([100, 0, 100, 100, 100, 100, 100, 100], 300);
+    const flat = createCarousel(empty.viewport, { loop: true });
+    cleanups.push(flat.destroy);
+    expect(flat.getState()).toMatchObject({ isLooping: false, seamSlides: [] });
+  });
+
+  it("snaps only the first slide of each group and the slide a move was sent to", () => {
+    const { viewport, slides } = eight();
+    slides[1].style.scrollSnapAlign = "end";
+    const carousel = createCarousel(viewport, { group: 3 });
+    const aligns = () => slides.map((slide) => slide.style.scrollSnapAlign);
+    expect(aligns()).toEqual([
+      "start",
+      "none",
+      "none",
+      "start",
+      "none",
+      "none",
+      "start",
+      "none",
+    ]);
+    carousel.goTo(2, "instant");
+    expect(aligns()[2]).toBe("start");
+    pointer(viewport, "pointerdown", 200);
+    pointer(window, "pointermove", 150);
+    vi.advanceTimersByTime(200);
+    pointer(window, "pointermove", 140);
+    vi.advanceTimersByTime(200);
+    pointer(window, "pointerup", 140);
+    vi.advanceTimersByTime(2000);
+    expect(viewport.scrollLeft).toBe(300);
+    expect(carousel.getState().index).toBe(3);
+    expect(aligns()[2]).toBe("none");
+    carousel.destroy();
+    expect(aligns()).toEqual(["", "end", "", "", "", "", "", ""]);
+  });
+
+  it("snaps the first slide of each page with group page", () => {
+    const { viewport, slides } = fixture([100, 100, 100, 100, 100, 100], 200);
+    const carousel = createCarousel(viewport, { group: "page" });
+    cleanups.push(carousel.destroy);
+    expect(slides.map((slide) => slide.style.scrollSnapAlign)).toEqual([
+      "start",
+      "none",
+      "start",
+      "none",
+      "start",
+      "none",
+    ]);
+  });
+
+  it("hands the position to a driver that wraps through the seam without a jump", () => {
+    const { viewport, slides } = eight();
+    const carousel = createCarousel(viewport, { loop: true, autoplay: 1000 });
+    cleanups.push(carousel.destroy);
+    const driver = carousel.take("marquee");
+    expect(viewport.style.scrollSnapType).toBe("none");
+    expect(carousel.getState().isPlaying).toBe(false);
+    const places = () => slides.map((slide) => shown(viewport, slide));
+    let previous = places();
+    for (let px = 1; px <= 1200; px++) {
+      driver.setPosition(px);
+      const now = places();
+      const steps = now
+        .map((left, index) => left - previous[index])
+        .filter((_step, index) => now[index] > -100 && now[index] < 300);
+      expect(steps.every((step) => step === -1)).toBe(true);
+      previous = now;
+    }
+    expect(viewport.scrollLeft).toBeGreaterThanOrEqual(800);
+    expect(viewport.scrollLeft).toBeLessThan(1600);
+    carousel.next();
+    vi.advanceTimersByTime(5000);
+    expect(viewport.scrollLeft).toBe(1200);
+    driver.setPosition(1250);
+    driver.release();
+    expect(carousel.getState().isPlaying).toBe(true);
+    vi.advanceTimersByTime(900);
+    expect(viewport.scrollLeft % 100).toBe(0);
+    expect(viewport.style.scrollSnapType).toBe("");
+    driver.setPosition(1300);
+    expect(viewport.scrollLeft % 100).toBe(0);
+  });
+
+  it("gives the position back to a touch or a drag and calls onInterrupt", () => {
+    const { viewport } = eight();
+    const carousel = createCarousel(viewport);
+    cleanups.push(carousel.destroy);
+    let interrupted = 0;
+    const touched = carousel.take("marquee", {
+      onInterrupt: () => interrupted++,
+    });
+    touched.setPosition(160);
+    expect(viewport.scrollLeft).toBe(160);
+    pointer(viewport, "pointerdown", 100, { pointerType: "touch" });
+    expect(interrupted).toBe(1);
+    touched.setPosition(180);
+    expect(viewport.scrollLeft).toBe(160);
+    expect(carousel.take("marquee").setPosition).toBeTypeOf("function");
+    pointer(viewport, "pointerup", 100, { pointerType: "touch" });
+    vi.advanceTimersByTime(2000);
+    expect(viewport.scrollLeft).toBe(200);
+    const dragged = carousel.take("marquee", {
+      onInterrupt: () => interrupted++,
+    });
+    dragged.setPosition(-20);
+    pointer(viewport, "pointerdown", 200);
+    pointer(window, "pointerup", 200);
+    const click = new MouseEvent("click", { bubbles: true, cancelable: true });
+    viewport.dispatchEvent(click);
+    expect(click.defaultPrevented).toBe(false);
+    expect(interrupted).toBe(1);
+    pointer(viewport, "pointerdown", 200);
+    pointer(window, "pointermove", 202);
+    expect(interrupted).toBe(1);
+    pointer(window, "pointermove", 150);
+    expect(interrupted).toBe(2);
+    expect(viewport.scrollLeft).toBe(180);
+    pointer(window, "pointerup", 150);
+    vi.advanceTimersByTime(2000);
+    expect(viewport.scrollLeft % 100).toBe(0);
+    const other = carousel.take("marquee", {
+      onInterrupt: () => interrupted++,
+    });
+    carousel.take("ticker");
+    expect(interrupted).toBe(3);
+    other.release();
+    expect(viewport.style.scrollSnapType).toBe("none");
+  });
+
+  it("returns a driver that does nothing under reduced motion", () => {
+    motion.matches = true;
+    const { viewport } = eight();
+    const carousel = createCarousel(viewport);
+    cleanups.push(carousel.destroy);
+    const driver = carousel.take("marquee");
+    driver.setPosition(150);
+    expect(viewport.scrollLeft).toBe(0);
+    expect(viewport.style.scrollSnapType).toBe("");
   });
 });
 

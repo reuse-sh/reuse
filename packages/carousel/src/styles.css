@@ -64,3 +64,7 @@
 :where([data-carousel-counter][data-roll] > *) {
   grid-area: 1 / 1;
 }
+
+.re-carousel__slide[data-re-cycle]:not([data-re-cycle="0"]) {
+  translate: var(--re-carousel-shift);
+}
