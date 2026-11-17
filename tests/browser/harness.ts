@@ -102,9 +102,10 @@ async function synthesizeTouches(
   type: TouchPhase,
   points: Point[],
   first = 0,
+  time?: number,
 ) {
   await page.evaluate(
-    ([phase, fingers, offset]) => {
+    ([phase, fingers, offset, due]) => {
       // WebKit throws when a page captures a synthesized pointer, which a real finger never does.
       const capture = Element.prototype.setPointerCapture;
       if (!("synthesized" in capture))
@@ -130,6 +131,13 @@ async function synthesizeTouches(
       }[phase];
       const target = document.elementFromPoint(fingers[0].x, fingers[0].y);
       if (!target) return;
+      const stamped = <T extends Event>(event: T) => {
+        if (due !== undefined)
+          Object.defineProperty(event, "timeStamp", {
+            value: due - performance.timeOrigin,
+          });
+        return event;
+      };
       let touches: Touch[] = [];
       try {
         touches = fingers.map(
@@ -146,32 +154,37 @@ async function synthesizeTouches(
       }
       fingers.forEach((finger, index) => {
         target.dispatchEvent(
-          new PointerEvent(pointer, {
-            bubbles: true,
-            cancelable: true,
-            composed: true,
-            pointerId: 100 + offset + index,
-            pointerType: "touch",
-            isPrimary: offset + index === 0,
-            clientX: finger.x,
-            clientY: finger.y,
-            buttons: phase === "end" || phase === "cancel" ? 0 : 1,
-          }),
+          stamped(
+            new PointerEvent(pointer, {
+              bubbles: true,
+              cancelable: true,
+              composed: true,
+              pointerId: 100 + offset + index,
+              pointerType: "touch",
+              isPrimary: offset + index === 0,
+              clientX: finger.x,
+              clientY: finger.y,
+              buttons: phase === "end" || phase === "cancel" ? 0 : 1,
+            }),
+          ),
         );
       });
       if (touches.length > 0)
         target.dispatchEvent(
-          new TouchEvent(touch, {
-            bubbles: true,
-            cancelable: true,
-            composed: true,
-            touches: phase === "end" || phase === "cancel" ? [] : touches,
-            targetTouches: phase === "end" || phase === "cancel" ? [] : touches,
-            changedTouches: touches,
-          }),
+          stamped(
+            new TouchEvent(touch, {
+              bubbles: true,
+              cancelable: true,
+              composed: true,
+              touches: phase === "end" || phase === "cancel" ? [] : touches,
+              targetTouches:
+                phase === "end" || phase === "cancel" ? [] : touches,
+              changedTouches: touches,
+            }),
+          ),
         );
     },
-    [type, points, first] as const,
+    [type, points, first, time] as const,
   );
 }
 
@@ -197,7 +210,7 @@ async function touchPath(
   const cdp = isChromium(page)
     ? await page.context().newCDPSession(page)
     : undefined;
-  // A busy machine delivers CDP input late, so each touch carries the time its point was due.
+  // A busy machine delivers input late, so each touch carries the time its point was due.
   const start = Date.now();
   let previous: Point[] = [];
   const send = async (phase: TouchPhase, points: Point[], due: number) => {
@@ -207,8 +220,14 @@ async function touchPath(
     previous = points;
     if (!cdp) {
       if (lifted.length)
-        await synthesizeTouches(page, "end", lifted, points.length);
-      return synthesizeTouches(page, phase, points);
+        await synthesizeTouches(
+          page,
+          "end",
+          lifted,
+          points.length,
+          start + due,
+        );
+      return synthesizeTouches(page, phase, points, 0, start + due);
     }
     const type = {
       start: "touchStart",
