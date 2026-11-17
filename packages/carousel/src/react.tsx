@@ -24,6 +24,11 @@ const emptyState: CarouselState = Object.freeze({
   isPlaying: false,
   isDragging: false,
   isLooping: false,
+  pageCount: 0,
+  pageIndex: 0,
+  visible: Object.freeze([]),
+  autoplayProgress: 0,
+  seamSlides: Object.freeze([]),
 });
 
 export function useCarousel(options: CarouselOptions = {}) {
@@ -32,6 +37,8 @@ export function useCarousel(options: CarouselOptions = {}) {
   const [state, setState] = useState<CarouselState>(emptyState);
   const onChange = useRef(options.onChange);
   onChange.current = options.onChange;
+  const latest = useRef(options);
+  latest.current = options;
   const {
     slides,
     align,
@@ -46,17 +53,19 @@ export function useCarousel(options: CarouselOptions = {}) {
   } = options;
   useEffect(() => {
     if (!viewport) return;
+    const initial = latest.current;
     const instance = createCarousel(viewport, {
       slides,
-      align,
-      loop,
-      drag,
-      group,
-      autoplay,
+      align: initial.align,
+      loop: initial.loop,
+      drag: initial.drag,
+      group: initial.group,
+      autoplay: initial.autoplay,
       releaseMotion,
       releaseDuration,
       moveMotion,
       wheel,
+      strings: initial.strings,
       onChange: (next) => {
         setState(next);
         onChange.current?.(next);
@@ -65,19 +74,10 @@ export function useCarousel(options: CarouselOptions = {}) {
     setCarousel(instance);
     setState(instance.getState());
     return () => instance.destroy();
-  }, [
-    viewport,
-    slides,
-    align,
-    loop,
-    drag,
-    group,
-    autoplay,
-    releaseMotion,
-    releaseDuration,
-    moveMotion,
-    wheel,
-  ]);
+  }, [viewport, slides, releaseMotion, releaseDuration, moveMotion, wheel]);
+  useEffect(() => {
+    carousel?.setOptions({ autoplay, loop, group, align, drag });
+  }, [carousel, autoplay, loop, group, align, drag]);
   return { ref: setViewport, carousel, state };
 }
 

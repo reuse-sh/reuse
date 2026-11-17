@@ -9,15 +9,18 @@ CarouselOptions:
 - align?: "start" | "center", default start
 - loop?: boolean, default false
 - drag?: boolean, default true
-- group?: number | "page", default 1
+- group?: number | "page", default 1. With N above 1 or "page", only the slides next() reaches from the first slide keep scroll-snap-align, plus the slide a move or a refresh left active; the others get scroll-snap-align: none, so touch and trackpad swipes, a released mouse drag and settling all rest on a group start. destroy restores each slide's own value.
 - autoplay?: number, milliseconds, off by default
 - releaseMotion?: "spring" | "native", default spring. A released mouse drag projects its speed 260ms ahead and travels to the snap point nearest that stop, at least one slide ahead after a flick, and never past the first slide on the way whose scroll-snap-stop is always. Spring starts at the drag speed and slows down without overshooting a target it moves toward; native uses the browser smooth scroll. Reduced motion jumps.
 - releaseDuration?: number, milliseconds, default 260, the spring time for a slow release and for the return from a stretched end
 - moveMotion?: "spring" | "native", default spring. next, prev, goTo, the arrow keys, Home and End travel on the same critically damped spring as a released drag, settling in 500ms. A move during a move redirects the spring, keeps its speed and counts from its target. The spring crosses the loop seam. native keeps the browser smooth scroll. goTo(index, "instant") and reduced motion jump.
 - wheel?: "vertical", off by default. A vertical mouse wheel (line or page deltaMode, or |deltaY| >= 50 per event) moves one slide per notch and lets the page scroll once the strip cannot move that way; trackpads stay native.
+- strings?: Partial<CarouselStrings>, the slide labels and announcements
 - onChange?: (state: CarouselState) => void
 
-CarouselState: index, count, progress, canPrev, canNext, isPlaying, isDragging, isLooping. index is zero-based; progress is 0..1. isLooping is true only while the slides can cover the viewport and the loop actually repeats them. getState returns a stable snapshot until something actually changes.
+CarouselState: index, count, progress, canPrev, canNext, isPlaying, isDragging, isLooping, pageCount, pageIndex, visible, autoplayProgress, seamSlides. index is zero-based; progress is 0..1. isLooping is true only while the slides can cover the viewport and the loop actually repeats them. pageCount is the number of distinct stops next() reaches from the first slide (fewer than count with group N or "page", or when the last slides share the end position), and pageIndex is the last page whose position is at or before the active slide's. visible lists the slides at least half inside the viewport, in index order, measured during scrolling and replaced only when it changes. autoplayProgress is the part of the autoplay wait that has passed, 0..1 in whole percents. seamSlides lists, while the loop repeats, the first slides that start within one viewport width of the first slide and the last slides that end within one viewport width of the last slide's end, which are the slides seen while the strip crosses the loop seam; it is empty otherwise. getState returns a stable snapshot until something actually changes.
+
+CarouselStrings: previous ("Previous slide"), next ("Next slide"), goTo(index, count) ("Go to slide 3 of 8"), counter(index, count) ("3 / 8"), slide(index, count) ("3 of 8"), play ("Play slideshow"), pause ("Pause slideshow"), progress ("Slide position"). index is zero-based, like the state's.
 
 Carousel methods:
 - next(), prev()
@@ -27,7 +30,17 @@ Carousel methods:
 - refresh(): void, remeasure dynamic content while retaining the active element where possible
 - setEnabled(enabled: boolean): void, temporarily suspend user scrolling and dragging, used for lightbox zoom
 - play(), pause(), hold(reason: string, isHeld: boolean)
+- take(owner: string, options?: { onInterrupt?: () => void }): { setPosition(px: number): void; release(): void } hands the position to a driver such as a marquee. While taken, scroll snapping is off, autoplay holds, and next, prev, goTo and the keys do nothing. setPosition(px) places the strip px from where it was when taken, forward in the reading direction, wraps any distance through the loop seam without a visible jump and clamps it to the ends otherwise. A mouse drag past 5px or a touch takes the position back and calls onInterrupt, and re-carousel:settle follows once the strip rests, the point to take again; a mouse press that does not drag keeps the driver and still clicks. release() travels to the nearest snap point unless scroll-snap-type is none, and restores snapping. A take by another owner ends the current one and calls its onInterrupt. While a mouse button or a finger is down on the strip, take returns a handle that does nothing and re-carousel:settle follows the release; under reduced motion and after destroy it also returns one; setPosition also does nothing while the strip is disabled or reduced motion turns on.
+- setOptions(options: Pick<CarouselOptions, "autoplay" | "loop" | "group" | "align" | "drag">): void, applies the options it is given without rebuilding and keeps the active slide in place
 - destroy(): void, idempotent, restore owned DOM/style/listeners and cancel all pending work
+
+Autoplay waits for its interval, then moves on; on the last slide of a strip that does not loop it returns to the first slide the same way. Hover, focus, a drag, a hidden page, a strip less than half visible, reduced motion and hold() pause it and keep what is left of the wait. Any change of index starts the wait again. pause() by the visitor outlasts every hold(): releasing the holds does not resume it. --re-carousel-autoplay-progress on the viewport carries the passed part of the wait, written every frame while autoplay plays and left in place while it pauses.
+
+DOM events on the viewport, bubbling, with the state in detail: re-carousel:change when index changes, re-carousel:settle when a move comes to rest, re-carousel:play and re-carousel:pause when isPlaying changes.
+
+A goTo while the strip does not overflow (a hidden tab, display: none, images not loaded) only sets the index; the first refresh that finds overflow scrolls to that slide at once. A later goTo replaces it.
+
+A div or span viewport without a role gets role="region" and aria-roledescription="carousel"; a div or span slide without a role gets role="group", aria-roledescription="slide" and, without its own label, aria-label from strings.slide. next(), prev() and the keys announce the slide they reach in a polite live region placed after the viewport when the carousel is created (on the first announcement for a viewport that had no parent then); autoplay, goTo from code, drags and swipes do not. destroy removes all of it.
 
 A touch, a mouse press, a wheel and a scroll from outside the carousel stop a running spring where it is, and the strip snaps to the nearest point.
 
@@ -39,47 +52,23 @@ Scroll snap type is read on refresh: mandatory snaps as before, proximity snaps 
 
 A mouse drag that starts inside a nested strip with room to scroll moves that strip only; one that fits lets the outer strip move. Slides inside another slide belong to the nested strip. Mouse drag listeners are added on the first pointer move over an overflowing strip while (hover: hover) and (pointer: fine) matches; measuring and keys work at once. ResizeObserver, MutationObserver and, without ResizeObserver, the window resize event request a refresh, which runs at most once per animation frame. An explicit refresh() runs at once.
 
+Slide state: the loop shifts a slide by whole periods through --re-carousel-shift (px), which the package CSS applies as translate on a slide whose data-re-cycle is not 0, and never writes the slide's transform or translate. A translate set on the slide by its own CSS or style replaces the shift, so effects belong on transform or add var(--re-carousel-shift, 0px) to their translate. data-re-cycle holds the period the slide is drawn in (-1, 0 or 1) while the loop repeats. Every slide carries --re-carousel-offset: how far the slide is from where it would rest aligned, its center's distance from the alignment point, in slide widths, rounded to thousandths, 0 for a slide resting where it aligns, negative before it and positive after it in the reading direction (so negative to the right in right-to-left layouts), counting the loop shift and a stretched end. It is written on every scroll, spring and drag frame, only when it changes, from measurements taken at refresh. destroy removes all three.
+
+The loop also needs every slide to have a width: a slide 0px wide during a refresh keeps the loop off and isLooping false until a refresh finds it sized. Slides of different widths repeat. Slides added or removed refresh the strip with the active slide where it was, and the loop checks again whether it can repeat.
+
 A mouse drag past either end of a non-repeating strip stretches it with a rubber band curve through the slides' CSS translate, which replaces a slide's own translate while it lasts, and a spring brings it back after release or any interruption, native release included; reduced motion and an instant or auto goTo drop it at once. A wheel does not stop that return. A mouse press while the strip is visibly moving (a spring, or a scroll in the last 100ms) stops it and does not click. While a mouse drag can move the strip, the viewport cursor is grab, and grabbing during a drag; destroy restores both the transforms and the cursor.
 
 When disabled, the current viewport position stays stable. No global keyboard interception. Keyboard controls only handle events within the viewport and prevent their own handled event so modal owners do not act twice.
 
 The React adapter belongs to the package and uses this same controller, not a duplicate geometry implementation. Controls may be rendered by the owner. Native touch and trackpad scrolling remain browser scrolling. Looping must preserve original interactive slide behavior and must not leave duplicate ids or stale transformations on destroy.
 
-## Planned
+Main entry: connectThumbnails(main: Carousel, thumbnails: Carousel): () => void sets the thumbnail strip to align: "center", keeps the main strip's slide active in it (at once the first time, on the spring after that), sets aria-current="true" on that thumbnail and sends the main strip to a clicked thumbnail's slide, announced. The returned function restores the alignment and removes the mark and the listener.
 
-The carousel and lightbox work in progress adds the names below. They are fixed now so the lightbox and the controls can be built against them. Each moves into the sections above once the code ships it.
+Entry point @reuse-sh/carousel/controls: bindCarouselControls(root: HTMLElement, carousel: Carousel, options?: { strings?: Partial<CarouselStrings>; dotsWindow?: number }): () => void binds, inside root and on elements whose data-carousel-controls is the viewport id:
+- [data-carousel-prev], [data-carousel-next]: click, disabled (aria-disabled on other elements) at the ends, aria-controls, a label from strings when the element has no text or label
+- [data-carousel-dots]: one button per page when it holds no buttons, its own buttons in page order otherwise; aria-current="true" on the active page; a click goes to the page, announced. dotsWindow: N shows at most N dots and moves the window only when the active dot would reach its outer two (for N of 3 or more) or leave it (N of 1 or 2); on a side with more pages, the outermost shown dot gets data-edge="far" and the next data-edge="near"
+- [data-carousel-counter]: one text node with strings.counter(index, count), written only when the text changes; with data-roll each new text rolls in over 200ms, up going forward and down going back, and without the roll under reduced motion
+- [data-carousel-play]: play() and pause() by the visitor, aria-pressed="true" and the strings.pause label while autoplay is requested, aria-pressed="false" and strings.play otherwise
+- [data-carousel-progress]: role="slider" over pages (aria-valuemin 1, aria-valuemax pageCount, aria-valuenow pageIndex + 1, aria-valuetext strings.slide), --re-carousel-progress with the strip progress, a pointer drag that goes to the nearest page, ArrowRight, ArrowUp and PageUp forward, ArrowLeft, ArrowDown and PageDown back (left and right swap in right-to-left layouts), Home and End
+Controls inside an element whose data-carousel-controls names another viewport are left to that one, unless that element also holds root. Announcements use the carousel's strings. The binder gives the viewport a generated id when it has none. The returned function removes every listener, created element and attribute it added and restores the ones it changed.
 
-### Controls, state and events
-
-CarouselOptions:
-- strings?: Partial<CarouselStrings>
-
-CarouselState additions: pageCount, pageIndex, visible (readonly number[], slides at least half visible), autoplayProgress (0..1).
-
-Carousel method additions:
-- setOptions(options: Pick<CarouselOptions, "autoplay" | "loop" | "group" | "align" | "drag">): void, keeps the position
-
-CarouselStrings: previous ("Previous slide"), next ("Next slide"), goTo(index, count) ("Go to slide 3 of 8"), counter(index, count) ("3 / 8"), slide(index, count) ("3 of 8"), play ("Play slideshow"), pause ("Pause slideshow"), progress ("Slide position").
-
-DOM events on the viewport, bubbling, with the state in detail: re-carousel:change, re-carousel:settle, re-carousel:play, re-carousel:pause.
-
-Custom property: --re-carousel-autoplay-progress on the viewport.
-
-A goTo before the strip overflows is kept and runs on the first refresh that finds overflow. pause() by the visitor outlasts every hold().
-
-Entry point @reuse-sh/carousel/controls:
-- bindCarouselControls(root: HTMLElement, carousel: Carousel, options?: { strings?: Partial<CarouselStrings>; dotsWindow?: number }): () => void. Binds [data-carousel-prev], [data-carousel-next], [data-carousel-dots], [data-carousel-counter] (data-roll), [data-carousel-play] and [data-carousel-progress], also outside root through data-carousel-controls="<viewport id>". The returned function removes every listener and created element.
-
-Main entry addition:
-- connectThumbnails(main: Carousel, thumbnails: Carousel): () => void. Keeps the active thumbnail visible and centered, sets aria-current="true" on it, and moves the main strip on a thumbnail click.
-
-### Effects, marquee and groups
-
-CarouselState additions: seamSlides (readonly number[], slides seen while crossing the loop seam).
-
-Carousel method additions:
-- take(owner: string, options?: { onInterrupt?: () => void }): { setPosition(px: number): void; release(): void }. While taken, snapping, autoplay and the spring stop and setPosition wraps through the loop seam. A user drag or touch takes the position back and calls onInterrupt. release restores snapping. Under reduced motion setPosition does nothing.
-
-Slide state: the loop shifts a slide through --re-carousel-shift (px), applied by the package CSS as translate, and leaves the slide's own transform and translate alone. data-re-cycle holds the period (-1, 0, 1). --re-carousel-offset is the slide center's distance from the alignment point in slide widths, updated every frame while the strip moves.
-
-With group: N only the first slide of each group snaps; with group: "page" the first slide of each page does. Other slides get scroll-snap-align: none, restored on destroy.
