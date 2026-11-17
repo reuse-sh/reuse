@@ -2037,7 +2037,29 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
         ),
       );
     };
+    const shown = () => {
+      if (!image?.complete || !image.naturalWidth) throw new Error("No image");
+      const canvas = doc.createElement("canvas");
+      const svg = formatOf(source ?? "", doc.baseURI) === "svg";
+      canvas.width = Math.round(svg ? size.width : image.naturalWidth);
+      canvas.height = Math.round(svg ? size.height : image.naturalHeight);
+      canvas
+        .getContext("2d")
+        ?.drawImage(image, 0, 0, canvas.width, canvas.height);
+      return new Promise<Blob>((resolve, reject) =>
+        canvas.toBlob(
+          (result) => (result ? resolve(result) : reject(new Error("No blob"))),
+          "image/png",
+        ),
+      );
+    };
+    // Only a tainted canvas fetches the file, since a page's connect-src may refuse data: and blob:.
     const blob = (async () => {
+      try {
+        return await shown();
+      } catch (error) {
+        if ((error as Error).name !== "SecurityError") throw error;
+      }
       if (!source) throw new Error("No image");
       const response = await win.fetch(source, {
         mode: "cors",
@@ -2635,10 +2657,8 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
     if (!Number.isFinite(index))
       throw new TypeError("Image index must be finite.");
     configure();
-    const opening = settings.getOrigin?.(index) ?? nextItems[index]?.origin;
     const doc =
       settings.container?.ownerDocument ??
-      (typeof opening === "function" ? opening() : opening)?.ownerDocument ??
       (typeof document === "undefined" ? undefined : document);
     if (!doc?.body)
       throw new Error("Opening a lightbox needs a browser document.");
@@ -2888,7 +2908,8 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
         if (
           (event.ctrlKey || event.metaKey) &&
           !event.altKey &&
-          (event.code ? event.code === "KeyC" : event.key.toLowerCase() === "c")
+          (event.key.toLowerCase() === "c" ||
+            (!/^[a-z]$/i.test(event.key) && event.code === "KeyC"))
         ) {
           copyImage(s, event);
           return;
@@ -3332,6 +3353,10 @@ export function bindLightboxGallery(
 ) {
   const controller = createLightbox({
     ...options,
+    // Read at each open, so a page that swaps its body still gets the dialog in the live one.
+    get container() {
+      return options.container ?? root.ownerDocument.body;
+    },
   });
   const click = (event: MouseEvent) => {
     if (

@@ -250,26 +250,68 @@ test.describe("lightbox native photo handling", () => {
     expect(seen.writes).toEqual([]);
   });
 
-  test("Ctrl+C takes the C key by its position, so a Cyrillic layout copies too", async ({
+  for (const [layout, key, code, copies] of [
+    ["Cyrillic Ctrl+C", "с", "KeyC", true],
+    ["Dvorak Ctrl+C", "c", "KeyI", true],
+    ["Dvorak Ctrl+J", "j", "KeyC", false],
+  ] as const)
+    test(`${layout} ${copies ? "copies" : "is left to the browser"}`, async ({
+      page,
+    }) => {
+      await open(page);
+      await stubClipboard(page);
+      await page.evaluate(
+        ([key, code]) =>
+          (document.activeElement ?? document.body).dispatchEvent(
+            new KeyboardEvent("keydown", {
+              key,
+              code,
+              ctrlKey: true,
+              bubbles: true,
+              cancelable: true,
+            }),
+          ),
+        [key, code] as const,
+      );
+      if (copies)
+        await expect
+          .poll(async () => (await records(page)).writes)
+          .toEqual([
+            { types: ["image/png"], png: { type: "image/png", width: 1600 } },
+          ]);
+      else {
+        await page.waitForTimeout(200);
+        expect((await records(page)).writes).toEqual([]);
+      }
+    });
+
+  test("Ctrl+C copies a data: photo without fetching it, as a page whose connect-src refuses data: needs", async ({
     page,
   }) => {
     await open(page);
     await stubClipboard(page);
-    await page.evaluate(() =>
-      (document.activeElement ?? document.body).dispatchEvent(
-        new KeyboardEvent("keydown", {
-          key: "с",
-          code: "KeyC",
-          ctrlKey: true,
-          bubbles: true,
-          cancelable: true,
-        }),
-      ),
-    );
+    await page.evaluate(() => {
+      window.fetch = () => Promise.reject(new TypeError("Refused by CSP"));
+      const image = document.querySelector(
+        '.re-lightbox-slide[aria-hidden="false"] .re-lightbox-image',
+      ) as HTMLImageElement;
+      const canvas = document.createElement("canvas");
+      canvas.width = 320;
+      canvas.height = 240;
+      (canvas.getContext("2d") as CanvasRenderingContext2D).fillRect(
+        0,
+        0,
+        320,
+        240,
+      );
+      image.src = canvas.toDataURL("image/jpeg");
+      return image.decode();
+    });
+    await page.keyboard.press("Control+c");
     await expect
       .poll(async () => (await records(page)).writes)
       .toEqual([
-        { types: ["image/png"], png: { type: "image/png", width: 1600 } },
+        { types: ["image/png"], png: { type: "image/png", width: 320 } },
       ]);
   });
 
@@ -570,7 +612,12 @@ test.describe("lightbox documents", () => {
     .join("")
     .replaceAll('"', "&quot;")}"></iframe>`;
 
-  for (const from of ["frame", "parent bind", "parent container"] as const)
+  for (const from of [
+    "frame",
+    "parent bind",
+    "parent bind with items that name no origin",
+    "parent container",
+  ] as const)
     test(`a lightbox in a frame, made from the ${from}, locks only the frame's scroll and returns focus there`, async ({
       page,
     }) => {
@@ -596,6 +643,16 @@ test.describe("lightbox documents", () => {
             .contentDocument as Document;
           if (from === "parent bind") {
             bindLightboxGallery(doc.body);
+            return;
+          }
+          if (from === "parent bind with items that name no origin") {
+            bindLightboxGallery(doc.body, {
+              getItem: (image) => ({
+                src: image.src,
+                width: 1200,
+                height: 800,
+              }),
+            });
             return;
           }
           const lightbox = createLightbox({ container: doc.body });
