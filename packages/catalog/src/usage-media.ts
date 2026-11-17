@@ -733,7 +733,7 @@ export function ImageLink() {
         blocks: [
           {
             kind: "prose",
-            text: "Keep the full-size URL on the anchor and repeat it in `data-lightbox-src` for gallery binding. The other data attributes below are application metadata, mapped by `getItem` during setup.",
+            text: "Keep the full-size URL on the anchor; gallery binding opens it when its path ends in an image extension, and `data-lightbox-src` names the file otherwise. The other data attributes below are application metadata, mapped by `getItem` during setup.",
           },
           {
             kind: "code",
@@ -741,8 +741,7 @@ export function ImageLink() {
             language: "html",
             code: `<div id="gallery">
   <a href="/images/print-large.jpg">
-    <img src="/images/print.jpg" data-lightbox-src="/images/print-large.jpg"
-      alt="Blue marble print" width="640" height="480"
+    <img src="/images/print.jpg" alt="Blue marble print" width="640" height="480"
       data-caption="Archival pigment on paper" data-width="2400" data-height="1800" />
   </a>
 </div>`,
@@ -768,7 +767,7 @@ export function ImageLink() {
         blocks: [
           {
             kind: "prose",
-            text: "`lightboxItemFromImage` supplies the preview, alt text and origin. Override its dimensions with the full-size metadata, or leave them undefined when unknown; the helper otherwise reads the thumbnail dimensions.",
+            text: "`lightboxItemFromImage` supplies the source, preview, alt text, caption and origin. It reads `data-lightbox-width` and `data-lightbox-height`, and the thumbnail's own size only when the thumbnail is the full file. Override the dimensions with your full-size metadata, or leave them undefined when unknown.",
           },
           {
             kind: "code",

@@ -184,7 +184,7 @@ test("a failed image offers a retry that loads the same file, while paging goes 
     )
     .toBe(0);
 
-  // A press on a strip that still glides stops it and is not a click.
+  // A press on a strip that still glides, or scrolled in the last 100ms, stops it and is not a click.
   await expect
     .poll(() =>
       page
@@ -195,6 +195,7 @@ test("a failed image offers a retry that loads the same file, while paging goes 
         ),
     )
     .toBe(true);
+  await page.waitForTimeout(150);
   status = 200;
   await retry.click();
   await expect(error).toHaveCount(0);

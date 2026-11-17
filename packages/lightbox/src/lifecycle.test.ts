@@ -910,6 +910,9 @@ describe("lightbox public API", () => {
     );
     loaders[0].dispatchEvent(new Event("error"));
     controller.zoomTo(2);
+    expect(controller.getState().zoom.scale).toBe(1);
+    controller.goTo(1);
+    controller.zoomTo(2);
     const texts = [
       ...dialog().querySelectorAll<HTMLElement>("*"),
       dialog(),
@@ -926,7 +929,7 @@ describe("lightbox public API", () => {
     ).toEqual([]);
     expect(dialog().getAttribute("aria-label")).toBe("Bildergalerie");
     expect(dialog().querySelector(".re-lightbox-counter")?.textContent).toBe(
-      "1 von 3",
+      "2 von 3",
     );
     expect(dialog().querySelector(".re-lightbox-error")?.textContent).toBe(
       "Das Bild konnte nicht geladen werden.Erneut versuchen",

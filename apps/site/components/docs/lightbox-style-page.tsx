@@ -59,9 +59,9 @@ export function LightboxStylePage({ style }: { style: string }) {
           <FrameworkOnly value="html">
             <Text>
               Run this after the gallery exists. <C>bindLightboxGallery</C>{" "}
-              reads the full image from <C>data-lightbox-src</C> and preserves
-              modified clicks. Import the stylesheets through your app’s
-              bundler.
+              opens the full image the link points to, or{" "}
+              <C>data-lightbox-src</C>, and preserves modified clicks. Import
+              the stylesheets through your app’s bundler.
             </Text>
           </FrameworkOnly>
           <CodePair

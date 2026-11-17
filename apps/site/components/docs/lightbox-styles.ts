@@ -59,6 +59,7 @@ const rules: readonly (readonly [(o: LightboxStyle) => boolean, string])[] = [
   --re-lightbox-background: #fcfcfc;
   --re-lightbox-foreground: #1f1f1f;
   --re-lightbox-control: #fff;
+  --re-lightbox-placeholder: rgb(0 0 0 / 5%);
 }
 .re-lightbox-style *, .re-lightbox-style *::before, .re-lightbox-style *::after { box-sizing: border-box; }
 .re-lightbox-style .re-lightbox-viewport {
@@ -75,6 +76,7 @@ const rules: readonly (readonly [(o: LightboxStyle) => boolean, string])[] = [
   transition: background-color 150ms ease, transform 160ms cubic-bezier(0.23, 1, 0.32, 1), opacity 300ms ease;
 }
 .re-lightbox-style .re-lightbox-button svg { width: 18px; height: 18px; }
+.re-lightbox-style .re-lightbox-retry { box-shadow: var(--re-lightbox-ring); }
 .re-lightbox-style .re-lightbox-button:hover { background: #f4f4f4; }
 .re-lightbox-style .re-lightbox-button:active:not(:disabled) { transform: scale(0.95); }
 .re-lightbox-style .re-lightbox-button:disabled { opacity: 0.3; }
@@ -228,6 +230,7 @@ const rules: readonly (readonly [(o: LightboxStyle) => boolean, string])[] = [
   --re-lightbox-background: #09090a;
   --re-lightbox-foreground: #fff;
   --re-lightbox-control: rgb(255 255 255 / 8%);
+  --re-lightbox-placeholder: rgb(255 255 255 / 6%);
 }
 .re-lightbox-style .re-lightbox-button:hover { background: rgb(255 255 255 / 14%); }`,
   ],

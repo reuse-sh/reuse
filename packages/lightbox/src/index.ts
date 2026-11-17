@@ -184,7 +184,7 @@ type LoadedSlide = {
   loader?: HTMLImageElement;
   /** The pixel width of the file on screen, once the full file shows. */
   natural?: number;
-  status: "idle" | "loading" | "settled";
+  status: "idle" | "loading" | "settled" | "failed";
   load: (priority: "high" | "low") => void;
   /** The full file's swap, held until the open flight with the preview has landed. */
   commit?: () => void;
@@ -666,12 +666,10 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
   }
 
   function previewOf(index: number) {
-    const item = items[index];
-    if (item.previewSrc) return item.previewSrc;
     const tile = tileImage(index);
     return tile?.complete && tile.naturalWidth
       ? tile.currentSrc || tile.src
-      : undefined;
+      : items[index].previewSrc;
   }
 
   // Before the file arrives, the shown preview or the tile gives the proportions.
@@ -691,11 +689,12 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
 
   function limits(s: Session, index = state.index) {
     const item = items[index];
+    const entry = s.loaded.get(index);
     return zoomLimits({
       fileWidth:
-        largestWidth(item?.srcset) ??
-        s.loaded.get(index)?.natural ??
-        item?.width,
+        entry?.status === "failed"
+          ? undefined
+          : (largestWidth(item?.srcset) ?? entry?.natural ?? item?.width),
       fittedWidth: fit(index, s).width,
       svg: Boolean(item && isSvg(item.src)),
       maxZoom: settings.maxZoom,
@@ -1056,7 +1055,7 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
   function requestSizes(s: Session) {
     for (const [index, entry] of s.loaded) {
       const item = items[index];
-      if (!item.srcset || !entry.loader) continue;
+      if (!item.srcset || !entry.loader || entry.status === "failed") continue;
       const width = fit(index, s).width;
       const scale =
         index === state.index ? Math.min(s.sharpScale, state.zoom.scale) : 1;
@@ -1251,9 +1250,9 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
         entry.loader = loader;
         entry.status = "loading";
         wait = setTimeout(showSpinner, LOADING_DELAY);
-        const settle = () => {
+        const settle = (status: "settled" | "failed") => {
           if (entry.status !== "loading") return;
-          entry.status = "settled";
+          entry.status = status;
           stopWaiting();
           startLoads(s);
         };
@@ -1262,11 +1261,12 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
           const width = fileWidth(loader, item.srcset, doc.baseURI);
           const decoded = () => {
             if (!alive || session !== s || entry.loader !== loader) return;
+            if (entry.status === "failed") return;
             if ((loader.currentSrc || loader.src) !== source) return;
             if (s.flying && image.hasAttribute("src"))
               entry.commit = () => show(loader, width);
             else show(loader, width);
-            settle();
+            settle("settled");
           };
           if (typeof loader.decode !== "function") decoded();
           else
@@ -1278,7 +1278,7 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
           if (!alive || session !== s || entry.loader !== loader) return;
           if (entry.status !== "loading") return;
           failed();
-          settle();
+          settle("failed");
         };
         if (item.srcset) {
           loader.srcset = item.srcset;
