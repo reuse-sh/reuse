@@ -302,6 +302,20 @@ export const libraries: Library[] = [
             build: "a journal where every image opens in one sequence",
           },
           {
+            path: "examples/carousel",
+            title: "Carousel with lightbox",
+            lead: "A strip of photos that opens in the viewer. Close on another photo and the strip has already moved to it, so the photo flies back into its own tile.",
+            build:
+              "a photo carousel that opens in a lightbox and follows the photo shown",
+          },
+          {
+            path: "examples/album",
+            title: "Album in a conversation",
+            lead: "A conversation with an album of seven photos shown as four tiles. One viewer pages through every photo in the thread, and a photo without a tile closes into the +3 tile.",
+            build:
+              "a conversation where every photo opens in one sequence and an album shows four tiles",
+          },
+          {
             path: "examples/device-check",
             title: "Device check",
             lead: "A checklist for trying the lightbox by hand on an iPhone, an Android phone and a Mac, with the examples to open.",
