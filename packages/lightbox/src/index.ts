@@ -1067,7 +1067,7 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
       s.animations.add(animation);
       syncAnimating(s);
       let settled = false;
-      const finish = () => {
+      const finish = (landed = false) => {
         if (settled) return;
         settled = true;
         clearTimeout(timer);
@@ -1077,18 +1077,20 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
         // commitStyles throws on an element that is no longer rendered, such
         // as one inside a dialog the browser already closed.
         try {
-          if (node.isConnected) animation.commitStyles?.();
+          if (landed) Object.assign(node.style, frames.at(-1));
+          else if (node.isConnected) animation.commitStyles?.();
         } catch {}
         animation.cancel();
         resolve();
       };
-      // A timeline that has not advanced by the deadline still lands the last keyframe.
-      const timer = setTimeout(() => {
-        animation.finish();
-        finish();
-      }, duration + 80);
+      // A timeline that has not advanced by the deadline still lands the last keyframe. It is
+      // written directly, since WebKit commits the first keyframe of an animation that never got a frame.
+      const timer = setTimeout(() => finish(true), duration + 80);
       s.finishAnimations.add(finish);
-      void animation.finished.then(finish, finish);
+      void animation.finished.then(
+        () => finish(),
+        () => finish(),
+      );
     });
   }
 

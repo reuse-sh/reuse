@@ -1,6 +1,18 @@
+import { createServer } from "node:net";
 import { defineConfig, devices } from "@playwright/test";
 
-const site = "http://127.0.0.1:4300";
+function freePort(): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const server = createServer().listen(0, "127.0.0.1", () => {
+      const { port } = server.address() as { port: number };
+      server.close(() => resolve(String(port)));
+    });
+    server.on("error", reject);
+  });
+}
+
+process.env.REUSE_TEST_PORT ??= await freePort();
+const site = `http://127.0.0.1:${process.env.REUSE_TEST_PORT}`;
 const phone = { width: 390, height: 844 };
 const laptop = { width: 1440, height: 900 };
 
@@ -61,6 +73,6 @@ export default defineConfig({
   webServer: {
     command: "pnpm --filter @reuse-sh/site start",
     url: site,
-    reuseExistingServer: !process.env.CI,
+    env: { REUSE_PORT: process.env.REUSE_TEST_PORT },
   },
 });
