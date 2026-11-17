@@ -21,9 +21,10 @@ async function open(
     captions = false,
     srcset = false,
     slots = false,
+    styles = [] as string[],
   } = {},
 ) {
-  await mount(page, "", ["lightbox/base.css", "lightbox/theme.css"]);
+  await mount(page, "", ["lightbox/base.css", "lightbox/theme.css", ...styles]);
   await page.evaluate(
     async ([extra, total, start, captioned, widths, slotted]) => {
       const { createLightbox } = await import("/modules/lightbox/index.js");
@@ -249,6 +250,37 @@ const offCenter = (page: Page) =>
     const b = thumb.getBoundingClientRect();
     return Math.abs(b.left + b.width / 2 - (a.left + a.width / 2));
   });
+
+test("the carousel's own stylesheet on the page leaves the slides edge to edge and the thumbnails at 44px, 8px apart", async ({
+  page,
+}) => {
+  await open(
+    page,
+    { thumbnails: "bottom" },
+    { styles: ["carousel/styles.css"] },
+  );
+  const layout = await page.evaluate(() => {
+    const viewport = document.querySelector(
+      ".re-lightbox-viewport",
+    ) as HTMLElement;
+    const slides = viewport.querySelectorAll<HTMLElement>(".re-lightbox-slide");
+    const [first, second] = [
+      ...document.querySelectorAll(".re-lightbox-thumbnails button"),
+    ].map((thumb) => thumb.getBoundingClientRect());
+    return {
+      pitch: slides[1].offsetLeft - slides[0].offsetLeft,
+      width: viewport.clientWidth,
+      thumb: first.width,
+      gap: second.left - first.right,
+    };
+  });
+  expect(layout).toEqual({
+    pitch: layout.width,
+    width: layout.width,
+    thumb: 44,
+    gap: 8,
+  });
+});
 
 test("the active thumbnail stays centered from the first photo to the fortieth", async ({
   page,

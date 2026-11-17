@@ -27,9 +27,9 @@ type Window = globalThis.Window & typeof globalThis & { lightbox: Lightbox };
 async function open(
   page: Page,
   sizes: [number, number][],
-  { aside = false }: { aside?: boolean } = {},
+  { aside = false, styles = [] }: { aside?: boolean; styles?: string[] } = {},
 ) {
-  await mount(page, "", ["lightbox/base.css", "lightbox/theme.css"]);
+  await mount(page, "", ["lightbox/base.css", "lightbox/theme.css", ...styles]);
   await page.evaluate(
     async ([list, withAside]) => {
       const sources: string[] = [];
@@ -157,6 +157,28 @@ test.describe("lightbox zoom with a mouse, wheel and trackpad", {
     await page.mouse.click(at.x, at.y);
     await still(page);
     expect((await state(page)).zoom).toEqual({ scale: 1, x: 0, y: 0 });
+  });
+
+  test("a click zooms on a page that also loads the carousel's stylesheet", async ({
+    page,
+  }) => {
+    await open(
+      page,
+      [
+        [4000, 3000],
+        [4000, 3000],
+      ],
+      {
+        styles: ["carousel/styles.css"],
+      },
+    );
+    await page.keyboard.press("ArrowRight");
+    await expect.poll(async () => (await state(page)).index).toBe(1);
+    await still(page);
+    const box = await photo(page);
+    await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2);
+    await still(page);
+    expect((await state(page)).zoom.scale).toBeGreaterThan(1);
   });
 
   test("a drag 200px past the right edge stretches 70px and springs back to the edge", async ({

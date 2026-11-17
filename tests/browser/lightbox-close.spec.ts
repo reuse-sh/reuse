@@ -481,6 +481,50 @@ test("a page that scrolls during the close flight keeps the photo on its tile", 
   ).toBe(0);
 });
 
+test("a wheel during the close flight scrolls the page", async ({ page }) => {
+  await stickyPage(page);
+  await openAt(page, 0);
+  await page.evaluate(() => {
+    const win = window as Window;
+    win.closing = win.lightbox.close();
+  });
+  await page.mouse.move(500, 350);
+  await page.mouse.wheel(0, 100);
+  await expect.poll(() => page.evaluate(() => window.scrollY)).toBe(332);
+  expect(
+    await page.evaluate(() => document.querySelectorAll("dialog").length),
+  ).toBe(1);
+  await finishClose(page);
+});
+
+test("the photo flies whole out of a strip that clips its tile", async ({
+  page,
+}) => {
+  await stripPage(page);
+  await openAt(page, 0);
+  const center = await page.evaluate(() => {
+    const win = window as Window;
+    win.closing = win.lightbox.close();
+    for (const animation of document.getAnimations()) {
+      animation.pause();
+      animation.currentTime =
+        Number(animation.effect?.getComputedTiming().endTime ?? 0) * 0.4;
+    }
+    const { x, y, width, height } = (
+      document.querySelector(
+        '.re-lightbox-slide[aria-hidden="false"] .re-lightbox-frame',
+      ) as HTMLElement
+    ).getBoundingClientRect();
+    return { x: Math.round(x + width / 2), y: Math.round(y + height / 2) };
+  });
+  const strip = await page.locator("#strip").boundingBox();
+  expect(center.x).toBeGreaterThan((strip?.x ?? 0) + (strip?.width ?? 0));
+  const seen = await pixel(page, center.x, center.y);
+  for (const [channel, value] of [209, 71, 71].entries())
+    expect(Math.abs(seen[channel] - value)).toBeLessThanOrEqual(3);
+  await finishClose(page);
+});
+
 test("the page carousel's autoplay waits while the lightbox is open and a visitor's pause stays", async ({
   page,
 }) => {
@@ -602,6 +646,15 @@ test.describe("focus after close", { tag: "@desktop" }, () => {
     await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2);
     await expect(page.locator("dialog")).toHaveCount(0);
   }
+
+  test("a mouse open focuses the close button without a ring", async ({
+    page,
+  }) => {
+    await galleryPage(page);
+    await page.getByAltText("Photo 2").click();
+    await expect(page.locator("dialog")).toHaveAttribute("data-phase", "open");
+    expect(await focused(page)).toEqual({ id: "BUTTON", ring: false });
+  });
 
   test("a mouse close focuses the tile without a ring", async ({ page }) => {
     await galleryPage(page);
