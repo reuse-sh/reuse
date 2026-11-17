@@ -1,10 +1,13 @@
 {
   "carousel": {
-    "entries": { "carousel": "dist/index.js" },
-    "budgets": { "carousel.js": 6.95 }
+    "entries": {
+      "carousel": "dist/index.js",
+      "controls": "dist/controls.js"
+    },
+    "budgets": { "carousel.js": 8.82, "controls.js": 2.62 }
   },
   "lightbox": {
     "entries": { "lightbox": "dist/index.js" },
-    "budgets": { "lightbox.js": 12.5 }
+    "budgets": { "lightbox.js": 15.04 }
   }
 }

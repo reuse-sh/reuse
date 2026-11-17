@@ -55,3 +55,12 @@
     transition: none;
   }
 }
+
+:where([data-carousel-counter][data-roll]) {
+  display: inline-grid;
+  overflow: hidden;
+}
+
+:where([data-carousel-counter][data-roll] > *) {
+  grid-area: 1 / 1;
+}

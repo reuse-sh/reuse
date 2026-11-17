@@ -134,6 +134,24 @@ export function carouselMotion(): World {
         viewport
           .getAttributeNames()
           .every((name) => !name.startsWith("data-re-")),
+      "every control reads the page and slides the strip shows": () => {
+        if (destroyed) return true;
+        const state = carousel.getState();
+        const left = viewport.scrollLeft;
+        const shown = Array.from({ length: count }, (_, index) => index).filter(
+          (index) =>
+            Math.min((index + 1) * slideWidth - left, viewportWidth) -
+              Math.max(index * slideWidth - left, 0) >=
+            slideWidth / 2 - 0.5,
+        );
+        const at = Math.min(state.index * slideWidth, max);
+        return (
+          state.pageCount === snaps.length &&
+          state.pageIndex ===
+            snaps.filter((snap) => snap <= at + 1).length - 1 &&
+          state.visible.join() === shown.join()
+        );
+      },
       "the strip shows dragging only while a mouse is held": () =>
         held !== undefined || !viewport.hasAttribute("data-re-dragging"),
       "a strip at rest sits on a snap point": () =>

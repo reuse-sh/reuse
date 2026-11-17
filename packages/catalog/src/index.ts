@@ -316,7 +316,7 @@ export const libraries: Library[] = [
       ],
       [
         "Let autoplay wait for people",
-        "Autoplay pauses for hover, focus, dragging, hidden pages, offscreen strips and reduced motion.",
+        "Autoplay pauses for hover, focus, dragging, hidden pages, strips less than half in view and reduced motion, keeps the rest of its wait, and stays paused after the visitor pauses it.",
       ],
       [
         "Keep keys local",
@@ -339,12 +339,17 @@ export const libraries: Library[] = [
       [
         "Publish one state",
         "Index, pages, visible slides and autoplay progress come from one source that every control reads.",
+        "tests/browser/carousel-controls.spec.ts",
       ],
     ],
     api: [
       [
         "createCarousel(viewport, options?)",
-        "Binds a scroll-snap strip. Options: slides, align, loop, drag, group, autoplay, moveMotion, releaseMotion, releaseDuration, wheel, onChange.",
+        "Binds a scroll-snap strip. Options: slides, align, loop, drag, group, autoplay, moveMotion, releaseMotion, releaseDuration, wheel, strings, onChange.",
+      ],
+      [
+        "setOptions(options)",
+        "Changes autoplay, loop, group, align and drag without rebuilding the strip. The active slide stays in place.",
       ],
       [
         "moveMotion",
@@ -364,11 +369,11 @@ export const libraries: Library[] = [
       ],
       [
         "getState(), subscribe(listener)",
-        "Index, count, progress, canPrev, canNext, and whether it is playing, dragging or looping.",
+        "Index, count, progress, pageCount, pageIndex, the visible slides, autoplayProgress, canPrev, canNext, and whether it is playing, dragging or looping.",
       ],
       [
         "play(), pause()",
-        "Starts and stops autoplay. It also waits for hover, focus, drag and hidden tabs on its own.",
+        "Starts and stops autoplay. It also waits for hover, focus, drag, hidden tabs and a strip less than half in view on its own, and returns to the first slide after the last one.",
       ],
       [
         "setEnabled(enabled)",
@@ -387,6 +392,14 @@ export const libraries: Library[] = [
         "syncCarousels(...carousels)",
         "Keeps several carousels on the same index. Returns a function that stops it.",
       ],
+      [
+        "connectThumbnails(main, thumbnails)",
+        "Centers the active thumbnail, marks it with aria-current and moves the main strip to a clicked thumbnail. Returns a function that stops it.",
+      ],
+      [
+        "bindCarouselControls(root, carousel, options?)",
+        "From @reuse-sh/carousel/controls. Wires prev, next, dots, counter, play and progress markup to the strip. Returns a function that removes everything it added.",
+      ],
     ],
     notes: [
       "The loop needs enough slides to cover the viewport plus the widest slide. With fewer, isLooping is false and the strip scrolls normally.",
@@ -395,10 +408,12 @@ export const libraries: Library[] = [
       "While a mouse drags the strip, the slides scale to --re-carousel-press-scale (0.96) over --re-carousel-press-duration (300ms). Set the scale to 1 to turn it off.",
       "scroll-snap-type on the viewport sets how a released drag ends: mandatory snaps, proximity snaps only near a snap point, and none glides to a stop.",
       "A mouse drag inside a nested strip that can scroll moves only that strip.",
-      "Autoplay pauses for hover, focus, dragging, hidden pages, offscreen strips and reduced motion.",
-      'For a page without a bundler or an import map, such as a theme or a plugin, load @reuse-sh/carousel/browser/carousel.js with <script type="module">. It is one minified ES module with a source map and no imports. Entry points such as controls are separate files in the same folder that import carousel.js by a relative path, so copy the folder whole.',
+      "Autoplay pauses for hover, focus, dragging, hidden pages, strips less than half in view and reduced motion, and picks up the rest of its wait when it resumes. --re-carousel-autoplay-progress on the viewport fills from 0 to 1 over the wait, every frame.",
+      'For a page without a bundler or an import map, such as a theme or a plugin, load @reuse-sh/carousel/browser/carousel.js with <script type="module">. It is one minified ES module with a source map and no imports. The controls entry is controls.js in the same folder, also with no imports.',
       "bindCarouselControls(root, carousel, { strings, dotsWindow }) from @reuse-sh/carousel/controls wires your own markup: [data-carousel-prev], [data-carousel-next], [data-carousel-dots], [data-carousel-counter], [data-carousel-play] and [data-carousel-progress], also outside root with data-carousel-controls set to the viewport id. It reads pageCount, pageIndex and autoplayProgress from the one state, and the function it returns removes every listener and element it added.",
       "The strings option supplies every label and announcement, such as goTo(index, count) and slide(index, count), with English defaults. The viewport dispatches re-carousel:change, re-carousel:settle, re-carousel:play and re-carousel:pause with the state in detail.",
+      "A div or span viewport without a role becomes a region described as a carousel, and div or span slides without one become groups labeled from strings.slide, such as 3 of 8. next(), prev(), the arrows, dots and keys announce the slide they reach; autoplay and swipes stay quiet.",
+      "A goTo while the strip cannot scroll yet, such as in a hidden tab or before its images load, waits for the first refresh that finds overflow and lands there at once.",
       "connectThumbnails(main, thumbnails) keeps the active thumbnail in view and centered, marks it with aria-current and moves the main strip when a thumbnail is clicked.",
       "take(owner, { onInterrupt }) hands the position to your own driver, such as a marquee: setPosition(px) moves the strip and wraps through the loop seam, a drag or touch takes it back and calls onInterrupt, and release() restores snapping.",
     ],

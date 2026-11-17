@@ -1,3 +1,16 @@
+import type { CarouselInternals } from "./internal.js";
+
+export interface CarouselStrings {
+  previous: string;
+  next: string;
+  goTo(index: number, count: number): string;
+  counter(index: number, count: number): string;
+  slide(index: number, count: number): string;
+  play: string;
+  pause: string;
+  progress: string;
+}
+
 export interface CarouselOptions {
   slides?: string;
   align?: "start" | "center";
@@ -9,6 +22,7 @@ export interface CarouselOptions {
   releaseDuration?: number;
   moveMotion?: "spring" | "native";
   wheel?: "vertical";
+  strings?: Partial<CarouselStrings>;
   onChange?: (state: CarouselState) => void;
 }
 
@@ -21,6 +35,10 @@ export interface CarouselState {
   readonly isPlaying: boolean;
   readonly isDragging: boolean;
   readonly isLooping: boolean;
+  readonly pageCount: number;
+  readonly pageIndex: number;
+  readonly visible: readonly number[];
+  readonly autoplayProgress: number;
 }
 
 export interface Carousel {
@@ -34,6 +52,12 @@ export interface Carousel {
   play(): void;
   pause(): void;
   hold(reason: string, isHeld: boolean): void;
+  setOptions(
+    options: Pick<
+      CarouselOptions,
+      "autoplay" | "loop" | "group" | "align" | "drag"
+    >,
+  ): void;
   destroy(): void;
 }
 
@@ -60,6 +84,13 @@ function scrollPadding(viewport: HTMLElement, value: string): number {
   const padding = probe.offsetWidth;
   box.remove();
   return padding;
+}
+
+function generic(element: HTMLElement) {
+  return (
+    !element.hasAttribute("role") &&
+    (element.localName === "div" || element.localName === "span")
+  );
 }
 
 function clamp(value: number, max: number): number {
@@ -108,14 +139,26 @@ const stateAttributes = [
   "data-re-at-end",
 ];
 
-export function createCarousel(
-  viewport: HTMLElement,
-  options: CarouselOptions = {},
-): Carousel {
-  const document = viewport.ownerDocument;
-  const browserWindow = document.defaultView;
-  if (!browserWindow) throw new Error("Carousel requires a browser document.");
-  const window = browserWindow;
+const internalKey = Symbol.for("@reuse-sh/carousel internals");
+
+function internalsOf(carousel: Carousel) {
+  return (carousel as unknown as Record<symbol, CarouselInternals | undefined>)[
+    internalKey
+  ];
+}
+
+const defaultStrings: CarouselStrings = {
+  previous: "Previous slide",
+  next: "Next slide",
+  goTo: (index, count) => `Go to slide ${index + 1} of ${count}`,
+  counter: (index, count) => `${index + 1} / ${count}`,
+  slide: (index, count) => `${index + 1} of ${count}`,
+  play: "Play slideshow",
+  pause: "Pause slideshow",
+  progress: "Slide position",
+};
+
+function validate(options: CarouselOptions) {
   if (
     options.group !== undefined &&
     options.group !== "page" &&
@@ -129,6 +172,21 @@ export function createCarousel(
   ) {
     throw new RangeError("Carousel autoplay must be a positive interval.");
   }
+}
+
+const liveOptions = ["autoplay", "loop", "group", "align", "drag"] as const;
+
+export function createCarousel(
+  viewport: HTMLElement,
+  initialOptions: CarouselOptions = {},
+): Carousel {
+  const document = viewport.ownerDocument;
+  const browserWindow = document.defaultView;
+  if (!browserWindow) throw new Error("Carousel requires a browser document.");
+  const window = browserWindow;
+  const options = { ...initialOptions };
+  validate(options);
+  const strings = { ...defaultStrings, ...options.strings };
   if (
     options.releaseMotion !== undefined &&
     options.releaseMotion !== "spring" &&
@@ -219,6 +277,21 @@ export function createCarousel(
   } | null = null;
   let scrolling = false;
   let suppressClick = false;
+  let widths: number[] = [];
+  let width = 0;
+  let pages: number[] = [];
+  let waited = 0;
+  let runningSince: number | undefined;
+  let clockFrame = 0;
+  let unsettled = false;
+  // Screen readers announce changes to a live region already in the page, not one inserted with its text.
+  const live = document.createElement("div");
+  live.setAttribute("aria-live", "polite");
+  live.setAttribute("aria-atomic", "true");
+  live.style.cssText =
+    "position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; border: 0; overflow: hidden; clip-path: inset(50%); white-space: nowrap;";
+  const ownsRole = generic(viewport);
+  const roled = new Map<HTMLElement, boolean>();
   let state: CarouselState = Object.freeze({
     index: 0,
     count: 0,
@@ -228,7 +301,14 @@ export function createCarousel(
     isPlaying: false,
     isDragging: false,
     isLooping: false,
+    pageCount: 0,
+    pageIndex: 0,
+    visible: Object.freeze([]),
+    autoplayProgress: 0,
   });
+  let emitted = state;
+  const events: [string, CarouselState][] = [];
+  let dispatching = false;
 
   function listen(
     target: EventTarget,
@@ -297,7 +377,7 @@ export function createCarousel(
 
   function updateCursor() {
     viewport.style.cursor =
-      enabled && dragReady && max > 0 && !destroyed
+      enabled && dragReady && options.drag !== false && max > 0 && !destroyed
         ? pointer
           ? "grabbing"
           : "grab"
@@ -354,17 +434,65 @@ export function createCarousel(
       enabled &&
       !holds.size &&
       !internalHolds.size &&
-      targets.some((target) => target > 0) &&
-      (span > 0 || position() < max - 1)
+      targets.some((target) => target > 0)
     );
+  }
+
+  function autoplayFraction() {
+    if (options.autoplay === undefined) return 0;
+    const running =
+      runningSince === undefined ? 0 : window.performance.now() - runningSince;
+    return Math.min(1, (waited + running) / options.autoplay);
+  }
+
+  function pageOf(index: number) {
+    let page = 0;
+    pages.forEach((start, at) => {
+      if ((targets[start] ?? 0) <= (targets[index] ?? 0) + 1) page = at;
+    });
+    return page;
+  }
+
+  function visibleSlides(current: number) {
+    const shown: number[] = [];
+    slides.forEach((_slide, index) => {
+      const size = widths[index] ?? 0;
+      let left = (starts[index] ?? 0) - current;
+      if (span) left += Math.round((width / 2 - left - size / 2) / span) * span;
+      const overlap = Math.min(left + size, width) - Math.max(left, 0);
+      if (size > 0 && overlap >= size / 2 - 0.5) shown.push(index);
+    });
+    return shown;
+  }
+
+  function emit(type: string, detail: CarouselState) {
+    viewport.dispatchEvent(
+      new window.CustomEvent(`re-carousel:${type}`, {
+        bubbles: true,
+        detail,
+      }),
+    );
+  }
+
+  function restartWait() {
+    waited = 0;
+    if (runningSince !== undefined) runningSince = window.performance.now();
+    if (timer !== undefined) {
+      clearTimeout(timer);
+      timer = setTimeout(advance, options.autoplay);
+    }
+    if (options.autoplay !== undefined)
+      viewport.style.setProperty("--re-carousel-autoplay-progress", "0");
   }
 
   function publish(index = state.index) {
     if (destroyed) return;
+    if (index !== state.index) restartWait();
     const current = position();
     viewport.toggleAttribute("data-re-static", max <= 0);
     viewport.toggleAttribute("data-re-at-start", !span && current < 1);
     viewport.toggleAttribute("data-re-at-end", !span && current > max - 1);
+    const visible = visibleSlides(current);
     const next: CarouselState = {
       index,
       count: slides.length,
@@ -380,6 +508,14 @@ export function createCarousel(
       isPlaying: isPlaying(),
       isDragging: pointer?.moved ?? false,
       isLooping: span > 0,
+      pageCount: pages.length,
+      pageIndex: pageOf(index),
+      visible:
+        visible.length === state.visible.length &&
+        visible.every((slide, at) => slide === state.visible[at])
+          ? state.visible
+          : Object.freeze(visible),
+      autoplayProgress: Math.floor(autoplayFraction() * 100) / 100,
     };
     if (
       (Object.keys(next) as (keyof CarouselState)[]).every(
@@ -391,15 +527,55 @@ export function createCarousel(
     state = Object.freeze(next);
     options.onChange?.(state);
     for (const listener of listeners) listener(state);
+    const from = emitted;
+    const to = state;
+    emitted = to;
+    if (to.index !== from.index) events.push(["change", to]);
+    if (to.isPlaying !== from.isPlaying)
+      events.push([to.isPlaying ? "play" : "pause", to]);
+    if (dispatching) return;
+    dispatching = true;
+    for (let event = events.shift(); event; event = events.shift())
+      emit(...event);
+    dispatching = false;
+  }
+
+  function tick() {
+    clockFrame = window.requestAnimationFrame(tick);
+    const fraction = autoplayFraction();
+    viewport.style.setProperty(
+      "--re-carousel-autoplay-progress",
+      String(fraction),
+    );
+    if (Math.floor(fraction * 100) / 100 !== state.autoplayProgress) publish();
+  }
+
+  function advance() {
+    timer = undefined;
+    waited = 0;
+    runningSince = undefined;
+    if (span || state.canNext) step(1);
+    else goTo(0);
+    schedule();
   }
 
   function schedule() {
+    const playing = !destroyed && isPlaying();
+    const now = window.performance.now();
+    if (runningSince !== undefined) waited += now - runningSince;
+    runningSince = playing ? now : undefined;
     clearTimeout(timer);
     timer = undefined;
-    publish();
-    if (!destroyed && isPlaying()) {
-      timer = setTimeout(() => controller.next(), options.autoplay);
+    window.cancelAnimationFrame(clockFrame);
+    clockFrame = 0;
+    if (playing) {
+      timer = setTimeout(
+        advance,
+        Math.max(0, (options.autoplay ?? 0) - waited),
+      );
+      clockFrame = window.requestAnimationFrame(tick);
     }
+    publish();
   }
 
   function nearestIndex(current = position()) {
@@ -604,6 +780,10 @@ export function createCarousel(
     viewport.style.scrollSnapType = previousSnap;
     publish(index);
     schedule();
+    if (unsettled) {
+      unsettled = false;
+      emit("settle", state);
+    }
   }
 
   function interrupt(restoreSnap = true) {
@@ -665,6 +845,10 @@ export function createCarousel(
       span > 0
         ? ((rounded % slides.length) + slides.length) % slides.length
         : clamp(rounded, slides.length - 1);
+    if (max <= 0) {
+      publish(next);
+      return;
+    }
     let target = targetAt(next, reference);
     if (span && direction === 1 && target <= reference + 0.5) target += span;
     if (span && direction === -1 && target >= reference - 0.5) target -= span;
@@ -686,6 +870,7 @@ export function createCarousel(
       (stretch !== 0 || motion !== "native");
     const moving = glide && releaseSpeed === undefined ? spring : null;
     if (!moving) stopSpring();
+    unsettled = true;
     let target = destination;
     pendingPosition = target;
     pendingIndex = index;
@@ -716,9 +901,7 @@ export function createCarousel(
     schedule();
   }
 
-  function step(direction: 1 | -1) {
-    if (!enabled || destroyed || !slides.length || max === 0) return;
-    const current = state.index;
+  function stepIndex(current: number, direction: 1 | -1) {
     const at = targets[current] ?? 0;
     if (span && options.group === "page") {
       let count = 1;
@@ -727,18 +910,14 @@ export function createCarousel(
         const index =
           (current + direction * count + slides.length) % slides.length;
         const previous = (index - direction + slides.length) % slides.length;
-        distance +=
-          direction === 1
-            ? slides[previous].offsetWidth
-            : slides[index].offsetWidth;
-        if (distance >= viewport.clientWidth) break;
+        distance += direction === 1 ? widths[previous] : widths[index];
+        if (distance >= width) break;
         count++;
       }
-      goTo(current + direction * count, "smooth", direction);
-      return;
+      return current + direction * count;
     }
     if (options.group === "page") {
-      const distance = clamp(at + direction * viewport.clientWidth, max);
+      const distance = clamp(at + direction * width, max);
       let target = current;
       if (direction === 1) {
         target = targets.findIndex((value) => value >= distance - 1);
@@ -748,10 +927,41 @@ export function createCarousel(
           if (targets[index] <= distance + 1) target = index;
         }
       }
-      goTo(target);
-      return;
+      return target;
     }
-    goTo(current + direction * (options.group ?? 1), "smooth", direction);
+    return current + direction * (options.group ?? 1);
+  }
+
+  function measurePages() {
+    if (!slides.length) return [];
+    const found = [0];
+    if (max <= 0) return found;
+    for (let index = 0; ; ) {
+      const next = span
+        ? stepIndex(index, 1)
+        : Math.min(stepIndex(index, 1), slides.length - 1);
+      if (span ? next >= slides.length : next <= index) break;
+      index = next;
+      if (span || targets[index] > targets[found[found.length - 1]] + 1)
+        found.push(index);
+    }
+    return found;
+  }
+
+  function step(direction: 1 | -1) {
+    if (!enabled || destroyed || !slides.length || max === 0) return;
+    goTo(stepIndex(state.index, direction), "smooth", direction);
+  }
+
+  function say(text: string) {
+    if (!live.isConnected) viewport.after(live);
+    live.textContent = text;
+  }
+
+  function announced(move: () => void) {
+    const before = state.index;
+    move();
+    if (state.index !== before) say(strings.slide(state.index, state.count));
   }
 
   function readSlides() {
@@ -882,6 +1092,10 @@ export function createCarousel(
         span * 3 - viewportWidth - gap,
       );
     }
+    width = viewportWidth;
+    widths = slides.map((slide) => slide.offsetWidth);
+    pages = measurePages();
+    label();
     for (const slide of observedSlides) {
       if (!slides.includes(slide)) {
         observer?.unobserve(slide);
@@ -929,6 +1143,30 @@ export function createCarousel(
       clearTimeout(settleTimer);
       settleTimer = setTimeout(settle, 180);
     }
+  }
+
+  function label() {
+    for (const [slide, ownsLabel] of roled) {
+      if (slides.includes(slide)) continue;
+      unlabel(slide, ownsLabel);
+      roled.delete(slide);
+    }
+    slides.forEach((slide, index) => {
+      if (!roled.has(slide)) {
+        if (!generic(slide)) return;
+        slide.setAttribute("role", "group");
+        slide.setAttribute("aria-roledescription", "slide");
+        roled.set(slide, !slide.hasAttribute("aria-label"));
+      }
+      if (roled.get(slide))
+        slide.setAttribute("aria-label", strings.slide(index, slides.length));
+    });
+  }
+
+  function unlabel(slide: HTMLElement, ownsLabel: boolean) {
+    slide.removeAttribute("role");
+    slide.removeAttribute("aria-roledescription");
+    if (ownsLabel) slide.removeAttribute("aria-label");
   }
 
   function hold(reason: string, isHeld: boolean) {
@@ -987,8 +1225,8 @@ export function createCarousel(
   }
 
   const controller: Carousel = {
-    next: () => step(1),
-    prev: () => step(-1),
+    next: () => announced(() => step(1)),
+    prev: () => announced(() => step(-1)),
     goTo: (index, behavior) => goTo(index, behavior),
     getState: () => state,
     subscribe(listener) {
@@ -1022,6 +1260,30 @@ export function createCarousel(
       schedule();
     },
     hold,
+    setOptions(next) {
+      if (destroyed) return;
+      validate(next);
+      const changed = liveOptions.filter(
+        (name) => Object.hasOwn(next, name) && next[name] !== options[name],
+      );
+      if (!changed.length) return;
+      const hadAutoplay = options.autoplay !== undefined;
+      for (const name of changed)
+        Object.assign(options, { [name]: next[name] });
+      if (changed.includes("autoplay")) {
+        if (options.autoplay === undefined) {
+          requestedPlaying = false;
+          viewport.style.removeProperty("--re-carousel-autoplay-progress");
+        } else if (!hadAutoplay) requestedPlaying = true;
+        waited = 0;
+        runningSince = undefined;
+      }
+      if (options.drag === false) endDrag(false);
+      if (changed.some((name) => name !== "autoplay" && name !== "drag"))
+        refresh();
+      updateCursor();
+      schedule();
+    },
     destroy() {
       if (destroyed) return;
       endDrag(false);
@@ -1029,6 +1291,7 @@ export function createCarousel(
       clearTimeout(timer);
       clearTimeout(settleTimer);
       clearTimeout(quietTimer);
+      window.cancelAnimationFrame(clockFrame);
       window.cancelAnimationFrame(instantFrame);
       window.cancelAnimationFrame(refreshFrame);
       stopSpring();
@@ -1039,6 +1302,13 @@ export function createCarousel(
       listeners.clear();
       if (!hadClass) viewport.classList.remove("re-carousel");
       for (const name of stateAttributes) viewport.removeAttribute(name);
+      viewport.style.removeProperty("--re-carousel-autoplay-progress");
+      if (ownsRole) {
+        viewport.removeAttribute("role");
+        viewport.removeAttribute("aria-roledescription");
+      }
+      for (const [slide, ownsLabel] of roled) unlabel(slide, ownsLabel);
+      live.remove();
       const restoredPosition = span
         ? (targets[state.index] ?? span) - span
         : position();
@@ -1082,8 +1352,8 @@ export function createCarousel(
     : undefined;
   const intersection = window.IntersectionObserver
     ? new window.IntersectionObserver(
-        ([entry]) => internalHold("offscreen", !entry.isIntersecting),
-        { threshold: 0 },
+        ([entry]) => internalHold("offscreen", entry.intersectionRatio < 0.5),
+        { threshold: 0.5 },
       )
     : undefined;
 
@@ -1177,6 +1447,11 @@ export function createCarousel(
 
   viewport.classList.add("re-carousel");
   if (initialTabIndex === null) viewport.tabIndex = 0;
+  if (ownsRole) {
+    viewport.setAttribute("role", "region");
+    viewport.setAttribute("aria-roledescription", "carousel");
+  }
+  viewport.after(live);
   listen(viewport, "scroll", () => {
     if (!enabled) {
       if (Math.abs(position() - disabledPosition) > 0.5) {
@@ -1186,6 +1461,7 @@ export function createCarousel(
     }
     if (pointer?.moved) recenterLoop();
     scrolling = true;
+    unsettled = true;
     lastScroll = window.performance.now();
     trackScroll();
     renderLoop();
@@ -1234,10 +1510,12 @@ export function createCarousel(
     ) {
       return;
     }
-    if (key.key === "Home") goTo(0);
-    else if (key.key === "End") goTo(slides.length - 1);
-    else if (key.key === (rtl ? "ArrowLeft" : "ArrowRight")) step(1);
-    else if (key.key === (rtl ? "ArrowRight" : "ArrowLeft")) step(-1);
+    if (key.key === "Home") announced(() => goTo(0));
+    else if (key.key === "End") announced(() => goTo(slides.length - 1));
+    else if (key.key === (rtl ? "ArrowLeft" : "ArrowRight"))
+      announced(() => step(1));
+    else if (key.key === (rtl ? "ArrowRight" : "ArrowLeft"))
+      announced(() => step(-1));
     else return;
     key.preventDefault();
   });
@@ -1313,6 +1591,25 @@ export function createCarousel(
   refresh();
   mutation?.observe(viewport, { childList: true, subtree: true });
   intersection?.observe(viewport);
+  const reach: CarouselInternals = {
+    viewport,
+    strings,
+    slides: () => slides,
+    pages: () =>
+      pages.map((index) => ({
+        index,
+        at: span
+          ? ((targets[index] ?? 0) - (targets[0] ?? 0)) / span
+          : max > 0
+            ? (targets[index] ?? 0) / max
+            : 0,
+      })),
+    requested: () => requestedPlaying && options.autoplay !== undefined,
+    align: () => options.align,
+    goTo: (index, behavior, announce) =>
+      announce ? announced(() => goTo(index, behavior)) : goTo(index, behavior),
+  };
+  Object.defineProperty(controller, internalKey, { value: reach });
   return controller;
 }
 
@@ -1336,5 +1633,51 @@ export function syncCarousels(...carousels: Carousel[]): () => void {
   });
   return () => {
     for (const unsubscribe of unsubscribes) unsubscribe();
+  };
+}
+
+export function connectThumbnails(
+  main: Carousel,
+  thumbnails: Carousel,
+): () => void {
+  const strip = internalsOf(thumbnails);
+  if (!strip) throw new TypeError("connectThumbnails needs two carousels.");
+  const align = strip.align();
+  thumbnails.setOptions({ align: "center" });
+  let shown = -1;
+  let count = -1;
+  const mark = () => {
+    strip.slides().forEach((slide, index) => {
+      if (index === shown) slide.setAttribute("aria-current", "true");
+      else slide.removeAttribute("aria-current");
+    });
+  };
+  const follow = (state: CarouselState) => {
+    if (state.index === shown) return;
+    strip.goTo(state.index, shown < 0 ? "instant" : "smooth");
+    shown = state.index;
+    mark();
+  };
+  const unsubscribe = main.subscribe(follow);
+  const recount = thumbnails.subscribe((state) => {
+    if (state.count === count) return;
+    count = state.count;
+    mark();
+  });
+  follow(main.getState());
+  const choose = (event: Event) => {
+    const index = strip
+      .slides()
+      .findIndex((slide) => slide.contains(event.target as Node));
+    if (index >= 0) internalsOf(main)?.goTo(index, "smooth", true);
+  };
+  strip.viewport.addEventListener("click", choose);
+  return () => {
+    unsubscribe();
+    recount();
+    strip.viewport.removeEventListener("click", choose);
+    shown = -1;
+    mark();
+    thumbnails.setOptions({ align });
   };
 }
