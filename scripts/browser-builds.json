@@ -9,8 +9,21 @@
   "lightbox": {
     "entries": {
       "lightbox": "dist/index.js",
-      "carousel-link": "dist/carousel.js"
+      "carousel-link": "dist/carousel.js",
+      "video": "dist/video.js",
+      "audio": "dist/audio.js",
+      "iframe": "dist/iframe.js",
+      "html": "dist/html.js",
+      "embed": "dist/embed.js"
     },
-    "budgets": { "lightbox.js": 30.88, "carousel-link.js": 0.29 }
+    "budgets": {
+      "lightbox.js": 30.88,
+      "carousel-link.js": 0.29,
+      "video.js": 0.55,
+      "audio.js": 0.34,
+      "iframe.js": 0.5,
+      "html.js": 0.28,
+      "embed.js": 1.36
+    }
   }
 }

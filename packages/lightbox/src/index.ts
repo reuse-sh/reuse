@@ -142,7 +142,14 @@ export interface LightboxEvent {
 }
 
 export interface LightboxItem {
-  src: string;
+  /** The image file; an item with a type uses it as its media source where its module says so. */
+  src?: string;
+  /** Picks the content module whose type matches; without one the item is an image. */
+  type?: string;
+  video?: { src: string; poster?: string };
+  embed?: string;
+  /** Builds an HTML slide's content; HTML strings are never parsed. */
+  html?: () => Node;
   srcset?: string;
   sizes?: string;
   previewSrc?: string;
@@ -171,6 +178,34 @@ export interface LightboxContentContext {
   image: HTMLImageElement;
 }
 
+export interface LightboxMountContext {
+  item: LightboxItem;
+  index: number;
+  /** Aborts when the slide unmounts. */
+  signal: AbortSignal;
+  /** True when the player should start once it is current: the autoplay option and an open by a user action. */
+  autoplay: boolean;
+}
+
+export interface LightboxMounted {
+  unmount(): void;
+  /** Without pause the slide unmounts when another photo becomes current. */
+  pause?(): void;
+  /** Called when the slide becomes current; plays unless the person paused it. */
+  resume?(): void;
+  /** Width over height, 16 / 9 when missing. */
+  aspect?: number;
+  /** The slide takes pointer events, and the viewer's gestures leave it alone. */
+  interactive?: boolean;
+  /** Settles once the player can show itself; the poster and the spinner stay until then. */
+  ready?: Promise<unknown>;
+}
+
+export interface LightboxContent {
+  type: string;
+  mount(container: HTMLElement, context: LightboxMountContext): LightboxMounted;
+}
+
 export interface LightboxOptions {
   container?: HTMLElement;
   label?: string;
@@ -189,6 +224,10 @@ export interface LightboxOptions {
   className?: string;
   icons?: Partial<Record<LightboxIcon, () => Node>>;
   renderContent?: (context: LightboxContentContext) => undefined | (() => void);
+  /** Content modules for items with a type, such as video() from @reuse-sh/lightbox/video. */
+  content?: readonly LightboxContent[];
+  /** Starts the current player once it shows, when the viewer opened from a user action; default true. */
+  autoplay?: boolean;
   loop?: boolean;
   history?: boolean;
   strings?: Partial<LightboxStrings>;
@@ -223,8 +262,15 @@ export interface Lightbox {
   destroy(): void;
 }
 
+type MediaSlide = {
+  content: LightboxContent;
+  mounted?: LightboxMounted;
+  abort?: AbortController;
+};
+
 type LoadedSlide = {
   frame: HTMLDivElement;
+  media?: MediaSlide;
   image: HTMLImageElement;
   loader?: HTMLImageElement;
   /** The pixel width of the file on screen, once the full file shows. */
@@ -325,6 +371,7 @@ type Session = {
   flying: boolean;
   watchedScale: number;
   sharpScale: number;
+  autoplay: boolean;
   rest?: Zoom;
   resizeFrame?: number;
   sharpTimer?: ReturnType<typeof setTimeout>;
@@ -425,10 +472,18 @@ function goBack(win: Window) {
   return landing;
 }
 
-function validateItems(items: readonly LightboxItem[]) {
+function validateItems(
+  items: readonly LightboxItem[],
+  content: readonly LightboxContent[] = [],
+) {
   if (!items.length) throw new TypeError("Lightbox needs at least one image.");
   return items.map((item) => {
-    if (!item || typeof item.src !== "string" || !item.src.trim())
+    if (item?.type !== undefined) {
+      if (!content.some((module) => module.type === item.type))
+        throw new TypeError(
+          `Lightbox items of type ${item.type} need their module in the content option.`,
+        );
+    } else if (!item || typeof item.src !== "string" || !item.src.trim())
       throw new TypeError("Lightbox images need a source.");
     if (
       (item.width !== undefined &&
@@ -867,6 +922,11 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
     const item = items[index];
     if (item.width && item.height)
       return { width: item.width, height: item.height };
+    if (item.type)
+      return {
+        width: s.loaded.get(index)?.media?.mounted?.aspect || 16 / 9,
+        height: 1,
+      };
     for (const image of [s.loaded.get(index)?.image, tileImage(index)])
       if (image?.naturalWidth && image.naturalHeight)
         return { width: image.naturalWidth, height: image.naturalHeight };
@@ -878,10 +938,11 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
   }
 
   function fit(index: number, s: Session): Size {
+    // A player leaves 24px at each side for a swipe that pages past it.
     return (tall(index, s) ? widthFit : contain)(
       imageSize(index, s),
       view(s),
-      padding,
+      items[index].type ? Math.max(padding, 24) : padding,
     );
   }
 
@@ -896,14 +957,16 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
   function limits(s: Session, index = state.index) {
     const item = items[index];
     const entry = s.loaded.get(index);
-    if (entry?.status === "failed") return { min: 1, max: 1, tap: 1 };
+    if (entry?.status === "failed" || item?.type)
+      return { min: 1, max: 1, tap: 1 };
     return zoomLimits({
       fileWidth: largestWidth(item?.srcset) ?? entry?.natural ?? item?.width,
       image: imageSize(index, s),
       viewport: view(s),
       padding,
       svg: Boolean(
-        item && formatOf(item.src, s.dialog.ownerDocument.baseURI) === "svg",
+        item?.src &&
+          formatOf(item.src, s.dialog.ownerDocument.baseURI) === "svg",
       ),
       maxZoom: settings.maxZoom,
       tapZoom: settings.tapZoom ?? 2.5,
@@ -1199,7 +1262,11 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
       rect.right > 0 &&
       rect.top < viewport.height &&
       rect.left < viewport.width;
-    if (!visible || !origin) {
+    if (
+      !visible ||
+      !origin ||
+      (item.type && !entry.image.getAttribute("src"))
+    ) {
       return animate(
         s,
         entry.frame,
@@ -1422,6 +1489,84 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
     }
   }
 
+  function spin(s: Session, frame: HTMLElement) {
+    const doc = s.dialog.ownerDocument;
+    const status = doc.createElement("span");
+    status.className = "re-lightbox-loading";
+    status.setAttribute("role", "status");
+    status.setAttribute("aria-label", s.strings.loading);
+    const canvas = doc.createElement("canvas");
+    canvas.setAttribute("aria-hidden", "true");
+    status.append(canvas);
+    frame.append(status);
+    let dots: ReturnType<typeof createThinkingDots> | undefined;
+    try {
+      dots = createThinkingDots(canvas, { size: SPINNER_SIZE });
+    } catch {}
+    return () => {
+      dots?.destroy();
+      status.remove();
+    };
+  }
+
+  // A player mounts in its own layer above the poster, which stays under it.
+  function mountMedia(s: Session, index: number, entry: LoadedSlide) {
+    const media = entry.media;
+    if (!media || media.mounted || session !== s) return;
+    const doc = s.dialog.ownerDocument;
+    const holder = doc.createElement("div");
+    holder.className = "re-lightbox-media";
+    entry.frame.append(holder);
+    const abort = new AbortController();
+    const mounted = media.content.mount(holder, {
+      item: items[index],
+      index,
+      signal: abort.signal,
+      autoplay: s.autoplay,
+    });
+    media.abort = abort;
+    media.mounted = mounted;
+    if (mounted.interactive) {
+      holder.dataset.lightboxInteractive = "";
+      holder.dataset.carouselNoDrag = "";
+    }
+    if (mounted.ready) {
+      entry.frame.dataset.loading = "true";
+      const wait = setTimeout(() => {
+        stop = spin(s, entry.frame);
+      }, LOADING_DELAY);
+      let stop = () => clearTimeout(wait);
+      const settle = () => {
+        if (media.abort !== abort) return;
+        stop();
+        entry.frame.removeAttribute("data-loading");
+      };
+      abort.signal.addEventListener("abort", () => stop());
+      void mounted.ready.then(settle, settle);
+    }
+    layout(s);
+    if (index === state.index && !s.flying && !state.isClosing)
+      mounted.resume?.();
+  }
+
+  function unmountMedia(entry: LoadedSlide) {
+    const media = entry.media;
+    if (!media?.mounted) return;
+    const { mounted, abort } = media;
+    media.mounted = media.abort = undefined;
+    abort?.abort();
+    mounted.unmount();
+    entry.frame.querySelector(":scope > .re-lightbox-media")?.remove();
+    entry.frame.removeAttribute("data-loading");
+  }
+
+  function pauseMedia(entry: LoadedSlide | undefined) {
+    const mounted = entry?.media?.mounted;
+    if (!entry || !mounted) return;
+    if (mounted.pause) mounted.pause();
+    else unmountMedia(entry);
+  }
+
   function loadSlides(s: Session) {
     trimSlides(s);
     for (let step = -preload; step <= preload; step++) {
@@ -1436,6 +1581,33 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
       image.alt = item.alt || "";
       if (settings.protect) image.draggable = false;
       image.decoding = "async";
+      const content =
+        item.type === undefined
+          ? undefined
+          : settings.content?.find((module) => module.type === item.type);
+      if (content) {
+        frame.dataset.media = content.type;
+        const poster = item.video?.poster || previewOf(index);
+        if (poster) image.src = poster;
+        frame.append(image);
+        s.slides[index].append(frame);
+        const entry: LoadedSlide = {
+          frame,
+          image,
+          media: { content },
+          status: "settled",
+          load: () => {},
+          cancel: () => {
+            unmountMedia(entry);
+            image.removeAttribute("src");
+          },
+        };
+        s.loaded.set(index, entry);
+        // A poster flies open like a photo, and its player mounts once the flight lands.
+        if (!(s.flying && index === state.index && poster))
+          mountMedia(s, index, entry);
+        continue;
+      }
       let alive = true;
       let cleanup: undefined | (() => void);
       let wait: ReturnType<typeof setTimeout> | undefined;
@@ -1449,23 +1621,7 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
         spinner = undefined;
       };
       const showSpinner = () => {
-        if (!alive || session !== s) return;
-        const status = doc.createElement("span");
-        status.className = "re-lightbox-loading";
-        status.setAttribute("role", "status");
-        status.setAttribute("aria-label", s.strings.loading);
-        const canvas = doc.createElement("canvas");
-        canvas.setAttribute("aria-hidden", "true");
-        status.append(canvas);
-        frame.append(status);
-        let dots: ReturnType<typeof createThinkingDots> | undefined;
-        try {
-          dots = createThinkingDots(canvas, { size: SPINNER_SIZE });
-        } catch {}
-        spinner = () => {
-          dots?.destroy();
-          status.remove();
-        };
+        if (alive && session === s) spinner = spin(s, frame);
       };
       const fetcher = (url: string) =>
         (doc.defaultView ?? globalThis).fetch(url);
@@ -1598,7 +1754,7 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
           loader.srcset = item.srcset;
           requestSizes(s);
         }
-        loader.src = item.src;
+        loader.src = item.src ?? "";
       };
       const preview = previewOf(index);
       if (preview) display(preview);
@@ -1643,6 +1799,7 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
       old.frame.style.clipPath = "";
       old.frame.style.opacity = "";
     }
+    pauseMedia(old);
     const gap = index - state.index;
     const forward =
       looping() && Math.abs(gap) > items.length / 2 ? gap < 0 : gap > 0;
@@ -1650,6 +1807,9 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
     s.heading = forward ? 1 : -1;
     publish({ index, zoom: restZoom(s, index) });
     update(s, forward ? 1 : -1);
+    const entry = s.loaded.get(index);
+    if (entry?.media?.mounted) entry.media.mounted.resume?.();
+    else if (entry) mountMedia(s, index, entry);
     s.status.textContent = s.strings.slide(index, items.length);
     restartSlideshow(s);
     emit("change", s);
@@ -1741,7 +1901,13 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
     if (s.next)
       s.next.disabled = !looping() && state.index === items.length - 1;
     if (single) toggleSlideshow(s, false);
-    s.download?.setAttribute("href", largestSource(item.srcset, item.src));
+    if (s.download) {
+      s.download.hidden = Boolean(item.type);
+      s.download.setAttribute(
+        "href",
+        largestSource(item.srcset, item.src ?? ""),
+      );
+    }
     const mark = (index: number, current: boolean) => {
       const slide = s.slides[index];
       if (slide) {
@@ -2178,6 +2344,7 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
     )?.ClipboardItem;
     if (
       settings.protect ||
+      items[state.index]?.type ||
       !win ||
       !Item ||
       typeof win.navigator.clipboard?.write !== "function" ||
@@ -3009,7 +3176,7 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
 
   function open(input: readonly LightboxItem[], index = 0) {
     if (destroyed) throw new Error("This lightbox has been destroyed.");
-    const nextItems = validateItems(input);
+    const nextItems = validateItems(input, options.content);
     if (!Number.isFinite(index))
       throw new TypeError("Image index must be finite.");
     configure();
@@ -3253,6 +3420,9 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
       flying: true,
       watchedScale: 1,
       sharpScale: 1,
+      autoplay:
+        settings.autoplay !== false &&
+        (doc.defaultView?.navigator.userActivation?.isActive ?? true),
     };
     session = s;
     if (doc.defaultView) enterHistory(doc.defaultView);
@@ -3464,6 +3634,9 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
         entry.commit = undefined;
         commit?.();
       }
+      const current = s.loaded.get(state.index);
+      if (current?.media?.mounted) current.media.mounted.resume?.();
+      else if (current) mountMedia(s, state.index, current);
       if (s.phase === "opening") setPhase(s, "open");
       emit("opened", s);
     });
@@ -3525,6 +3698,7 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
     chromeInput(s, { type: "close" });
     publish({ isClosing: true });
     leaveFullscreen(s);
+    for (const entry of s.loaded.values()) entry.media?.mounted?.pause?.();
     s.dialog.style.removeProperty("--re-lightbox-chrome-opacity");
     setPhase(s, "closing");
     s.restoreScroll();
@@ -3550,7 +3724,7 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
 
   function setItems(input: readonly LightboxItem[], index?: number) {
     if (destroyed) throw new Error("This lightbox has been destroyed.");
-    const nextItems = validateItems(input);
+    const nextItems = validateItems(input, options.content);
     if (index !== undefined && !Number.isFinite(index))
       throw new TypeError("Image index must be finite.");
     const s = session;
@@ -3570,7 +3744,8 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
     for (const [j, item] of nextItems.entries()) {
       if (from[j] >= 0) continue;
       const old = items.findIndex(
-        (candidate, i) => !taken.has(i) && candidate.src === item.src,
+        (candidate, i) =>
+          !taken.has(i) && item.src !== undefined && candidate.src === item.src,
       );
       if (old < 0) continue;
       taken.add(old);
@@ -3739,6 +3914,23 @@ export function lightboxItemFromImage(
       ?.textContent?.trim() ||
     image.dataset.caption ||
     link?.dataset.caption;
+  // Without JavaScript the link still leads to the video or the page it plays.
+  const type = link?.dataset.lightboxType || image.dataset.lightboxType;
+  if (type) {
+    const media = href || src;
+    return {
+      type,
+      src: media,
+      embed: media,
+      video: { src: media, poster: tile },
+      previewSrc: tile,
+      width,
+      height,
+      alt: image.alt,
+      caption: caption || undefined,
+      origin: image,
+    };
+  }
   return {
     src,
     srcset: image.dataset.lightboxSrcset || undefined,

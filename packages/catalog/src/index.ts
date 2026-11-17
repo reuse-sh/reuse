@@ -195,6 +195,11 @@ export const libraries: Library[] = [
         "tests/browser/lightbox-controls.spec.ts",
       ],
       [
+        "Play only the current slide",
+        "Video, audio and embeds are optional modules. Leaving a slide pauses its player, close pauses them all at once, and over a player the pointer belongs to the player.",
+        "tests/browser/lightbox-media-modules.spec.ts",
+      ],
+      [
         "Survive every interruption",
         "Opening, closing, swiping, zooming, resizing, appending or destroying at any moment leaves no dialog, timer, hidden tile, scroll lock or extra history entry behind.",
         "packages/lightbox/src/session.model.test.ts",
@@ -203,7 +208,7 @@ export const libraries: Library[] = [
     api: [
       [
         "createLightbox(options?)",
-        "Creates a viewer. Options include controls, thumbnails, caption, slideshow, loop, history, strings, slots, imageClick, doubleTapZoom, autoHide, maxZoom, protect, padding, className and icons, read again at every open.",
+        "Creates a viewer. Options include controls, thumbnails, caption, slideshow, content, autoplay, loop, history, strings, slots, imageClick, doubleTapZoom, autoHide, maxZoom, protect, padding, className and icons, read again at every open.",
       ],
       [
         "bindLightboxGallery(root, options?)",
@@ -248,8 +253,8 @@ export const libraries: Library[] = [
       'Built-in controls: the counter sits top left before the toolbarStart slot, and zoom, slideshow, fullscreen, download, the toolbarEnd slot and close sit top right; the arrows sit at the sides and hide below 480px. controls turns each one on or off, and fullscreen, download and slideshow start off. Fullscreen covers the viewer\'s stage, since browsers refuse a dialog, and is missing where document.fullscreenEnabled is false. Download links the widest srcset candidate, else src. thumbnails: "bottom" is a carousel strip that keeps the current thumbnail centered and takes one Tab stop with arrow keys inside; "side" is a column at the end edge that becomes the strip below 720px, and both hide below 480px of height. caption: "side" moves captions into the aside panel. The slideshow advances every slideshow.interval ms, 4000 by default, springs back to the first photo at the end without loop, and publishes --re-lightbox-slideshow-progress from 0 to 1.',
       "Paging runs on the carousel package. Only the current and neighboring images stay loaded. Next and previous scroll smoothly, and a jump from a distant thumbnail fades through the backdrop so unloaded pages never flash past.",
       "Give an item a srcset and the viewer picks the file: it sets sizes to the photo's shown width, or uses yours, and 150ms after a zoom comes to rest asks for the zoomed width, swapping the file in only once it has decoded and never for a smaller one. While the photo flies open it shows the tile's loaded pixels or previewSrc. The current photo loads at high fetch priority and its neighbors at low priority once it has decoded, and Save-Data skips the neighbors. A photo still loading after 300ms shows a spinner from @reuse-sh/loaders over the --re-lightbox-placeholder background, and a failed one shows strings.error with a strings.retry button.",
-      "Images are the core. Video, audio, iframe and HTML slides are separate modules: @reuse-sh/lightbox/video, /audio, /iframe, /html and /embed each export a content factory that you pass in the content option. An item picks its module by type; without one it is an image. The embed module turns YouTube and Vimeo links into players and registerEmbed adds more. HTML slides take a function that returns a Node, never an HTML string. Live Photos and HDR are not supported.",
-      'For a page without a bundler or an import map, such as a theme or a plugin, load @reuse-sh/lightbox/browser/lightbox.js with <script type="module">. It is one minified ES module with a source map and the carousel inside. Each media module is a separate file in the same folder that imports lightbox.js by a relative path, and the carousel link is carousel-link.js beside them, so copy the folder whole.',
+      "Images are the core. Video, audio, iframe and HTML slides are separate modules: @reuse-sh/lightbox/video, /audio, /iframe, /html and /embed export video(), audio(), iframe(), html() and embed(), which you pass in the content option. An item picks its module by type; without one it is an image. The embed module turns YouTube (youtube-nocookie.com, Shorts at 9:16) and Vimeo links into players and registerEmbed adds more. Only the current slide plays: leaving it pauses the player, close pauses every one, and a player starts by itself only the first time it shows, when autoplay is on and a click opened the viewer, muted if the browser refuses sound. Over a player the pointer belongs to the player, and paging works from the 24px beside it and the arrows. HTML slides take a function that returns a Node, never an HTML string. Live Photos and HDR are not supported.",
+      'For a page without a bundler or an import map, such as a theme or a plugin, load @reuse-sh/lightbox/browser/lightbox.js with <script type="module">. It is one minified ES module with a source map and the carousel inside. Each media module is a separate file in the same folder, audio.js loads video.js and embed.js loads iframe.js, and the carousel link is carousel-link.js beside them, so copy the folder whole.',
       "Styles come in two files: base.css holds the layout and states in @layer re.base and is required, and theme.css holds the default dark theme in @layer re.theme. Other themes sit in themes/. Every theme value is a --re-lightbox-* custom property. dist/unlayered/ holds the same files without layers for sites whose own unlayered styles would win.",
       "Every visible and spoken text comes from the strings option, such as counter(index, count) and close, with English defaults, so a translation passes only the strings it changes.",
       "Slots add your own controls: toolbarStart, toolbarEnd, footer and aside each take a function that returns a node with optional update(state) and destroy(). Slot buttons take the theme's look with the re-lightbox-button class and hide with the other controls. Share is not built in; build it as a slot.",
