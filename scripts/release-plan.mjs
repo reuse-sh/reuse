@@ -1,13 +1,11 @@
 import { readdirSync, readFileSync } from "node:fs";
+import { join } from "node:path";
+import { pathToFileURL } from "node:url";
 
 const registry = "https://registry.npmjs.org";
 
-const pending = readdirSync(".changeset").filter(
-  (file) => file.endsWith(".md") && file !== "README.md",
-);
-
-async function isPublished({ name, version }) {
-  const response = await fetch(
+async function isPublished({ name, version }, lookup) {
+  const response = await lookup(
     `${registry}/${name.replace("/", "%2f")}/${version}`,
   );
   if (response.status === 404) return false;
@@ -17,25 +15,37 @@ async function isPublished({ name, version }) {
   return true;
 }
 
-async function unpublishedPackages() {
-  const manifests = readdirSync("packages")
+export async function planRelease(root = ".", lookup = fetch) {
+  const pending = readdirSync(join(root, ".changeset")).filter(
+    (file) => file.endsWith(".md") && file !== "README.md",
+  );
+  if (pending.length > 0)
+    return { action: "version", pending, unpublished: [] };
+
+  const manifests = readdirSync(join(root, "packages"))
     .map((dir) =>
-      JSON.parse(readFileSync(`packages/${dir}/package.json`, "utf8")),
+      JSON.parse(readFileSync(join(root, "packages", dir, "package.json"))),
     )
     .filter((manifest) => !manifest.private);
-  const published = await Promise.all(manifests.map(isPublished));
-  return manifests
+  const published = await Promise.all(
+    manifests.map((manifest) => isPublished(manifest, lookup)),
+  );
+  const unpublished = manifests
     .filter((_, index) => !published[index])
     .map(({ name, version }) => `${name}@${version}`);
+  return {
+    action: unpublished.length > 0 ? "publish" : "none",
+    pending,
+    unpublished,
+  };
 }
 
-let action = "none";
-if (pending.length > 0) {
-  action = "version";
-  console.error(`${pending.length} pending changesets`);
-} else {
-  const unpublished = await unpublishedPackages();
-  if (unpublished.length > 0) action = "publish";
-  console.error(`Not on npm: ${unpublished.join(", ") || "none"}`);
+if (import.meta.url === pathToFileURL(process.argv[1]).href) {
+  const { action, pending, unpublished } = await planRelease();
+  console.error(
+    pending.length > 0
+      ? `Pending changesets: ${pending.length}`
+      : `Not on npm: ${unpublished.join(", ") || "none"}`,
+  );
+  console.log(`action=${action}`);
 }
-console.log(`action=${action}`);
