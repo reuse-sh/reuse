@@ -2,7 +2,6 @@ import { expect, type Page, test } from "@playwright/test";
 import {
   countLayoutReads,
   ctrlWheel,
-  framesUntilIdle,
   mount,
   photo,
   swipe,
@@ -42,11 +41,7 @@ async function browseTenPhotos(
       { x: middle.x - 200, y: middle.y },
       { speed: 2 },
     );
-    // A swipe that catches the strip still gliding from the last one pages from there.
-    await framesUntilIdle(
-      page,
-      "document.querySelector('.re-lightbox-viewport').scrollLeft",
-    );
+    await page.waitForTimeout(400);
   }
   const index = await page.evaluate(
     () =>
