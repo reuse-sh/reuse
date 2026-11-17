@@ -344,7 +344,7 @@ export const libraries: Library[] = [
       ],
       [
         "Swipe by the group the buttons use",
-        "With group set, a swipe, a released drag and settling rest on the same slides next() reaches.",
+        "With group set, only the first slide of each group snaps, so a swipe and a released drag move a group like next() does.",
         "tests/browser/carousel-effects.spec.ts",
       ],
       [
@@ -419,8 +419,8 @@ export const libraries: Library[] = [
     notes: [
       "The loop needs enough slides to cover the viewport plus the widest slide, and every slide needs a width. With fewer, or while an image has not given its slide a width yet, isLooping is false and the strip scrolls normally.",
       "That check runs again after a resize or a content change. Slides added at the end, such as a Load More, leave the active slide where it was.",
-      "The loop draws a slide in another period through --re-carousel-shift, which the package CSS applies as translate, and marks the period in data-re-cycle (-1, 0 or 1). It never writes a slide's own transform or translate, so an effect can use both.",
-      "Every slide carries --re-carousel-offset: its distance from where it would rest aligned, in slide widths. It is 0 for the active slide, negative before it and positive after it in the reading direction, the same for a slide the loop moved, and it changes every frame while the strip moves.",
+      "The loop draws a slide in another period through --re-carousel-shift, which the package CSS applies as translate, and marks the period in data-re-cycle (-1, 0 or 1). It never writes a slide's own transform, so put an effect on transform. A translate of your own replaces the shift on a moved slide unless it adds var(--re-carousel-shift, 0px), and a drag past the end of a strip that does not loop stretches it through translate.",
+      "Every slide carries --re-carousel-offset: its distance from where it would rest aligned, in slide widths. It is 0 for a slide resting where it aligns, which is the active slide except at the ends of a strip that does not loop, negative before it and positive after it in the reading direction, the same for a slide the loop moved, and it changes every frame while the strip moves.",
       "A scroll-driven animation on a slide follows its layout position, so on a looping strip add --re-carousel-shift to the timeline range or read --re-carousel-offset instead.",
       'With group: 3 or group: "page", only the first slide of each group keeps scroll-snap-align, so touch and trackpad swipes move a group like the buttons. The others get scroll-snap-align: none, and destroy gives back their own value.',
       'state.seamSlides lists the slides a looping strip shows while it crosses the seam: the first slides and the last slides that each fill one viewport width. When the server renders the strip, give the images in those slides loading="eager" and leave the rest lazy, so crossing the seam never shows an image that is still loading.',
@@ -436,7 +436,7 @@ export const libraries: Library[] = [
       "A div or span viewport without a role becomes a region described as a carousel, and div or span slides without one become groups labeled from strings.slide, such as 3 of 8. next(), prev(), the arrows, dots and keys announce the slide they reach; autoplay and swipes stay quiet.",
       "A goTo while the strip cannot scroll yet, such as in a hidden tab or before its images load, waits for the first refresh that finds overflow and lands there at once.",
       "connectThumbnails(main, thumbnails) keeps the active thumbnail in view and centered, marks it with aria-current and moves the main strip when a thumbnail is clicked.",
-      "take(owner, { onInterrupt }) hands the position to your own driver, such as a marquee: setPosition(px) places the strip px from where it was taken and wraps through the loop seam, snapping, autoplay and moves from code stop meanwhile, a drag or a touch takes it back and calls onInterrupt, and release() glides to the nearest snap point and restores snapping. Take again after the visitor lets go. Under reduced motion setPosition does nothing.",
+      "take(owner, { onInterrupt }) hands the position to your own driver, such as a marquee: setPosition(px) places the strip px from where it was taken and wraps through the loop seam, snapping, autoplay and moves from code stop meanwhile, a drag or a touch takes it back and calls onInterrupt, and release() glides to the nearest snap point and restores snapping. Take again on the next re-carousel:settle. Under reduced motion setPosition does nothing.",
     ],
     pages: [
       { path: "", title: "Overview", lead: carouselDescription },

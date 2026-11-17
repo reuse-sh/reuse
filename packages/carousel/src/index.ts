@@ -280,6 +280,7 @@ export function createCarousel(
     samples: { time: number; position: number }[];
   } | null = null;
   let grabbedTouch: number | undefined;
+  let fingers = 0;
   let instantFrame = 0;
   let deferredSmooth: number | undefined;
   let smoothTarget: number | undefined;
@@ -786,7 +787,8 @@ export function createCarousel(
   }
 
   function settle() {
-    if (pointer || spring || taken || grabbedTouch !== undefined) return;
+    if (pointer || spring || taken || fingers || grabbedTouch !== undefined)
+      return;
     if (
       pendingPosition !== undefined &&
       Math.abs(position() - pendingPosition) > 1
@@ -847,7 +849,7 @@ export function createCarousel(
     pendingPosition = undefined;
     if (!restoreSnap) viewport.style.scrollSnapType = "none";
     scrollTo(position(), "instant");
-    if (restoreSnap) viewport.style.scrollSnapType = previousSnap;
+    if (restoreSnap && !taken) viewport.style.scrollSnapType = previousSnap;
     if (stretch) settleTimer = setTimeout(settle, 180);
     publish(nearestIndex());
   }
@@ -1264,6 +1266,7 @@ export function createCarousel(
     const hand = taken;
     if (!hand) return;
     untake();
+    unsettled = true;
     hand.onInterrupt?.();
   }
 
@@ -1304,7 +1307,7 @@ export function createCarousel(
     } else if (moved && snap)
       goTo(nearestIndex(current), "smooth", undefined, speed, current);
     else if (moved || snap || stretch) settle();
-    else viewport.style.scrollSnapType = previousSnap;
+    else if (!taken) viewport.style.scrollSnapType = previousSnap;
     publish();
   }
 
@@ -1350,6 +1353,7 @@ export function createCarousel(
         destroyed ||
         reducedMotion?.matches ||
         pointer ||
+        fingers ||
         grabbedTouch !== undefined
       )
         return inert;
@@ -1377,7 +1381,8 @@ export function createCarousel(
         release() {
           if (taken !== hand) return;
           untake();
-          if (snapMode !== "none" && enabled) goTo(nearestIndex(), "smooth");
+          if (snapMode !== "none" && enabled && max > 0 && slides.length)
+            goTo(nearestIndex(), "smooth");
           else viewport.style.scrollSnapType = previousSnap;
         },
       };
@@ -1675,9 +1680,9 @@ export function createCarousel(
     const input = event as PointerEvent;
     const target = input.target as HTMLElement;
     if (taken && input.pointerType !== "mouse") {
-      interruptTake();
-      interrupt(false);
       grabbedTouch = input.pointerId;
+      interrupt(false);
+      interruptTake();
       return;
     }
     if (
@@ -1726,6 +1731,15 @@ export function createCarousel(
   };
   listen(viewport, "pointerup", releaseTouch);
   listen(viewport, "pointercancel", releaseTouch);
+  // A native pan cancels its pointer while the finger stays down, so fingers are counted from touch events.
+  const countFingers = (event: Event) => {
+    fingers = (event as TouchEvent).touches.length;
+    if (fingers || !unsettled) return;
+    clearTimeout(settleTimer);
+    settleTimer = setTimeout(settle, 180);
+  };
+  for (const type of ["touchstart", "touchend", "touchcancel"])
+    listen(viewport, type, countFingers, { passive: true });
   observer?.observe(viewport);
   refresh();
   mutation?.observe(viewport, { childList: true, subtree: true });

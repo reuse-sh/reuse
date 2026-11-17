@@ -1654,7 +1654,8 @@ describe("effects, groups and drivers", () => {
     expect(interrupted).toBe(1);
     touched.setPosition(180);
     expect(viewport.scrollLeft).toBe(160);
-    expect(carousel.take("marquee").setPosition).toBeTypeOf("function");
+    carousel.take("marquee").setPosition(10);
+    expect(viewport.scrollLeft).toBe(160);
     pointer(viewport, "pointerup", 100, { pointerType: "touch" });
     vi.advanceTimersByTime(2000);
     expect(viewport.scrollLeft).toBe(200);
@@ -1684,6 +1685,51 @@ describe("effects, groups and drivers", () => {
     expect(interrupted).toBe(3);
     other.release();
     expect(viewport.style.scrollSnapType).toBe("none");
+  });
+
+  it("gives no position to a driver while a finger is down and keeps snapping off while it holds", () => {
+    const { viewport } = eight();
+    const carousel = createCarousel(viewport);
+    cleanups.push(carousel.destroy);
+    const touch = (type: string, count: number) =>
+      viewport.dispatchEvent(
+        Object.assign(new Event(type, { bubbles: true }), {
+          touches: Array.from({ length: count }, () => ({})),
+        }),
+      );
+    touch("touchstart", 1);
+    pointer(viewport, "pointerdown", 100, { pointerType: "touch" });
+    pointer(viewport, "pointercancel", 100, { pointerType: "touch" });
+    carousel.take("marquee").setPosition(50);
+    expect(viewport.scrollLeft).toBe(0);
+    touch("touchend", 0);
+    let retaken: { setPosition(px: number): void } | undefined;
+    const driver = carousel.take("marquee", {
+      onInterrupt: () => {
+        retaken = carousel.take("marquee");
+      },
+    });
+    driver.setPosition(50);
+    pointer(viewport, "pointerdown", 100, { pointerType: "touch" });
+    retaken?.setPosition(80);
+    expect(viewport.scrollLeft).toBe(50);
+    pointer(viewport, "pointerup", 100, { pointerType: "touch" });
+    vi.advanceTimersByTime(2000);
+    expect(viewport.scrollLeft).toBe(0);
+    const held = carousel.take("marquee");
+    carousel.setEnabled(false);
+    carousel.setEnabled(true);
+    expect(viewport.style.scrollSnapType).toBe("none");
+    pointer(viewport, "pointerdown", 100);
+    window.dispatchEvent(new Event("blur"));
+    expect(viewport.style.scrollSnapType).toBe("none");
+    held.setPosition(130);
+    expect(viewport.scrollLeft).toBe(130);
+    const short = fixture([100, 100], 300);
+    const still = createCarousel(short.viewport);
+    cleanups.push(still.destroy);
+    still.take("marquee").release();
+    expect(short.viewport.style.scrollSnapType).toBe("");
   });
 
   it("returns a driver that does nothing under reduced motion", () => {
