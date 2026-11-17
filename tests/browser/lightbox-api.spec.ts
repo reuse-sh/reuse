@@ -234,17 +234,17 @@ test("in RTL an aside keeps the arrow and the footer beside it, and the active t
   }, photo(3));
   await page.waitForTimeout(400);
   const aside = await page.locator(".re-lightbox-aside").boundingBox();
-  const prev = await page.locator(".re-lightbox-prev").boundingBox();
+  const next = await page.locator(".re-lightbox-next").boundingBox();
   const footer = await page.locator(".re-lightbox-footer").boundingBox();
   const strip = await page.locator(".re-lightbox-thumbnails").boundingBox();
   const thumb = await page
     .locator('.re-lightbox-thumbnails [aria-current="true"]')
     .boundingBox();
-  if (!aside || !prev || !footer || !strip || !thumb)
+  if (!aside || !next || !footer || !strip || !thumb)
     throw new Error("Missing part");
   const outside = (box: { x: number; width: number }) =>
     box.x + box.width <= aside.x || box.x >= aside.x + aside.width;
-  expect(outside(prev)).toBe(true);
+  expect(next.x - (aside.x + aside.width)).toBeCloseTo(16, 0);
   expect(outside(footer)).toBe(true);
   expect(
     Math.abs(thumb.x + thumb.width / 2 - (strip.x + strip.width / 2)),
