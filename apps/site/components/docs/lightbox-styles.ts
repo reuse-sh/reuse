@@ -478,6 +478,7 @@ export function lightboxCode(options: LightboxStyle) {
   );
   const lines = (items: string) => [
     ...(options.thumbnails ? ["thumbnails: true,"] : []),
+    "autoHide: false,",
     `className: "${LIGHTBOX_STYLE_CLASS}",`,
     ...(slots ? [`slots: chromeSlots(${items}),`] : []),
   ];

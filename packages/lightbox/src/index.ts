@@ -1,5 +1,11 @@
 import { type Carousel, createCarousel } from "@reuse-sh/carousel";
 import {
+  type ChromeInput,
+  type ChromeModel,
+  initialChrome,
+  stepChrome,
+} from "./chrome.js";
+import {
   boundZoom,
   clamp,
   contain,
@@ -126,6 +132,7 @@ export interface LightboxOptions {
   thumbnails?: boolean;
   padding?: number;
   duration?: number;
+  autoHide?: number | false;
   className?: string;
   icons?: Partial<Record<"close" | "prev" | "next" | "zoom", () => Node>>;
   renderContent?: (context: LightboxContentContext) => undefined | (() => void);
@@ -180,6 +187,14 @@ type Session = {
   strings: LightboxStrings;
   slots: ReturnType<LightboxSlot>[];
   motion?: { frame: number; left: number; still: number };
+  phase: "entering" | "opening" | "open" | "dragging" | "returning" | "closing";
+  timing: { open: number; close: number; ease: string };
+  chrome: ChromeModel;
+  chromeRoots: HTMLElement[];
+  chromeTimer?: ReturnType<typeof setTimeout>;
+  tapTimer?: ReturnType<typeof setTimeout>;
+  openingFocus: HTMLElement | null;
+  zoomed: boolean;
   thumbStrip?: HTMLDivElement;
   centeredThumb: number;
   abort: AbortController;
@@ -188,7 +203,9 @@ type Session = {
   previousFocus: HTMLElement | null;
   restoreScroll: () => void;
   hiddenOrigin?: { element: HTMLElement; visibility: string };
-  counter: HTMLOutputElement;
+  counter: HTMLSpanElement;
+  counterText: string;
+  status: HTMLDivElement;
   caption: HTMLParagraphElement;
   prev: HTMLButtonElement;
   next: HTMLButtonElement;
@@ -204,6 +221,9 @@ type Session = {
     midpoint: Point;
     moved: boolean;
     touch: boolean;
+    axis?: "x" | "y";
+    half: number;
+    samples: { time: number; y: number }[];
   };
   lastTap?: { time: number; point: Point };
   suppressClickUntil: number;
@@ -321,6 +341,35 @@ function validateItems(items: readonly LightboxItem[]) {
   });
 }
 
+const OPEN_DURATION = 400;
+const CLOSE_DURATION = 300;
+const REDUCED_DURATION = 150;
+const FLIGHT_EASE = "cubic-bezier(0.32, 0.72, 0, 1)";
+const ZOOM_EASE = "cubic-bezier(.16,1,.3,1)";
+const DOUBLE_TAP_TIME = 300;
+const DOUBLE_TAP_DISTANCE = 30;
+const DISMISS_DISTANCE = 120;
+const DISMISS_SPEED = 0.5;
+const SPEED_WINDOW = 80;
+
+function milliseconds(value: string, fallback: number) {
+  const number = Number.parseFloat(value);
+  if (!Number.isFinite(number)) return fallback;
+  return value.trim().endsWith("ms") || !value.trim().endsWith("s")
+    ? number
+    : number * 1000;
+}
+
+function releaseSpeed(
+  samples: { time: number; y: number }[],
+  time: number,
+  y: number,
+) {
+  const first = samples.find((sample) => sample.time >= time - SPEED_WINDOW);
+  if (!first || time - first.time <= 0) return 0;
+  return (y - first.y) / (time - first.time);
+}
+
 function distance(points: Point[]) {
   return Math.hypot(points[0].x - points[1].x, points[0].y - points[1].y);
 }
@@ -338,6 +387,7 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
   let tapZoom = 2.5;
   let preload = 1;
   let padding = 32;
+  let autoHide: number | false = 2500;
   let loop = Boolean(options.loop);
   let items: LightboxItem[] = [];
   let sources: readonly LightboxItem[] = [];
@@ -373,6 +423,12 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
     tapZoom = clamp(settings.tapZoom ?? 2.5, 1, maxZoom);
     preload = clamp(Math.floor(settings.preload ?? 1), 0, 2);
     padding = Math.max(0, settings.padding ?? 32);
+    autoHide =
+      settings.autoHide === false
+        ? false
+        : Number.isFinite(settings.autoHide)
+          ? Math.max(0, settings.autoHide as number)
+          : 2500;
   }
   configure();
 
@@ -423,6 +479,92 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
     if (busy !== state.isAnimating) publish({ isAnimating: busy });
   }
 
+  function prefersReducedMotion(s: Session) {
+    return Boolean(
+      s.dialog.ownerDocument.defaultView?.matchMedia?.(
+        "(prefers-reduced-motion: reduce)",
+      ).matches,
+    );
+  }
+
+  function setPhase(s: Session, phase: Session["phase"]) {
+    s.phase = phase;
+    s.dialog.dataset.phase = phase;
+  }
+
+  function easing(value: string) {
+    try {
+      return value && CSS.supports("transition-timing-function", value)
+        ? value
+        : FLIGHT_EASE;
+    } catch {
+      return FLIGHT_EASE;
+    }
+  }
+
+  function readTiming(s: Session) {
+    const style = s.dialog.ownerDocument.defaultView?.getComputedStyle(
+      s.dialog,
+    );
+    const read = (name: string) => style?.getPropertyValue(name) ?? "";
+    const fixed =
+      settings.duration === undefined
+        ? undefined
+        : Math.max(0, settings.duration);
+    s.timing = {
+      open:
+        fixed ??
+        milliseconds(read("--re-lightbox-open-duration"), OPEN_DURATION),
+      close:
+        fixed ??
+        milliseconds(read("--re-lightbox-close-duration"), CLOSE_DURATION),
+      ease: easing(read("--re-lightbox-ease").trim()),
+    };
+  }
+
+  function controlInUse(s: Session) {
+    const active = s.dialog.ownerDocument.activeElement;
+    return s.chromeRoots.some((root) => {
+      if (s.chrome.lastPointerIsMouse && root.matches(":hover")) return true;
+      if (!(active instanceof Element) || active === s.openingFocus)
+        return false;
+      if (!root.contains(active)) return false;
+      try {
+        return active.matches(":focus-visible");
+      } catch {
+        return true;
+      }
+    });
+  }
+
+  function applyChrome(s: Session, model: ChromeModel, notify = true) {
+    s.chrome = model;
+    clearTimeout(s.chromeTimer);
+    s.chromeTimer =
+      model.timer && autoHide !== false
+        ? setTimeout(() => chromeInput(s, { type: "idle" }), autoHide)
+        : undefined;
+    if (s.dialog.dataset.chrome !== model.chrome)
+      s.dialog.dataset.chrome = model.chrome;
+    if (state.chrome === model.chrome) return;
+    if (notify) publish({ chrome: model.chrome });
+    else updateState({ chrome: model.chrome });
+  }
+
+  function chromeInput(s: Session, input: ChromeInput, notify = true) {
+    if (session !== s) return;
+    const hides =
+      input.type === "idle" ||
+      input.type === "tap" ||
+      input.type === "zoom" ||
+      input.type === "pinch";
+    applyChrome(
+      s,
+      stepChrome(s.chrome, input, hides && controlInUse(s)),
+      notify,
+    );
+  }
+
   function looping() {
     return loop && items.length > 1;
   }
@@ -457,13 +599,15 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
     return contain(imageSize(index, s), view(s), padding);
   }
 
-  function applyZoom(s: Session) {
+  function applyZoom(s: Session, notify = true) {
     const frame = s.loaded.get(state.index)?.frame;
-    if (frame)
-      frame.style.transform = `translate(${state.zoom.x}px, ${state.zoom.y}px) scale(${state.zoom.scale})`;
-    syncingCarousel = true;
-    s.carousel.setEnabled(state.zoom.scale <= 1);
-    syncingCarousel = false;
+    if (s.phase !== "dragging") {
+      if (frame)
+        frame.style.transform = `translate(${state.zoom.x}px, ${state.zoom.y}px) scale(${state.zoom.scale})`;
+      syncingCarousel = true;
+      s.carousel.setEnabled(state.zoom.scale <= 1 && items.length > 1);
+      syncingCarousel = false;
+    }
     s.viewport.style.touchAction = state.zoom.scale > 1 ? "none" : "pan-x";
     s.zoomButton.setAttribute(
       "aria-label",
@@ -473,6 +617,10 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
     if (!settings.icons?.zoom)
       s.zoomButton.textContent = state.zoom.scale > 1 ? "−" : "+";
     s.dialog.dataset.zoomed = String(state.zoom.scale > 1);
+    if (s.zoomed !== state.zoom.scale > 1) {
+      s.zoomed = state.zoom.scale > 1;
+      chromeInput(s, { type: s.zoomed ? "zoom" : "unzoom" }, notify);
+    }
   }
 
   function restoreOrigin(s: Session) {
@@ -494,18 +642,17 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
     node: HTMLElement,
     frames: Keyframe[],
     duration: number,
+    easing = ZOOM_EASE,
   ) {
-    const reduced = s.dialog.ownerDocument.defaultView?.matchMedia?.(
-      "(prefers-reduced-motion: reduce)",
-    ).matches;
-    if (reduced || duration <= 0 || typeof node.animate !== "function")
+    if (duration <= 0 || typeof node.animate !== "function")
       return Promise.resolve();
+    let animation: Animation;
+    try {
+      animation = node.animate(frames, { duration, easing, fill: "both" });
+    } catch {
+      return Promise.resolve();
+    }
     return new Promise<void>((resolve) => {
-      const animation = node.animate(frames, {
-        duration,
-        easing: "cubic-bezier(.16,1,.3,1)",
-        fill: "both",
-      });
       s.animations.add(animation);
       syncAnimating(s);
       let settled = false;
@@ -524,7 +671,11 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
         animation.cancel();
         resolve();
       };
-      const timer = setTimeout(finish, duration + 80);
+      // A timeline that has not advanced by the deadline still lands the last keyframe.
+      const timer = setTimeout(() => {
+        animation.finish();
+        finish();
+      }, duration + 80);
       s.finishAnimations.add(finish);
       void animation.finished.then(finish, finish);
     });
@@ -532,6 +683,30 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
 
   function cancelAnimations(s: Session) {
     for (const finish of [...s.finishAnimations]) finish();
+  }
+
+  function flightDuration(s: Session, closing: boolean) {
+    const duration = closing ? s.timing.close : s.timing.open;
+    return prefersReducedMotion(s)
+      ? Math.min(duration, REDUCED_DURATION)
+      : duration;
+  }
+
+  function flight(s: Session, closing: boolean) {
+    const from = closing
+      ? s.dialog.ownerDocument.defaultView?.getComputedStyle(s.backdrop)
+          .opacity || "1"
+      : "0";
+    return Promise.all([
+      morph(s, closing),
+      animate(
+        s,
+        s.backdrop,
+        [{ opacity: from }, { opacity: closing ? 0 : 1 }],
+        flightDuration(s, closing),
+        s.timing.ease,
+      ),
+    ]);
   }
 
   function morph(s: Session, closing: boolean) {
@@ -555,7 +730,18 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
       : undefined;
     const viewport = view(s);
     const size = fit(state.index, s);
-    const duration = Math.max(0, settings.duration ?? 280);
+    const duration = flightDuration(s, closing);
+    const ease = s.timing.ease;
+    if (prefersReducedMotion(s))
+      return animate(
+        s,
+        entry.frame,
+        closing
+          ? [{ opacity: live.opacity }, { opacity: 0 }]
+          : [{ opacity: 0 }, { opacity: 1 }],
+        duration,
+        "ease",
+      );
     const visible =
       rect &&
       rect.width > 0 &&
@@ -572,15 +758,16 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
           ? [
               live,
               {
-                transform: `${live.transform} scale(.96)`,
+                transform: `${live.transform} scale(.94)`,
                 opacity: 0,
               },
             ]
           : [
-              { transform: "scale(.96)", opacity: 0 },
+              { transform: `${resting} scale(.94)`, opacity: 0 },
               { transform: resting, opacity: 1 },
             ],
         duration,
+        ease,
       );
     }
     const style = win.getComputedStyle(origin);
@@ -621,6 +808,7 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
       entry.frame,
       closing ? [live, clipped] : [clipped, expanded],
       duration,
+      ease,
     );
   }
 
@@ -761,16 +949,96 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
       old.frame.style.clipPath = "";
       old.frame.style.opacity = "";
     }
+    const gap = index - state.index;
+    const forward =
+      looping() && Math.abs(gap) > items.length / 2 ? gap < 0 : gap > 0;
     publish({ index, zoom: { ...identity } });
-    update(s);
+    update(s, forward ? 1 : -1);
+    s.status.textContent = s.strings.slide(index, items.length);
     emit("change", s);
   }
 
-  function update(s: Session) {
+  function renderCounter(s: Session, direction: 1 | -1 | 0) {
+    const text = s.strings.counter(state.index, items.length);
+    if (text === s.counterText) return;
+    s.counterText = text;
+    const doc = s.dialog.ownerDocument;
+    const parts = text.match(/\p{Nd}+(?:[^\p{Nd}\s]\p{Nd}+)*|\P{Nd}+/gu) ?? [];
+    const kind = (part: string) =>
+      /\p{Nd}/u.test(part)
+        ? "re-lightbox-counter-number"
+        : "re-lightbox-counter-text";
+    let nodes = [...s.counter.children] as HTMLElement[];
+    if (
+      nodes.length !== parts.length ||
+      nodes.some((node, index) => node.className !== kind(parts[index]))
+    ) {
+      nodes = parts.map((part) => {
+        const node = doc.createElement("span");
+        node.className = kind(part);
+        return node;
+      });
+      s.counter.replaceChildren(...nodes);
+    }
+    const roll =
+      direction !== 0 &&
+      !prefersReducedMotion(s) &&
+      typeof s.counter.animate === "function";
+    for (const [index, node] of nodes.entries()) {
+      const part = parts[index];
+      if (node.className === "re-lightbox-counter-text") {
+        if (node.textContent !== part) node.textContent = part;
+        continue;
+      }
+      const digits = [...part];
+      const cells = [...node.children] as HTMLElement[];
+      while (cells.length > digits.length) cells.shift()?.remove();
+      while (cells.length < digits.length) {
+        const cell = doc.createElement("span");
+        cell.className = "re-lightbox-counter-cell";
+        cell.append(doc.createElement("span"));
+        node.prepend(cell);
+        cells.unshift(cell);
+      }
+      for (const [at, cell] of cells.entries()) {
+        const digit = digits[at];
+        const current = cell.lastElementChild as HTMLElement;
+        if (current.textContent === digit) continue;
+        while (cell.firstElementChild !== current)
+          cell.firstElementChild?.remove();
+        const previous = current.textContent;
+        if (!roll || !previous) {
+          current.textContent = digit;
+          continue;
+        }
+        const incoming = doc.createElement("span");
+        incoming.textContent = digit;
+        cell.append(incoming);
+        current.dataset.char = previous;
+        current.textContent = "";
+        const timing = { duration: 200, easing: "ease" };
+        incoming.animate(
+          [{ translate: `0 ${direction * 100}%` }, { translate: "0 0" }],
+          timing,
+        );
+        const leaving = current.animate(
+          [{ translate: "0 0" }, { translate: `0 ${direction * -100}%` }],
+          { ...timing, fill: "forwards" },
+        );
+        leaving.onfinish = () => current.remove();
+      }
+    }
+  }
+
+  function update(s: Session, direction: 1 | -1 | 0 = 0) {
     loadSlides(s);
     hideOrigin(s);
-    s.counter.value = s.strings.counter(state.index, items.length);
+    renderCounter(s, direction);
     s.caption.textContent = items[state.index].caption || "";
+    const single = items.length < 2;
+    s.prev.hidden = single;
+    s.next.hidden = single;
+    s.counter.hidden = single;
     s.prev.disabled = !looping() && state.index === 0;
     s.next.disabled = !looping() && state.index === items.length - 1;
     for (const [index, slide] of s.slides.entries()) {
@@ -794,9 +1062,7 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
       strip.scrollWidth <= strip.clientWidth
     )
       return;
-    const reduced = s.dialog.ownerDocument.defaultView?.matchMedia?.(
-      "(prefers-reduced-motion: reduce)",
-    ).matches;
+    const reduced = prefersReducedMotion(s);
     // An RTL strip scrolls through negative positions, where offsetLeft already lies.
     const max = strip.scrollWidth - strip.clientWidth;
     const rtl =
@@ -817,6 +1083,8 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
     if (session === s) session = undefined;
     s.abort.abort();
     clearTimeout(s.wheelTimer);
+    clearTimeout(s.chromeTimer);
+    clearTimeout(s.tapTimer);
     if (s.motion)
       s.dialog.ownerDocument.defaultView?.cancelAnimationFrame(s.motion.frame);
     s.motion = undefined;
@@ -859,19 +1127,21 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
             fit(state.index, s),
             view(s),
           );
-    if (notify) publish({ zoom });
-    else updateState({ zoom });
+    updateState({ zoom });
     if (frame && shouldAnimate) {
       frame.style.clipPath = "";
       frame.style.opacity = "";
     }
-    applyZoom(s);
+    applyZoom(s, false);
+    if (notify) publish({});
     if (frame && live && shouldAnimate) {
       void animate(
         s,
         frame,
         [{ transform: live }, { transform: frame.style.transform }],
-        Math.min(220, Math.max(0, settings.duration ?? 280)),
+        prefersReducedMotion(s)
+          ? 0
+          : Math.min(220, Math.max(0, settings.duration ?? 280)),
       );
     }
   }
@@ -908,9 +1178,7 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
         trimSlides(s);
       },
     };
-    const reduced = s.dialog.ownerDocument.defaultView?.matchMedia?.(
-      "(prefers-reduced-motion: reduce)",
-    ).matches;
+    const reduced = prefersReducedMotion(s);
     const duration = Math.min(240, Math.max(0, settings.duration ?? 280));
     if (reduced || duration <= 0 || typeof s.viewport.animate !== "function") {
       fade.jump();
@@ -995,7 +1263,53 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
       frame.style.clipPath = "";
       frame.style.opacity = "";
     }
+    s.backdrop.style.opacity = "";
+    s.dialog.style.removeProperty("--re-lightbox-chrome-opacity");
+    if (s.phase !== "entering" && s.phase !== "closing") setPhase(s, "open");
     applyZoom(s);
+  }
+
+  function dismissDrag(s: Session, dx: number, dy: number, half: number) {
+    const progress = clamp(Math.abs(dy) / half, 0, 1);
+    const frame = s.loaded.get(state.index)?.frame;
+    if (frame)
+      frame.style.transform = `translate(${dx}px, ${dy}px) scale(${1 - progress * 0.25})`;
+    s.backdrop.style.opacity = String(1 - progress);
+    s.dialog.style.setProperty(
+      "--re-lightbox-chrome-opacity",
+      String(Math.max(0, 1 - 2 * progress)),
+    );
+  }
+
+  function returnFromDismiss(s: Session) {
+    const frame = s.loaded.get(state.index)?.frame;
+    const win = s.dialog.ownerDocument.defaultView;
+    const transform = frame && win?.getComputedStyle(frame).transform;
+    const opacity = win?.getComputedStyle(s.backdrop).opacity || "1";
+    setPhase(s, "returning");
+    s.backdrop.style.opacity = "";
+    applyZoom(s);
+    const duration = prefersReducedMotion(s) ? 0 : s.timing.open;
+    void Promise.all([
+      frame && transform && transform !== "none"
+        ? animate(
+            s,
+            frame,
+            [{ transform }, { transform: frame.style.transform }],
+            duration,
+            s.timing.ease,
+          )
+        : undefined,
+      animate(
+        s,
+        s.backdrop,
+        [{ opacity }, { opacity: 1 }],
+        duration,
+        s.timing.ease,
+      ),
+    ]).then(() => {
+      if (session === s && s.phase === "returning") setPhase(s, "open");
+    });
   }
 
   function installGestures(s: Session) {
@@ -1025,6 +1339,8 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
         midpoint: points.length > 1 ? midpoint(points) : points[0],
         moved: false,
         touch: s.gesture?.touch ?? true,
+        half: 1,
+        samples: [],
       };
     };
     s.viewport.addEventListener(
@@ -1047,7 +1363,16 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
         interruptImageMotion(s);
         s.pointers.set(event.pointerId, point(event));
         resetGesture();
-        if (s.gesture) s.gesture.touch = event.pointerType !== "mouse";
+        if (s.gesture) {
+          s.gesture.touch = event.pointerType !== "mouse";
+          s.gesture.samples.push({ time: event.timeStamp, y: event.clientY });
+        }
+        if (s.pointers.size === 2) {
+          clearTimeout(s.tapTimer);
+          s.tapTimer = undefined;
+          s.lastTap = undefined;
+          chromeInput(s, { type: "pinch" });
+        }
         if (state.zoom.scale > 1 || s.pointers.size > 1) {
           s.viewport.setPointerCapture?.(event.pointerId);
           event.preventDefault();
@@ -1065,6 +1390,9 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
         const dx = event.clientX - gesture.start.x;
         const dy = event.clientY - gesture.start.y;
         if (Math.hypot(dx, dy) > 8 || points.length > 1) gesture.moved = true;
+        gesture.samples.push({ time: event.timeStamp, y: event.clientY });
+        while (gesture.samples[0].time < event.timeStamp - SPEED_WINDOW * 2)
+          gesture.samples.shift();
         if (points.length > 1 && gesture.distance > 0) {
           event.preventDefault();
           const middle = midpoint(points);
@@ -1077,9 +1405,10 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
           zoom.x += middle.x - gesture.midpoint.x;
           zoom.y += middle.y - gesture.midpoint.y;
           updateState({ zoom });
-          applyZoom(s);
+          applyZoom(s, false);
         } else if (gesture.zoom.scale > 1) {
           event.preventDefault();
+          if (gesture.moved) s.dialog.dataset.panning = "true";
           updateState({
             zoom: boundZoom(
               {
@@ -1091,25 +1420,21 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
               view(s),
             ),
           });
-          applyZoom(s);
-        } else if (
-          gesture.touch &&
-          Math.abs(dy) > Math.abs(dx) * 1.3 &&
-          Math.abs(dy) > 8
-        ) {
-          event.preventDefault();
-          s.carousel.setEnabled(false);
-          s.viewport.setPointerCapture?.(event.pointerId);
-          updateState({
-            zoom: {
-              scale: Math.max(0.8, 1 - Math.abs(dy) / view(s).height / 2),
-              x: 0,
-              y: dy,
-            },
-          });
-          const frame = s.loaded.get(state.index)?.frame;
-          if (frame)
-            frame.style.transform = `translateY(${dy}px) scale(${state.zoom.scale})`;
+          applyZoom(s, false);
+        } else if (gesture.touch && points.length === 1) {
+          if (!gesture.axis && Math.hypot(dx, dy) >= 10) {
+            gesture.axis = Math.abs(dy) > Math.abs(dx) ? "y" : "x";
+            if (gesture.axis === "y") {
+              gesture.half = view(s).height / 2;
+              s.carousel.setEnabled(false);
+              s.viewport.setPointerCapture?.(event.pointerId);
+              setPhase(s, "dragging");
+            }
+          }
+          if (gesture.axis === "y") {
+            event.preventDefault();
+            dismissDrag(s, dx, dy, gesture.half);
+          }
         }
       },
       { signal, passive: false },
@@ -1120,15 +1445,25 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
       const hadPinch = s.pointers.size > 1;
       s.pointers.delete(event.pointerId);
       if (gesture?.moved) s.suppressClickUntil = Date.now() + 400;
-      if (
-        event.type === "pointerup" &&
-        !hadPinch &&
-        gesture?.touch &&
-        gesture.zoom.scale <= 1 &&
-        Math.abs(state.zoom.y) > 120
-      ) {
-        void close();
-        if (state.isClosing || session !== s) return;
+      delete s.dialog.dataset.panning;
+      if (gesture?.axis === "y" && !hadPinch) {
+        s.dialog.style.removeProperty("--re-lightbox-chrome-opacity");
+        const dy = event.clientY - gesture.start.y;
+        const speed = releaseSpeed(
+          gesture.samples,
+          event.timeStamp,
+          event.clientY,
+        );
+        resetGesture();
+        if (
+          event.type === "pointerup" &&
+          (Math.abs(dy) > DISMISS_DISTANCE || Math.abs(speed) > DISMISS_SPEED)
+        ) {
+          void close();
+          if (state.isClosing || session !== s) return;
+        }
+        returnFromDismiss(s);
+        return;
       }
       if (
         event.type === "pointerup" &&
@@ -1137,24 +1472,46 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
         !hadPinch
       ) {
         const now = Date.now();
-        const previous = s.lastTap;
+        s.suppressClickUntil = now + 400;
         const current = point(event);
-        if (
-          settings.doubleTapZoom !== false &&
+        const box = s.loaded.get(state.index)?.frame.getBoundingClientRect();
+        const onPhoto =
+          box !== undefined &&
+          current.x >= box.left &&
+          current.x <= box.right &&
+          current.y >= box.top &&
+          current.y <= box.bottom;
+        const previous = s.lastTap;
+        const pending = s.tapTimer !== undefined;
+        clearTimeout(s.tapTimer);
+        s.tapTimer = undefined;
+        s.lastTap = undefined;
+        const doubleTap =
+          settings.imageClick !== "close" && settings.doubleTapZoom !== false;
+        if (!onPhoto || settings.imageClick === "close") {
+          void close();
+          if (state.isClosing || session !== s) return;
+        } else if (
+          doubleTap &&
           previous &&
-          now - previous.time < 300 &&
+          now - previous.time < DOUBLE_TAP_TIME &&
           Math.hypot(
             current.x - previous.point.x,
             current.y - previous.point.y,
-          ) < 30
+          ) < DOUBLE_TAP_DISTANCE
         ) {
           toggleZoom(focus(current));
-          s.lastTap = undefined;
         } else {
-          s.lastTap = { time: now, point: current };
-          if (settings.imageClick === "close") void close();
+          if (pending) chromeInput(s, { type: "tap" });
+          if (doubleTap) {
+            s.lastTap = { time: now, point: current };
+            s.tapTimer = setTimeout(() => {
+              s.tapTimer = undefined;
+              s.lastTap = undefined;
+              chromeInput(s, { type: "tap" });
+            }, DOUBLE_TAP_TIME);
+          } else chromeInput(s, { type: "tap" });
         }
-        s.suppressClickUntil = now + 400;
       }
       if (
         state.zoom.scale < 1 ||
@@ -1174,7 +1531,13 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
       release,
       { signal },
     );
-    s.viewport.addEventListener("lostpointercapture", release, { signal });
+    s.viewport.addEventListener(
+      "lostpointercapture",
+      (event) => {
+        if (event.target === s.viewport) release(event);
+      },
+      { signal },
+    );
     s.viewport.addEventListener(
       "click",
       (event) => {
@@ -1233,7 +1596,7 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
               view(s),
             ),
           });
-          applyZoom(s);
+          applyZoom(s, false);
         }
         clearTimeout(s.wheelTimer);
         s.wheelTimer = setTimeout(() => {
@@ -1373,6 +1736,10 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
       .join(" ");
     dialog.setAttribute("aria-label", settings.label || strings.dialog);
     dialog.dataset.chrome = "shown";
+    dialog.dataset.phase = "entering";
+    dialog.dataset.zoomable = String(
+      (settings.imageClick ?? "zoom") === "zoom" && maxZoom > 1,
+    );
     const viewport = doc.createElement("div");
     viewport.className = "re-lightbox-viewport";
     viewport.tabIndex = 0;
@@ -1437,13 +1804,16 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
     const next = button("next", strings.next, "›", () => step(1), dialog);
     const footer = doc.createElement("div");
     footer.className = "re-lightbox-footer";
-    const counter = doc.createElement("output");
+    const counter = doc.createElement("span");
     counter.className = "re-lightbox-counter";
-    counter.setAttribute("aria-live", "polite");
+    counter.setAttribute("aria-hidden", "true");
     const caption = doc.createElement("p");
     caption.className = "re-lightbox-caption";
     footer.append(caption, counter);
-    dialog.append(footer);
+    const status = doc.createElement("div");
+    status.className = "re-lightbox-status";
+    status.setAttribute("role", "status");
+    dialog.append(footer, status);
     const thumbs: HTMLButtonElement[] = [];
     let thumbStrip: HTMLDivElement | undefined;
     if (settings.thumbnails) {
@@ -1506,7 +1876,15 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
       finishAnimations: new Set(),
       previousFocus,
       restoreScroll,
+      phase: "entering",
+      timing: { open: OPEN_DURATION, close: CLOSE_DURATION, ease: FLIGHT_EASE },
+      chrome: initialChrome(false),
+      chromeRoots: [toolbar, prev, next, footer],
+      openingFocus: closeButton,
+      zoomed: false,
       counter,
+      counterText: "",
+      status,
       caption,
       prev,
       next,
@@ -1537,6 +1915,7 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
         aside.className = "re-lightbox-aside";
         aside.append(node);
         dialog.append(aside);
+        s.chromeRoots.push(aside);
       },
     });
     update(s);
@@ -1567,21 +1946,28 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
     dialog.addEventListener(
       "keydown",
       (event) => {
+        s.openingFocus = null;
+        chromeInput(s, { type: "key" });
         if (
           event.defaultPrevented ||
+          event.altKey ||
+          event.ctrlKey ||
+          event.metaKey ||
           (event.target instanceof Element &&
             event.target.closest(
               "input,textarea,select,[contenteditable=true],[data-lightbox-interactive]",
             ))
         )
           return;
-        if (event.key === "ArrowLeft") {
+        if (event.key === "ArrowLeft" || event.key === "ArrowRight") {
           event.preventDefault();
-          step(-1);
+          const rtl =
+            doc.defaultView?.getComputedStyle(dialog).direction === "rtl";
+          step((event.key === "ArrowRight") !== rtl ? 1 : -1);
         }
-        if (event.key === "ArrowRight") {
+        if (event.key === "Home" || event.key === "End") {
           event.preventDefault();
-          step(1);
+          goTo(event.key === "Home" ? 0 : items.length - 1);
         }
         if (event.key === "+" || event.key === "=") {
           event.preventDefault();
@@ -1639,18 +2025,52 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
       { signal: abort.signal, passive: true },
     );
     installGestures(s);
+    dialog.addEventListener(
+      "pointermove",
+      (event) => {
+        if (event.pointerType === "mouse" && event.buttons === 0)
+          chromeInput(s, {
+            type: "move",
+            point: { x: event.clientX, y: event.clientY },
+            movement: { x: event.movementX, y: event.movementY },
+          });
+      },
+      { signal: abort.signal, passive: true },
+    );
+    dialog.addEventListener(
+      "pointerdown",
+      (event) => {
+        if (event.pointerType === "touch" || event.pointerType === "pen")
+          chromeInput(s, { type: "touch" });
+      },
+      { signal: abort.signal, passive: true, capture: true },
+    );
+    dialog.addEventListener(
+      "focusin",
+      (event) => {
+        const target = event.target;
+        if (
+          target !== s.openingFocus &&
+          target instanceof Node &&
+          s.chromeRoots.some((root) => root.contains(target))
+        )
+          chromeInput(s, { type: "focus" });
+      },
+      { signal: abort.signal },
+    );
     closeButton.focus({ preventScroll: true });
+    readTiming(s);
+    void win?.getComputedStyle(toolbar).opacity;
+    setPhase(s, "opening");
+    applyChrome(
+      s,
+      initialChrome(Boolean(win?.matchMedia?.("(hover: hover)").matches)),
+    );
     emit("open", s);
-    void Promise.all([
-      morph(s, false),
-      animate(
-        s,
-        s.backdrop,
-        [{ opacity: 0 }, { opacity: 1 }],
-        Math.max(0, settings.duration ?? 280),
-      ),
-    ]).then(() => {
-      if (session === s && !state.isClosing) emit("opened", s);
+    void flight(s, false).then(() => {
+      if (session !== s || state.isClosing) return;
+      if (s.phase === "opening") setPhase(s, "open");
+      emit("opened", s);
     });
   }
 
@@ -1689,18 +2109,15 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
     }
     if (session !== s || closePromise) return closePromise ?? Promise.resolve();
     cancelAnimations(s);
+    clearTimeout(s.tapTimer);
+    s.tapTimer = undefined;
+    chromeInput(s, { type: "close" });
     publish({ isClosing: true });
+    s.dialog.style.removeProperty("--re-lightbox-chrome-opacity");
+    setPhase(s, "closing");
     let closing: Promise<void> | undefined;
     closing = (async () => {
-      await Promise.all([
-        morph(s, true),
-        animate(
-          s,
-          s.backdrop,
-          [{ opacity: 1 }, { opacity: 0 }],
-          Math.max(0, settings.duration ?? 280),
-        ),
-      ]);
+      await flight(s, true);
       if (session !== s) return;
       teardown(s);
       publish({

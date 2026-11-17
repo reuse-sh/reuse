@@ -95,25 +95,48 @@ function isChromium(page: Page) {
   return page.context().browser()?.browserType().name() === "chromium";
 }
 
+type TouchPhase = "start" | "move" | "end" | "cancel";
+
 async function synthesizeTouches(
   page: Page,
-  type: "start" | "move" | "end",
+  type: TouchPhase,
   points: Point[],
+  time?: number,
 ) {
   await page.evaluate(
-    ([phase, fingers]) => {
+    ([phase, fingers, due]) => {
+      // WebKit throws when a page captures a synthesized pointer, which a real finger never does.
+      const capture = Element.prototype.setPointerCapture;
+      if (!("synthesized" in capture))
+        Element.prototype.setPointerCapture = Object.assign(
+          function (this: Element, id: number) {
+            try {
+              capture.call(this, id);
+            } catch {}
+          },
+          { synthesized: true },
+        );
       const pointer = {
         start: "pointerdown",
         move: "pointermove",
         end: "pointerup",
+        cancel: "pointercancel",
       }[phase];
       const touch = {
         start: "touchstart",
         move: "touchmove",
         end: "touchend",
+        cancel: "touchcancel",
       }[phase];
       const target = document.elementFromPoint(fingers[0].x, fingers[0].y);
       if (!target) return;
+      const stamped = <T extends Event>(event: T) => {
+        if (due !== undefined)
+          Object.defineProperty(event, "timeStamp", {
+            value: due - performance.timeOrigin,
+          });
+        return event;
+      };
       let touches: Touch[] = [];
       try {
         touches = fingers.map(
@@ -130,32 +153,37 @@ async function synthesizeTouches(
       }
       fingers.forEach((finger, index) => {
         target.dispatchEvent(
-          new PointerEvent(pointer, {
-            bubbles: true,
-            cancelable: true,
-            composed: true,
-            pointerId: 100 + index,
-            pointerType: "touch",
-            isPrimary: index === 0,
-            clientX: finger.x,
-            clientY: finger.y,
-            buttons: phase === "end" ? 0 : 1,
-          }),
+          stamped(
+            new PointerEvent(pointer, {
+              bubbles: true,
+              cancelable: true,
+              composed: true,
+              pointerId: 100 + index,
+              pointerType: "touch",
+              isPrimary: index === 0,
+              clientX: finger.x,
+              clientY: finger.y,
+              buttons: phase === "end" || phase === "cancel" ? 0 : 1,
+            }),
+          ),
         );
       });
       if (touches.length > 0)
         target.dispatchEvent(
-          new TouchEvent(touch, {
-            bubbles: true,
-            cancelable: true,
-            composed: true,
-            touches: phase === "end" ? [] : touches,
-            targetTouches: phase === "end" ? [] : touches,
-            changedTouches: touches,
-          }),
+          stamped(
+            new TouchEvent(touch, {
+              bubbles: true,
+              cancelable: true,
+              composed: true,
+              touches: phase === "end" || phase === "cancel" ? [] : touches,
+              targetTouches:
+                phase === "end" || phase === "cancel" ? [] : touches,
+              changedTouches: touches,
+            }),
+          ),
         );
     },
-    [type, points] as const,
+    [type, points, time] as const,
   );
 }
 
@@ -176,23 +204,57 @@ async function touchPath(
   duration: number,
   at: (share: number) => Point[],
   hold: number,
+  last: "end" | "cancel" = "end",
 ) {
   const cdp = isChromium(page)
     ? await page.context().newCDPSession(page)
     : undefined;
-  const send = async (phase: "start" | "move" | "end", points: Point[]) => {
-    if (!cdp) return synthesizeTouches(page, phase, points);
-    const type = { start: "touchStart", move: "touchMove", end: "touchEnd" };
+  // A busy machine delivers input late, so each touch carries the time its point was due.
+  const start = Date.now();
+  const send = async (phase: TouchPhase, points: Point[], due: number) => {
+    if (!cdp) return synthesizeTouches(page, phase, points, start + due);
+    const type = {
+      start: "touchStart",
+      move: "touchMove",
+      end: "touchEnd",
+      cancel: "touchCancel",
+    } as const;
     await cdp.send("Input.dispatchTouchEvent", {
       type: type[phase],
+      timestamp: (start + due) / 1000,
       touchPoints:
-        phase === "end" ? [] : points.map((point, id) => ({ ...point, id })),
+        phase === "end" || phase === "cancel"
+          ? []
+          : points.map((point, id) => ({ ...point, id })),
     });
   };
   for await (const share of timeline(page, duration))
-    await send(share === 0 ? "start" : "move", at(share));
+    await send(share === 0 ? "start" : "move", at(share), share * duration);
   if (hold > 0) await page.waitForTimeout(hold);
-  await send("end", at(1));
+  await send(last, at(1), duration + hold);
+  await cdp?.detach();
+}
+
+// Taps in one input session, so a double tap stays inside its time window.
+export async function tap(
+  page: Page,
+  point: Point,
+  { count = 1, gap = 60 }: { count?: number; gap?: number } = {},
+) {
+  const cdp = isChromium(page)
+    ? await page.context().newCDPSession(page)
+    : undefined;
+  for (let index = 0; index < count; index++) {
+    if (index > 0) await page.waitForTimeout(gap);
+    for (const phase of ["start", "end"] as const) {
+      if (!cdp) await synthesizeTouches(page, phase, [point]);
+      else
+        await cdp.send("Input.dispatchTouchEvent", {
+          type: phase === "start" ? "touchStart" : "touchEnd",
+          touchPoints: phase === "start" ? [{ ...point, id: 0 }] : [],
+        });
+    }
+  }
   await cdp?.detach();
 }
 
@@ -200,7 +262,11 @@ export async function swipe(
   page: Page,
   from: Point,
   to: Point,
-  { speed = 1, hold = 0 }: { speed?: number; hold?: number } = {},
+  {
+    speed = 1,
+    hold = 0,
+    cancel = false,
+  }: { speed?: number; hold?: number; cancel?: boolean } = {},
 ) {
   const duration = Math.hypot(to.x - from.x, to.y - from.y) / speed;
   const at = (share: number): Point => ({
@@ -208,7 +274,13 @@ export async function swipe(
     y: from.y + (to.y - from.y) * share,
   });
   if (await hasTouch(page)) {
-    await touchPath(page, duration, (share) => [at(share)], hold);
+    await touchPath(
+      page,
+      duration,
+      (share) => [at(share)],
+      hold,
+      cancel ? "cancel" : "end",
+    );
     return;
   }
   for await (const share of timeline(page, duration)) {

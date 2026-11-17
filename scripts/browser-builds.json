@@ -5,6 +5,6 @@
   },
   "lightbox": {
     "entries": { "lightbox": "dist/index.js" },
-    "budgets": { "lightbox.js": 16.1 }
+    "budgets": { "lightbox.js": 18.6 }
   }
 }
