@@ -740,7 +740,7 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
     const src = image.currentSrc || image.src;
     if (
       origin.ownerDocument !== doc ||
-      !doc.body ||
+      !origin.parentNode ||
       !src ||
       !image.complete ||
       !image.naturalWidth
@@ -753,7 +753,7 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
     copy.draggable = false;
     copy.src = src;
     copy.style.cssText = `position:absolute;left:0;top:0;right:auto;bottom:auto;display:block;box-sizing:content-box;width:${size.width}px;height:${size.height}px;min-width:0;min-height:0;max-width:none;max-height:none;margin:0;padding:0;border:0;border-radius:0;box-shadow:none;outline:0;object-fit:fill;opacity:1;visibility:visible;filter:none;transition:none;animation:none;translate:none;rotate:none;scale:none;transform-origin:center;pointer-events:none`;
-    doc.body.append(copy);
+    origin.after(copy);
     const at = copy.getBoundingClientRect();
     copy.style.left = `${box.left + (box.width - size.width) / 2 - at.left}px`;
     copy.style.top = `${box.top + (box.height - size.height) / 2 - at.top}px`;

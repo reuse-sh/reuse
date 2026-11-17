@@ -201,6 +201,27 @@ test("a close during the open flight turns back from where the photo is, with on
   expect(Math.abs(flight.after - flight.before)).toBeLessThan(2);
 });
 
+test("a slow beforeclose does not eat into the close flight", {
+  tag: "@desktop",
+}, async ({ page }) => {
+  await stripPage(page);
+  await openAt(page, 0);
+  const elapsed = await page.evaluate(async () => {
+    const win = window as Window;
+    win.lightbox.on("beforeclose", () => {
+      const until = performance.now() + 120;
+      while (performance.now() < until);
+    });
+    void win.lightbox.close();
+    await new Promise(requestAnimationFrame);
+    const frame = document.querySelector(
+      '.re-lightbox-slide[aria-hidden="false"] .re-lightbox-frame',
+    ) as HTMLElement;
+    return Number(frame.getAnimations()[0]?.currentTime);
+  });
+  expect(elapsed).toBeLessThan(60);
+});
+
 test("closing at 4x zoom panned to a corner unwinds into the tile", async ({
   page,
 }) => {
@@ -351,10 +372,12 @@ async function pixel(page: Page, x: number, y: number) {
 }
 
 // A 5s close keeps the flight's own deadline away while the screen is read.
-async function stickyPage(page: Page) {
+async function stickyPage(page: Page, layered = false) {
+  const tile = `<img id="tile" src="${photo(0)}" alt="Photo 1" style="display:block;width:300px;height:200px;margin-left:100px">`;
+  const body = `<header id="header" style="position:sticky;top:0;z-index:2;height:64px;background:#111"></header><div style="height:200px"></div>${layered ? `<div style="position:relative;z-index:1;background:#fff">${tile}</div>` : tile}<div style="height:2000px"></div>`;
   await mount(
     page,
-    `<style>.re-lightbox{--re-lightbox-close-duration:5s}</style><header id="header" style="position:sticky;top:0;z-index:1;height:64px;background:#111"></header><div style="height:200px"></div><img id="tile" src="${photo(0)}" alt="Photo 1" style="display:block;width:300px;height:200px;margin-left:100px"><div style="height:2000px"></div>`,
+    `<style>.re-lightbox{--re-lightbox-close-duration:5s}</style>${layered ? `<div style="isolation:isolate">${body}</div>` : body}`,
     styles,
   );
   await page.evaluate(async () => {
@@ -370,22 +393,23 @@ async function stickyPage(page: Page) {
   });
 }
 
-test("the landing photo passes under a 64px sticky header and over its own tile", async ({
-  page,
-}) => {
-  await stickyPage(page);
-  await openAt(page, 0);
-  const tile = await tileBox(page, 0);
-  expect(tile.y).toBe(32);
-  const landing = await closeAtLastFrame(page);
-  expect(landing.frameOpacity).toBe(0);
-  expectOn(landing.copy, tile);
-  const x = tile.x + tile.width / 2;
-  expect(await pixel(page, x, 48)).toEqual([17, 17, 17]);
-  const below = await pixel(page, x, tile.y + tile.height - 20);
-  for (const [channel, value] of [209, 71, 71].entries())
-    expect(Math.abs(below[channel] - value)).toBeLessThanOrEqual(3);
-});
+for (const layered of [false, true])
+  test(`the landing photo passes under a 64px sticky header and over its own tile${layered ? " inside an isolated root and a z-index card" : ""}`, async ({
+    page,
+  }) => {
+    await stickyPage(page, layered);
+    await openAt(page, 0);
+    const tile = await tileBox(page, 0);
+    expect(tile.y).toBe(32);
+    const landing = await closeAtLastFrame(page);
+    expect(landing.frameOpacity).toBe(0);
+    expectOn(landing.copy, tile);
+    const x = tile.x + tile.width / 2;
+    expect(await pixel(page, x, 48)).toEqual([17, 17, 17]);
+    const below = await pixel(page, x, tile.y + tile.height - 20);
+    for (const [channel, value] of [209, 71, 71].entries())
+      expect(Math.abs(below[channel] - value)).toBeLessThanOrEqual(3);
+  });
 
 test("a page that scrolls during the close flight keeps the photo on its tile", async ({
   page,
