@@ -15,7 +15,7 @@ let controllers: Lightbox[] = [];
 let reduced = false;
 
 function create(options: Parameters<typeof createLightbox>[0] = {}) {
-  const controller = createLightbox({ duration: 0, ...options });
+  const controller = createLightbox({ duration: 0, maxZoom: 4, ...options });
   controllers.push(controller);
   return controller;
 }
@@ -481,6 +481,34 @@ describe("lightbox lifecycle", () => {
     expect(controller.getState().zoom.y).toBe(-60);
   });
 
+  it("zooms on Safari's gesture events within the limits, except while a finger is down", () => {
+    const controller = create();
+    controller.open(gallery);
+    const viewport = dialog().querySelector(".re-lightbox-viewport");
+    const gesture = (type: string, scale: number) => {
+      const event = new Event(type, { bubbles: true, cancelable: true });
+      Object.assign(event, { scale, clientX: 512, clientY: 384 });
+      viewport?.dispatchEvent(event);
+      return event;
+    };
+    expect(gesture("gesturestart", 1).defaultPrevented).toBe(true);
+    gesture("gesturechange", 2);
+    expect(controller.getState().zoom.scale).toBe(2);
+    gesture("gesturechange", 100);
+    expect(controller.getState().zoom.scale).toBeCloseTo(6.818);
+    gesture("gestureend", 100);
+    controller.zoomTo(1);
+    const down = new MouseEvent("pointerdown", { bubbles: true, button: 0 });
+    Object.defineProperties(down, {
+      pointerId: { value: 7 },
+      pointerType: { value: "touch" },
+    });
+    viewport?.dispatchEvent(down);
+    gesture("gesturestart", 1);
+    gesture("gesturechange", 2);
+    expect(controller.getState().zoom.scale).toBe(1);
+  });
+
   it("cleans presenter resources when slides leave the bounded window", async () => {
     let mounted = 0;
     let cleaned = 0;
@@ -750,6 +778,7 @@ describe("lightbox lifecycle", () => {
       '.re-lightbox-slide[aria-hidden="false"] .re-lightbox-frame',
     );
     if (!viewport || !frame) throw new Error("Missing native image");
+    let time = 0;
     const pointer = (type: string, x: number, y: number) => {
       const event = new MouseEvent(type, {
         bubbles: true,
@@ -759,9 +788,11 @@ describe("lightbox lifecycle", () => {
         clientX: x,
         clientY: y,
       });
+      time += 100;
       Object.defineProperties(event, {
         pointerId: { value: 1 },
         pointerType: { value: "mouse" },
+        timeStamp: { value: time },
       });
       viewport.dispatchEvent(event);
     };
@@ -892,7 +923,10 @@ describe("lightbox public API", () => {
     );
     const controller = create({ strings: german, thumbnails: true });
     controller.open(
-      [{ src: "https://example.test/missing.jpg" }, ...gallery.slice(1, 3)],
+      [
+        { src: "https://example.test/missing.jpg", width: 1600, height: 1200 },
+        ...gallery.slice(1, 3),
+      ],
       0,
     );
     loaders[0].dispatchEvent(new Event("error"));
@@ -1427,6 +1461,74 @@ describe("lightbox chrome, taps and keys", () => {
       ...dialog().querySelectorAll(".re-lightbox-counter-number"),
     ].map((number) => number.textContent);
     expect(numbers).toEqual(["1,234", (12).toLocaleString("ar-EG")]);
+  });
+
+  it("zooms a photo up to its file pixels and an SVG up to 4x the fit", () => {
+    const controller = create({ maxZoom: undefined });
+    controller.open(gallery);
+    controller.toggleZoom();
+    expect(controller.getState().zoom.scale).toBeCloseTo(
+      1600 / ((704 * 4) / 3),
+    );
+    controller.zoomTo(10);
+    expect(controller.getState().zoom.scale).toBeCloseTo(1.7045);
+    controller.open([
+      { src: "https://example.test/plan.svg", width: 1600, height: 1200 },
+    ]);
+    controller.toggleZoom();
+    expect(controller.getState().zoom.scale).toBe(2.5);
+    controller.zoomTo(10);
+    expect(controller.getState().zoom.scale).toBe(4);
+  });
+
+  it("offers no zoom for a photo the screen already shows whole, or one of unknown size", () => {
+    const controller = create({ maxZoom: undefined });
+    for (const item of [
+      { src: "https://example.test/small.jpg", width: 800, height: 600 },
+      { src: "https://example.test/unknown.jpg" },
+    ]) {
+      controller.open([item]);
+      expect(
+        dialog().querySelector<HTMLButtonElement>(".re-lightbox-zoom")?.hidden,
+      ).toBe(true);
+      expect(dialog().dataset.zoomable).toBe("false");
+      controller.toggleZoom();
+      key({ key: "=" });
+      expect(controller.getState().zoom.scale).toBe(1);
+    }
+  });
+
+  it("pans 10% of the screen with the arrows while zoomed and pages with them at fit", () => {
+    const controller = create();
+    controller.open(gallery, 2);
+    controller.zoomTo(4);
+    key({ key: "ArrowRight" });
+    key({ key: "ArrowDown" });
+    const { index, zoom } = controller.getState();
+    expect(index).toBe(2);
+    expect(zoom.x).toBeCloseTo(-102.4);
+    expect(zoom.y).toBeCloseTo(-76.8);
+    key({ key: "ArrowLeft" });
+    key({ key: "ArrowUp" });
+    expect(controller.getState().zoom.x).toBeCloseTo(0);
+    expect(controller.getState().zoom.y).toBeCloseTo(0);
+    key({ key: "0" });
+    key({ key: "ArrowRight" });
+    expect(controller.getState().index).toBe(3);
+  });
+
+  it("drops the zoom at once on a resize and when the photo changes", () => {
+    const controller = create();
+    controller.open(gallery, 2);
+    controller.zoomTo(2, { x: 100, y: 50 });
+    window.dispatchEvent(new Event("resize"));
+    expect(controller.getState().zoom).toEqual({ scale: 1, x: 0, y: 0 });
+    const frame = dialog().querySelectorAll<HTMLElement>(".re-lightbox-frame");
+    expect(frame[1].style.transform).toBe("translate(0px, 0px) scale(1)");
+    controller.zoomTo(2, { x: 100, y: 50 });
+    controller.next();
+    expect(frame[1].style.transform).toBe("");
+    expect(controller.getState().zoom).toEqual({ scale: 1, x: 0, y: 0 });
   });
 
   it("closes on Escape while zoomed", () => {

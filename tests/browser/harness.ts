@@ -101,10 +101,11 @@ async function synthesizeTouches(
   page: Page,
   type: TouchPhase,
   points: Point[],
+  first = 0,
   time?: number,
 ) {
   await page.evaluate(
-    ([phase, fingers, due]) => {
+    ([phase, fingers, offset, due]) => {
       // WebKit throws when a page captures a synthesized pointer, which a real finger never does.
       const capture = Element.prototype.setPointerCapture;
       if (!("synthesized" in capture))
@@ -158,9 +159,9 @@ async function synthesizeTouches(
               bubbles: true,
               cancelable: true,
               composed: true,
-              pointerId: 100 + index,
+              pointerId: 100 + offset + index,
               pointerType: "touch",
-              isPrimary: index === 0,
+              isPrimary: offset + index === 0,
               clientX: finger.x,
               clientY: finger.y,
               buttons: phase === "end" || phase === "cancel" ? 0 : 1,
@@ -183,7 +184,7 @@ async function synthesizeTouches(
           ),
         );
     },
-    [type, points, time] as const,
+    [type, points, first, time] as const,
   );
 }
 
@@ -211,17 +212,42 @@ async function touchPath(
     : undefined;
   // A busy machine delivers input late, so each touch carries the time its point was due.
   const start = Date.now();
+  let previous: Point[] = [];
   const send = async (phase: TouchPhase, points: Point[], due: number) => {
-    if (!cdp) return synthesizeTouches(page, phase, points, start + due);
+    // CDP keeps a finger that a touchMove leaves out, so a dropped finger ends on its own.
+    const lifted =
+      phase === "move" ? previous.slice(points.length) : ([] as Point[]);
+    previous = points;
+    if (!cdp) {
+      if (lifted.length)
+        await synthesizeTouches(
+          page,
+          "end",
+          lifted,
+          points.length,
+          start + due,
+        );
+      return synthesizeTouches(page, phase, points, 0, start + due);
+    }
     const type = {
       start: "touchStart",
       move: "touchMove",
       end: "touchEnd",
       cancel: "touchCancel",
     } as const;
+    const timestamp = (start + due) / 1000;
+    if (lifted.length)
+      await cdp.send("Input.dispatchTouchEvent", {
+        type: "touchEnd",
+        timestamp,
+        touchPoints: lifted.map((point, index) => ({
+          ...point,
+          id: points.length + index,
+        })),
+      });
     await cdp.send("Input.dispatchTouchEvent", {
       type: type[phase],
-      timestamp: (start + due) / 1000,
+      timestamp,
       touchPoints:
         phase === "end" || phase === "cancel"
           ? []
@@ -283,13 +309,83 @@ export async function swipe(
     );
     return;
   }
+  await mousePath(page, duration, at, hold);
+}
+
+// Each mouse event carries the time its point was due, as touches do; only CDP sets that
+// time on trusted input, so the other engines get synthesized pointer events.
+async function mousePath(
+  page: Page,
+  duration: number,
+  at: (share: number) => Point,
+  hold: number,
+) {
+  const cdp = isChromium(page)
+    ? await page.context().newCDPSession(page)
+    : undefined;
+  const start = Date.now();
+  const send = async (phase: "down" | "move" | "up", due: number) => {
+    const point = at(Math.min(1, due / duration));
+    const pressed = phase === "down" || (phase === "move" && due > 0);
+    if (cdp) {
+      await cdp.send("Input.dispatchMouseEvent", {
+        type: { down: "mousePressed", move: "mouseMoved", up: "mouseReleased" }[
+          phase
+        ] as "mouseMoved",
+        x: point.x,
+        y: point.y,
+        button: phase === "move" && !pressed ? "none" : "left",
+        buttons: pressed ? 1 : 0,
+        clickCount: phase === "move" ? 0 : 1,
+        timestamp: (start + due) / 1000,
+      });
+      return;
+    }
+    await page.evaluate(
+      ([type, x, y, buttons, time]) => {
+        const capture = Element.prototype.setPointerCapture;
+        if (!("synthesized" in capture))
+          Element.prototype.setPointerCapture = Object.assign(
+            function (this: Element, id: number) {
+              try {
+                capture.call(this, id);
+              } catch {}
+            },
+            { synthesized: true },
+          );
+        const event = new PointerEvent(type, {
+          bubbles: true,
+          cancelable: true,
+          composed: true,
+          pointerId: 1,
+          pointerType: "mouse",
+          isPrimary: true,
+          clientX: x,
+          clientY: y,
+          button: type === "pointermove" ? -1 : 0,
+          buttons,
+        });
+        Object.defineProperty(event, "timeStamp", {
+          value: time - performance.timeOrigin,
+        });
+        document.elementFromPoint(x, y)?.dispatchEvent(event);
+      },
+      [
+        { down: "pointerdown", move: "pointermove", up: "pointerup" }[phase],
+        point.x,
+        point.y,
+        pressed ? 1 : 0,
+        start + due,
+      ] as const,
+    );
+  };
   for await (const share of timeline(page, duration)) {
-    const point = at(share);
-    await page.mouse.move(point.x, point.y);
-    if (share === 0) await page.mouse.down();
+    await send("move", share * duration);
+    if (share === 0) await send("down", 0);
   }
   if (hold > 0) await page.waitForTimeout(hold);
-  await page.mouse.up();
+  await send("up", duration + hold);
+  await cdp?.detach();
 }
 
 export async function pinch(
@@ -305,6 +401,37 @@ export async function pinch(
       return [
         { x: center.x - gap / 2, y: center.y },
         { x: center.x + gap / 2, y: center.y },
+      ];
+    },
+    0,
+  );
+}
+
+// Two fingers pinch from one gap to another, then the second lifts and the first moves by pan.
+export async function pinchThenPan(
+  page: Page,
+  center: Point,
+  {
+    from,
+    to,
+    pan,
+    duration = 400,
+  }: { from: number; to: number; pan: Point; duration?: number },
+) {
+  await touchPath(
+    page,
+    duration,
+    (share) => {
+      if (share < 0.5) {
+        const gap = from + (to - from) * share * 2;
+        return [
+          { x: center.x - gap / 2, y: center.y },
+          { x: center.x + gap / 2, y: center.y },
+        ];
+      }
+      const moved = (share - 0.5) * 2;
+      return [
+        { x: center.x - to / 2 + pan.x * moved, y: center.y + pan.y * moved },
       ];
     },
     0,
@@ -376,7 +503,12 @@ export type LayoutReads = {
 // Call before mount: it wraps listeners as the page adds them.
 export async function countLayoutReads(page: Page) {
   await page.addInitScript(() => {
-    const watched = new Set(["pointermove", "wheel", "scroll"]);
+    const watched = new Set([
+      "pointermove",
+      "wheel",
+      "scroll",
+      "gesturechange",
+    ]);
     const reads = {
       total: 0,
       insideListener: {} as Record<string, number>,

@@ -10,11 +10,16 @@ import {
   clamp,
   contain,
   cover,
+  elasticZoom,
   identity,
   type Point,
+  panLimits,
+  type Rect,
   type Size,
+  unrubber,
   type Zoom,
   zoomAround,
+  zoomLimits,
 } from "./geometry.js";
 
 export type { Point, Rect, Size, Zoom } from "./geometry.js";
@@ -173,8 +178,11 @@ type LoadedSlide = {
   frame: HTMLDivElement;
   image: HTMLImageElement;
   loader: HTMLImageElement;
+  natural?: number;
   cancel: () => void;
 };
+
+type Sample = { time: number; x: number; y: number };
 
 type Session = {
   dialog: HTMLDialogElement;
@@ -216,17 +224,25 @@ type Session = {
   makeSlide: () => HTMLDivElement;
   makeThumbs: () => void;
   pointers: Map<number, Point>;
+  box: Rect;
   gesture?: {
     start: Point;
     zoom: Zoom;
+    raw: Point;
     distance: number;
     midpoint: Point;
+    focus: Point;
     moved: boolean;
     touch: boolean;
+    pinched: boolean;
+    pinned?: Pinned;
     axis?: "x" | "y";
     half: number;
-    samples: { time: number; y: number }[];
+    samples: Sample[];
   };
+  pinned?: Pinned;
+  zoomMotion?: { from: Zoom; to: Zoom; animation: Animation };
+  safariScale?: number;
   lastTap?: { time: number; point: Point };
   suppressClickUntil: number;
   wheelTimer?: ReturnType<typeof setTimeout>;
@@ -353,6 +369,27 @@ const DOUBLE_TAP_DISTANCE = 30;
 const DISMISS_DISTANCE = 120;
 const DISMISS_SPEED = 0.5;
 const SPEED_WINDOW = 80;
+const GLIDE_TIME = 180;
+const GLIDE_DURATION = 400;
+const PINCH_MIN = 0.6;
+const PINCH_OVER = 1.25;
+const PINCH_CLOSE = 0.75;
+const EDGE_PAGE = 0.3;
+const KEY_PAN = 0.1;
+
+type Pinned = { index: number; zoom: Zoom; left: boolean; right: boolean };
+
+function isSvg(src: string) {
+  return /^data:image\/svg\+xml[;,]|\.svg(?:$|[?#])/i.test(src);
+}
+
+function sameZoom(a: Zoom, b: Zoom) {
+  return a.scale === b.scale && a.x === b.x && a.y === b.y;
+}
+
+function zoomTransform(zoom: Zoom) {
+  return `translate(${zoom.x}px, ${zoom.y}px) scale(${zoom.scale})`;
+}
 
 function milliseconds(value: string, fallback: number) {
   const number = Number.parseFloat(value);
@@ -362,14 +399,13 @@ function milliseconds(value: string, fallback: number) {
     : number * 1000;
 }
 
-function releaseSpeed(
-  samples: { time: number; y: number }[],
-  time: number,
-  y: number,
-) {
+function releaseVelocity(samples: Sample[], time: number, at: Point): Point {
   const first = samples.find((sample) => sample.time >= time - SPEED_WINDOW);
-  if (!first || time - first.time <= 0) return 0;
-  return (y - first.y) / (time - first.time);
+  if (!first || time - first.time <= 0) return { x: 0, y: 0 };
+  return {
+    x: (at.x - first.x) / (time - first.time),
+    y: (at.y - first.y) / (time - first.time),
+  };
 }
 
 function matches(element: Element, selector: string) {
@@ -393,8 +429,6 @@ function midpoint(points: Point[]): Point {
 
 export function createLightbox(options: LightboxOptions = {}): Lightbox {
   let settings: LightboxOptions = { ...options };
-  let maxZoom = 4;
-  let tapZoom = 2.5;
   let preload = 1;
   let padding = 32;
   let autoHide: number | false = 2500;
@@ -429,8 +463,6 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
 
   function configure() {
     settings = { ...options };
-    maxZoom = Math.max(1, settings.maxZoom ?? 4);
-    tapZoom = clamp(settings.tapZoom ?? 2.5, 1, maxZoom);
     preload = clamp(Math.floor(settings.preload ?? 1), 0, 2);
     padding = Math.max(0, settings.padding ?? 32);
     autoHide =
@@ -595,13 +627,19 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
     return rect.width > 0 && rect.height > 0 ? rect : undefined;
   }
 
-  function view(s: Session): Size {
-    const rect = s.viewport.getBoundingClientRect();
-    const win = s.dialog.ownerDocument.defaultView;
+  function measure(viewport: HTMLElement): Rect {
+    const rect = viewport.getBoundingClientRect();
+    const win = viewport.ownerDocument.defaultView;
     return {
+      left: rect.left,
+      top: rect.top,
       width: rect.width || win?.innerWidth || 1,
       height: rect.height || win?.innerHeight || 1,
     };
+  }
+
+  function view(s: Session): Size {
+    return s.box;
   }
 
   function imageSize(index: number, s: Session): Size {
@@ -617,14 +655,38 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
     return contain(imageSize(index, s), view(s), padding);
   }
 
+  function limits(s: Session, index = state.index) {
+    const item = items[index];
+    return zoomLimits({
+      fileWidth: s.loaded.get(index)?.natural ?? item?.width,
+      fittedWidth: fit(index, s).width,
+      svg: Boolean(item && isSvg(item.src)),
+      maxZoom: settings.maxZoom,
+      tapZoom: settings.tapZoom ?? 2.5,
+    });
+  }
+
   function applyZoom(s: Session, notify = true) {
     const frame = s.loaded.get(state.index)?.frame;
     if (s.phase !== "dragging") {
-      if (frame)
-        frame.style.transform = `translate(${state.zoom.x}px, ${state.zoom.y}px) scale(${state.zoom.scale})`;
+      if (frame) frame.style.transform = zoomTransform(state.zoom);
       syncingCarousel = true;
-      s.carousel.setEnabled(state.zoom.scale <= 1 && items.length > 1);
+      s.carousel.setEnabled(
+        state.zoom.scale === 1 && s.pointers.size < 2 && items.length > 1,
+      );
       syncingCarousel = false;
+    }
+    const zoomable = limits(s).max > 1;
+    const clickable = String(
+      zoomable && (settings.imageClick ?? "zoom") === "zoom",
+    );
+    if (s.dialog.dataset.zoomable !== clickable)
+      s.dialog.dataset.zoomable = clickable;
+    const hidden = !zoomable && state.zoom.scale <= 1;
+    if (s.zoomButton.hidden !== hidden) {
+      if (hidden && s.dialog.ownerDocument.activeElement === s.zoomButton)
+        s.viewport.focus({ preventScroll: true });
+      s.zoomButton.hidden = hidden;
     }
     s.viewport.style.touchAction = state.zoom.scale > 1 ? "none" : "pan-x";
     s.zoomButton.setAttribute(
@@ -700,7 +762,77 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
   }
 
   function cancelAnimations(s: Session) {
+    freezeZoom(s);
     for (const finish of [...s.finishAnimations]) finish();
+  }
+
+  function liveZoom(s: Session): Zoom {
+    const motion = s.zoomMotion;
+    if (!motion) return state.zoom;
+    const progress = motion.animation.effect?.getComputedTiming().progress;
+    const t = typeof progress === "number" ? progress : 1;
+    const { from, to } = motion;
+    return {
+      scale: from.scale + (to.scale - from.scale) * t,
+      x: from.x + (to.x - from.x) * t,
+      y: from.y + (to.y - from.y) * t,
+    };
+  }
+
+  function freezeZoom(s: Session) {
+    const motion = s.zoomMotion;
+    if (!motion) return;
+    const zoom = liveZoom(s);
+    s.zoomMotion = undefined;
+    s.animations.delete(motion.animation);
+    motion.animation.cancel();
+    updateState({ zoom });
+    applyZoom(s, false);
+  }
+
+  function moveZoom(s: Session, to: Zoom, duration: number, ease: string) {
+    const from = liveZoom(s);
+    const previous = s.zoomMotion;
+    s.zoomMotion = undefined;
+    if (previous) {
+      s.animations.delete(previous.animation);
+      previous.animation.cancel();
+    }
+    updateState({ zoom: to });
+    applyZoom(s, false);
+    const frame = s.loaded.get(state.index)?.frame;
+    if (
+      !frame ||
+      duration <= 0 ||
+      sameZoom(from, to) ||
+      typeof frame.animate !== "function"
+    )
+      return;
+    let animation: Animation;
+    try {
+      animation = frame.animate(
+        [{ transform: zoomTransform(from) }, { transform: zoomTransform(to) }],
+        { duration, easing: ease },
+      );
+    } catch {
+      return;
+    }
+    const motion = { from, to, animation };
+    s.zoomMotion = motion;
+    s.animations.add(animation);
+    syncAnimating(s);
+    const done = () => {
+      if (s.zoomMotion === motion) s.zoomMotion = undefined;
+      s.animations.delete(animation);
+      syncAnimating(s);
+    };
+    void animation.finished.then(done, done);
+  }
+
+  function zoomDuration(s: Session) {
+    return prefersReducedMotion(s)
+      ? 0
+      : Math.min(220, Math.max(0, settings.duration ?? 280));
   }
 
   function flightDuration(s: Session, closing: boolean) {
@@ -888,8 +1020,15 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
       entry.frame.style.width = `${size.width}px`;
       entry.frame.style.height = `${size.height}px`;
     }
-    if (state.zoom.scale > 1)
-      publish({ zoom: boundZoom(state.zoom, fit(state.index, s), view(s)) });
+    if (state.zoom.scale > 1) {
+      const scale = Math.min(state.zoom.scale, limits(s).max);
+      publish({
+        zoom:
+          scale > 1
+            ? boundZoom({ ...state.zoom, scale }, fit(state.index, s), view(s))
+            : { ...identity },
+      });
+    }
     applyZoom(s);
   }
 
@@ -960,6 +1099,7 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
           item.width = loader.naturalWidth;
         if (!item.height && loader.naturalHeight)
           item.height = loader.naturalHeight;
+        if (loader.naturalWidth) entry.natural = loader.naturalWidth;
         image.src = item.src;
         frame.removeAttribute("data-loading");
         layout(s);
@@ -984,7 +1124,7 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
       loader.onerror = failed;
       if (item.previewSrc) image.src = item.previewSrc;
       frame.dataset.loading = "true";
-      s.loaded.set(index, {
+      const entry: LoadedSlide = {
         frame,
         image,
         loader,
@@ -996,7 +1136,8 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
           image.removeAttribute("src");
           cleanup?.();
         },
-      });
+      };
+      s.loaded.set(index, entry);
       loader.src = item.src;
       if (loader.complete && loader.naturalWidth)
         loader.onload(new Event("load"));
@@ -1022,6 +1163,7 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
     const gap = index - state.index;
     const forward =
       looping() && Math.abs(gap) > items.length / 2 ? gap < 0 : gap > 0;
+    s.pinned = undefined;
     publish({ index, zoom: { ...identity } });
     update(s, forward ? 1 : -1);
     s.status.textContent = s.strings.slide(index, items.length);
@@ -1218,21 +1360,16 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
   function setZoom(scale: number, focus: Point, notify: boolean) {
     const s = session;
     if (!s || state.isClosing || !Number.isFinite(scale)) return;
-    const nextScale = clamp(scale, 1, maxZoom);
+    const nextScale = clamp(scale, 1, limits(s).max);
     if (nextScale > 1 && state.zoom.scale <= 1) {
       syncingCarousel = true;
       s.carousel.goTo(state.index, "instant");
       syncingCarousel = false;
     }
-    const shouldAnimate =
-      notify && Math.abs(nextScale - state.zoom.scale) > 0.001;
-    const frame = s.loaded.get(state.index)?.frame;
-    const live =
-      frame && shouldAnimate
-        ? s.dialog.ownerDocument.defaultView?.getComputedStyle(frame)
-            .transform || frame.style.transform
-        : undefined;
-    if (shouldAnimate) cancelAnimations(s);
+    const animated = notify && Math.abs(nextScale - state.zoom.scale) > 0.001;
+    if (animated && s.animations.size > 0 && !s.zoomMotion)
+      interruptImageMotion(s);
+    if (!animated) freezeZoom(s);
     const zoom =
       nextScale === 1
         ? { ...identity }
@@ -1241,23 +1378,13 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
             fit(state.index, s),
             view(s),
           );
-    updateState({ zoom });
-    if (frame && shouldAnimate) {
+    const frame = s.loaded.get(state.index)?.frame;
+    if (frame && animated) {
       frame.style.clipPath = "";
       frame.style.opacity = "";
     }
-    applyZoom(s, false);
+    moveZoom(s, zoom, animated ? zoomDuration(s) : 0, ZOOM_EASE);
     if (notify) publish({});
-    if (frame && live && shouldAnimate) {
-      void animate(
-        s,
-        frame,
-        [{ transform: live }, { transform: frame.style.transform }],
-        prefersReducedMotion(s)
-          ? 0
-          : Math.min(220, Math.max(0, settings.duration ?? 280)),
-      );
-    }
   }
 
   function zoomTo(scale: number, focus: Point = { x: 0, y: 0 }) {
@@ -1265,7 +1392,23 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
   }
 
   function toggleZoom(focus?: Point) {
-    zoomTo(state.zoom.scale > 1 ? 1 : tapZoom, focus);
+    const s = session;
+    if (!s) return;
+    zoomTo(state.zoom.scale > 1 ? 1 : limits(s).tap, focus);
+  }
+
+  function panBy(s: Session, dx: number, dy: number) {
+    moveZoom(
+      s,
+      boundZoom(
+        { ...state.zoom, x: state.zoom.x + dx, y: state.zoom.y + dy },
+        fit(state.index, s),
+        view(s),
+      ),
+      zoomDuration(s),
+      ZOOM_EASE,
+    );
+    publish({});
   }
 
   function finishFade(s: Session, jump: boolean) {
@@ -1358,7 +1501,10 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
   function interruptImageMotion(s: Session) {
     const frame = s.loaded.get(state.index)?.frame;
     const win = s.dialog.ownerDocument.defaultView;
-    const transform = frame && win?.getComputedStyle(frame).transform;
+    const transform =
+      frame && !s.zoomMotion && s.animations.size > 0
+        ? win?.getComputedStyle(frame).transform
+        : undefined;
     cancelAnimations(s);
     if (transform && transform !== "none" && win?.DOMMatrixReadOnly) {
       const matrix = new win.DOMMatrixReadOnly(transform);
@@ -1426,33 +1572,118 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
     });
   }
 
+  function settle(
+    s: Session,
+    gesture: NonNullable<Session["gesture"]>,
+    event: PointerEvent,
+    pinch: boolean,
+    pinched: boolean,
+  ) {
+    const scale = state.zoom.scale;
+    if (pinched && scale < PINCH_CLOSE && event.type === "pointerup") {
+      void close();
+      if (state.isClosing || session !== s) return;
+    }
+    const { max } = limits(s);
+    const content = fit(state.index, s);
+    const viewport = view(s);
+    const reduced = prefersReducedMotion(s);
+    let target: Zoom;
+    if (scale <= 1) target = { ...identity };
+    else if (scale > max)
+      target = boundZoom(
+        zoomAround(state.zoom, max, gesture.focus),
+        content,
+        viewport,
+      );
+    else {
+      const speed =
+        pinch || reduced || event.type !== "pointerup"
+          ? { x: 0, y: 0 }
+          : releaseVelocity(gesture.samples, event.timeStamp, {
+              x: event.clientX,
+              y: event.clientY,
+            });
+      target = boundZoom(
+        {
+          scale,
+          x: state.zoom.x + speed.x * GLIDE_TIME,
+          y: state.zoom.y + speed.y * GLIDE_TIME,
+        },
+        content,
+        viewport,
+      );
+      const dx = event.clientX - gesture.start.x;
+      const dy = event.clientY - gesture.start.y;
+      const pinned = gesture.pinned;
+      if (
+        pinned &&
+        gesture.touch &&
+        !pinched &&
+        event.type === "pointerup" &&
+        Math.abs(dx) > Math.abs(dy) &&
+        Math.abs(dx) > viewport.width * EDGE_PAGE &&
+        (dx < 0 ? pinned.right : pinned.left)
+      ) {
+        const rtl =
+          s.dialog.ownerDocument.defaultView?.getComputedStyle(s.dialog)
+            .direction === "rtl";
+        const direction = dx < 0 !== rtl ? 1 : -1;
+        const index = state.index + direction;
+        if (looping() || (index >= 0 && index < items.length)) {
+          freezeZoom(s);
+          updateState({ zoom: { ...identity } });
+          applyZoom(s);
+          step(direction);
+          return;
+        }
+      }
+      const limit = panLimits(scale, content, viewport);
+      if (pinched) s.pinned = undefined;
+      else if (gesture.moved)
+        s.pinned = {
+          index: state.index,
+          zoom: target,
+          left: target.x >= limit.x - 0.5,
+          right: target.x <= -limit.x + 0.5,
+        };
+    }
+    if (target.scale <= 1) s.pinned = undefined;
+    moveZoom(s, target, reduced ? 0 : GLIDE_DURATION, s.timing.ease);
+    publish({});
+  }
+
   function installGestures(s: Session) {
     const signal = s.abort.signal;
     const point = (event: PointerEvent): Point => ({
       x: event.clientX,
       y: event.clientY,
     });
-    const focus = (p: Point): Point => {
-      const rect = s.viewport.getBoundingClientRect();
-      const size = view(s);
-      return {
-        x: p.x - rect.left - size.width / 2,
-        y: p.y - rect.top - size.height / 2,
-      };
-    };
+    const focus = (p: Point): Point => ({
+      x: p.x - s.box.left - s.box.width / 2,
+      y: p.y - s.box.top - s.box.height / 2,
+    });
     const resetGesture = () => {
       const points = [...s.pointers.values()];
       if (!points.length) {
         s.gesture = undefined;
         return;
       }
+      const limit = panLimits(state.zoom.scale, fit(state.index, s), view(s));
+      const middle = points.length > 1 ? midpoint(points) : points[0];
       s.gesture = {
         start: points[0],
         zoom: { ...state.zoom },
+        raw: {
+          x: unrubber(state.zoom.x, limit.x),
+          y: unrubber(state.zoom.y, limit.y),
+        },
         distance: points.length > 1 ? distance(points) : 0,
-        midpoint: points.length > 1 ? midpoint(points) : points[0],
+        midpoint: middle,
+        focus: focus(middle),
         moved: false,
         touch: s.gesture?.touch ?? true,
+        pinched: false,
         half: 1,
         samples: [],
       };
@@ -1475,11 +1706,23 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
           publish({});
         }
         interruptImageMotion(s);
+        if (!s.pointers.size) s.box = measure(s.viewport);
         s.pointers.set(event.pointerId, point(event));
         resetGesture();
         if (s.gesture) {
           s.gesture.touch = event.pointerType !== "mouse";
-          s.gesture.samples.push({ time: event.timeStamp, y: event.clientY });
+          s.gesture.samples.push({
+            time: event.timeStamp,
+            x: event.clientX,
+            y: event.clientY,
+          });
+          const pinned = s.pinned;
+          if (
+            s.pointers.size === 1 &&
+            pinned?.index === state.index &&
+            sameZoom(pinned.zoom, state.zoom)
+          )
+            s.gesture.pinned = pinned;
         }
         if (s.pointers.size === 2) {
           clearTimeout(s.tapTimer);
@@ -1504,7 +1747,11 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
         const dx = event.clientX - gesture.start.x;
         const dy = event.clientY - gesture.start.y;
         if (Math.hypot(dx, dy) > 8 || points.length > 1) gesture.moved = true;
-        gesture.samples.push({ time: event.timeStamp, y: event.clientY });
+        gesture.samples.push({
+          time: event.timeStamp,
+          x: event.clientX,
+          y: event.clientY,
+        });
         while (gesture.samples[0].time < event.timeStamp - SPEED_WINDOW * 2)
           gesture.samples.shift();
         if (points.length > 1 && gesture.distance > 0) {
@@ -1512,23 +1759,25 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
           const middle = midpoint(points);
           const scale = clamp(
             (gesture.zoom.scale * distance(points)) / gesture.distance,
-            0.8,
-            maxZoom * 1.15,
+            PINCH_MIN,
+            PINCH_OVER * limits(s).max,
           );
           const zoom = zoomAround(gesture.zoom, scale, focus(gesture.midpoint));
           zoom.x += middle.x - gesture.midpoint.x;
           zoom.y += middle.y - gesture.midpoint.y;
+          gesture.focus = focus(middle);
           updateState({ zoom });
           applyZoom(s, false);
-        } else if (gesture.zoom.scale > 1) {
+        } else if (gesture.zoom.scale > 1 || gesture.pinched) {
           event.preventDefault();
-          if (gesture.moved) s.dialog.dataset.panning = "true";
+          if (gesture.moved && !s.dialog.dataset.panning)
+            s.dialog.dataset.panning = "true";
           updateState({
-            zoom: boundZoom(
+            zoom: elasticZoom(
               {
                 scale: gesture.zoom.scale,
-                x: gesture.zoom.x + dx,
-                y: gesture.zoom.y + dy,
+                x: gesture.raw.x + dx,
+                y: gesture.raw.y + dy,
               },
               fit(state.index, s),
               view(s),
@@ -1563,11 +1812,10 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
       if (gesture?.axis === "y" && !hadPinch) {
         s.dialog.style.removeProperty("--re-lightbox-chrome-opacity");
         const dy = event.clientY - gesture.start.y;
-        const speed = releaseSpeed(
-          gesture.samples,
-          event.timeStamp,
-          event.clientY,
-        );
+        const speed = releaseVelocity(gesture.samples, event.timeStamp, {
+          x: event.clientX,
+          y: event.clientY,
+        }).y;
         resetGesture();
         if (
           event.type === "pointerup" &&
@@ -1583,7 +1831,8 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
         event.type === "pointerup" &&
         gesture?.touch &&
         !gesture.moved &&
-        !hadPinch
+        !hadPinch &&
+        !gesture.pinched
       ) {
         const now = Date.now();
         s.suppressClickUntil = now + 400;
@@ -1601,7 +1850,9 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
         s.tapTimer = undefined;
         s.lastTap = undefined;
         const doubleTap =
-          settings.imageClick !== "close" && settings.doubleTapZoom !== false;
+          settings.imageClick !== "close" &&
+          settings.doubleTapZoom !== false &&
+          (state.zoom.scale > 1 || limits(s).max > 1);
         if (!onPhoto || settings.imageClick === "close") {
           void close();
           if (state.isClosing || session !== s) return;
@@ -1615,6 +1866,8 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
           ) < DOUBLE_TAP_DISTANCE
         ) {
           toggleZoom(focus(current));
+          resetGesture();
+          return;
         } else {
           if (pending) chromeInput(s, { type: "tap" });
           if (doubleTap) {
@@ -1627,14 +1880,20 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
           } else chromeInput(s, { type: "tap" });
         }
       }
-      if (
-        state.zoom.scale < 1 ||
-        (gesture?.zoom.scale === 1 && !hadPinch && state.zoom.scale <= 1)
-      )
-        setZoom(1, { x: 0, y: 0 }, s.pointers.size === 0);
-      else setZoom(state.zoom.scale, { x: 0, y: 0 }, s.pointers.size === 0);
+      if (s.pointers.size > 0) {
+        const focusPoint = gesture?.focus;
+        resetGesture();
+        if (s.gesture) {
+          s.gesture.moved = true;
+          s.gesture.pinched = true;
+          if (focusPoint) s.gesture.focus = focusPoint;
+        }
+        s.lastTap = undefined;
+        return;
+      }
+      if (gesture)
+        settle(s, gesture, event, hadPinch, hadPinch || gesture.pinched);
       resetGesture();
-      if (hadPinch && s.gesture) s.gesture.moved = true;
       if (hadPinch) s.lastTap = undefined;
     };
     s.dialog.ownerDocument.defaultView?.addEventListener("pointerup", release, {
@@ -1674,22 +1933,30 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
       },
       { signal },
     );
+    const settleLater = () => {
+      clearTimeout(s.wheelTimer);
+      s.wheelTimer = setTimeout(() => {
+        s.wheelTimer = undefined;
+        if (session === s && !state.isClosing) publish({});
+      }, 150);
+    };
     s.viewport.addEventListener(
       "wheel",
       (event) => {
-        if (state.isClosing || (!event.ctrlKey && state.zoom.scale <= 1))
-          return;
+        const zooming = event.ctrlKey || event.metaKey;
+        if (!zooming && (state.isClosing || state.zoom.scale <= 1)) return;
         event.preventDefault();
-        if (s.animations.size) interruptImageMotion(s);
-        if (event.ctrlKey) {
-          const rect = s.viewport.getBoundingClientRect();
-          const size = view(s);
+        if (
+          state.isClosing ||
+          s.pointers.size > 0 ||
+          (s.animations.size > 0 && !s.zoomMotion)
+        )
+          return;
+        freezeZoom(s);
+        if (zooming) {
           setZoom(
             state.zoom.scale * Math.exp(-event.deltaY * 0.01),
-            {
-              x: event.clientX - rect.left - size.width / 2,
-              y: event.clientY - rect.top - size.height / 2,
-            },
+            focus({ x: event.clientX, y: event.clientY }),
             false,
           );
         } else {
@@ -1712,13 +1979,62 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
           });
           applyZoom(s, false);
         }
-        clearTimeout(s.wheelTimer);
-        s.wheelTimer = setTimeout(() => {
-          s.wheelTimer = undefined;
-          if (session === s && !state.isClosing) publish({});
-        }, 150);
+        settleLater();
       },
       { signal, passive: false },
+    );
+    // Safari reports a trackpad pinch as gesture events, and iOS sends them beside the touches.
+    type GestureEvent = Event & {
+      scale?: number;
+      clientX?: number;
+      clientY?: number;
+    };
+    s.viewport.addEventListener(
+      "gesturestart",
+      (event) => {
+        event.preventDefault();
+        s.safariScale = undefined;
+        if (
+          state.isClosing ||
+          s.pointers.size > 0 ||
+          (s.animations.size > 0 && !s.zoomMotion)
+        )
+          return;
+        freezeZoom(s);
+        s.box = measure(s.viewport);
+        s.safariScale = state.zoom.scale;
+      },
+      { signal },
+    );
+    s.viewport.addEventListener(
+      "gesturechange",
+      (input) => {
+        const event = input as GestureEvent;
+        event.preventDefault();
+        const base = s.safariScale;
+        if (base === undefined || state.isClosing || s.pointers.size > 0)
+          return;
+        if (!Number.isFinite(event.scale)) return;
+        setZoom(
+          base * (event.scale as number),
+          focus({
+            x: event.clientX ?? s.box.left + s.box.width / 2,
+            y: event.clientY ?? s.box.top + s.box.height / 2,
+          }),
+          false,
+        );
+      },
+      { signal },
+    );
+    s.viewport.addEventListener(
+      "gestureend",
+      (event) => {
+        event.preventDefault();
+        if (s.safariScale === undefined) return;
+        s.safariScale = undefined;
+        if (session === s && !state.isClosing) publish({});
+      },
+      { signal },
     );
   }
 
@@ -1851,9 +2167,6 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
     dialog.setAttribute("aria-label", settings.label || strings.dialog);
     dialog.dataset.chrome = "shown";
     dialog.dataset.phase = "entering";
-    dialog.dataset.zoomable = String(
-      (settings.imageClick ?? "zoom") === "zoom" && maxZoom > 1,
-    );
     const viewport = doc.createElement("div");
     viewport.className = "re-lightbox-viewport";
     viewport.tabIndex = 0;
@@ -2007,6 +2320,7 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
       makeSlide,
       makeThumbs,
       pointers: new Map(),
+      box: measure(viewport),
       suppressClickUntil: 0,
     };
     session = s;
@@ -2032,6 +2346,7 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
         s.chromeRoots.push(aside);
       },
     });
+    s.box = measure(viewport);
     update(s);
     s.carousel.goTo(state.index, "instant");
     dialog.addEventListener(
@@ -2073,7 +2388,16 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
             ))
         )
           return;
-        if (event.key === "ArrowLeft" || event.key === "ArrowRight") {
+        const pan = {
+          ArrowLeft: [KEY_PAN, 0],
+          ArrowRight: [-KEY_PAN, 0],
+          ArrowUp: [0, KEY_PAN],
+          ArrowDown: [0, -KEY_PAN],
+        }[event.key];
+        if (pan && state.zoom.scale > 1) {
+          event.preventDefault();
+          panBy(s, pan[0] * view(s).width, pan[1] * view(s).height);
+        } else if (event.key === "ArrowLeft" || event.key === "ArrowRight") {
           event.preventDefault();
           const rtl =
             doc.defaultView?.getComputedStyle(dialog).direction === "rtl";
@@ -2102,7 +2426,12 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
       "resize",
       () => {
         cancelAnimations(s);
+        s.box = measure(viewport);
+        s.pinned = undefined;
+        const zoomed = state.zoom.scale !== 1;
+        if (zoomed) updateState({ zoom: { ...identity } });
         layout(s);
+        if (zoomed) publish({});
       },
       { signal: abort.signal },
     );
