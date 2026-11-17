@@ -1,4 +1,4 @@
-import { readdirSync, readFileSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
 
@@ -16,8 +16,14 @@ async function isPublished({ name, version }, lookup) {
 }
 
 export async function planRelease(root = ".", lookup = fetch) {
+  const prePath = join(root, ".changeset", "pre.json");
+  const pre = existsSync(prePath) ? JSON.parse(readFileSync(prePath)) : null;
+  const consumed = new Set(pre?.mode === "pre" ? pre.changesets : []);
   const pending = readdirSync(join(root, ".changeset")).filter(
-    (file) => file.endsWith(".md") && file !== "README.md",
+    (file) =>
+      file.endsWith(".md") &&
+      file !== "README.md" &&
+      !consumed.has(file.slice(0, -3)),
   );
   if (pending.length > 0)
     return { action: "version", pending, unpublished: [] };
