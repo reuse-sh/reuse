@@ -59,6 +59,7 @@ const rules: readonly (readonly [(o: LightboxStyle) => boolean, string])[] = [
   --re-lightbox-background: #fcfcfc;
   --re-lightbox-foreground: #1f1f1f;
   --re-lightbox-control: #fff;
+  --re-lightbox-control-hover: #f4f4f4;
   --re-lightbox-placeholder: rgb(0 0 0 / 5%);
 }
 .re-lightbox-style *, .re-lightbox-style *::before, .re-lightbox-style *::after { box-sizing: border-box; }
@@ -230,6 +231,7 @@ const rules: readonly (readonly [(o: LightboxStyle) => boolean, string])[] = [
   --re-lightbox-background: #09090a;
   --re-lightbox-foreground: #fff;
   --re-lightbox-control: rgb(255 255 255 / 8%);
+  --re-lightbox-control-hover: rgb(255 255 255 / 14%);
   --re-lightbox-placeholder: rgb(255 255 255 / 6%);
 }
 .re-lightbox-style .re-lightbox-button:hover { background: rgb(255 255 255 / 14%); }`,

@@ -606,7 +606,7 @@ const gallery = bindLightboxGallery(document.querySelector("#gallery"), { imageC
         blocks: [
           {
             kind: "prose",
-            text: "`src` is the full-size image URL. `previewSrc` is an optional smaller image shown while that asset loads. `width` and `height` describe the full-size asset, not the thumbnail crop; omit unknown dimensions so the viewer can learn them after loading.",
+            text: "`src` is the full-size image URL. `previewSrc` is an optional smaller image shown while that asset loads, when the origin thumbnail has not loaded. `width` and `height` describe the full-size asset, not the thumbnail crop; omit unknown dimensions so the viewer can learn them after loading.",
           },
           {
             kind: "prose",
@@ -687,7 +687,7 @@ export function ImageLink() {
         blocks: [
           {
             kind: "prose",
-            text: "A successful image load and decode replaces the preview with `src`. If the full-size image fails, a loaded preview remains visible. Without `previewSrc`, the viewer shows “Image could not be loaded.” Navigation and closing remain available.",
+            text: "A successful image load and decode replaces the preview with `src`. If the full-size image fails, the viewer shows “Image could not be loaded.” with a “Try again” button over the preview. Navigation and closing remain available.",
           },
           {
             kind: "prose",
@@ -720,7 +720,7 @@ export function ImageLink() {
         blocks: [
           {
             kind: "prose",
-            text: "`src` is the full-size image URL. `previewSrc` is an optional smaller image shown while that asset loads. `width` and `height` describe the full-size asset, not the thumbnail crop; omit unknown dimensions so the viewer can learn them after loading.",
+            text: "`src` is the full-size image URL. `previewSrc` is an optional smaller image shown while that asset loads, when the origin thumbnail has not loaded. `width` and `height` describe the full-size asset, not the thumbnail crop; omit unknown dimensions so the viewer can learn them after loading.",
           },
           {
             kind: "prose",
@@ -801,7 +801,7 @@ const gallery = bindLightboxGallery(document.querySelector("#gallery"), {
         blocks: [
           {
             kind: "prose",
-            text: "A successful image load and decode replaces the preview with `src`. If the full-size image fails, a loaded preview remains visible. Without `previewSrc`, the viewer shows “Image could not be loaded.” Navigation and closing remain available.",
+            text: "A successful image load and decode replaces the preview with `src`. If the full-size image fails, the viewer shows “Image could not be loaded.” with a “Try again” button over the preview. Navigation and closing remain available.",
           },
           {
             kind: "prose",

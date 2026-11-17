@@ -623,6 +623,47 @@ describe("lightbox lifecycle", () => {
     expect(loaders.at(-1)?.src).toBe("https://example.test/missing.jpg");
   });
 
+  it("drops the zoom of a photo whose first load failed and asks for no other file", () => {
+    const loaders: HTMLImageElement[] = [];
+    const source = Object.getOwnPropertyDescriptor(
+      HTMLImageElement.prototype,
+      "src",
+    );
+    vi.spyOn(HTMLImageElement.prototype, "src", "set").mockImplementation(
+      function (this: HTMLImageElement, value: string) {
+        source?.set?.call(this, value);
+        if (!this.className) loaders.push(this);
+      },
+    );
+    const controller = create({ maxZoom: undefined });
+    controller.open([
+      {
+        src: "https://example.test/3600.jpg",
+        srcset:
+          "https://example.test/900.jpg 900w, https://example.test/3600.jpg 3600w",
+        width: 3600,
+        height: 2400,
+      },
+    ]);
+    const zoom = dialog().querySelector<HTMLButtonElement>(".re-lightbox-zoom");
+    expect(zoom?.hidden).toBe(false);
+    controller.zoomTo(2);
+    expect(controller.getState().zoom.scale).toBe(2);
+    const sizes = loaders[0].getAttribute("sizes");
+    loaders[0].dispatchEvent(new Event("error"));
+    expect(controller.getState().zoom.scale).toBe(1);
+    expect(zoom?.hidden).toBe(true);
+    expect(dialog().dataset.zoomable).toBe("false");
+    vi.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockReturnValue(
+      new DOMRect(0, 0, 640, 480),
+    );
+    window.dispatchEvent(new Event("resize"));
+    controller.zoomTo(2);
+    expect(controller.getState().zoom.scale).toBe(1);
+    expect(sizes).toBe("960px");
+    expect(loaders[0].getAttribute("sizes")).toBe(sizes);
+  });
+
   it("handles touch double tap, pinch, cancellation and pull dismissal", async () => {
     const controller = create();
     controller.open(gallery);

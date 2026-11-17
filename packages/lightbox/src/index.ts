@@ -690,11 +690,9 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
   function limits(s: Session, index = state.index) {
     const item = items[index];
     const entry = s.loaded.get(index);
+    if (entry?.status === "failed") return { max: 1, tap: 1 };
     return zoomLimits({
-      fileWidth:
-        entry?.status === "failed"
-          ? undefined
-          : (largestWidth(item?.srcset) ?? entry?.natural ?? item?.width),
+      fileWidth: largestWidth(item?.srcset) ?? entry?.natural ?? item?.width,
       fittedWidth: fit(index, s).width,
       svg: Boolean(item && isSvg(item.src)),
       maxZoom: settings.maxZoom,
@@ -1279,6 +1277,7 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
           if (entry.status !== "loading") return;
           failed();
           settle("failed");
+          if (!state.isClosing) layout(s);
         };
         if (item.srcset) {
           loader.srcset = item.srcset;
