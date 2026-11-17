@@ -157,14 +157,24 @@ test.describe("harness", { tag: ["@touch", "@desktop"] }, () => {
     await recordingPad(page);
     await page.evaluate(() => {
       const pad = document.getElementById("pad") as HTMLElement;
-      pad.addEventListener("pointermove", () => pad.getBoundingClientRect());
+      const reader = { calls: 0 };
+      pad.addEventListener("pointermove", () => {
+        reader.calls++;
+        pad.getBoundingClientRect();
+      });
+      Object.assign(window, { reader });
       getComputedStyle(pad);
     });
     await swipe(page, { x: 300, y: 200 }, { x: 200, y: 200 });
-    const { total, insideListener, eventsHandled } = await reads.read();
-    expect(eventsHandled.pointermove).toBeGreaterThan(0);
-    expect(insideListener.pointermove).toBe(eventsHandled.pointermove);
-    expect(total).toBe(eventsHandled.pointermove + 1);
+    const { total, insideListener } = await reads.read();
+    // A move that arrives before the reading listener exists is handled but never read, so
+    // the reads are matched to the moves that listener ran for.
+    const { calls } = await page.evaluate(
+      () => (window as unknown as { reader: { calls: number } }).reader,
+    );
+    expect(calls).toBeGreaterThan(0);
+    expect(insideListener.pointermove).toBe(calls);
+    expect(total).toBe(calls + 1);
   });
 
   test("recordFrames records frame durations", async ({ page }) => {
