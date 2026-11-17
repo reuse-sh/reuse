@@ -144,7 +144,7 @@ export function lightboxFrame(options: LightboxStyle) {
 <link rel="stylesheet" href="/modules/lightbox/base.css">
 <link rel="stylesheet" href="/modules/lightbox/theme.css">
 <link rel="stylesheet" href="/styles/site.css">
-<script type="importmap">{"imports":{"@reuse-sh/carousel":"/modules/carousel/index.js","@reuse-sh/lightbox":"/modules/lightbox/index.js"}}</script>
+<script type="importmap">{"imports":{"@reuse-sh/carousel":"/modules/carousel/index.js","@reuse-sh/lightbox":"/modules/lightbox/index.js","@reuse-sh/loaders":"/modules/loaders/index.js"}}</script>
 <style>${lightboxStyleCss(options)}</style>
 </head>
 <body class="grid h-screen min-h-0 place-items-center overflow-hidden bg-secondary font-sans text-ui">

@@ -10,7 +10,7 @@ const height = 768;
 const count = 6;
 
 // jsdom has no dialog methods, no layout and no scrolling, so the world supplies them.
-function stubBrowser() {
+export function stubBrowser() {
   Object.defineProperty(HTMLDialogElement.prototype, "showModal", {
     configurable: true,
     value(this: HTMLDialogElement) {

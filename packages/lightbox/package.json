@@ -63,7 +63,8 @@
     "@types/react": "19.3.0"
   },
   "dependencies": {
-    "@reuse-sh/carousel": "workspace:*"
+    "@reuse-sh/carousel": "workspace:*",
+    "@reuse-sh/loaders": "workspace:*"
   },
   "publishConfig": {
     "access": "public"

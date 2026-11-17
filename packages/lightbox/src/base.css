@@ -79,6 +79,9 @@
   user-select: none;
   -webkit-user-drag: none;
 }
+.re-lightbox-image:not([src]) {
+  visibility: hidden;
+}
 .re-lightbox-button {
   display: grid;
   flex: none;
@@ -231,8 +234,33 @@
   position: absolute;
   inset: 0;
   display: grid;
-  place-items: center;
+  place-content: center;
+  justify-items: center;
+  gap: var(--re-lightbox-gap, 10px);
   text-align: center;
+}
+.re-lightbox-error p {
+  margin: 0;
+}
+.re-lightbox-retry {
+  cursor: pointer;
+  touch-action: manipulation;
+}
+.re-lightbox-loading {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  pointer-events: none;
+  animation: re-lightbox-loading-in 150ms ease both;
+}
+.re-lightbox-loading canvas {
+  display: block;
+}
+@keyframes re-lightbox-loading-in {
+  from {
+    opacity: 0;
+  }
 }
 .re-lightbox
   :is(

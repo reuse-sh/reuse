@@ -21,6 +21,9 @@
   --re-lightbox-thumbnail-gap: 8px;
   --re-lightbox-thumbnails-padding: 4px;
   --re-lightbox-error-padding: 24px;
+  --re-lightbox-placeholder: rgb(255 255 255 / 6%);
+  --re-lightbox-retry-padding: 8px 16px;
+  --re-lightbox-retry-radius: 20px;
   --re-lightbox-aside-width: 320px;
   --re-lightbox-aside-height: 40%;
   --re-lightbox-open-duration: 400ms;
@@ -110,8 +113,28 @@
 .re-lightbox-aside {
   background: var(--re-lightbox-panel);
 }
+.re-lightbox-frame:is([data-loading], [data-error]) {
+  background: var(--re-lightbox-placeholder);
+}
 .re-lightbox-error {
   padding: var(--re-lightbox-error-padding);
+  font-size: 14px;
+  line-height: 1.5;
+}
+.re-lightbox-retry {
+  padding: var(--re-lightbox-retry-padding);
+  border: 0;
+  border-radius: var(--re-lightbox-retry-radius);
+  background: var(--re-lightbox-control);
+  color: inherit;
+  font: inherit;
+}
+.re-lightbox-retry:hover {
+  background: var(--re-lightbox-control-hover);
+}
+.re-lightbox-retry:focus-visible {
+  outline: 2px solid currentColor;
+  outline-offset: 3px;
 }
 @media (max-width: 480px) {
   .re-lightbox {

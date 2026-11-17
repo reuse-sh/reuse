@@ -115,7 +115,8 @@ export const libraries: Library[] = [
       ],
       [
         "Load only what is near",
-        "Only the current and neighboring images load, and a long jump skips the pages in between.",
+        "Only the current and neighboring images load, the current one first, the neighbors not at all under Save-Data, and a long jump skips the pages in between.",
+        "tests/browser/lightbox-images.spec.ts",
       ],
       [
         "Zoom around the point you touch",
@@ -154,6 +155,7 @@ export const libraries: Library[] = [
       [
         "Fetch the pixels the screen shows",
         "Each image loads the source that fits the rendered size, a zoom asks for more, and the preview stays until the sharper file has decoded.",
+        "tests/browser/lightbox-images.spec.ts",
       ],
       [
         "Zoom to real pixels",
@@ -178,11 +180,11 @@ export const libraries: Library[] = [
       ],
       [
         "bindLightboxGallery(root, options?)",
-        "Opens the images inside root in the viewer, in page order, only those of the clicked image's data-lightbox-group or group(image). items(root) supplies the list instead. Its destroy also removes the click listener.",
+        "Opens the images inside root in the viewer, in page order, only those of the clicked image's data-lightbox-group or group(image). Each image opens the file its link points to, else data-lightbox-src, with data-lightbox-srcset, -sizes, -width and -height and its figure's caption. items(root) supplies the list instead. Its destroy also removes the click listener.",
       ],
       [
         "open(items, index?)",
-        "Opens at an index. Items carry src, alt, caption, the natural size and an optional origin, an element or a function that returns one.",
+        "Opens at an index. Items carry src, srcset, sizes, alt, caption, the natural size and an optional origin, an element or a function that returns one.",
       ],
       [
         "close(), next(), prev(), goTo(index)",
@@ -215,6 +217,7 @@ export const libraries: Library[] = [
       "A vertical swipe either way closes past 120px or 0.5px/ms, measured over the last 80ms before the finger lifts. The controls hide after autoHide ms of a still mouse, 2500 by default, and while zoomed, and come back on a key, a 24px move, or a tap. The open and close flights take --re-lightbox-open-duration and --re-lightbox-close-duration on the --re-lightbox-ease curve.",
       "Zoom follows the file's pixels: a double tap, a click or the zoom button goes to 1:1, or to tapZoom (2.5) when that is larger, and maxZoom (1) is a multiple of 1:1. A photo the screen already shows at full resolution has no zoom, and an SVG zooms up to maxZoom times its fitted size, 4 by default. A pinch below 0.75 closes, Ctrl or Cmd with the wheel and a trackpad pinch zoom, and a plain wheel does nothing until you zoom in, then pans. While zoomed the arrow keys pan and a pan glides on release; the next photo is a second swipe once the photo rests against its edge.",
       "Paging runs on the carousel package. Only the current and neighboring images stay loaded. Next and previous scroll smoothly, and a jump from a distant thumbnail fades through the backdrop so unloaded pages never flash past.",
+      "Give an item a srcset and the viewer picks the file: it sets sizes to the photo's shown width, or uses yours, and 150ms after a zoom comes to rest asks for the zoomed width, swapping the file in only once it has decoded and never for a smaller one. While the photo flies open it shows the tile's loaded pixels or previewSrc. The current photo loads at high fetch priority and its neighbors at low priority once it has decoded, and Save-Data skips the neighbors. A photo still loading after 300ms shows a spinner from @reuse-sh/loaders over the --re-lightbox-placeholder background, and a failed one shows strings.error with a strings.retry button.",
       "Images are the core. Video, audio, iframe and HTML slides are separate modules: @reuse-sh/lightbox/video, /audio, /iframe, /html and /embed each export a content factory that you pass in the content option. An item picks its module by type; without one it is an image. The embed module turns YouTube and Vimeo links into players and registerEmbed adds more. HTML slides take a function that returns a Node, never an HTML string. Live Photos and HDR are not supported.",
       'For a page without a bundler or an import map, such as a theme or a plugin, load @reuse-sh/lightbox/browser/lightbox.js with <script type="module">. It is one minified ES module with a source map and the carousel inside. Each media module is a separate file in the same folder that imports lightbox.js by a relative path, and the carousel link is carousel-link.js beside them, so copy the folder whole.',
       "Styles come in two files: base.css holds the layout and states in @layer re.base and is required, and theme.css holds the default dark theme in @layer re.theme. Other themes sit in themes/. Every theme value is a --re-lightbox-* custom property. dist/unlayered/ holds the same files without layers for sites whose own unlayered styles would win.",
