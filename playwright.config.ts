@@ -45,6 +45,12 @@ export default defineConfig({
       use: { ...devices["Desktop Chrome"], viewport: laptop },
     },
     {
+      name: "webkit-desktop",
+      testDir: "tests/browser",
+      grep: /@desktop/,
+      use: { ...devices["Desktop Safari"], viewport: laptop },
+    },
+    {
       name: "firefox-desktop",
       testDir: "tests/browser",
       grep: /@desktop/,

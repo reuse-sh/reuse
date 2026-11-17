@@ -58,7 +58,7 @@ test("a short fast flick moves on to the next slide", async ({ page }) => {
   await setup(page);
   await page.mouse.move(400, 100);
   await page.mouse.down();
-  await page.mouse.move(340, 100, { steps: 3 });
+  await page.mouse.move(355, 100, { steps: 3 });
   await page.mouse.up();
   const values = await framesUntilIdle(page, scrollLeft);
   expect(values.at(-1)).toBe(300);
@@ -96,13 +96,30 @@ test("a click during a smooth scroll travels on to a snap point instead of stopp
       window as unknown as { carousel: { goTo(i: number): void } }
     ).carousel.goTo(4),
   );
-  await page.waitForTimeout(60);
+  await page.waitForFunction(
+    () => {
+      const strip = document.getElementById("strip") as HTMLElement;
+      if (strip.scrollLeft === 0) return false;
+      strip.addEventListener(
+        "pointerdown",
+        () => Object.assign(window, { caught: strip.scrollLeft }),
+        { capture: true, once: true },
+      );
+      return true;
+    },
+    undefined,
+    { polling: "raf" },
+  );
   const frames = framesUntilIdle(page, scrollLeft);
   await page.mouse.down();
   await page.waitForTimeout(30);
   await page.mouse.up();
-  const values = await frames;
-  expect(values[0] % 300).not.toBe(0);
+  const caught = await page.evaluate(
+    () => (window as unknown as { caught: number }).caught,
+  );
+  const values = [caught, ...(await frames)];
+  expect(caught).toBeGreaterThan(0);
+  expect(caught).toBeLessThan(1200);
   expect((values.at(-1) ?? 1) % 300).toBe(0);
   const steps = values.slice(1).map((value, index) => value - values[index]);
   expect(Math.max(...steps.map(Math.abs))).toBeLessThan(150);

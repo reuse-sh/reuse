@@ -304,7 +304,7 @@ export const libraries: Library[] = [
       ],
       [
         "Drag like a trackpad",
-        "A released mouse drag keeps its speed and glides to the slide nearest where it would stop, never past a slide that asks to stop. Past either end it stretches and springs back.",
+        "A released mouse drag keeps its speed and glides to the slide nearest where it would stop, or to the stop itself when the strip does not snap there, never past a slide that asks to stop. Past either end it stretches and springs back.",
       ],
       [
         "Keep the slide it was sent to",
@@ -329,10 +329,12 @@ export const libraries: Library[] = [
       [
         "Move the same way every time",
         "Next, dots, goTo and a released drag use one motion, so browsers do not differ.",
+        "tests/browser/carousel-motion.spec.ts",
       ],
       [
         "Hold hover while the strip moves",
         "Slides ignore hover during a fast swipe or wheel scroll and respond again once it slows down.",
+        "tests/browser/carousel-motion.spec.ts",
       ],
       [
         "Publish one state",
@@ -342,7 +344,11 @@ export const libraries: Library[] = [
     api: [
       [
         "createCarousel(viewport, options?)",
-        "Binds a scroll-snap strip. Options: slides, align, loop, drag, group, autoplay, releaseMotion, releaseDuration, onChange.",
+        "Binds a scroll-snap strip. Options: slides, align, loop, drag, group, autoplay, moveMotion, releaseMotion, releaseDuration, wheel, onChange.",
+      ],
+      [
+        "moveMotion",
+        'How next, prev, goTo, the arrow keys, Home and End travel. "spring" uses the same spring as a released drag and settles in 500ms; a move during a move redirects it and keeps its speed. "native" uses the browser\'s smooth scroll. "spring" by default; goTo(index, "instant") and reduced motion jump.',
       ],
       [
         "releaseMotion",
@@ -368,7 +374,14 @@ export const libraries: Library[] = [
         "setEnabled(enabled)",
         "Turns scrolling and dragging off and back on, keeping the current position.",
       ],
-      ["refresh()", "Measures again after slides are added or removed."],
+      [
+        "wheel",
+        '"vertical" turns each notch of a vertical mouse wheel into one slide and lets the page scroll once the strip cannot move further. Trackpads stay native. Off by default.',
+      ],
+      [
+        "refresh()",
+        "Measures again at once. Resizes and added or removed slides request it on their own, at most once a frame.",
+      ],
       ["destroy()", "Removes listeners and restores the viewport."],
       [
         "syncCarousels(...carousels)",
@@ -378,6 +391,10 @@ export const libraries: Library[] = [
     notes: [
       "The loop needs enough slides to cover the viewport plus the widest slide. With fewer, isLooping is false and the strip scrolls normally.",
       "That check runs again after a resize or a content change.",
+      "The viewport carries data-re-dragging during a mouse drag, data-re-scrolling during a fast swipe or wheel scroll, data-re-static when nothing overflows, and data-re-at-start and data-re-at-end at the edges of a strip that does not loop. The package CSS turns off hover on the slides while data-re-scrolling is set and hides [data-carousel-prev], [data-carousel-next] and [data-carousel-dots] beside a static strip.",
+      "While a mouse drags the strip, the slides scale to --re-carousel-press-scale (0.96) over --re-carousel-press-duration (300ms). Set the scale to 1 to turn it off.",
+      "scroll-snap-type on the viewport sets how a released drag ends: mandatory snaps, proximity snaps only near a snap point, and none glides to a stop.",
+      "A mouse drag inside a nested strip that can scroll moves only that strip.",
       "Autoplay pauses for hover, focus, dragging, hidden pages, offscreen strips and reduced motion.",
       'For a page without a bundler or an import map, such as a theme or a plugin, load @reuse-sh/carousel/browser/carousel.js with <script type="module">. It is one minified ES module with a source map and no imports. Entry points such as controls are separate files in the same folder that import carousel.js by a relative path, so copy the folder whole.',
       "bindCarouselControls(root, carousel, { strings, dotsWindow }) from @reuse-sh/carousel/controls wires your own markup: [data-carousel-prev], [data-carousel-next], [data-carousel-dots], [data-carousel-counter], [data-carousel-play] and [data-carousel-progress], also outside root with data-carousel-controls set to the viewport id. It reads pageCount, pageIndex and autoplayProgress from the one state, and the function it returns removes every listener and element it added.",

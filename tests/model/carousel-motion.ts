@@ -32,9 +32,12 @@ function pointer(target: EventTarget, type: string, x: number, kind: string) {
 
 export function carouselMotion(): World {
   vi.useFakeTimers();
-  vi.stubGlobal("matchMedia", () =>
-    Object.assign(new EventTarget(), { matches: false }),
+  vi.stubGlobal("matchMedia", (query: string) =>
+    Object.assign(new EventTarget(), { matches: query.includes("fine") }),
   );
+  const snapping = document.createElement("style");
+  snapping.textContent = ".re-carousel { scroll-snap-type: x mandatory; }";
+  document.head.append(snapping);
   const viewport = document.createElement("div");
   for (let index = 0; index < count; index++) {
     const slide = document.createElement("div");
@@ -66,10 +69,10 @@ export function carouselMotion(): World {
   const carousel = createCarousel(viewport);
   let held: number | undefined;
   let destroyed = false;
-  const snapping = () => viewport.style.scrollSnapType !== "none";
+  const snapOn = () => viewport.style.scrollSnapType !== "none";
   // jsdom has no scroll snapping, so a resting strip is moved to the nearest snap point here.
   const settle = () => {
-    if (destroyed || held !== undefined || !snapping()) return;
+    if (destroyed || held !== undefined || !snapOn()) return;
     if (viewport.scrollLeft === nearest(viewport.scrollLeft)) return;
     scrollTo(nearest(viewport.scrollLeft));
     viewport.dispatchEvent(new Event("scrollend"));
@@ -104,7 +107,7 @@ export function carouselMotion(): World {
       touch: step(() => {
         pointer(viewport, "pointerdown", 500, "touch");
         scrollTo(viewport.scrollLeft + 120);
-        pointer(window, "pointerup", 380, "touch");
+        pointer(viewport, "pointerup", 380, "touch");
         viewport.dispatchEvent(new Event("scrollend"));
       }),
       refresh: step(() => carousel.refresh()),
@@ -126,6 +129,13 @@ export function carouselMotion(): World {
         !destroyed || vi.getTimerCount() === 0,
       "after destroy every style is back": () =>
         !destroyed || styles().join("|") === original.join("|"),
+      "after destroy no state attribute is left": () =>
+        !destroyed ||
+        viewport
+          .getAttributeNames()
+          .every((name) => !name.startsWith("data-re-")),
+      "the strip shows dragging only while a mouse is held": () =>
+        held !== undefined || !viewport.hasAttribute("data-re-dragging"),
       "a strip at rest sits on a snap point": () =>
         destroyed ||
         held !== undefined ||
@@ -143,6 +153,7 @@ export function carouselMotion(): World {
       ].join("|"),
     teardown: () => {
       carousel.destroy();
+      document.head.replaceChildren();
       document.body.replaceChildren();
       vi.unstubAllGlobals();
       vi.useRealTimers();

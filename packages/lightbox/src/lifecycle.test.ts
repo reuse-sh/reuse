@@ -28,6 +28,10 @@ function dialog() {
 
 beforeEach(() => {
   reduced = false;
+  const styles = document.createElement("style");
+  styles.textContent =
+    ".re-lightbox-viewport { scroll-snap-type: x mandatory; }";
+  document.head.append(styles);
   Object.defineProperty(HTMLDialogElement.prototype, "showModal", {
     configurable: true,
     value(this: HTMLDialogElement) {
@@ -42,7 +46,7 @@ beforeEach(() => {
     },
   });
   vi.stubGlobal("matchMedia", (media: string) => ({
-    matches: reduced,
+    matches: media.includes("reduced-motion") ? reduced : true,
     media,
     addEventListener() {},
     removeEventListener() {},
@@ -82,6 +86,7 @@ beforeEach(() => {
 afterEach(() => {
   for (const controller of controllers) controller.destroy();
   controllers = [];
+  document.head.replaceChildren();
   document.body.replaceChildren();
   document.body.removeAttribute("style");
   vi.restoreAllMocks();
