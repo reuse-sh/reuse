@@ -14,12 +14,13 @@ export interface EmbedProvider {
 }
 
 type Command = "play" | "pause" | "mute";
+type State = "playing" | "waiting" | "paused" | "unstarted";
 
 // A player's postMessage API: how to greet it, send it a command and read its state.
 type Remote = {
   greet(send: (message: object) => void): void;
   command(command: Command): object;
-  state(data: Record<string, unknown>): "playing" | "paused" | undefined;
+  state(data: Record<string, unknown>): State | undefined;
 };
 
 const parse = (data: unknown) => {
@@ -43,11 +44,15 @@ const youtubeRemote: Remote = {
   state(data) {
     const info = data.info as { playerState?: number } | undefined;
     const value = info?.playerState;
-    return value === 1 || value === 3
+    return value === 1
       ? "playing"
-      : value === 2 || value === 0
-        ? "paused"
-        : undefined;
+      : value === 3
+        ? "waiting"
+        : value === 2 || value === 0
+          ? "paused"
+          : value === -1 || value === 5
+            ? "unstarted"
+            : undefined;
   },
 };
 
@@ -109,12 +114,15 @@ function withParameters(url: string, source: string) {
     const target = new URL(url);
     for (const [key, value] of new URL(source).searchParams) {
       // YouTube links say t=30s; its player reads start=30.
-      const name = key === "t" ? "start" : key;
-      if (key !== "v" && !target.searchParams.has(name))
-        target.searchParams.set(
-          name,
-          key === "t" ? `${Number.parseInt(value, 10)}` : value,
-        );
+      if (key === "v" || target.searchParams.has(key === "t" ? "start" : key))
+        continue;
+      if (key !== "t") target.searchParams.set(key, value);
+      else {
+        const [, h = 0, m = 0, sec = 0] =
+          /^(?:(\d+)h)?(?:(\d+)m)?(?:(\d+)s?)?$/.exec(value) ?? [];
+        const seconds = Number(h) * 3600 + Number(m) * 60 + Number(sec);
+        if (seconds) target.searchParams.set("start", String(seconds));
+      }
     }
     return target.href;
   } catch {
@@ -162,7 +170,7 @@ export function embed(options: FrameOptions = {}): LightboxContent {
         frame.contentWindow?.postMessage(JSON.stringify(message), origin);
       let pending = autoplay;
       let current = false;
-      let state: "playing" | "paused" | undefined;
+      let state: State | undefined;
       let retry: ReturnType<typeof setTimeout> | undefined;
       container.ownerDocument.defaultView?.addEventListener(
         "message",
@@ -197,7 +205,8 @@ export function embed(options: FrameOptions = {}): LightboxContent {
             send(remote.command("play"));
             // A player the browser keeps from starting with sound gets one muted try.
             retry = setTimeout(() => {
-              if (state === "playing") return;
+              // Buffering on a slow line is a start, not a refusal.
+              if (state === "playing" || state === "waiting") return;
               send(remote.command("mute"));
               send(remote.command("play"));
             }, MUTED_RETRY);

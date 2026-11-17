@@ -80,8 +80,10 @@ async function setup(
         slow: async () => ({ type: "video", video: { src: "/slow.webm" } }),
         youtube: async () => ({
           type: "embed",
-          embed: "https://www.youtube.com/watch?v=abc123&t=30",
+          embed: "https://www.youtube.com/watch?v=abc123&t=1m30s",
         }),
+        script: async () => ({ type: "embed", embed: "java\tscript:alert(1)" }),
+        empty: async () => ({ type: "embed", embed: "" }),
         shorts: async () => ({
           type: "embed",
           embed: "https://www.youtube.com/shorts/abc123",
@@ -151,7 +153,7 @@ test("the embed carries the link's own parameters and uses youtube-nocookie", as
   const url = new URL(src ?? "");
   expect(url.origin).toBe("https://www.youtube-nocookie.com");
   expect(url.pathname).toBe("/embed/abc123");
-  expect(url.searchParams.get("start")).toBe("30");
+  expect(url.searchParams.get("start")).toBe("90");
   expect(url.searchParams.get("enablejsapi")).toBe("1");
   const frame = page.locator(".re-lightbox-media iframe");
   await expect(frame).toHaveAttribute(
@@ -163,6 +165,20 @@ test("the embed carries the link's own parameters and uses youtube-nocookie", as
     "strict-origin-when-cross-origin",
   );
   await expect(frame).toHaveAttribute("loading", "lazy");
+});
+
+test("a frame loads only web pages: a script URL or an empty one stays blank", async ({
+  page,
+}) => {
+  await setup(page, "script,empty", { preload: 1 });
+  await expect(page.locator(".re-lightbox-media iframe")).toHaveCount(2);
+  expect(
+    await page
+      .locator(".re-lightbox-media iframe")
+      .evaluateAll((frames) =>
+        frames.map((frame) => frame.getAttribute("src")),
+      ),
+  ).toEqual(["about:blank", "about:blank"]);
 });
 
 test("a Shorts link opens at 9:16", async ({ page }) => {

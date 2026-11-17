@@ -20,11 +20,12 @@ export function frameOf(
   if (sandbox !== undefined) frame.setAttribute("sandbox", sandbox);
   // Only web pages load: a javascript: URL would run in the host page.
   let url = "about:blank";
-  try {
-    const parsed = new URL(src, container.ownerDocument.baseURI);
-    if (parsed.protocol === "https:" || parsed.protocol === "http:")
-      url = parsed.href;
-  } catch {}
+  if (src.trim())
+    try {
+      const parsed = new URL(src, container.ownerDocument.baseURI);
+      if (parsed.protocol === "https:" || parsed.protocol === "http:")
+        url = parsed.href;
+    } catch {}
   frame.src = url;
   container.append(frame);
   return frame;

@@ -17,13 +17,13 @@
       "embed": "dist/embed.js"
     },
     "budgets": {
-      "lightbox.js": 30.88,
+      "lightbox.js": 33.74,
       "carousel-link.js": 0.29,
-      "video.js": 0.55,
+      "video.js": 0.57,
       "audio.js": 0.34,
-      "iframe.js": 0.57,
+      "iframe.js": 0.58,
       "html.js": 0.28,
-      "embed.js": 1.45
+      "embed.js": 1.54
     }
   }
 }

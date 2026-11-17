@@ -943,6 +943,7 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
   }
 
   function tall(index: number, s: Session) {
+    if (items[index].type) return false;
     return shapeOf(imageSize(index, s), view(s), padding) === "tall";
   }
 
@@ -1913,7 +1914,11 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
     if (s.download) {
       s.download.hidden = Boolean(item.type);
       const href = largestSource(item.srcset, item.src ?? "");
-      if (/^\s*javascript:/i.test(href)) s.download.removeAttribute("href");
+      let scheme = "";
+      try {
+        scheme = new URL(href, s.dialog.ownerDocument.baseURI).protocol;
+      } catch {}
+      if (scheme === "javascript:") s.download.removeAttribute("href");
       else s.download.setAttribute("href", href);
     }
     const mark = (index: number, current: boolean) => {
@@ -4015,17 +4020,16 @@ export function bindLightboxGallery(
       );
       index = members.indexOf(image);
     }
-    // A link whose media type has no module is followed instead of opened.
-    if (
-      list.some(
-        (item) =>
-          item.type !== undefined &&
-          !options.content?.some((module) => module.type === item.type),
-      )
-    )
-      return;
+    // A clicked link whose media type has no module is followed; others leave such items out.
+    const supported = list.filter(
+      (item) =>
+        item.type === undefined ||
+        options.content?.some((module) => module.type === item.type),
+    );
+    const at = supported.indexOf(list[index]);
+    if (at < 0) return;
     event.preventDefault();
-    controller.open(list, index);
+    controller.open(supported, at);
   };
   root.addEventListener("click", click);
   return {
