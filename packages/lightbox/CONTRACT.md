@@ -11,7 +11,7 @@ LightboxOptions:
 - doubleTapZoom?: boolean, default true, two taps within 300ms and 30px zoom
 - maxZoom?: number, the most a photo zooms as a multiple of its file's own pixels, default 1 (1:1). An SVG, recognized by a data:image/svg+xml source, a .svg path or a blob: URL whose Blob type is image/svg+xml, has no pixels, so its maxZoom is a multiple of the fitted size, default 4. A photo whose file is no wider than its fitted width, and a photo whose first load failed until a retry loads it, has no zoom: no zoom button, no zoom cursor and no double tap. With a srcset of width descriptors the widest candidate gives the pixels, since a zoom fetches it. Otherwise, until the file decodes, the item's width stands for its pixels; an item without one waits for the decode, whose width is the candidate's own and not the density-corrected naturalWidth
 - tapZoom?: number, default 2.5, as a multiple of the fitted size; a double tap, a click and the zoom button zoom to the larger of tapZoom and 1:1, at most the maximum. A tall or a wide photo ignores it (see Shapes)
-- preload?: number, neighbors kept loaded on each side, 0 to 2, default 1. The current image loads first with fetchpriority="high"; the neighbors start with fetchpriority="low" once it has decoded or failed, and not at all while navigator.connection.saveData is true
+- preload?: number, neighbors kept loaded on each side, 0 to 2, default 1. The current image loads first with fetchpriority="high"; the neighbors start with fetchpriority="low" once it has decoded or failed, nearest first, and at each distance the one in the direction of the last change of photo before the other (forward: +1, -1, +2, -2; backward: -1, +1, -2, +2; open counts as forward), and not at all while navigator.connection.saveData is true
 - thumbnails?: boolean, default false; the active thumbnail stays centered in an overflowing strip
 - padding?: number, px around the fitted image, default 32
 - duration?: number, ms of both the open and the close flight; unset, they take --re-lightbox-open-duration (400ms) and --re-lightbox-close-duration (300ms)
@@ -28,6 +28,8 @@ LightboxOptions:
 - onChange?: (state: LightboxState) => void, discrete actions, completed pointer gestures, and wheel input after 150ms idle
 
 Every option except loop is read again at each open. loop is read when the controller is created and changed by setOptions, also while the viewer is open.
+
+Large galleries. Every item has an empty slide in the strip for native scroll snap; an image and renderContent mount only within preload of the current photo and in slides on screen while the strip moves. The viewer reads the size of one slide and places slide k at k × that width, so a frame of paging costs the same with 1000 photos as with 10, and a change of photo rewrites the state of the two slides and thumbnails it concerns. Thumbnails load with loading="lazy", and only the active one is measured.
 
 LightboxItem: src, srcset?, sizes?, previewSrc?, width?, height?, alt?, caption?, thumbnailSrc?, origin? (HTMLElement | null | (() => HTMLElement | null)).
 

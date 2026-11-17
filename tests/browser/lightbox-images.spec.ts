@@ -5,6 +5,7 @@ type Lightbox = {
   open(items: unknown[], index?: number): void;
   close(): Promise<void>;
   next(): void;
+  goTo(index: number): void;
   zoomTo(scale: number): void;
   getState(): { index: number };
 };
@@ -357,6 +358,33 @@ test("neighbors load only after the current photo has decoded", async ({
       "/img/photo-5-1200x800.jpg",
       "/img/photo-6-1200x800.jpg",
     ]);
+});
+
+test("neighbors load nearest first in the direction of the last move", async ({
+  page,
+}) => {
+  await mount(page, "", ["lightbox/base.css", "lightbox/theme.css"]);
+  const requests = await serveImages(page, () => ({}));
+  await create(page, { preload: 2 });
+  const gallery = Array.from({ length: 30 }, (_, index) => ({
+    src: `/img/photo-${index + 1}-1200x800.jpg`,
+    width: 1200,
+    height: 800,
+  }));
+  const loaded = async (total: number) => {
+    await expect.poll(() => requests.length).toBe(total);
+    return requests
+      .slice(total - 5)
+      .map((path) => Number(/photo-(\d+)-/.exec(path)?.[1]));
+  };
+  await open(page, gallery, 10);
+  expect(await loaded(5)).toEqual([11, 12, 10, 13, 9]);
+  await page.evaluate(() => (window as Window).lightbox.goTo(20));
+  expect(await loaded(10)).toEqual([21, 22, 20, 23, 19]);
+  await page.evaluate(() => (window as Window).lightbox.goTo(5));
+  expect(await loaded(15)).toEqual([6, 5, 7, 4, 8]);
+  await page.waitForTimeout(300);
+  expect(requests).toHaveLength(15);
 });
 
 test("Save-Data loads only the current photo", async ({ page }) => {

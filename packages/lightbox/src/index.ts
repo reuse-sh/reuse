@@ -212,6 +212,8 @@ type Session = {
   loaded: Map<number, LoadedSlide>;
   carousel: Carousel;
   carouselLoops: boolean;
+  heading: 1 | -1;
+  marked?: number;
   strings: LightboxStrings;
   slots: ReturnType<LightboxSlot>[];
   motion?: { frame: number; left: number; still: number };
@@ -1184,26 +1186,23 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
   }
 
   function visibleRange(s: Session) {
+    const count = s.slides.length;
+    const size = count ? s.slides[0].getBoundingClientRect().width : 0;
+    if (!size) return [];
     const width = s.viewport.clientWidth;
-    const rtl =
-      s.dialog.ownerDocument.defaultView?.getComputedStyle(s.viewport)
-        .direction === "rtl";
     const start = Math.abs(s.viewport.scrollLeft);
-    const span =
-      s.carouselLoops && s.carousel.getState().isLooping
-        ? s.slides.reduce((sum, slide) => sum + slide.offsetWidth, 0)
-        : 0;
-    return s.slides.flatMap((slide, index) => {
-      const base = rtl
-        ? s.viewport.scrollWidth - slide.offsetLeft - slide.offsetWidth
-        : slide.offsetLeft;
-      return (span ? [base - span, base, base + span] : [base]).some(
-        (left) =>
-          left < start + width - 1 && left + slide.offsetWidth > start + 1,
-      )
-        ? [index]
-        : [];
-    });
+    const looped = s.carouselLoops && s.carousel.getState().isLooping;
+    const visible = new Set<number>();
+    for (
+      let k = Math.floor((start + 1) / size) - 1;
+      k * size < start + width - 1;
+      k++
+    ) {
+      if (k * size + size <= start + 1) continue;
+      if (looped && k >= 0 && k < 3 * count) visible.add(wrap(k));
+      else if (k >= 0 && k < count) visible.add(k);
+    }
+    return [...visible].sort((a, b) => a - b);
   }
 
   function distanceTo(index: number) {
@@ -1236,8 +1235,16 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
         | undefined
     )?.connection;
     if (connection?.saveData) return;
-    for (const entry of s.loaded.values())
-      if (entry.status === "idle") entry.load("low");
+    const order: number[] = [];
+    for (let step = 1; step <= preload; step++)
+      for (const side of [s.heading, -s.heading]) {
+        const index = state.index + side * step;
+        order.push(looping() ? wrap(index) : index);
+      }
+    for (const index of [...order, ...s.loaded.keys()]) {
+      const entry = s.loaded.get(index);
+      if (entry?.status === "idle") entry.load("low");
+    }
   }
 
   function loadSlides(s: Session) {
@@ -1466,6 +1473,7 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
     const forward =
       looping() && Math.abs(gap) > items.length / 2 ? gap < 0 : gap > 0;
     s.pinned = undefined;
+    s.heading = forward ? 1 : -1;
     publish({ index, zoom: restZoom(s, index) });
     update(s, forward ? 1 : -1);
     s.status.textContent = s.strings.slide(index, items.length);
@@ -1555,13 +1563,24 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
     s.counter.hidden = single;
     s.prev.disabled = !looping() && state.index === 0;
     s.next.disabled = !looping() && state.index === items.length - 1;
-    for (const [index, slide] of s.slides.entries()) {
-      slide.inert = index !== state.index;
-      slide.setAttribute("aria-hidden", String(index !== state.index));
-      slide.setAttribute("aria-label", s.strings.slide(index, items.length));
+    const mark = (index: number, current: boolean) => {
+      const slide = s.slides[index];
+      if (slide) {
+        slide.inert = !current;
+        slide.setAttribute("aria-hidden", String(!current));
+      }
+      s.thumbs[index]?.setAttribute("aria-current", String(current));
+    };
+    if (s.marked === undefined) {
+      for (const [index, slide] of s.slides.entries()) {
+        mark(index, index === state.index);
+        slide.setAttribute("aria-label", s.strings.slide(index, items.length));
+      }
+    } else if (s.marked !== state.index) {
+      mark(s.marked, false);
+      mark(state.index, true);
     }
-    for (const [index, thumb] of s.thumbs.entries())
-      thumb.setAttribute("aria-current", String(index === state.index));
+    s.marked = state.index;
     centerThumb(s);
     applyZoom(s);
   }
@@ -2707,6 +2726,7 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
       loaded: new Map(),
       carousel: connect(viewport),
       carouselLoops: looping(),
+      heading: 1,
       strings,
       slots: [],
       thumbStrip,
@@ -3105,6 +3125,7 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
     sources = [...input];
     s.slides = slides;
     s.loaded = loaded;
+    s.marked = undefined;
     s.makeThumbs();
     s.centeredThumb = Number.NaN;
     const changed = target !== state.index;
