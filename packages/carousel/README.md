@@ -16,6 +16,9 @@ These are the rules the code keeps. An adaptation on any framework keeps them to
 - **Let autoplay wait for people.** Autoplay pauses for hover, focus, dragging, hidden pages, offscreen strips and reduced motion.
 - **Keep keys local.** Arrow keys act only inside the focused strip and swap sides in right-to-left layouts.
 - **Put back what it moved.** Destroy cancels timers and restores the styles, transforms and listeners it added.
+- **Move the same way every time.** Next, dots, goTo and a released drag use one motion, so browsers do not differ.
+- **Hold hover while the strip moves.** Slides ignore hover during a fast swipe or wheel scroll and respond again once it slows down.
+- **Publish one state.** Index, pages, visible slides and autoplay progress come from one source that every control reads.
 
 <!-- principles:end -->
 
@@ -23,6 +26,19 @@ These are the rules the code keeps. An adaptation on any framework keeps them to
 
 ```sh
 npm install @reuse-sh/carousel
+```
+
+## Browser build
+
+For a page without a bundler or an import map, such as a theme or a plugin, copy `dist/browser/` and `dist/styles.css` from the package into your assets. `carousel.js` is one minified ES module with a source map and no imports.
+
+```html
+<link rel="stylesheet" href="/assets/carousel/styles.css" />
+<script type="module">
+  import { createCarousel } from "/assets/carousel/browser/carousel.js";
+
+  const carousel = createCarousel(document.querySelector("#prints"));
+</script>
 ```
 
 <!-- examples:start -->

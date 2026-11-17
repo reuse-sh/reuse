@@ -1,13 +1,41 @@
 import type { Library } from "@reuse-sh/catalog";
 import type { ReactNode } from "react";
 import { Kbd } from "@/components/ui/typography";
+import { DeviceCheck } from "./device-check";
 import type { DocIconName } from "./doc-icon";
 import { LightboxStylePage } from "./lightbox-style-page";
 import { ApiTable, Keys, Principles } from "./parts";
 
 const icons: Record<string, DocIconName[]> = {
-  lightbox: ["touch", "resize", "layers", "zoom", "keyboard", "code"],
-  carousel: ["touch", "cursor", "chevrons", "timer", "keyboard", "code"],
+  lightbox: [
+    "touch",
+    "resize",
+    "layers",
+    "zoom",
+    "keyboard",
+    "code",
+    "touch",
+    "chevrons",
+    "layers",
+    "resize",
+    "feather",
+    "zoom",
+    "timer",
+    "keyboard",
+  ],
+  carousel: [
+    "touch",
+    "cursor",
+    "chevrons",
+    "timer",
+    "keyboard",
+    "code",
+    "code",
+    "code",
+    "chevrons",
+    "cursor",
+    "doc",
+  ],
   annotations: ["doc", "resize", "code", "layers", "share", "keyboard"],
   loaders: ["chevrons", "layers", "feather", "timer", "doc", "code"],
   shadows: ["layers", "feather", "resize", "code"],
@@ -86,6 +114,8 @@ export function docBody(
   example?: ReactNode,
 ): ReactNode {
   if (path === "api") return <ApiTable rows={library.api} />;
+  if (path === "examples/device-check" && library.slug === "lightbox")
+    return <DeviceCheck />;
   if (path.startsWith("controls/") && library.slug === "lightbox")
     return <LightboxStylePage style={path.slice(9)} />;
   if (!path)

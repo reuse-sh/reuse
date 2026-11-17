@@ -2,6 +2,12 @@ import type { UsagePlatform } from "./usage-types.js";
 /** A name and its explanation: an API entry or a principle. */
 export type Row = readonly [name: string, text: string];
 
+export type Principle = readonly [
+  name: string,
+  text: string,
+  testPath?: string,
+];
+
 /** One documentation page. The path is relative to the library, "" for its overview. */
 export interface DocPage {
   path: string;
@@ -23,7 +29,7 @@ export interface Library {
   name: string;
   description: string;
   packageName: string;
-  principles: readonly Row[];
+  principles: readonly Principle[];
   api: readonly Row[];
   notes: readonly string[];
   pages: readonly DocEntry[];
@@ -123,6 +129,38 @@ export const libraries: Library[] = [
         "Leave the page as it was",
         "Destroy restores the page scroll, the hidden thumbnail, and every style and listener the viewer touched.",
       ],
+      [
+        "Behave like the platform's photo viewer",
+        "Gestures, keys and timing match iOS Photos, macOS Photos and Google Photos unless a recorded decision says otherwise.",
+      ],
+      [
+        "Dismiss like a photos app",
+        "A vertical swipe carries the photo, fades the backdrop and the controls with it, and closes past a distance or a speed. A cancelled pointer never closes.",
+      ],
+      [
+        "Let the photo lead",
+        "Controls fade in after the photo starts moving and leave before it. They hide while zoomed and after a still pointer, never while hovered or focused.",
+      ],
+      [
+        "Return to what is on screen",
+        "Close goes back to the current photo's tile, after bringing it into view in its own carousel, and fades in place when the tile cannot be seen or the strip is still moving.",
+      ],
+      [
+        "Fetch the pixels the screen shows",
+        "Each image loads the source that fits the rendered size, a zoom asks for more, and the preview stays until the sharper file has decoded.",
+      ],
+      [
+        "Zoom to real pixels",
+        "Zoom levels follow the image's own resolution. Panning stretches past the edge and glides on release.",
+      ],
+      [
+        "Never block a frame",
+        "No layout read or framework render runs per pointer move, scroll or wheel event.",
+      ],
+      [
+        "Give focus back quietly",
+        "Focus returns to the photo's tile without a ring after a pointer close, and with one after a keyboard close.",
+      ],
     ],
     api: [
       [
@@ -154,7 +192,13 @@ export const libraries: Library[] = [
     notes: [
       'A click on the image zooms by default. For a publishing gallery, set imageClick: "close" and doubleTapZoom: false.',
       "Paging runs on the carousel package. Only the current and neighboring images stay loaded. Next and previous scroll smoothly, and a jump from a distant thumbnail fades through the backdrop so unloaded pages never flash past.",
-      "Images and captions are supported, with optional thumbnails. Video and iframe players are outside this image viewer.",
+      "Images are the core. Video, audio, iframe and HTML slides are separate modules: @reuse-sh/lightbox/video, /audio, /iframe, /html and /embed each export a content factory that you pass in the content option. An item picks its module by type; without one it is an image. The embed module turns YouTube and Vimeo links into players and registerEmbed adds more. HTML slides take a function that returns a Node, never an HTML string. Live Photos and HDR are not supported.",
+      'For a page without a bundler or an import map, such as a theme or a plugin, load @reuse-sh/lightbox/browser/lightbox.js with <script type="module">. It is one minified ES module with a source map and the carousel inside. Each media module and the carousel link are separate files in the same folder that import lightbox.js by a relative path, so copy the folder whole.',
+      "Styles come in two files: base.css holds the layout and states in @layer re.base and is required, and theme.css holds the default dark theme in @layer re.theme. Other themes sit in themes/. Every theme value is a --re-lightbox-* custom property. dist/unlayered/ holds the same files without layers for sites whose own unlayered styles would win.",
+      "Every visible and spoken text comes from the strings option, such as counter(index, count) and close, with English defaults, so a translation passes only the strings it changes.",
+      "Slots add your own controls: toolbarStart, toolbarEnd, footer and aside each take a function that returns a node with optional update(state) and destroy(). Slot buttons take the theme's look with the re-lightbox-button class and hide with the other controls. Share is not built in; build it as a slot.",
+      "Events: on(type, listener) reports open, opened, change, settle, beforeclose and closed. beforeclose runs before the close flight is measured, and preventDefault() keeps the viewer open.",
+      "connectCarousel(lightbox, carousel, { slideOf }) from @reuse-sh/lightbox/carousel moves a carousel on the page to the current photo on every settle and holds its autoplay while the viewer is open, so close returns to a tile that is already in view.",
     ],
     pages: [
       { path: "", title: "Overview", lead: lightboxDescription },
@@ -184,6 +228,11 @@ export const libraries: Library[] = [
             title: "Journal",
             lead: "A short essay about a print series. Every image opens in one sequence, shown whole whatever its crop.",
             build: "a journal where every image opens in one sequence",
+          },
+          {
+            path: "examples/device-check",
+            title: "Device check",
+            lead: "A checklist for trying the lightbox by hand on an iPhone, an Android phone and a Mac, with the examples to open.",
           },
         ],
       },
@@ -277,6 +326,18 @@ export const libraries: Library[] = [
         "Put back what it moved",
         "Destroy cancels timers and restores the styles, transforms and listeners it added.",
       ],
+      [
+        "Move the same way every time",
+        "Next, dots, goTo and a released drag use one motion, so browsers do not differ.",
+      ],
+      [
+        "Hold hover while the strip moves",
+        "Slides ignore hover during a fast swipe or wheel scroll and respond again once it slows down.",
+      ],
+      [
+        "Publish one state",
+        "Index, pages, visible slides and autoplay progress come from one source that every control reads.",
+      ],
     ],
     api: [
       [
@@ -318,6 +379,11 @@ export const libraries: Library[] = [
       "The loop needs enough slides to cover the viewport plus the widest slide. With fewer, isLooping is false and the strip scrolls normally.",
       "That check runs again after a resize or a content change.",
       "Autoplay pauses for hover, focus, dragging, hidden pages, offscreen strips and reduced motion.",
+      'For a page without a bundler or an import map, such as a theme or a plugin, load @reuse-sh/carousel/browser/carousel.js with <script type="module">. It is one minified ES module with a source map and no imports. Entry points such as controls are separate files in the same folder that import carousel.js by a relative path, so copy the folder whole.',
+      "bindCarouselControls(root, carousel, { strings, dotsWindow }) from @reuse-sh/carousel/controls wires your own markup: [data-carousel-prev], [data-carousel-next], [data-carousel-dots], [data-carousel-counter], [data-carousel-play] and [data-carousel-progress], also outside root with data-carousel-controls set to the viewport id. It reads pageCount, pageIndex and autoplayProgress from the one state, and the function it returns removes every listener and element it added.",
+      "The strings option supplies every label and announcement, such as goTo(index, count) and slide(index, count), with English defaults. The viewport dispatches re-carousel:change, re-carousel:settle, re-carousel:play and re-carousel:pause with the state in detail.",
+      "connectThumbnails(main, thumbnails) keeps the active thumbnail in view and centered, marks it with aria-current and moves the main strip when a thumbnail is clicked.",
+      "take(owner, { onInterrupt }) hands the position to your own driver, such as a marquee: setPosition(px) moves the strip and wraps through the loop seam, a drag or touch takes it back and calls onInterrupt, and release() restores snapping.",
     ],
     pages: [
       { path: "", title: "Overview", lead: carouselDescription },
