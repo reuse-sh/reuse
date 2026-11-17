@@ -140,8 +140,28 @@ test.describe("carousel spring", { tag: "@desktop" }, () => {
     await page.evaluate(() =>
       (window as unknown as { carousel: Strip }).carousel.goTo(4),
     );
-    await page.waitForTimeout(120);
-    await page.mouse.wheel(0, 40);
+    // The wheel lands on the frame the strip passes 300px, since a wheel sent from the test
+    // can arrive after the 500ms move on a busy runner.
+    await page.evaluate(
+      () =>
+        new Promise<void>((resolve) => {
+          const strip = document.getElementById("strip") as HTMLElement;
+          const watch = () => {
+            if (strip.scrollLeft <= 300) return requestAnimationFrame(watch);
+            strip.dispatchEvent(
+              new WheelEvent("wheel", {
+                bubbles: true,
+                cancelable: true,
+                deltaY: 40,
+                clientX: 300,
+                clientY: 100,
+              }),
+            );
+            resolve();
+          };
+          watch();
+        }),
+    );
     const values = await framesUntilIdle(page, scrollLeft);
     const stoppedAt = await page.evaluate(
       () => (window as unknown as { stoppedAt: number }).stoppedAt,
@@ -378,17 +398,18 @@ test.describe("carousel refresh", { tag: "@desktop" }, () => {
 });
 
 test.describe("carousel drag listeners", () => {
+  // Records from the first script, so a move that lands before the test's own still counts.
   async function addedListeners(page: Page, move: () => Promise<void>) {
-    await setup(page);
-    await page.evaluate(() => {
+    await page.addInitScript(() => {
       const added: string[] = [];
       const add = EventTarget.prototype.addEventListener;
       EventTarget.prototype.addEventListener = function (type, ...rest) {
-        added.push(type);
+        if (this === window && type.startsWith("pointer")) added.push(type);
         return add.call(this, type, ...rest);
       };
       Object.assign(window, { added });
     });
+    await setup(page);
     await move();
     return page.evaluate(
       () => (window as unknown as { added: string[] }).added,
