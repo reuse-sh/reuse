@@ -24,6 +24,8 @@ import {
 } from "./geometry.js";
 import { fileWidth, isImageFile, largestWidth } from "./sources.js";
 
+const carouselInternals = Symbol.for("@reuse-sh/carousel internals");
+
 export type { Point, Rect, Size, Zoom } from "./geometry.js";
 
 export interface LightboxStrings {
@@ -2212,7 +2214,7 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
   }
 
   function connect(viewport: HTMLDivElement) {
-    return createCarousel(viewport, {
+    const carousel = createCarousel(viewport, {
       drag: true,
       loop: looping(),
       onChange: (value) => {
@@ -2220,6 +2222,10 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
           activeChanged(session, value.index);
       },
     });
+    (carousel as unknown as Record<symbol, { silence(): void } | undefined>)[
+      carouselInternals
+    ]?.silence();
+    return carousel;
   }
 
   // The carousel reads loop only when created until its setOptions (VPF-255) lands.

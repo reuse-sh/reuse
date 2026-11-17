@@ -303,6 +303,7 @@ export function createCarousel(
   let clockFrame = 0;
   let unsettled = false;
   // Screen readers announce changes to a live region already in the page, not one inserted with its text.
+  let silent = false;
   const live = document.createElement("div");
   live.setAttribute("aria-live", "polite");
   live.setAttribute("aria-atomic", "true");
@@ -1022,6 +1023,7 @@ export function createCarousel(
   }
 
   function say(text: string) {
+    if (silent) return;
     if (!live.isConnected) viewport.after(live);
     live.textContent = text;
   }
@@ -1769,6 +1771,10 @@ export function createCarousel(
     align: () => options.align,
     goTo: (index, behavior, announce) =>
       announce ? announced(() => goTo(index, behavior)) : goTo(index, behavior),
+    silence: () => {
+      silent = true;
+      live.remove();
+    },
   };
   Object.defineProperty(controller, internalKey, { value: reach });
   return controller;
