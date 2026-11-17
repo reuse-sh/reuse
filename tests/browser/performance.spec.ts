@@ -40,7 +40,21 @@ async function browseTenPhotos(
       { x: middle.x - 200, y: middle.y },
       { speed: 2 },
     );
-    await page.waitForTimeout(400);
+    // A swipe that catches the strip more than 200px short of the photo it is heading to ends
+    // its 400px before that photo and lands on it again, so the next one waits until it is closer.
+    await page.waitForFunction(
+      () => {
+        const viewport = document.querySelector(
+          ".re-lightbox-viewport",
+        ) as HTMLElement;
+        const slide = document.querySelector(
+          '.re-lightbox-slide[aria-hidden="false"]',
+        ) as HTMLElement;
+        return Math.abs(viewport.scrollLeft - slide.offsetLeft) < 200;
+      },
+      undefined,
+      { polling: "raf" },
+    );
   }
   const index = await page.evaluate(
     () =>
