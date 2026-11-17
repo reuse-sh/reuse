@@ -2,6 +2,7 @@ import { expect, type Page, test } from "@playwright/test";
 import {
   countLayoutReads,
   ctrlWheel,
+  framesUntilIdle,
   mount,
   photo,
   swipe,
@@ -42,18 +43,10 @@ async function browseTenPhotos(
       { speed: 2 },
     );
     // A swipe that catches the strip still gliding from the last one pages from there.
-    await expect
-      .poll(() =>
-        page.evaluate(() => {
-          const { index, isAnimating } = (
-            window as unknown as {
-              gallery: { getState(): { index: number; isAnimating: boolean } };
-            }
-          ).gallery.getState();
-          return { index, isAnimating };
-        }),
-      )
-      .toEqual({ index: photo, isAnimating: false });
+    await framesUntilIdle(
+      page,
+      "document.querySelector('.re-lightbox-viewport').scrollLeft",
+    );
   }
   const index = await page.evaluate(
     () =>
