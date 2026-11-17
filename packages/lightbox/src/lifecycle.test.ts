@@ -175,6 +175,45 @@ describe("lightbox lifecycle", () => {
     );
   });
 
+  it("stops a paging move under a touch on the photo, and leaves a mouse press on it to the file drag", () => {
+    vi.useFakeTimers({
+      toFake: ["requestAnimationFrame", "cancelAnimationFrame", "performance"],
+    });
+    const controller = create();
+    controller.open(gallery);
+    const viewport = dialog().querySelector<HTMLElement>(
+      ".re-lightbox-viewport",
+    );
+    const image = dialog().querySelector(".re-lightbox-image");
+    if (!viewport || !image) throw new Error("Missing image");
+    const press = (pointerType: string) => {
+      const event = new MouseEvent("pointerdown", {
+        bubbles: true,
+        cancelable: true,
+        clientX: 512,
+        clientY: 384,
+        button: 0,
+      });
+      Object.defineProperties(event, {
+        pointerId: { value: 1 },
+        pointerType: { value: pointerType },
+      });
+      image.dispatchEvent(event);
+    };
+    press("mouse");
+    expect(image.hasAttribute("data-carousel-no-drag")).toBe(true);
+    window.dispatchEvent(new MouseEvent("pointerup", { button: 0 }));
+    controller.next();
+    vi.advanceTimersByTime(48);
+    press("touch");
+    const held = viewport.scrollLeft;
+    vi.advanceTimersByTime(1000);
+    vi.useRealTimers();
+    expect(held).toBeGreaterThan(0);
+    expect(held).toBeLessThan(1024);
+    expect(viewport.scrollLeft).toBe(held);
+  });
+
   it("jumps directly to distant images without traversing unloaded pages in either direction", () => {
     const controller = create();
     controller.open(gallery);

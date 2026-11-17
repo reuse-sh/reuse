@@ -58,10 +58,14 @@
 .re-lightbox-frame[data-transparent]:not([data-loading], [data-error]) {
   background: var(--re-lightbox-media-background);
 }
-.re-lightbox[data-zoomable="true"] .re-lightbox-frame {
+.re-lightbox[data-zoom="in"]:where([data-zoomable="true"]) .re-lightbox-frame {
   cursor: zoom-in;
 }
-.re-lightbox[data-zoomed="true"] .re-lightbox-frame {
+.re-lightbox[data-zoom="out"]:where(
+    [data-zoomed="true"],
+    [data-zoomable="true"]
+  )
+  .re-lightbox-frame {
   cursor: zoom-out;
 }
 .re-lightbox[data-zoomed="true"] .re-lightbox-frame:active {

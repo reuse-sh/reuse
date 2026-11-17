@@ -561,7 +561,7 @@ export function createCarousel(
     clearTimeout(settleTimer);
     pendingIndex = undefined;
     pendingPosition = undefined;
-    const index = nearestIndex();
+    const index = enabled ? nearestIndex() : state.index;
     if (stretch && enabled) {
       goTo(index, "smooth", undefined, 0);
       return;

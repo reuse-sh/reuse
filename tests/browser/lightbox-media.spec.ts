@@ -117,6 +117,47 @@ test.describe("lightbox tall and wide photos", { tag: "@touch" }, () => {
     await expect.poll(async () => (await state(page)).isOpen).toBe(false);
   });
 
+  test("after a vertical pan on a tall photo the strip pages again", async ({
+    page,
+  }) => {
+    await open(page, [
+      [1170, 8000],
+      [800, 600],
+    ]);
+    await swipe(page, { x: 195, y: 700 }, { x: 195, y: 300 });
+    await still(page);
+    expect((await state(page)).zoom.y).toBeGreaterThan(0);
+    await expect(page.locator(".re-lightbox-viewport")).not.toHaveCSS(
+      "overflow-x",
+      "hidden",
+    );
+    await page.keyboard.press("ArrowRight");
+    await expect.poll(async () => (await state(page)).index).toBe(1);
+  });
+
+  test("a dismiss drag on a tall photo shrinks it around the screen center, so its top edge stays near the finger", async ({
+    page,
+  }) => {
+    await open(page, [[1170, 8000]]);
+    const view = await screen(page);
+    const top = (await photo(page)).y;
+    const drag = 200;
+    const held = swipe(
+      page,
+      { x: 195, y: 100 },
+      { x: 195, y: 100 + drag },
+      { hold: 600 },
+    );
+    await page.waitForTimeout(450);
+    const moved = (await photo(page)).y;
+    await held;
+    const middle = view.y + view.height / 2;
+    const shrink = 1 - (0.25 * drag) / (view.height / 2);
+    expect(
+      Math.abs(moved - (middle + (top - middle) * shrink + drag)),
+    ).toBeLessThan(2);
+  });
+
   test("a double tap shows the whole tall photo and the next one returns to its width", async ({
     page,
   }) => {
@@ -183,6 +224,24 @@ test.describe("lightbox tall photos with keys and the wheel", {
     expect((await state(page)).zoom.scale).toBe(1);
     await page.keyboard.press("ArrowRight");
     await expect.poll(async () => (await state(page)).index).toBe(1);
+  });
+
+  test("a tall photo at its width shows the zoom-out cursor, since a click shows it whole, and zoom-in once whole", async ({
+    page,
+  }) => {
+    await open(page, [[1170, 8000]]);
+    const frame = page.locator(
+      '.re-lightbox-slide[aria-hidden="false"] .re-lightbox-frame',
+    );
+    const view = await screen(page);
+    await page.mouse.move(view.x + view.width / 2, view.y + view.height / 2);
+    await expect(page.locator("dialog")).toHaveAttribute("data-zoom", "out");
+    await expect(frame).toHaveCSS("cursor", "zoom-out");
+    await page.mouse.click(view.x + view.width / 2, view.y + view.height / 2);
+    await still(page);
+    expect((await state(page)).zoom.scale).toBeLessThan(1);
+    await expect(page.locator("dialog")).toHaveAttribute("data-zoom", "in");
+    await expect(frame).toHaveCSS("cursor", "zoom-in");
   });
 });
 

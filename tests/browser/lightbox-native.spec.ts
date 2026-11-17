@@ -23,6 +23,7 @@ async function open(
   page: Page,
   options: Record<string, unknown> = {},
   index = 0,
+  count = 2,
 ) {
   await mount(
     page,
@@ -30,7 +31,7 @@ async function open(
     ["lightbox/base.css", "lightbox/theme.css"],
   );
   await page.evaluate(
-    async ([options, index]) => {
+    async ([options, index, count]) => {
       const records: Records = {
         contextmenu: [],
         dragstart: [],
@@ -46,7 +47,8 @@ async function open(
           records[type].push(event.defaultPrevented);
         });
       const sources: string[] = [];
-      for (const color of ["#345", "#c96"]) {
+      for (let photo = 0; photo < count; photo++) {
+        const color = photo % 2 ? "#c96" : "#345";
         const canvas = document.createElement("canvas");
         canvas.width = 1600;
         canvas.height = 1200;
@@ -66,7 +68,7 @@ async function open(
         index,
       );
     },
-    [options, index] as const,
+    [options, index, count] as const,
   );
   await expect(page.locator("dialog")).toHaveAttribute("data-phase", "open");
   await expect(page.locator(".re-lightbox-frame[data-loading]")).toHaveCount(0);
@@ -247,6 +249,87 @@ test.describe("lightbox native photo handling", () => {
     expect(seen.keydown).toEqual([false]);
     expect(seen.writes).toEqual([]);
   });
+
+  test("Ctrl+C takes the C key by its position, so a Cyrillic layout copies too", async ({
+    page,
+  }) => {
+    await open(page);
+    await stubClipboard(page);
+    await page.evaluate(() =>
+      (document.activeElement ?? document.body).dispatchEvent(
+        new KeyboardEvent("keydown", {
+          key: "с",
+          code: "KeyC",
+          ctrlKey: true,
+          bubbles: true,
+          cancelable: true,
+        }),
+      ),
+    );
+    await expect
+      .poll(async () => (await records(page)).writes)
+      .toEqual([
+        { types: ["image/png"], png: { type: "image/png", width: 1600 } },
+      ]);
+  });
+
+  const viewBoxOnly = `data:image/svg+xml,${encodeURIComponent(
+    '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 400"><rect width="800" height="400" fill="#c96"/></svg>',
+  )}`;
+  for (const [name, src, width] of [
+    [
+      "a cross-origin PNG served with Access-Control-Allow-Origin",
+      "http://cdn.test/photo.png",
+      640,
+    ],
+    ["an SVG with only a viewBox, at the item's 800x400", viewBoxOnly, 800],
+  ] as const)
+    test(`Ctrl+C copies ${name}`, async ({ page }) => {
+      await mount(page, "", ["lightbox/base.css", "lightbox/theme.css"]);
+      const png = await page.evaluate(() => {
+        const canvas = document.createElement("canvas");
+        canvas.width = 640;
+        canvas.height = 480;
+        const context = canvas.getContext("2d") as CanvasRenderingContext2D;
+        context.fillStyle = "#c96";
+        context.fillRect(0, 0, 640, 480);
+        return canvas.toDataURL("image/png").split(",")[1];
+      });
+      await page.route("http://cdn.test/photo.png", (route) =>
+        route.fulfill({
+          contentType: "image/png",
+          headers: { "access-control-allow-origin": "*" },
+          body: Buffer.from(png, "base64"),
+        }),
+      );
+      await page.evaluate(() =>
+        Object.assign(window, {
+          records: { contextmenu: [], dragstart: [], keydown: [], writes: [] },
+        }),
+      );
+      await stubClipboard(page);
+      await page.evaluate(
+        async ([src, width]) => {
+          const { createLightbox } = await import("/modules/lightbox/index.js");
+          createLightbox({ history: false }).open(
+            [{ src, width, height: width === 800 ? 400 : 480 }],
+            0,
+          );
+        },
+        [src, width] as const,
+      );
+      await expect(page.locator("dialog")).toHaveAttribute(
+        "data-phase",
+        "open",
+      );
+      await expect(
+        page.locator(".re-lightbox-frame[data-loading]"),
+      ).toHaveCount(0);
+      await page.keyboard.press("Control+c");
+      await expect
+        .poll(async () => (await records(page)).writes)
+        .toEqual([{ types: ["image/png"], png: { type: "image/png", width } }]);
+    });
 });
 
 test.describe("lightbox native drag across engines", {
@@ -309,14 +392,14 @@ test.describe("lightbox rotation", { tag: "@touch" }, () => {
   test("a rotation keeps the current photo and the zoomed point at the center, and resizes in one frame relayout once", async ({
     page,
   }) => {
-    await open(page, { padding: 0 }, 1);
+    await open(page, {}, 3, 6);
     await page.evaluate(() => {
       const changes: number[] = [];
       Object.assign(window, { changes });
       (window as Window).lightbox.on("change", () => changes.push(1));
     });
     await page.evaluate(() =>
-      (window as Window).lightbox.zoomTo(2, { x: -60, y: 0 }),
+      (window as Window).lightbox.zoomTo(2, { x: -8, y: 0 }),
     );
     await expect
       .poll(() =>
@@ -325,12 +408,12 @@ test.describe("lightbox rotation", { tag: "@touch" }, () => {
           return !state.isAnimating && state.zoom;
         }),
       )
-      .toEqual({ scale: 2, x: 60, y: 0 });
+      .toEqual({ scale: 2, x: 8, y: 0 });
     const before = await centerPoint(page);
     await page.setViewportSize({ width: 844, height: 390 });
     await expect
       .poll(async () => (await centerPoint(page)).box.width)
-      .toBeCloseTo(before.box.width * (390 / 292.5), 0);
+      .toBeCloseTo((before.box.width * 4) / 3, 0);
     const after = await centerPoint(page);
     expect(
       Math.abs(after.box.x + before.u * after.box.width - after.x),
@@ -341,7 +424,7 @@ test.describe("lightbox rotation", { tag: "@touch" }, () => {
     const state = await page.evaluate(() =>
       (window as Window).lightbox.getState(),
     );
-    expect(state.index).toBe(1);
+    expect(state.index).toBe(3);
     expect(state.zoom.scale).toBe(2);
     const slide = await page
       .locator('.re-lightbox-slide[aria-hidden="false"]')
@@ -420,6 +503,36 @@ test.describe("lightbox documents", () => {
         await trigger.evaluate((button) => document.activeElement === button),
       ).toBe(true);
     }
+  });
+
+  test("a gallery whose page swaps in a new body opens in the body the page has at the click", async ({
+    page,
+  }) => {
+    await mount(
+      page,
+      `<div class="gallery">${[0, 1]
+        .map(
+          (index) =>
+            `<button type="button"><img src="${tile(index)}" alt="Tile ${index}" width="240" height="160"></button>`,
+        )
+        .join("")}</div>`,
+      ["lightbox/base.css", "lightbox/theme.css"],
+    );
+    await page.evaluate(async () => {
+      const { bindLightboxGallery } = await import(
+        "/modules/lightbox/index.js"
+      );
+      const root = document.querySelector(".gallery") as HTMLElement;
+      bindLightboxGallery(root, { history: false });
+      const body = document.createElement("body");
+      body.append(root);
+      document.documentElement.replaceChild(body, document.body);
+    });
+    await page.locator(".gallery button").nth(1).click();
+    await expect(page.locator("body > dialog")).toHaveAttribute(
+      "data-phase",
+      "open",
+    );
   });
 
   const frameGallery = `<iframe style="width:640px;height:480px;border:0" srcdoc="${[

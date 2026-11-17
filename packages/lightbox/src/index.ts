@@ -782,6 +782,7 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
     s.zoomButton.setAttribute("aria-pressed", String(state.zoom.scale > 1));
     if (!settings.icons?.zoom) s.zoomButton.textContent = out ? "−" : "+";
     s.dialog.dataset.zoomed = String(state.zoom.scale > 1);
+    s.dialog.dataset.zoom = out ? "out" : "in";
     if (s.watchedScale !== state.zoom.scale) {
       s.watchedScale = state.zoom.scale;
       clearTimeout(s.sharpTimer);
@@ -1180,8 +1181,11 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
     }
     layout(s);
     syncingCarousel = true;
+    s.carousel.setEnabled(true);
+    s.carousel.refresh();
     s.carousel.goTo(state.index, "instant");
     syncingCarousel = false;
+    applyZoom(s, false);
     if (!sameZoom(before, state.zoom)) publish({});
   }
 
@@ -1260,7 +1264,6 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
       image.className = "re-lightbox-image";
       image.alt = item.alt || "";
       if (settings.protect) image.draggable = false;
-      else image.dataset.carouselNoDrag = "";
       image.decoding = "async";
       let alive = true;
       let cleanup: undefined | (() => void);
@@ -1855,8 +1858,9 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
     const progress = clamp(Math.abs(dy) / half, 0, 1);
     const frame = s.loaded.get(state.index)?.frame;
     const { scale, x, y } = state.zoom;
+    const shrink = 1 - progress * 0.25;
     if (frame)
-      frame.style.transform = `translate(${x + dx}px, ${y + dy}px) scale(${scale * (1 - progress * 0.25)})`;
+      frame.style.transform = `translate(${x * shrink + dx}px, ${y * shrink + dy}px) scale(${scale * shrink})`;
     s.backdrop.style.opacity = String(1 - progress);
     s.dialog.style.setProperty(
       "--re-lightbox-chrome-opacity",
@@ -1996,18 +2000,53 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
     )
       return;
     event.preventDefault();
+    const doc = s.dialog.ownerDocument;
     const image = s.loaded.get(state.index)?.image;
-    const blob = new Promise<Blob>((resolve, reject) => {
-      if (!image?.complete || !image.naturalWidth) throw new Error("No image");
-      const canvas = s.dialog.ownerDocument.createElement("canvas");
-      canvas.width = image.naturalWidth;
-      canvas.height = image.naturalHeight;
-      canvas.getContext("2d")?.drawImage(image, 0, 0);
-      canvas.toBlob(
-        (result) => (result ? resolve(result) : reject(new Error("No blob"))),
-        "image/png",
+    const source = image?.currentSrc || image?.src;
+    const size = imageSize(state.index, s);
+    const draw = async (file: Blob) => {
+      const canvas = doc.createElement("canvas");
+      const context = canvas.getContext("2d");
+      if (!context) throw new Error("No canvas");
+      if (file.type.split(";")[0].trim() === "image/svg+xml") {
+        const url = win.URL.createObjectURL(file);
+        try {
+          const svg = new win.Image();
+          await new Promise((resolve, reject) => {
+            svg.onload = resolve;
+            svg.onerror = reject;
+            svg.src = url;
+          });
+          canvas.width = Math.round(size.width);
+          canvas.height = Math.round(size.height);
+          context.drawImage(svg, 0, 0, canvas.width, canvas.height);
+        } finally {
+          win.URL.revokeObjectURL(url);
+        }
+      } else {
+        const bitmap = await win.createImageBitmap(file);
+        canvas.width = bitmap.width;
+        canvas.height = bitmap.height;
+        context.drawImage(bitmap, 0, 0);
+        bitmap.close();
+      }
+      return new Promise<Blob>((resolve, reject) =>
+        canvas.toBlob(
+          (result) => (result ? resolve(result) : reject(new Error("No blob"))),
+          "image/png",
+        ),
       );
-    });
+    };
+    const blob = (async () => {
+      if (!source) throw new Error("No image");
+      const response = await win.fetch(source, {
+        mode: "cors",
+        credentials: "same-origin",
+      });
+      if (!response.ok) throw new Error("No file");
+      const file = await response.blob();
+      return file.type === "image/png" ? file : draw(file);
+    })();
     blob.catch(() => {});
     win.navigator.clipboard
       .write([new Item({ "image/png": blob })])
@@ -2049,6 +2088,24 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
         samples: [],
       };
     };
+    s.dialog.addEventListener(
+      "pointerdown",
+      (event) => {
+        if (
+          !isElement(event.target) ||
+          !event.target.matches(".re-lightbox-image")
+        )
+          return;
+        if (
+          event.pointerType === "mouse" &&
+          !settings.protect &&
+          state.zoom.scale <= 1
+        )
+          event.target.setAttribute("data-carousel-no-drag", "");
+        else event.target.removeAttribute("data-carousel-no-drag");
+      },
+      { signal, capture: true },
+    );
     s.viewport.addEventListener(
       "pointerdown",
       (event) => {
@@ -2283,6 +2340,7 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
       if (gesture)
         settle(s, gesture, event, hadPinch, hadPinch || gesture.pinched);
       resetGesture();
+      if (gesture?.axis === "pan" && session === s) applyZoom(s, false);
       if (hadPinch) s.lastTap = undefined;
     };
     s.dialog.ownerDocument.defaultView?.addEventListener("pointerup", release, {
@@ -2573,8 +2631,10 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
     if (!Number.isFinite(index))
       throw new TypeError("Image index must be finite.");
     configure();
+    const opening = settings.getOrigin?.(index) ?? nextItems[index]?.origin;
     const doc =
       settings.container?.ownerDocument ??
+      (typeof opening === "function" ? opening() : opening)?.ownerDocument ??
       (typeof document === "undefined" ? undefined : document);
     if (!doc?.body)
       throw new Error("Opening a lightbox needs a browser document.");
@@ -2824,7 +2884,7 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
         if (
           (event.ctrlKey || event.metaKey) &&
           !event.altKey &&
-          event.key.toLowerCase() === "c"
+          (event.code ? event.code === "KeyC" : event.key.toLowerCase() === "c")
         ) {
           copyImage(s, event);
           return;
@@ -3268,7 +3328,6 @@ export function bindLightboxGallery(
 ) {
   const controller = createLightbox({
     ...options,
-    container: options.container ?? root.ownerDocument.body,
   });
   const click = (event: MouseEvent) => {
     if (

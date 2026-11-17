@@ -221,6 +221,10 @@ describe("native carousel", () => {
     viewport.dispatchEvent(new Event("scroll"));
     expect(viewport.scrollLeft).toBe(100);
     expect(viewport.style.overflowX).toBe("hidden");
+    viewport.scrollLeft = 200;
+    viewport.dispatchEvent(new Event("scrollend"));
+    expect(carousel.getState().index).toBe(1);
+    viewport.scrollLeft = 100;
     expect(carousel.getState()).toMatchObject({
       canPrev: false,
       canNext: false,
