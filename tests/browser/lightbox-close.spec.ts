@@ -14,6 +14,7 @@ type Lightbox = {
   next(): void;
   goTo(index: number): void;
   getState(): { index: number; isOpen: boolean; count: number };
+  destroy(): void;
   on(type: string, listener: () => void): () => void;
 };
 type Carousel = {
@@ -679,6 +680,37 @@ test.describe("focus after close", { tag: "@desktop" }, () => {
         return { index, count };
       }),
     ).toEqual({ index: 2, count: 3 });
+  });
+
+  test("a gallery bound to the body ignores the viewer's own images", async ({
+    page,
+  }) => {
+    await galleryPage(page);
+    await page.evaluate(async () => {
+      (window as Window).lightbox.destroy();
+      const { bindLightboxGallery } = await import(
+        "/modules/lightbox/index.js"
+      );
+      Object.assign(window, {
+        lightbox: bindLightboxGallery(document.body, {
+          history: false,
+          autoHide: false,
+        }),
+      });
+    });
+    await slowClose(page);
+    await page.locator("#gallery").getByAltText("Photo 2").click();
+    await expect(page.locator("dialog")).toHaveAttribute("data-phase", "open");
+    const state = () =>
+      page.evaluate(() => {
+        const { index, count } = (window as Window).lightbox.getState();
+        return { index, count };
+      });
+    await page.locator("dialog .re-lightbox-close").focus();
+    await page.keyboard.press("Escape");
+    await page.locator("#gallery").getByAltText("Photo 3").click();
+    await expect(page.locator("dialog")).toHaveAttribute("data-phase", "open");
+    expect(await state()).toEqual({ index: 2, count: 3 });
   });
 
   test("a page that hides closed dialogs still shows the close flight", async ({

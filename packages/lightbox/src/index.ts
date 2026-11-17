@@ -4031,10 +4031,14 @@ export function bindLightboxGallery(
     )
       return;
     const target = event.target;
-    if (!isElement(target)) return;
+    if (!isElement(target) || target.closest(".re-lightbox")) return;
     const images = [
       ...root.querySelectorAll<HTMLImageElement>(options.selector || "img"),
-    ].filter((image) => !image.classList.contains("re-lightbox-landing"));
+    ].filter(
+      (image) =>
+        !image.classList.contains("re-lightbox-landing") &&
+        !image.closest(".re-lightbox"),
+    );
     const image = images.find(
       (candidate) =>
         candidate === target ||
