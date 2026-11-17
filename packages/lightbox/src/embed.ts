@@ -43,7 +43,7 @@ const youtubeRemote: Remote = {
   state(data) {
     const info = data.info as { playerState?: number } | undefined;
     const value = info?.playerState;
-    return value === 1
+    return value === 1 || value === 3
       ? "playing"
       : value === 2 || value === 0
         ? "paused"
@@ -88,8 +88,10 @@ const providers: EmbedProvider[] = [
   },
   {
     name: "vimeo",
-    pattern: /^https?:\/\/(?:player\.)?vimeo\.com\/(?:video\/)?(\d+)/,
-    url: (match) => `https://player.vimeo.com/video/${match[1]}`,
+    pattern:
+      /^https?:\/\/(?:player\.)?vimeo\.com\/(?:video\/)?(\d+)(?:\/([\da-f]+))?/,
+    url: (match) =>
+      `https://player.vimeo.com/video/${match[1]}${match[2] ? `?h=${match[2]}` : ""}`,
   },
 ];
 remotes.set(providers[0], youtubeRemote);
@@ -105,9 +107,15 @@ export function registerEmbed(provider: EmbedProvider): void {
 function withParameters(url: string, source: string) {
   try {
     const target = new URL(url);
-    for (const [key, value] of new URL(source).searchParams)
-      if (key !== "v" && !target.searchParams.has(key))
-        target.searchParams.set(key, value);
+    for (const [key, value] of new URL(source).searchParams) {
+      // YouTube links say t=30s; its player reads start=30.
+      const name = key === "t" ? "start" : key;
+      if (key !== "v" && !target.searchParams.has(name))
+        target.searchParams.set(
+          name,
+          key === "t" ? `${Number.parseInt(value, 10)}` : value,
+        );
+    }
     return target.href;
   } catch {
     return url;
@@ -153,12 +161,14 @@ export function embed(options: FrameOptions = {}): LightboxContent {
       const send = (message: object) =>
         frame.contentWindow?.postMessage(JSON.stringify(message), origin);
       let pending = autoplay;
+      let current = false;
       let state: "playing" | "paused" | undefined;
       let retry: ReturnType<typeof setTimeout> | undefined;
       container.ownerDocument.defaultView?.addEventListener(
         "message",
         (event) => {
-          if (event.source !== frame.contentWindow) return;
+          if (event.source !== frame.contentWindow || event.origin !== origin)
+            return;
           const data = parse(event.data);
           state = (data && remote.state(data)) ?? state;
           if (state === "playing") {
@@ -173,14 +183,17 @@ export function embed(options: FrameOptions = {}): LightboxContent {
       return {
         ...base,
         pause() {
+          current = false;
           clearTimeout(retry);
           send(remote.command("pause"));
         },
         resume() {
+          current = true;
           if (!pending) return;
           pending = false;
           void ready.then(() => {
-            if (signal.aborted) return;
+            // A slide left before its player loaded stays quiet.
+            if (signal.aborted || !current) return;
             send(remote.command("play"));
             // A player the browser keeps from starting with sound gets one muted try.
             retry = setTimeout(() => {

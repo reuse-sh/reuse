@@ -150,7 +150,7 @@ const rules: readonly (readonly [(o: LightboxStyle) => boolean, string])[] = [
   [
     (o) => o.thumbnails,
     `.re-lightbox-style { --re-lightbox-strip: 64px; }
-.re-lightbox-style .re-lightbox-thumbnails { order: 2; max-width: 100%; gap: 6px; padding: 5px; scrollbar-width: none; }
+.re-lightbox-style .re-lightbox-thumbnails { order: 2; max-width: 100%; gap: 6px; padding-block: 5px; scrollbar-width: none; }
 .re-lightbox-style .re-lightbox-thumbnails::-webkit-scrollbar { display: none; }
 .re-lightbox-style .re-lightbox-thumbnails button {
   flex: 0 0 60px;

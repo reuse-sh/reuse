@@ -231,9 +231,11 @@
   max-height: none;
   overflow: visible;
 }
+/* The strip spans the footer to center its ends; only the thumbnails take input. */
 .re-lightbox-thumbnails {
   position: relative;
   box-sizing: border-box;
+  pointer-events: none;
   display: flex;
   max-width: 100%;
   overflow-x: auto;
@@ -242,6 +244,9 @@
 }
 .re-lightbox-thumbnails::-webkit-scrollbar {
   display: none;
+}
+.re-lightbox-thumbnails > * {
+  pointer-events: auto;
 }
 .re-lightbox[data-thumbnails="bottom"] .re-lightbox-thumbnails {
   padding-inline: calc(50% - var(--re-lightbox-thumbnail-size, 44px) / 2);

@@ -278,6 +278,18 @@ test("a side caption panel at 1280px never covers the photo", async ({
     .boundingBox();
   if (!aside || !photo) throw new Error("Missing part");
   expect(photo.x + photo.width).toBeLessThanOrEqual(aside.x);
+  // The panel exists from the first frame, so the open flight runs to its end.
+  expect(
+    await page.evaluate(() =>
+      [
+        ".re-lightbox-backdrop",
+        '.re-lightbox-slide[aria-hidden="false"] .re-lightbox-frame',
+      ].map(
+        (selector) =>
+          getComputedStyle(document.querySelector(selector) as Element).opacity,
+      ),
+    ),
+  ).toEqual(["1", "1"]);
   await expect(
     page.locator(".re-lightbox-aside .re-lightbox-caption"),
   ).toHaveText("Caption 1");
@@ -337,7 +349,7 @@ test("the last photo without loop goes back to the first, at once under reduced 
   expect(
     await page.evaluate(() =>
       document
-        .querySelector(".re-lightbox")
+        .querySelector<HTMLElement>(".re-lightbox-slideshow")
         ?.style.getPropertyValue("--re-lightbox-slideshow-progress"),
     ),
   ).toBe("0");

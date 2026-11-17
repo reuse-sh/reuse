@@ -53,8 +53,6 @@ export function largestWidth(srcset: string | undefined) {
   return largest;
 }
 
-/** The file's own pixel width: a srcset makes naturalWidth a density-corrected size. */
-// The widest width descriptor wins, else the highest density, else src.
 export function largestSource(srcset: string | undefined, src: string) {
   let best: Candidate | undefined;
   for (const candidate of parseSrcset(srcset ?? ""))
@@ -68,6 +66,8 @@ export function largestSource(srcset: string | undefined, src: string) {
       best = candidate;
   return best?.url ?? src;
 }
+
+/** The file's own pixel width: a srcset makes naturalWidth a density-corrected size. */
 
 export function fileWidth(
   image: HTMLImageElement,

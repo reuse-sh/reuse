@@ -717,7 +717,7 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
     const tick = () => {
       const since = show.since;
       if (since === undefined) return;
-      s.dialog.style.setProperty(
+      s.slideshowButton?.style.setProperty(
         "--re-lightbox-slideshow-progress",
         String(
           Math.min(
@@ -743,7 +743,10 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
     if (!show) return;
     show.waited = 0;
     show.since = undefined;
-    s.dialog.style.setProperty("--re-lightbox-slideshow-progress", "0");
+    s.slideshowButton?.style.setProperty(
+      "--re-lightbox-slideshow-progress",
+      "0",
+    );
     scheduleSlideshow(s);
   }
 
@@ -774,7 +777,9 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
       if (show.frame !== undefined)
         s.dialog.ownerDocument.defaultView?.cancelAnimationFrame(show.frame);
       s.slideshow = undefined;
-      s.dialog.style.removeProperty("--re-lightbox-slideshow-progress");
+      s.slideshowButton?.style.removeProperty(
+        "--re-lightbox-slideshow-progress",
+      );
     } else {
       const interval = settings.slideshow?.interval;
       s.slideshow = {
@@ -922,11 +927,15 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
     const item = items[index];
     if (item.width && item.height)
       return { width: item.width, height: item.height };
-    if (item.type)
+    // A player has no pixels to stop at, so it fills the screen at its aspect.
+    if (item.type) {
+      const aspect = s.loaded.get(index)?.media?.mounted?.aspect || 16 / 9;
+      const { width, height } = view(s);
       return {
-        width: s.loaded.get(index)?.media?.mounted?.aspect || 16 / 9,
-        height: 1,
+        width: Math.max(width, height * aspect),
+        height: Math.max(height, width / aspect),
       };
+    }
     for (const image of [s.loaded.get(index)?.image, tileImage(index)])
       if (image?.naturalWidth && image.naturalHeight)
         return { width: image.naturalWidth, height: image.naturalHeight };
@@ -1903,10 +1912,9 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
     if (single) toggleSlideshow(s, false);
     if (s.download) {
       s.download.hidden = Boolean(item.type);
-      s.download.setAttribute(
-        "href",
-        largestSource(item.srcset, item.src ?? ""),
-      );
+      const href = largestSource(item.srcset, item.src ?? "");
+      if (/^\s*javascript:/i.test(href)) s.download.removeAttribute("href");
+      else s.download.setAttribute("href", href);
     }
     const mark = (index: number, current: boolean) => {
       const slide = s.slides[index];
@@ -2994,7 +3002,7 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
   }
 
   // The caption panel shows when some photo has a caption, so the photo keeps one width while paging.
-  function placeAside(s: Session) {
+  function placeAside(s: Session, relayout = false) {
     const needed =
       Boolean(settings.slots?.aside) ||
       (settings.caption === "side" && items.some((item) => item.caption));
@@ -3013,7 +3021,7 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
       s.aside = aside;
       s.dialog.dataset.aside = "";
     }
-    if (s.slides.length && s.dialog.isConnected) {
+    if (relayout) {
       const win = s.dialog.ownerDocument.defaultView;
       s.resizeFrame ??= win?.requestAnimationFrame(() => resized(s));
     }
@@ -3798,8 +3806,9 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
     s.marked = undefined;
     s.makeThumbs();
     s.roving = -1;
+    s.thumbCarousel?.refresh();
     s.centeredThumb = Number.NaN;
-    placeAside(s);
+    placeAside(s, true);
     const changed = target !== state.index;
     if ((changed || !kept || s.carouselLoops) && state.zoom.scale > 1) {
       updateState({ zoom: restZoom(s, target) });
@@ -3983,30 +3992,40 @@ export function bindLightboxGallery(
         candidate.closest("a, button")?.contains(target),
     );
     if (!image) return;
-    event.preventDefault();
+    let list: readonly LightboxItem[];
+    let index: number;
     if (options.items) {
-      const list = options.items(root);
-      const index = list.findIndex(
+      list = options.items(root);
+      index = list.findIndex(
         (item) =>
           (typeof item.origin === "function" ? item.origin() : item.origin) ===
           image,
       );
-      controller.open(list, index < 0 ? images.indexOf(image) : index);
-      return;
-    }
-    const group =
-      options.group ??
-      ((element: HTMLImageElement) =>
-        element.closest<HTMLElement>("[data-lightbox-group]")?.dataset
-          .lightboxGroup ?? "");
-    const name = group(image);
-    const members = images.filter((candidate) => group(candidate) === name);
-    controller.open(
-      members.map((member) =>
+      if (index < 0) index = images.indexOf(image);
+    } else {
+      const group =
+        options.group ??
+        ((element: HTMLImageElement) =>
+          element.closest<HTMLElement>("[data-lightbox-group]")?.dataset
+            .lightboxGroup ?? "");
+      const name = group(image);
+      const members = images.filter((candidate) => group(candidate) === name);
+      list = members.map((member) =>
         (options.getItem || lightboxItemFromImage)(member),
-      ),
-      members.indexOf(image),
-    );
+      );
+      index = members.indexOf(image);
+    }
+    // A link whose media type has no module is followed instead of opened.
+    if (
+      list.some(
+        (item) =>
+          item.type !== undefined &&
+          !options.content?.some((module) => module.type === item.type),
+      )
+    )
+      return;
+    event.preventDefault();
+    controller.open(list, index);
   };
   root.addEventListener("click", click);
   return {

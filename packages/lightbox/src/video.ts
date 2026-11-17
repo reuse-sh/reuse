@@ -11,7 +11,8 @@ export function playerOf(
   return {
     interactive: true,
     ready: new Promise((resolve) => {
-      media.addEventListener("loadeddata", resolve, { once: true, signal });
+      // Safari may stop at metadata under preload="metadata"; the element shows its poster till then.
+      media.addEventListener("loadedmetadata", resolve, { once: true, signal });
       media.addEventListener("error", resolve, { once: true, signal });
     }),
     pause: () => media.pause(),
@@ -21,7 +22,9 @@ export function playerOf(
       // A browser that refuses sound may still play muted.
       media
         .play()
-        .catch(() => {
+        .catch((error: Error) => {
+          // A pause before the first frame aborts the play; only a refusal retries muted.
+          if (error.name !== "NotAllowedError") return;
           media.muted = true;
           return media.play();
         })

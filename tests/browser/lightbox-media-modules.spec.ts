@@ -77,6 +77,7 @@ async function setup(
           video: { src: await recorded() },
         }),
         still: async () => ({ type: "video", video: { src: "/missing.webm" } }),
+        slow: async () => ({ type: "video", video: { src: "/slow.webm" } }),
         youtube: async () => ({
           type: "embed",
           embed: "https://www.youtube.com/watch?v=abc123&t=30",
@@ -150,7 +151,7 @@ test("the embed carries the link's own parameters and uses youtube-nocookie", as
   const url = new URL(src ?? "");
   expect(url.origin).toBe("https://www.youtube-nocookie.com");
   expect(url.pathname).toBe("/embed/abc123");
-  expect(url.searchParams.get("t")).toBe("30");
+  expect(url.searchParams.get("start")).toBe("30");
   expect(url.searchParams.get("enablejsapi")).toBe("1");
   const frame = page.locator(".re-lightbox-media iframe");
   await expect(frame).toHaveAttribute(
@@ -171,6 +172,7 @@ test("a Shorts link opens at 9:16", async ({ page }) => {
     .boundingBox();
   if (!box) throw new Error("No frame");
   expect(box.width / box.height).toBeCloseTo(9 / 16, 2);
+  expect(box.height).toBeGreaterThan(600);
 });
 
 test("closing during a playing video pauses it at once and removes it", async ({
@@ -187,6 +189,23 @@ test("closing during a playing video pauses it at once and removes it", async ({
   });
   expect(paused).toBe(true);
   await expect(page.locator("video")).toHaveCount(0);
+});
+
+test("leaving a video before its first frame neither unmutes nor plays it", async ({
+  page,
+}) => {
+  await page.route("http://reuse.test/slow.webm", () => {});
+  await setup(page, "photo,slow,photo", {}, 0);
+  await step(page, "next");
+  await page.waitForTimeout(100);
+  await step(page, "next");
+  await page.waitForTimeout(500);
+  expect(
+    await page.evaluate(() => {
+      const video = document.querySelector("video");
+      return { paused: video?.paused, muted: video?.muted };
+    }),
+  ).toEqual({ paused: true, muted: false });
 });
 
 test("with autoplay off the video waits for a press", async ({ page }) => {

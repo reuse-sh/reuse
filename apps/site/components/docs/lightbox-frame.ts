@@ -108,7 +108,7 @@ ${chrome ?? ""}
       lightbox = createLightbox({
         className,
         icons: ICONS,
-        thumbnails: options.thumbnails,
+        thumbnails: options.thumbnails ? "bottom" : false,
         autoHide: false,
         label: "Photos",
         padding: window.innerWidth < 560 ? 12 : 24,${slots ? "\n        slots: chromeSlots(() => items, ICONS)," : ""}
