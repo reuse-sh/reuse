@@ -9,10 +9,11 @@ type Lightbox = {
   zoomTo(scale: number): void;
   getState(): { index: number };
 };
-type Window = typeof globalThis & {
-  lightbox: Lightbox;
-  marks: Record<string, number>;
-};
+type Window = globalThis.Window &
+  typeof globalThis & {
+    lightbox: Lightbox;
+    marks: Record<string, number>;
+  };
 
 type Reply = { delay?: number; status?: number };
 
@@ -321,7 +322,9 @@ test("bindLightboxGallery opens the file a link points to", async ({
     );
     Object.assign(window, {
       lightbox: bindLightboxGallery(root, { history: false }),
-      item: lightboxItemFromImage(root.querySelector("img")),
+      item: lightboxItemFromImage(
+        root.querySelector("img") as HTMLImageElement,
+      ),
     });
   });
   expect(

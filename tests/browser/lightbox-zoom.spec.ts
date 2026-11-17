@@ -22,7 +22,7 @@ type Lightbox = {
   zoomTo(scale: number, focus?: Point): void;
   close(): Promise<void>;
 };
-type Window = typeof globalThis & { lightbox: Lightbox };
+type Window = globalThis.Window & typeof globalThis & { lightbox: Lightbox };
 
 async function open(
   page: Page,

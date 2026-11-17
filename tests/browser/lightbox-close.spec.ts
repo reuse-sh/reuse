@@ -17,15 +17,16 @@ type Lightbox = {
   on(type: string, listener: () => void): () => void;
 };
 type Carousel = {
-  getState(): { index: number; isPlaying: boolean };
+  getState(): { index: number; isPlaying: boolean; count: number };
   pause(): void;
 };
-type Window = typeof globalThis & {
-  lightbox: Lightbox;
-  carousel: Carousel;
-  tiles: HTMLElement[];
-  closing?: Promise<void>;
-};
+type Window = globalThis.Window &
+  typeof globalThis & {
+    lightbox: Lightbox;
+    carousel: Carousel;
+    tiles: HTMLElement[];
+    closing?: Promise<void>;
+  };
 
 const styles = [
   "lightbox/base.css",

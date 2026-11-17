@@ -1,6 +1,7 @@
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 import { expect, type Page, test } from "@playwright/test";
+import type { LightboxItem } from "/modules/lightbox/index.js";
 import { mount, photo, swipe, tap } from "./harness";
 
 type Lightbox = {
@@ -9,7 +10,7 @@ type Lightbox = {
   close(): Promise<void>;
   getState(): { index: number; chrome: string };
 };
-type Window = typeof globalThis & { lightbox: Lightbox };
+type Window = globalThis.Window & typeof globalThis & { lightbox: Lightbox };
 
 // A stand-in for the YouTube player that keeps its state the way the iframe API reports it.
 const youtubeStub = `<!doctype html><script>
@@ -70,7 +71,7 @@ async function setup(
         clearInterval(paint);
         return URL.createObjectURL(new Blob(chunks, { type: "video/webm" }));
       };
-      const kinds: Record<string, () => Promise<unknown>> = {
+      const kinds: Record<string, () => Promise<LightboxItem>> = {
         photo: async () => ({ src: image, width: 1200, height: 800 }),
         video: async () => ({
           type: "video",

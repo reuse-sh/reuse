@@ -9,7 +9,8 @@ type Lightbox = {
   getState(): { index: number; isOpen: boolean; zoom: { scale: number } };
   on(type: string, listener: (event: { index: number }) => void): () => void;
 };
-type Window = typeof globalThis & { lightbox: Lightbox; changes: number[] };
+type Window = globalThis.Window &
+  typeof globalThis & { lightbox: Lightbox; changes: number[] };
 
 async function open(
   page: Page,

@@ -10,7 +10,7 @@ type Lightbox = {
     zoom: Zoom;
   };
 };
-type Window = typeof globalThis & { lightbox: Lightbox };
+type Window = globalThis.Window & typeof globalThis & { lightbox: Lightbox };
 
 const PADDING = 32;
 

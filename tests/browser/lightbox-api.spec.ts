@@ -1,17 +1,18 @@
 import { expect, type Page, test } from "@playwright/test";
 import { mount, photo } from "./harness";
 
-type Window = typeof globalThis & {
-  lightbox: {
-    open(items: unknown[], index?: number): void;
-    close(): Promise<void>;
-    next(): void;
-    append(items: unknown[]): void;
-    setOptions(options: { loop?: boolean }): void;
-    getState(): { index: number; count: number; isOpen: boolean };
+type Window = globalThis.Window &
+  typeof globalThis & {
+    lightbox: {
+      open(items: unknown[], index?: number): void;
+      close(): Promise<void>;
+      next(): void;
+      append(items: unknown[]): void;
+      setOptions(options: { loop?: boolean }): void;
+      getState(): { index: number; count: number; isOpen: boolean };
+    };
+    destroyed: number;
   };
-  destroyed: number;
-};
 
 async function open(
   page: Page,
