@@ -103,14 +103,18 @@ describe("lightbox lifecycle", () => {
       index: 2,
       count: 6,
     });
-    expect(dialog().querySelector("output")?.value).toBe("3 / 6");
+    expect(dialog().querySelector(".re-lightbox-counter")?.textContent).toBe(
+      "3 / 6",
+    );
     expect(dialog().querySelector(".re-lightbox-caption")?.textContent).toBe(
       "Caption 2",
     );
     expect(dialog().querySelectorAll(".re-lightbox-image")).toHaveLength(3);
     controller.next();
     expect(controller.getState().index).toBe(3);
-    expect(dialog().querySelector("output")?.value).toBe("4 / 6");
+    expect(dialog().querySelector(".re-lightbox-counter")?.textContent).toBe(
+      "4 / 6",
+    );
     expect(
       [
         ...dialog().querySelectorAll<HTMLImageElement>(".re-lightbox-image"),
@@ -161,7 +165,9 @@ describe("lightbox lifecycle", () => {
       zoom: { scale: 1, x: 0, y: 0 },
     });
     expect(viewport.scrollLeft).toBe(1024);
-    expect(dialog().querySelector("output")?.value).toBe("2 / 6");
+    expect(dialog().querySelector(".re-lightbox-counter")?.textContent).toBe(
+      "2 / 6",
+    );
   });
 
   it("jumps directly to distant images without traversing unloaded pages in either direction", () => {
@@ -179,7 +185,9 @@ describe("lightbox lifecycle", () => {
     });
     controller.goTo(5);
     expect(viewport.scrollLeft).toBe(5120);
-    expect(dialog().querySelector("output")?.value).toBe("6 / 6");
+    expect(dialog().querySelector(".re-lightbox-counter")?.textContent).toBe(
+      "6 / 6",
+    );
     expect(
       [
         ...dialog().querySelectorAll<HTMLImageElement>(".re-lightbox-image"),
@@ -193,7 +201,9 @@ describe("lightbox lifecycle", () => {
       index: 0,
       zoom: { scale: 1, x: 0, y: 0 },
     });
-    expect(dialog().querySelector("output")?.value).toBe("1 / 6");
+    expect(dialog().querySelector(".re-lightbox-counter")?.textContent).toBe(
+      "1 / 6",
+    );
   });
 
   it("finishes paging to the active image before disabling scroll for zoom", () => {
@@ -367,7 +377,9 @@ describe("lightbox lifecycle", () => {
       isClosing: false,
       index: 4,
     });
-    expect(dialog().querySelector("output")?.value).toBe("5 / 6");
+    expect(dialog().querySelector(".re-lightbox-counter")?.textContent).toBe(
+      "5 / 6",
+    );
     expect(document.querySelectorAll("dialog")).toHaveLength(1);
   });
 
@@ -470,19 +482,28 @@ describe("lightbox lifecycle", () => {
     expect(controller.getState().index).toBe(2);
   });
 
-  it("skips WAAPI travel for reduced motion", async () => {
+  it("fades in place for reduced motion, without moving or scaling the photo", async () => {
     reduced = true;
-    const animate = vi.fn(() => {
-      throw new Error("Reduced motion must not animate");
-    });
+    const animated: Keyframe[][] = [];
     Object.defineProperty(HTMLElement.prototype, "animate", {
       configurable: true,
-      value: animate,
+      value(frames: Keyframe[], timing: KeyframeAnimationOptions) {
+        animated.push(frames);
+        const finished = new Promise<void>((resolve) =>
+          setTimeout(resolve, Number(timing.duration)),
+        );
+        return { finished, cancel() {}, commitStyles() {} };
+      },
     });
     const controller = create({ duration: 280 });
     controller.open(gallery);
     await controller.close();
-    expect(animate).not.toHaveBeenCalled();
+    expect(animated.length).toBeGreaterThan(0);
+    expect(
+      animated
+        .flat()
+        .filter((frame) => "transform" in frame || "clipPath" in frame),
+    ).toEqual([]);
     delete (HTMLElement.prototype as { animate?: unknown }).animate;
   });
 
@@ -704,6 +725,7 @@ describe("lightbox lifecycle", () => {
         bubbles: true,
         cancelable: true,
         button: 0,
+        buttons: type === "pointerup" ? 0 : 1,
         clientX: x,
         clientY: y,
       });
@@ -860,7 +882,9 @@ describe("lightbox public API", () => {
       ),
     ).toEqual([]);
     expect(dialog().getAttribute("aria-label")).toBe("Bildergalerie");
-    expect(dialog().querySelector("output")?.value).toBe("1 von 3");
+    expect(dialog().querySelector(".re-lightbox-counter")?.textContent).toBe(
+      "1 von 3",
+    );
     expect(dialog().querySelector('[role="status"]')?.textContent).toBe(
       "Das Bild konnte nicht geladen werden.",
     );
@@ -1018,7 +1042,9 @@ describe("lightbox public API", () => {
     controller.append(gallery.slice(5));
     expect(controller.getState()).toMatchObject({ index: 4, count: 6 });
     expect(controller.getSlide(4)).toBe(current);
-    expect(dialog().querySelector("output")?.value).toBe("5 / 6");
+    expect(dialog().querySelector(".re-lightbox-counter")?.textContent).toBe(
+      "5 / 6",
+    );
     expect(
       dialog().querySelector<HTMLButtonElement>(".re-lightbox-next")?.disabled,
     ).toBe(false);
@@ -1159,5 +1185,190 @@ describe("lightbox public API", () => {
     expect((history.state as Record<string, unknown>).reuseLightbox).toEqual(
       expect.any(String),
     );
+  });
+});
+
+describe("lightbox chrome, taps and keys", () => {
+  const touch = (type: string, x = 512, y = 384, target?: Element) => {
+    const event = new MouseEvent(type, {
+      bubbles: true,
+      cancelable: true,
+      button: 0,
+      clientX: x,
+      clientY: y,
+    });
+    Object.defineProperties(event, {
+      pointerId: { value: 1 },
+      pointerType: { value: "touch" },
+    });
+    (target ?? dialog().querySelector(".re-lightbox-viewport"))?.dispatchEvent(
+      event,
+    );
+  };
+  const tap = (x = 512, y = 384) => {
+    touch("pointerdown", x, y);
+    touch("pointerup", x, y);
+  };
+  const key = (init: KeyboardEventInit) =>
+    dialog().dispatchEvent(
+      new KeyboardEvent("keydown", {
+        bubbles: true,
+        cancelable: true,
+        ...init,
+      }),
+    );
+
+  it("toggles the controls 300ms after a single tap, and a second tap brings them back", () => {
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout", "Date"] });
+    const controller = create();
+    controller.open(gallery);
+    tap();
+    vi.advanceTimersByTime(299);
+    expect(dialog().dataset.chrome).toBe("shown");
+    vi.advanceTimersByTime(1);
+    expect(dialog().dataset.chrome).toBe("hidden");
+    expect(controller.getState().chrome).toBe("hidden");
+    vi.advanceTimersByTime(500);
+    tap();
+    vi.advanceTimersByTime(300);
+    expect(controller.getState().chrome).toBe("shown");
+  });
+
+  it("zooms on a double tap without the single tap's toggle", () => {
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout", "Date"] });
+    const controller = create();
+    controller.open(gallery);
+    tap();
+    vi.advanceTimersByTime(120);
+    tap();
+    expect(controller.getState().zoom.scale).toBe(2.5);
+    expect(controller.getState().chrome).toBe("hidden");
+    vi.advanceTimersByTime(1000);
+    expect(controller.getState().chrome).toBe("hidden");
+    tap();
+    vi.advanceTimersByTime(100);
+    tap();
+    expect(controller.getState()).toMatchObject({
+      zoom: { scale: 1 },
+      chrome: "shown",
+    });
+    vi.advanceTimersByTime(1000);
+    expect(controller.getState().chrome).toBe("shown");
+  });
+
+  it("closes on a tap beside the photo, and on any tap with imageClick close", async () => {
+    const controller = create({ history: false });
+    controller.open(gallery);
+    const frame = dialog().querySelector<HTMLElement>(
+      '.re-lightbox-slide[aria-hidden="false"] .re-lightbox-frame',
+    );
+    if (!frame) throw new Error("Missing frame");
+    frame.getBoundingClientRect = () => new DOMRect(212, 159, 600, 450);
+    tap(512, 100);
+    expect(controller.getState().isClosing).toBe(true);
+    await controller.close();
+    const closer = create({ imageClick: "close", history: false });
+    closer.open(gallery);
+    tap();
+    expect(closer.getState()).toMatchObject({
+      isClosing: true,
+      zoom: { scale: 1 },
+    });
+  });
+
+  it("hides a still mouse's controls after autoHide and never with autoHide false", () => {
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+    const controller = create();
+    controller.open(gallery);
+    vi.advanceTimersByTime(2499);
+    expect(dialog().dataset.chrome).toBe("shown");
+    vi.advanceTimersByTime(1);
+    expect(dialog().dataset.chrome).toBe("hidden");
+    controller.destroy();
+    expect(vi.getTimerCount()).toBe(0);
+    const pinned = create({ autoHide: false });
+    pinned.open(gallery);
+    vi.advanceTimersByTime(10_000);
+    expect(dialog().dataset.chrome).toBe("shown");
+    expect(vi.getTimerCount()).toBe(0);
+  });
+
+  it("shows hidden controls on any key and pages with Home and End", () => {
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+    const controller = create();
+    controller.open(gallery, 2);
+    vi.advanceTimersByTime(2500);
+    expect(dialog().dataset.chrome).toBe("hidden");
+    key({ key: "Shift" });
+    expect(dialog().dataset.chrome).toBe("shown");
+    key({ key: "End" });
+    expect(controller.getState().index).toBe(5);
+    key({ key: "Home" });
+    expect(controller.getState().index).toBe(0);
+  });
+
+  it("closes on Escape while zoomed", () => {
+    const controller = create({ history: false });
+    controller.open(gallery);
+    controller.zoomTo(2);
+    dialog().dispatchEvent(new Event("cancel", { cancelable: true }));
+    expect(controller.getState().isClosing).toBe(true);
+  });
+
+  it("leaves keys with Alt, Ctrl or Meta to the browser", () => {
+    const controller = create();
+    controller.open(gallery, 2);
+    for (const modifier of ["altKey", "ctrlKey", "metaKey"]) {
+      key({ key: "ArrowRight", [modifier]: true });
+      key({ key: "=", [modifier]: true });
+    }
+    expect(controller.getState()).toMatchObject({
+      index: 2,
+      zoom: { scale: 1 },
+    });
+  });
+
+  it("shows one photo without arrows, counter or paging", () => {
+    const controller = create();
+    controller.open(gallery.slice(0, 1));
+    for (const selector of [
+      ".re-lightbox-prev",
+      ".re-lightbox-next",
+      ".re-lightbox-counter",
+    ])
+      expect(dialog().querySelector<HTMLElement>(selector)?.hidden).toBe(true);
+    controller.append(gallery.slice(1, 2));
+    expect(
+      dialog().querySelector<HTMLElement>(".re-lightbox-next")?.hidden,
+    ).toBe(false);
+  });
+
+  it("rewrites only the counter characters that change and announces the slide once in its own region", () => {
+    const controller = create();
+    controller.open(
+      Array.from({ length: 12 }, (_, i) => ({ ...gallery[0], src: `${i}` })),
+      8,
+    );
+    const counter = dialog().querySelector(".re-lightbox-counter");
+    const status = dialog().querySelector('[role="status"]');
+    expect(counter?.getAttribute("aria-hidden")).toBe("true");
+    expect(counter?.textContent).toBe("9 / 12");
+    const tail = [...(counter?.children ?? [])].slice(1);
+    controller.next();
+    expect(counter?.textContent).toBe("10 / 12");
+    expect([...(counter?.children ?? [])].slice(2)).toEqual(tail);
+    expect(status?.textContent).toBe("Image 10 of 12");
+    const nodes = [...(counter?.querySelectorAll("span") ?? [])].map(
+      (cell) => cell.firstChild,
+    );
+    controller.setOptions({ loop: true });
+    expect(
+      [...(counter?.querySelectorAll("span") ?? [])].map(
+        (cell) => cell.firstChild,
+      ),
+    ).toEqual(nodes);
+    expect(
+      dialog().querySelectorAll("[aria-live], [role=status]"),
+    ).toHaveLength(1);
   });
 });

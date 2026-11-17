@@ -133,14 +133,17 @@ export const libraries: Library[] = [
       [
         "Behave like the platform's photo viewer",
         "Gestures, keys and timing match iOS Photos, macOS Photos and Google Photos unless a recorded decision says otherwise.",
+        "tests/browser/lightbox-gestures.spec.ts",
       ],
       [
         "Dismiss like a photos app",
         "A vertical swipe carries the photo, fades the backdrop and the controls with it, and closes past a distance or a speed. A cancelled pointer never closes.",
+        "tests/browser/lightbox-gestures.spec.ts",
       ],
       [
         "Let the photo lead",
         "Controls fade in after the photo starts moving and leave before it. They hide while zoomed and after a still pointer, never while hovered or focused.",
+        "tests/browser/lightbox-gestures.spec.ts",
       ],
       [
         "Return to what is on screen",
@@ -166,7 +169,7 @@ export const libraries: Library[] = [
     api: [
       [
         "createLightbox(options?)",
-        "Creates a viewer. Options include loop, history, strings, slots, thumbnails, imageClick, doubleTapZoom, maxZoom, padding, className and icons, read again at every open.",
+        "Creates a viewer. Options include loop, history, strings, slots, thumbnails, imageClick, doubleTapZoom, autoHide, maxZoom, padding, className and icons, read again at every open.",
       ],
       [
         "bindLightboxGallery(root, options?)",
@@ -203,7 +206,8 @@ export const libraries: Library[] = [
       ["destroy()", "Removes listeners and restores the page."],
     ],
     notes: [
-      'A click on the image zooms by default. For a publishing gallery, set imageClick: "close" and doubleTapZoom: false.',
+      'A click on the image zooms by default, and a click beside it closes. On a phone a tap on the photo shows or hides the controls once the 300ms double-tap window passes, a double tap zooms, and a tap beside it closes. For a publishing gallery, set imageClick: "close", which also turns off the double tap.',
+      "A vertical swipe either way closes past 120px or 0.5px/ms, measured over the last 80ms before the finger lifts. The controls hide after autoHide ms of a still mouse, 2500 by default, and while zoomed, and come back on a key, a 24px move, or a tap. The open and close flights take --re-lightbox-open-duration and --re-lightbox-close-duration on the --re-lightbox-ease curve.",
       "Paging runs on the carousel package. Only the current and neighboring images stay loaded. Next and previous scroll smoothly, and a jump from a distant thumbnail fades through the backdrop so unloaded pages never flash past.",
       "Images are the core. Video, audio, iframe and HTML slides are separate modules: @reuse-sh/lightbox/video, /audio, /iframe, /html and /embed each export a content factory that you pass in the content option. An item picks its module by type; without one it is an image. The embed module turns YouTube and Vimeo links into players and registerEmbed adds more. HTML slides take a function that returns a Node, never an HTML string. Live Photos and HDR are not supported.",
       'For a page without a bundler or an import map, such as a theme or a plugin, load @reuse-sh/lightbox/browser/lightbox.js with <script type="module">. It is one minified ES module with a source map and the carousel inside. Each media module and the carousel link are separate files in the same folder that import lightbox.js by a relative path, so copy the folder whole.',

@@ -7,14 +7,15 @@ createLightbox(options?: LightboxOptions): Lightbox
 LightboxOptions:
 - container?: HTMLElement, where the dialog is appended, default document.body
 - label?: string, the dialog's accessible name, default strings.dialog
-- imageClick?: "zoom" | "close" | "none", default zoom
-- doubleTapZoom?: boolean, default true
+- imageClick?: "zoom" | "close" | "none", default zoom; what a mouse click or a finger tap on the photo does. A tap waits out the 300ms double-tap window and then shows or hides the controls; "close" closes at once and turns off the double tap. A click or tap beside the photo closes
+- doubleTapZoom?: boolean, default true, two taps within 300ms and 30px zoom
 - maxZoom?: number, default 4
 - tapZoom?: number, default 2.5, clamped between 1 and maxZoom
 - preload?: number, neighbors kept loaded on each side, 0 to 2, default 1
 - thumbnails?: boolean, default false; the active thumbnail stays centered in an overflowing strip
 - padding?: number, px around the fitted image, default 32
-- duration?: number, ms of the open and close flight, default 280
+- duration?: number, ms of both the open and the close flight; unset, they take --re-lightbox-open-duration (400ms) and --re-lightbox-close-duration (300ms)
+- autoHide?: number | false, default 2500, ms of a still mouse before the controls hide; false keeps them up
 - className?: string, added to the dialog
 - icons?: Partial<Record<"close" | "prev" | "next" | "zoom", () => Node>>
 - renderContent?: (context: LightboxContentContext) => undefined | (() => void), an overlay above the image; the returned function runs when the slide unloads
@@ -29,7 +30,7 @@ Every option except loop is read again at each open. loop is read when the contr
 
 LightboxItem: src, previewSrc?, width?, height?, alt?, caption?, thumbnailSrc?, origin? (HTMLElement | null).
 
-LightboxState: isOpen, isClosing, isAnimating, index, count, zoom, chrome. zoom is { scale, x, y } around the viewport center. isAnimating is true during a flight, a paging move or an animated zoom. chrome is "shown" | "hidden", also data-chrome on the dialog.
+LightboxState: isOpen, isClosing, isAnimating, index, count, zoom, chrome. zoom is { scale, x, y } around the viewport center. isAnimating is true during a flight, a paging move or an animated zoom. chrome is "shown" | "hidden", also data-chrome on the dialog. The controls hide after autoHide ms of a still mouse, on a zoom, at the start of a pinch and on a tap; a key, focus moving into them, a 24px mouse move from where they hid, a tap and a return to scale 1 show them. Nothing hides them while a control is hovered or has a visible focus.
 
 LightboxStrings: dialog ("Image gallery"), slide(index, count) ("Image 3 of 12"), counter(index, count) ("3 / 12"), close ("Close gallery"), previous ("Previous image"), next ("Next image"), zoomIn, zoomOut, fullscreenEnter, fullscreenExit, download, thumbnails ("Choose image"), thumbnail(index, count) ("Show image 3"), slideshowStart, slideshowStop, loading, error ("Image could not be loaded."), retry. index is zero-based.
 
@@ -59,9 +60,13 @@ bindLightboxGallery(root: HTMLElement, options?: LightboxOptions & { selector?: 
 
 lightboxItemFromImage(image: HTMLImageElement, source?: string): LightboxItem, reads data-lightbox-src, the current source, the natural size, alt and the image as origin.
 
-CSS files: @reuse-sh/lightbox/base.css holds the layout and states (positions, sizes, control visibility, cursors, reduced motion) without colors or fonts in @layer re.base, and is required. @reuse-sh/lightbox/theme.css holds the default dark theme in @layer re.theme. Theme colors, radii, sizes, insets and paddings are --re-lightbox-* custom properties. dist/unlayered/ holds both files without layers.
+CSS files: @reuse-sh/lightbox/base.css holds the layout and states (positions, sizes, control visibility, cursors, reduced motion) without colors or fonts in @layer re.base, and is required. @reuse-sh/lightbox/theme.css holds the default dark theme in @layer re.theme. Theme colors, radii, sizes, insets, paddings and the flight timing (--re-lightbox-open-duration, --re-lightbox-close-duration, --re-lightbox-ease) are --re-lightbox-* custom properties. Under reduced motion both flights fade in place in at most 150ms. The controls take their opacity from --re-lightbox-chrome-opacity, which base.css sets to 0 while they are hidden and the dismiss swipe lowers; a theme that sets a control's own opacity multiplies it by that property. dist/unlayered/ holds both files without layers.
 
-The viewer is a native modal dialog paged by @reuse-sh/carousel. Escape closes it. Keys act only while it is open. The React hook useLightbox(options) returns the same controller with its state; it belongs to the package and adds no second implementation. It applies changed options at the next open and a changed loop at once.
+The viewer is a native modal dialog paged by @reuse-sh/carousel. Escape closes it, also while zoomed. ArrowLeft and ArrowRight page, swapped on a right-to-left page, Home and End go to the first and last image, and +, - and 0 zoom; keys with Alt, Ctrl or Meta are left to the browser. Keys act only while it is open. One image shows no arrows and no counter. The visible counter is aria-hidden; a role="status" region says strings.slide(index, count) when the image changes.
+
+A touch or pen swipe that moves 10px more vertically than sideways carries the photo, scales it to 1 - 0.25 × progress, where progress is the distance over half the viewport height, and fades the backdrop to 1 - progress and the controls to 1 - 2 × progress. It closes past 120px or 0.5px/ms over the last 80ms before release, flying from where the photo is, and otherwise returns in --re-lightbox-open-duration. pointercancel never closes. A mouse drag never dismisses.
+
+Dialog attributes for styles: data-chrome, data-zoomed, data-zoomable, data-panning, and data-phase, one of entering, opening, open, dragging, returning and closing. The React hook useLightbox(options) returns the same controller with its state; it belongs to the package and adds no second implementation. It applies changed options at the next open and a changed loop at once.
 
 ## Planned
 

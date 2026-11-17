@@ -23,6 +23,9 @@
   --re-lightbox-error-padding: 24px;
   --re-lightbox-aside-width: 320px;
   --re-lightbox-aside-height: 40%;
+  --re-lightbox-open-duration: 400ms;
+  --re-lightbox-close-duration: 300ms;
+  --re-lightbox-ease: cubic-bezier(0.32, 0.72, 0, 1);
   color: var(--re-lightbox-foreground);
   font-family: inherit;
 }
@@ -49,8 +52,19 @@
 .re-lightbox-button:hover {
   background: var(--re-lightbox-control-hover);
 }
+.re-lightbox-button:active:not(:disabled) {
+  scale: 0.96;
+}
 .re-lightbox-button:disabled {
-  opacity: 0.3;
+  opacity: calc(0.3 * var(--re-lightbox-chrome-opacity, 1));
+}
+.re-lightbox-close {
+  transition: rotate 300ms ease;
+}
+@media (hover: hover) and (prefers-reduced-motion: no-preference) {
+  .re-lightbox-close:hover {
+    rotate: 90deg;
+  }
 }
 .re-lightbox-button:focus-visible,
 .re-lightbox-thumbnails button:focus-visible {
