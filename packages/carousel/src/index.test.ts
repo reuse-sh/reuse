@@ -334,6 +334,29 @@ describe("native carousel", () => {
     expect(vi.getTimerCount()).toBe(0);
   });
 
+  it("keeps the momentum of a flick whose release is handled late", () => {
+    const { viewport } = fixture([100, 100, 100, 100, 100, 100]);
+    const carousel = createCarousel(viewport);
+    cleanups.push(carousel.destroy);
+    pointer(viewport, "pointerdown", 300);
+    vi.advanceTimersByTime(16);
+    pointer(window, "pointermove", 290);
+    vi.advanceTimersByTime(16);
+    pointer(window, "pointermove", 270);
+    vi.advanceTimersByTime(16);
+    pointer(window, "pointermove", 250);
+    const release = new Event("pointerup", { bubbles: true });
+    Object.assign(release, {
+      pointerId: 1,
+      pointerType: "mouse",
+      clientX: 250,
+    });
+    Object.defineProperty(release, "timeStamp", { value: performance.now() });
+    vi.advanceTimersByTime(120);
+    window.dispatchEvent(release);
+    expect(carousel.getState().index).toBe(4);
+  });
+
   it("stretches a mouse drag past either end and springs back after release", () => {
     const { viewport, slides } = fixture();
     slides[0].style.transform = "rotate(1deg)";
