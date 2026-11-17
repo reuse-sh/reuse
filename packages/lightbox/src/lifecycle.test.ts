@@ -1614,15 +1614,21 @@ describe("lightbox chrome, taps and keys", () => {
     expect(controller.getState().index).toBe(3);
   });
 
-  it("drops the zoom at once on a resize and when the photo changes", () => {
+  it("keeps the zoom across a resize and drops it when the photo changes", () => {
+    vi.useFakeTimers({
+      toFake: ["requestAnimationFrame", "cancelAnimationFrame"],
+    });
     const controller = create();
     controller.open(gallery, 2);
     controller.zoomTo(2, { x: 100, y: 50 });
+    const zoomed = controller.getState().zoom;
     window.dispatchEvent(new Event("resize"));
-    expect(controller.getState().zoom).toEqual({ scale: 1, x: 0, y: 0 });
+    window.dispatchEvent(new Event("resize"));
+    vi.advanceTimersByTime(32);
+    vi.useRealTimers();
+    expect(controller.getState().zoom).toEqual(zoomed);
+    expect(zoomed.scale).toBe(2);
     const frame = dialog().querySelectorAll<HTMLElement>(".re-lightbox-frame");
-    expect(frame[1].style.transform).toBe("translate(0px, 0px) scale(1)");
-    controller.zoomTo(2, { x: 100, y: 50 });
     controller.next();
     expect(frame[1].style.transform).toBe("");
     expect(controller.getState().zoom).toEqual({ scale: 1, x: 0, y: 0 });

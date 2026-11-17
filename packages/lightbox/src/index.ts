@@ -271,6 +271,7 @@ type Session = {
   watchedScale: number;
   sharpScale: number;
   rest?: Zoom;
+  resizeFrame?: number;
   sharpTimer?: ReturnType<typeof setTimeout>;
   fade?: {
     animation?: Animation;
@@ -407,6 +408,21 @@ const ZOOM_IDLE = 150;
 const SPINNER_SIZE = 32;
 
 type Pinned = { index: number; zoom: Zoom; left: boolean; right: boolean };
+
+// A node from another document's window fails instanceof against this window's classes.
+function isNode(value: unknown): value is Node {
+  return typeof (value as Node | null)?.nodeType === "number";
+}
+
+function isElement(value: unknown): value is Element {
+  return isNode(value) && value.nodeType === 1;
+}
+
+function isHTMLElement(value: unknown): value is HTMLElement {
+  return (
+    isElement(value) && value.namespaceURI === "http://www.w3.org/1999/xhtml"
+  );
+}
 
 function sameZoom(a: Zoom, b: Zoom) {
   return a.scale === b.scale && a.x === b.x && a.y === b.y;
@@ -593,8 +609,7 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
     const active = s.dialog.ownerDocument.activeElement;
     return s.chromeRoots.some((root) => {
       if (s.chrome.lastPointerIsMouse && root.matches(":hover")) return true;
-      if (!(active instanceof Element) || active === s.openingFocus)
-        return false;
+      if (!isElement(active) || active === s.openingFocus) return false;
       if (!root.contains(active)) return false;
       try {
         return active.matches(":focus-visible");
@@ -1134,6 +1149,40 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
     applyZoom(s);
   }
 
+  function resized(s: Session) {
+    s.resizeFrame = undefined;
+    if (session !== s) return;
+    cancelAnimations(s);
+    const before = state.zoom;
+    const from = fit(state.index, s);
+    const resting = s.rest !== undefined && sameZoom(before, s.rest);
+    s.box = measure(s.viewport);
+    s.pinned = undefined;
+    if (resting) updateState({ zoom: restZoom(s, state.index) });
+    else {
+      const to = fit(state.index, s);
+      const range = limits(s);
+      const scale = clamp(before.scale, range.min, range.max);
+      const ratio = scale / before.scale;
+      updateState({
+        zoom: boundZoom(
+          {
+            scale,
+            x: ((before.x * to.width) / from.width) * ratio,
+            y: ((before.y * to.height) / from.height) * ratio,
+          },
+          to,
+          view(s),
+        ),
+      });
+    }
+    layout(s);
+    syncingCarousel = true;
+    s.carousel.goTo(state.index, "instant");
+    syncingCarousel = false;
+    if (!sameZoom(before, state.zoom)) publish({});
+  }
+
   function visibleRange(s: Session) {
     const width = s.viewport.clientWidth;
     const rtl =
@@ -1551,9 +1600,11 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
     clearTimeout(s.sharpTimer);
     clearTimeout(s.chromeTimer);
     clearTimeout(s.tapTimer);
-    if (s.motion)
-      s.dialog.ownerDocument.defaultView?.cancelAnimationFrame(s.motion.frame);
+    const win = s.dialog.ownerDocument.defaultView;
+    if (s.motion) win?.cancelAnimationFrame(s.motion.frame);
     s.motion = undefined;
+    if (s.resizeFrame !== undefined) win?.cancelAnimationFrame(s.resizeFrame);
+    s.resizeFrame = undefined;
     finishFade(s, false);
     cancelAnimations(s);
     s.carousel.destroy();
@@ -1985,7 +2036,7 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
         if (
           event.button !== 0 ||
           state.isClosing ||
-          (event.target instanceof Element &&
+          (isElement(event.target) &&
             event.target.closest(
               "button, a, input, textarea, select, [data-lightbox-interactive]",
             ))
@@ -2234,7 +2285,7 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
       "dragstart",
       (event) => {
         if (
-          !(event.target instanceof Element) ||
+          !isElement(event.target) ||
           !event.target.matches(".re-lightbox-image")
         )
           return;
@@ -2257,7 +2308,7 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
       (event) => {
         if (
           settings.protect &&
-          event.target instanceof Element &&
+          isElement(event.target) &&
           event.target.matches(".re-lightbox-image")
         )
           event.preventDefault();
@@ -2270,7 +2321,7 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
         if (Date.now() < s.suppressClickUntil || state.isClosing) return;
         const target = event.target;
         if (
-          !(target instanceof Element) ||
+          !isElement(target) ||
           target.closest(
             "[data-lightbox-interactive],button,a,input,textarea,select",
           )
@@ -2636,8 +2687,9 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
       );
     };
     makeThumbs();
-    const previousFocus =
-      doc.activeElement instanceof HTMLElement ? doc.activeElement : null;
+    const previousFocus = isHTMLElement(doc.activeElement)
+      ? doc.activeElement
+      : null;
     (settings.container ?? doc.body).append(dialog);
     const restoreScroll = lockScroll(doc);
     try {
@@ -2743,7 +2795,7 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
         chromeInput(s, { type: "key" });
         if (
           event.defaultPrevented ||
-          (event.target instanceof Element &&
+          (isElement(event.target) &&
             event.target.closest(
               "input,textarea,select,[contenteditable=true],[data-lightbox-interactive]",
             ))
@@ -2798,13 +2850,9 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
     doc.defaultView?.addEventListener(
       "resize",
       () => {
-        cancelAnimations(s);
-        s.box = measure(viewport);
-        s.pinned = undefined;
-        const before = state.zoom;
-        updateState({ zoom: restZoom(s, state.index) });
-        layout(s);
-        if (!sameZoom(before, state.zoom)) publish({});
+        s.resizeFrame ??= doc.defaultView?.requestAnimationFrame(() =>
+          resized(s),
+        );
       },
       { signal: abort.signal },
     );
@@ -2878,7 +2926,7 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
         const target = event.target;
         if (
           target !== s.openingFocus &&
-          target instanceof Node &&
+          isNode(target) &&
           s.chromeRoots.some((root) => root.contains(target))
         )
           chromeInput(s, { type: "focus" });
@@ -3197,7 +3245,10 @@ export function bindLightboxGallery(
     items?: (root: HTMLElement) => readonly LightboxItem[];
   } = {},
 ) {
-  const controller = createLightbox(options);
+  const controller = createLightbox({
+    ...options,
+    container: options.container ?? root.ownerDocument.body,
+  });
   const click = (event: MouseEvent) => {
     if (
       event.defaultPrevented ||
@@ -3209,7 +3260,7 @@ export function bindLightboxGallery(
     )
       return;
     const target = event.target;
-    if (!(target instanceof Element)) return;
+    if (!isElement(target)) return;
     const images = [
       ...root.querySelectorAll<HTMLImageElement>(options.selector || "img"),
     ];
