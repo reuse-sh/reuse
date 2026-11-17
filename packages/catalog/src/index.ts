@@ -1,6 +1,7 @@
 import type { UsagePlatform } from "./usage-types.js";
 
 export { type GestureRow, lightboxGestures } from "./gestures.js";
+export { lightboxShareSlot } from "./share.js";
 /** A name and its explanation: an API entry or a principle. */
 export type Row = readonly [name: string, text: string];
 
@@ -255,7 +256,7 @@ export const libraries: Library[] = [
       "Give an item a srcset and the viewer picks the file: it sets sizes to the photo's shown width, or uses yours, and 150ms after a zoom comes to rest asks for the zoomed width, swapping the file in only once it has decoded and never for a smaller one. While the photo flies open it shows the tile's loaded pixels or previewSrc. The current photo loads at high fetch priority and its neighbors at low priority once it has decoded, and Save-Data skips the neighbors. A photo still loading after 300ms shows a spinner from @reuse-sh/loaders over the --re-lightbox-placeholder background, and a failed one shows strings.error with a strings.retry button.",
       "Images are the core. Video, audio, iframe and HTML slides are separate modules: @reuse-sh/lightbox/video, /audio, /iframe, /html and /embed export video(), audio(), iframe(), html() and embed(), which you pass in the content option. An item picks its module by type; without one it is an image. The embed module turns YouTube (youtube-nocookie.com, Shorts at 9:16) and Vimeo links into players and registerEmbed adds more. Only the current slide plays: leaving it pauses the player, close pauses every one, and a player starts by itself only the first time it shows, when autoplay is on and a click opened the viewer, muted if the browser refuses sound. Over a player the pointer belongs to the player, and paging works from the 24px beside it and the arrows. HTML slides take a function that returns a Node, never an HTML string. Live Photos and HDR are not supported.",
       'For a page without a bundler or an import map, such as a theme or a plugin, load @reuse-sh/lightbox/browser/lightbox.js with <script type="module">. It is one minified ES module with a source map and the carousel inside. Each media module is a separate file in the same folder, audio.js loads video.js and embed.js loads iframe.js, and the carousel link is carousel-link.js beside them, so copy the folder whole.',
-      "Styles come in two files: base.css holds the layout and states in @layer re.base and is required, and theme.css holds the default dark theme in @layer re.theme. Other themes sit in themes/. Every theme value is a --re-lightbox-* custom property. dist/unlayered/ holds the same files without layers for sites whose own unlayered styles would win.",
+      "Styles come in two files: base.css holds the layout and states in @layer re.base and is required, and theme.css holds the default dark theme in @layer re.theme. themes/dark.css, light.css, page.css and photos.css load after theme.css and change only its custom properties: page follows --re-lightbox-page, and photos is white with a black room while the controls are hidden. Every theme value is a --re-lightbox-* custom property. dist/unlayered/ holds the same files without layers for sites whose own unlayered styles would win.",
       "Every visible and spoken text comes from the strings option, such as counter(index, count) and close, with English defaults, so a translation passes only the strings it changes.",
       "Slots add your own controls: toolbarStart, toolbarEnd, footer and aside each take a function that returns a node with optional update(state) and destroy(). Slot buttons take the theme's look with the re-lightbox-button class and hide with the other controls. Share is not built in; build it as a slot.",
       "Events: on(type, listener) reports open, opened, change, settle, beforeclose and closed. beforeclose runs before the close flight is measured, and preventDefault() keeps the viewer open.",
@@ -267,6 +268,16 @@ export const libraries: Library[] = [
         path: "getting-started",
         title: "Getting started",
         lead: "Install the package, import the stylesheet once, then bind the viewer to the element that holds your images.",
+      },
+      {
+        path: "themes",
+        title: "Themes",
+        lead: "Four themes for the room and the controls, each a stylesheet of custom properties, and four looks built from a theme, slots and options.",
+      },
+      {
+        path: "gestures",
+        title: "Gestures",
+        lead: "What each gesture and key does in the lightbox, beside iOS Photos, macOS Photos and Google Photos.",
       },
       {
         title: "Examples",

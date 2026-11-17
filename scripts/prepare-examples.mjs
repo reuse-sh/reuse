@@ -28,12 +28,16 @@ for (const name of [
 ]) {
   const directory = resolve(modules, name);
   await mkdir(directory, { recursive: true });
-  for (const entry of await readdir(resolve(root, "packages", name, "dist"))) {
+  for (const entry of await readdir(resolve(root, "packages", name, "dist"), {
+    recursive: true,
+  })) {
+    if (entry.startsWith("unlayered") || entry.startsWith("browser")) continue;
     if (
       (!entry.endsWith(".js") && !entry.endsWith(".css")) ||
       entry.startsWith("react")
     )
       continue;
+    await mkdir(dirname(resolve(directory, entry)), { recursive: true });
     await copyFile(
       resolve(root, "packages", name, "dist", entry),
       resolve(directory, entry),

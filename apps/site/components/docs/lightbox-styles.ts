@@ -271,17 +271,6 @@ const rules: readonly (readonly [(o: LightboxStyle) => boolean, string])[] = [
 .re-lightbox-style-panel-text { color: rgb(255 255 255 / 70%); }`,
   ],
   [
-    (o) => o.autoHide,
-    `.re-lightbox-style :is(.re-lightbox-button, .re-lightbox-counter, .re-lightbox-caption, .re-lightbox-thumbnails, .re-lightbox-style-toolbar) {
-  transition: opacity 400ms ease, background-color 150ms ease, transform 160ms cubic-bezier(0.23, 1, 0.32, 1);
-}
-.re-lightbox-style[data-idle], .re-lightbox-style[data-idle] .re-lightbox-frame { cursor: none; }
-.re-lightbox-style[data-idle] :is(.re-lightbox-button, .re-lightbox-counter, .re-lightbox-caption, .re-lightbox-thumbnails, .re-lightbox-style-toolbar) {
-  opacity: 0;
-  transition-duration: 700ms;
-}`,
-  ],
-  [
     always,
     `@media (max-width: 559px) {
   .re-lightbox-style { --re-lightbox-pad: 12px; }
@@ -336,13 +325,12 @@ export function lightboxStyleCss(options: LightboxStyle) {
 /**
  * The chrome module one style needs, as module source, or null when the package's
  * own controls and options are enough. chromeSlots(getItems, icons) returns the
- * slots option; hideWhenIdle(lightbox) returns its cleanup.
+ * slots option.
  */
 export function lightboxChrome(options: LightboxStyle) {
   const bar = hasBar(options);
   const panel = options.caption === "Panel";
-  const idle = options.autoHide;
-  if (!bar && !panel && !idle) return null;
+  if (!bar && !panel) return null;
   const modules: string[] = [];
   const slots: string[] = [];
   if (bar) {
@@ -375,9 +363,8 @@ export function lightboxChrome(options: LightboxStyle) {
       }${
         options.counter === "Toolbar"
           ? `
-      const counter = document.createElement("output");
-      counter.className = "re-lightbox-counter";
-      counter.setAttribute("aria-live", "polite");`
+      const counter = document.createElement("span");
+      counter.className = "re-lightbox-counter";`
           : ""
       }
       bar.append(${order.join(", ")});${
@@ -401,7 +388,7 @@ export function lightboxChrome(options: LightboxStyle) {
         }${
           options.counter === "Toolbar"
             ? `
-          counter.value = \`\${state.index + 1} / \${state.count}\`;`
+          counter.textContent = \`\${state.index + 1} / \${state.count}\`;`
             : ""
         }${
           options.zoomButton
@@ -443,47 +430,16 @@ export function lightboxChrome(options: LightboxStyle) {
 ${slots.join("\n")}
   };
 }`);
-  if (idle)
-    modules.push(`export function hideWhenIdle(lightbox) {
-  const types = ["pointermove", "pointerdown", "keydown", "wheel"];
-  let dialog = null;
-  let timer = 0;
-  const wake = () => {
-    dialog?.removeAttribute("data-idle");
-    clearTimeout(timer);
-    timer = setTimeout(() => dialog?.setAttribute("data-idle", ""), 2000);
-  };
-  const release = () => {
-    clearTimeout(timer);
-    for (const type of types) dialog?.removeEventListener(type, wake);
-    dialog = null;
-  };
-  const stopOpen = lightbox.on("open", (event) => {
-    release();
-    dialog = event.slide?.closest("dialog") ?? null;
-    for (const type of types) dialog?.addEventListener(type, wake, { passive: true });
-    wake();
-  });
-  const stopClosed = lightbox.on("closed", release);
-  return () => {
-    stopOpen();
-    stopClosed();
-    release();
-  };
-}`);
   return modules.join("\n\n");
 }
 
 export function lightboxCode(options: LightboxStyle) {
   const chromeSource = lightboxChrome(options);
   const slots = chromeSource?.includes("chromeSlots") ?? false;
-  const idle = chromeSource?.includes("hideWhenIdle") ?? false;
-  const names = [slots && "chromeSlots", idle && "hideWhenIdle"].filter(
-    Boolean,
-  );
+  const names = slots ? ["chromeSlots"] : [];
   const lines = (items: string) => [
     ...(options.thumbnails ? ['thumbnails: "bottom",'] : []),
-    "autoHide: false,",
+    ...(options.autoHide ? ["autoHide: 2000,"] : []),
     `className: "${LIGHTBOX_STYLE_CLASS}",`,
     ...(slots ? [`slots: chromeSlots(${items}),`] : []),
   ];
@@ -514,12 +470,12 @@ const getItem = (image) => ({
 const lightbox = bindLightboxGallery(gallery, {
 ${body("  ", "items")}
   getItem,
-});${idle ? "\nconst stopIdle = hideWhenIdle(lightbox);" : ""}`,
+});`,
     react: `"use client";
 
 import type { LightboxItem } from "@reuse-sh/lightbox";
 import { useLightbox } from "@reuse-sh/lightbox/react";
-import { ${idle ? "useEffect, " : ""}useRef } from "react";
+import { useRef } from "react";
 ${imports}
 
 const photos: LightboxItem[] = [
@@ -530,7 +486,7 @@ const photos: LightboxItem[] = [
 export function Gallery() {
   const lightbox = useLightbox({
 ${body("    ", "() => photos")}
-  });${idle ? "\n  const { on } = lightbox;\n  useEffect(() => hideWhenIdle({ on }), [on]);" : ""}
+  });
   const root = useRef<HTMLDivElement>(null);
   const open = (index: number) => {
     const images = root.current?.querySelectorAll<HTMLImageElement>("img");
@@ -553,6 +509,6 @@ ${body("    ", "() => photos")}
 }`,
     css: lightboxStyleCss(options),
     chrome: chromeSource,
-    cleanup: `${idle ? "stopIdle();\n" : ""}lightbox.destroy();`,
+    cleanup: "lightbox.destroy();",
   };
 }

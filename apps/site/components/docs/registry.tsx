@@ -1,10 +1,13 @@
-import type { Library } from "@reuse-sh/catalog";
+import { type Library, lightboxShareSlot } from "@reuse-sh/catalog";
 import type { ReactNode } from "react";
 import { Kbd } from "@/components/ui/typography";
+import { CodeBlock } from "../shell/code-block";
 import { DeviceCheck } from "./device-check";
 import type { DocIconName } from "./doc-icon";
+import { LightboxGesturesPage } from "./lightbox-gestures-page";
 import { LightboxStylePage } from "./lightbox-style-page";
-import { ApiTable, Keys, Principles } from "./parts";
+import { LightboxThemesPage } from "./lightbox-themes-page";
+import { ApiTable, C, Keys, Principles, Section, Text } from "./parts";
 
 const icons: Record<string, DocIconName[]> = {
   lightbox: [
@@ -113,7 +116,32 @@ export function docBody(
   path: string,
   example?: ReactNode,
 ): ReactNode {
+  if (path === "api" && library.slug === "lightbox")
+    return (
+      <>
+        <ApiTable rows={library.api} />
+        <Section title="A share button in a slot">
+          <Text>
+            Share is not built in. This <C>toolbarEnd</C> slot opens the system
+            share sheet where <C>navigator.share</C> exists, and otherwise a
+            menu with the photo's link and a copy button from{" "}
+            <C>@reuse-sh/interactions</C>. While the menu is open,{" "}
+            <C>aria-expanded</C> holds the slideshow.
+          </Text>
+          <CodeBlock
+            tabs={{ code: lightboxShareSlot, lang: "ts" }}
+            caption="Share slot"
+            snippetId="lightbox-share-slot"
+            codeRole="setup"
+          />
+        </Section>
+      </>
+    );
   if (path === "api") return <ApiTable rows={library.api} />;
+  if (path === "themes" && library.slug === "lightbox")
+    return <LightboxThemesPage />;
+  if (path === "gestures" && library.slug === "lightbox")
+    return <LightboxGesturesPage />;
   if (path === "examples/device-check" && library.slug === "lightbox")
     return <DeviceCheck />;
   if (path.startsWith("controls/") && library.slug === "lightbox")
