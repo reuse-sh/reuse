@@ -963,6 +963,14 @@ describe("lightbox public API", () => {
       zoom: { scale: 1 },
     });
     expect(dialog().dataset.zoomed).toBe("false");
+    controller.setOptions({ loop: true });
+    controller.zoomTo(2);
+    controller.append(gallery.slice(0, 1));
+    expect(controller.getState()).toMatchObject({
+      index: 3,
+      count: 7,
+      zoom: { scale: 1 },
+    });
   });
 
   it("mounts slots in their places, updates them with the state and destroys them once", async () => {
@@ -1102,6 +1110,32 @@ describe("lightbox public API", () => {
     expect(
       (history.state as Record<string, unknown> | null)?.reuseLightbox,
     ).not.toBe(entry);
+  });
+
+  it("reports closed once the back lands, or before a new open, and stops when a closed listener destroys", async () => {
+    await new Promise((resolve) => setTimeout(resolve, 10));
+    const controller = create();
+    const events: string[] = [];
+    for (const type of ["open", "closed"] as const)
+      controller.on(type, (event) => events.push(event.type));
+    controller.open(gallery, 0);
+    void controller.close();
+    for (let tick = 0; tick < 5; tick++) await Promise.resolve();
+    expect(controller.getState().isOpen).toBe(false);
+    expect(events).toEqual(["open"]);
+    controller.open(gallery, 1);
+    expect(events).toEqual(["open", "closed", "open"]);
+    dialog().close();
+    expect(events).toEqual(["open", "closed", "open"]);
+    await vi.waitFor(() =>
+      expect(events).toEqual(["open", "closed", "open", "closed"]),
+    );
+    const destroying = create({ history: false });
+    destroying.on("closed", () => destroying.destroy());
+    destroying.open(gallery, 0);
+    destroying.open(gallery, 1);
+    expect(document.querySelector("dialog")).toBeNull();
+    expect(document.body.style.overflow).toBe("");
   });
 
   it("waits for a back on its way instead of closing the next lightbox or going back twice", async () => {

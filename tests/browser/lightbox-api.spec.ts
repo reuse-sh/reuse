@@ -250,3 +250,22 @@ test("in RTL an aside keeps the arrow and the footer beside it, and the active t
     Math.abs(thumb.x + thumb.width / 2 - (strip.x + strip.width / 2)),
   ).toBeLessThan(2);
 });
+
+test("inside a frame the lightbox leaves the page's history alone unless history is set", async ({
+  page,
+}) => {
+  await mount(page, '<iframe srcdoc="<body></body>"></iframe>');
+  const frame = page.frames()[1];
+  const result = await frame.evaluate(async (src) => {
+    const { createLightbox } = await import(
+      "http://reuse.test/modules/lightbox/browser/lightbox.js"
+    );
+    const length = history.length;
+    const lightbox = createLightbox({ duration: 0 });
+    lightbox.open([{ src, width: 1200, height: 800 }]);
+    const opened = history.length;
+    await lightbox.close();
+    return { length, opened };
+  }, photo(1));
+  expect(result.opened).toBe(result.length);
+});

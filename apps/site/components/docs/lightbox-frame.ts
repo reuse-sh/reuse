@@ -105,14 +105,12 @@ ${chrome ?? ""}
     function render({ animate = false } = {}) {
       teardown();
       again.hidden = true;
-      // The frame shares the page's session history, so Back stays with the docs page.
       lightbox = createLightbox({
         className,
         icons: ICONS,
         thumbnails: options.thumbnails,
         label: "Photos",
-        padding: window.innerWidth < 560 ? 12 : 24,
-        history: false,${slots ? "\n        slots: chromeSlots(() => items, ICONS)," : ""}
+        padding: window.innerWidth < 560 ? 12 : 24,${slots ? "\n        slots: chromeSlots(() => items, ICONS)," : ""}
       });${idle ? "\n      stopIdle = hideWhenIdle(lightbox);" : ""}
       withoutFocus(() => lightbox.open(items, index));
       const dialog = document.querySelector("dialog.${LIGHTBOX_STYLE_CLASS}");

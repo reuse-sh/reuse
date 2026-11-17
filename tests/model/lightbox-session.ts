@@ -126,6 +126,8 @@ export function lightboxSession(): World {
       time: async () => {
         vi.advanceTimersToNextTimer();
         await Promise.resolve();
+        // jsdom lands history traversals on setImmediate, which stays real.
+        await new Promise((resolve) => setImmediate(resolve));
       },
     },
     checks: {

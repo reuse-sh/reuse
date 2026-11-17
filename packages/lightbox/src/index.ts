@@ -345,6 +345,7 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
   let destroyed = false;
   let syncingCarousel = false;
   let closePromise: Promise<void> | undefined;
+  let pendingClosed: (() => void) | undefined;
   let state: LightboxState = {
     isOpen: false,
     isClosing: false,
@@ -399,7 +400,7 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
     for (const slot of session?.slots ?? []) slot.update?.(state);
   }
 
-  function emit(type: LightboxEventName, s = session) {
+  function emit(type: LightboxEventName, s: Session | null) {
     let prevented = false;
     const event: LightboxEvent = {
       type,
@@ -1287,8 +1288,10 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
     );
   }
 
+  // A frame shares the page's session history but sees none of the page's entries, so it opts in.
   function enterHistory(win: Window) {
-    if (settings.history === false) return;
+    if (settings.history === false || (!settings.history && win.top !== win))
+      return;
     if (historyWindow !== win) {
       historyWindow?.removeEventListener("popstate", onPopState);
       historyWindow = win;
@@ -1352,10 +1355,12 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
       (typeof document === "undefined" ? undefined : document);
     if (!doc?.body)
       throw new Error("Opening a lightbox needs a browser document.");
+    pendingClosed?.();
     if (session) {
       teardown(session);
-      emit("closed", undefined);
+      emit("closed", null);
     }
+    if (destroyed) return;
     items = nextItems;
     sources = [...input];
     closePromise = undefined;
@@ -1555,8 +1560,7 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
           isAnimating: false,
           zoom: { ...identity },
         });
-        leaveHistory();
-        emit("closed", undefined);
+        void reportClosed(leaveHistory());
       },
       { signal: abort.signal },
     );
@@ -1654,9 +1658,22 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
     return closeSession(false);
   }
 
+  // closed waits for the history back, unless open() or destroy() comes first.
+  function reportClosed(landing: Promise<void>) {
+    let reported = false;
+    const report = () => {
+      if (reported) return;
+      reported = true;
+      if (pendingClosed === report) pendingClosed = undefined;
+      emit("closed", null);
+    };
+    pendingClosed = report;
+    return landing.then(report);
+  }
+
   function closeSession(fromHistory: boolean): Promise<void> {
     const s = session;
-    if (!s) return Promise.resolve();
+    if (!s) return closePromise ?? Promise.resolve();
     if (closePromise) return closePromise;
     if (vetting) return Promise.resolve();
     vetting = true;
@@ -1673,7 +1690,8 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
     if (session !== s || closePromise) return closePromise ?? Promise.resolve();
     cancelAnimations(s);
     publish({ isClosing: true });
-    closePromise = (async () => {
+    let closing: Promise<void> | undefined;
+    closing = (async () => {
       await Promise.all([
         morph(s, true),
         animate(
@@ -1685,7 +1703,6 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
       ]);
       if (session !== s) return;
       teardown(s);
-      closePromise = undefined;
       publish({
         isOpen: false,
         isClosing: false,
@@ -1693,10 +1710,11 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
         zoom: { ...identity },
       });
       if (fromHistory) releaseHistory();
-      else await leaveHistory();
-      emit("closed", undefined);
+      await reportClosed(fromHistory ? Promise.resolve() : leaveHistory());
+      if (closePromise === closing) closePromise = undefined;
     })();
-    return closePromise;
+    closePromise = closing;
+    return closing;
   }
 
   function setItems(input: readonly LightboxItem[], index?: number) {
@@ -1774,7 +1792,7 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
     s.makeThumbs();
     s.centeredThumb = Number.NaN;
     const changed = target !== state.index;
-    if ((changed || !kept) && state.zoom.scale > 1) {
+    if ((changed || !kept || s.carouselLoops) && state.zoom.scale > 1) {
       updateState({ zoom: { ...identity } });
       applyZoom(s);
     }
@@ -1830,6 +1848,7 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
     destroy: () => {
       if (destroyed) return;
       destroyed = true;
+      pendingClosed?.();
       const s = session;
       if (s) teardown(s);
       closePromise = undefined;
@@ -1839,7 +1858,7 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
         isAnimating: false,
         zoom: { ...identity },
       });
-      if (s) emit("closed", undefined);
+      if (s) emit("closed", null);
       const win = historyWindow;
       if (win && ownsHistory(win)) goBack(win);
       win?.removeEventListener("popstate", onPopState);

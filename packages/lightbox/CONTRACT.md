@@ -19,7 +19,7 @@ LightboxOptions:
 - icons?: Partial<Record<"close" | "prev" | "next" | "zoom", () => Node>>
 - renderContent?: (context: LightboxContentContext) => undefined | (() => void), an overlay above the image; the returned function runs when the slide unloads
 - loop?: boolean, default false, no effect for one item. Pages through the carousel loop while the slides cover the viewport, and through the fade otherwise
-- history?: boolean, default true, one history entry without a URL change; Back closes the lightbox with the usual flight, another close goes back only when the top entry is the lightbox's own, and opening again adds no entry
+- history?: boolean, default true at the top level and false in a frame, one history entry without a URL change; Back closes the lightbox with the usual flight, another close goes back only when the top entry is the lightbox's own, and opening again adds no entry
 - strings?: Partial<LightboxStrings>
 - slots?: Partial<Record<LightboxSlotName, LightboxSlot>>
 - getOrigin?: (index: number) => HTMLElement | null, the tile for an index, before item.origin
