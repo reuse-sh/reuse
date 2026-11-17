@@ -457,16 +457,21 @@ export function createCarousel(
     return first;
   }
 
-  function dragVelocity(samples: { time: number; position: number }[]) {
+  function dragVelocity(
+    samples: { time: number; position: number }[],
+    now: number,
+  ) {
     const last = samples.at(-1);
-    if (!last || window.performance.now() - last.time > 80) return 0;
+    if (!last || now - last.time > 80) return 0;
     const first = samples.find((sample) => sample.time >= last.time - 100);
     if (!first || last.time - first.time < 1) return 0;
     return (last.position - first.position) / (last.time - first.time);
   }
 
-  function releaseVelocity(samples: { time: number; position: number }[]) {
-    const now = window.performance.now();
+  function releaseVelocity(
+    samples: { time: number; position: number }[],
+    now: number,
+  ) {
     const recent = samples.filter(
       (sample) => sample.time >= now - RELEASE_SAMPLE_WINDOW,
     );
@@ -940,11 +945,11 @@ export function createCarousel(
     schedule();
   }
 
-  function endDrag(snap: boolean) {
+  function endDrag(snap: boolean, time = window.performance.now()) {
     if (!pointer) return;
     const { id, moved, caught, samples } = pointer;
-    const velocity = moved && snap ? dragVelocity(samples) : 0;
-    const speed = moved && snap ? releaseVelocity(samples) : 0;
+    const velocity = moved && snap ? dragVelocity(samples, time) : 0;
+    const speed = moved && snap ? releaseVelocity(samples, time) : 0;
     pointer = null;
     viewport.removeAttribute("data-re-dragging");
     if (viewport.hasPointerCapture?.(id)) viewport.releasePointerCapture(id);
@@ -1145,7 +1150,8 @@ export function createCarousel(
     dragReady = true;
     listen(window, "pointermove", moveDrag);
     listen(window, "pointerup", (event) => {
-      if ((event as PointerEvent).pointerId === pointer?.id) endDrag(true);
+      if ((event as PointerEvent).pointerId === pointer?.id)
+        endDrag(true, event.timeStamp);
     });
     listen(window, "pointercancel", (event) => {
       if ((event as PointerEvent).pointerId === pointer?.id) endDrag(false);
