@@ -1344,6 +1344,20 @@ describe("lightbox chrome, taps and keys", () => {
     expect(controller.getState().isOpen).toBe(true);
   });
 
+  it("keeps grouped and non-Latin numbers whole in the counter", () => {
+    const controller = create({
+      strings: {
+        counter: (index, count) =>
+          `${(index + 1234).toLocaleString("en")} / ${(count + 6).toLocaleString("ar-EG")}`,
+      },
+    });
+    controller.open(gallery);
+    const numbers = [
+      ...dialog().querySelectorAll(".re-lightbox-counter-number"),
+    ].map((number) => number.textContent);
+    expect(numbers).toEqual(["1,234", (12).toLocaleString("ar-EG")]);
+  });
+
   it("closes on Escape while zoomed", () => {
     const controller = create({ history: false });
     controller.open(gallery);
@@ -1393,17 +1407,17 @@ describe("lightbox chrome, taps and keys", () => {
     const tail = [...(counter?.children ?? [])].slice(1);
     controller.next();
     expect(counter?.textContent).toBe("10 / 12");
-    expect([...(counter?.children ?? [])].slice(1)).toEqual(tail);
+    const after = [...(counter?.children ?? [])].slice(1);
+    for (const [index, node] of tail.entries()) expect(after[index]).toBe(node);
     expect(status?.textContent).toBe("Image 10 of 12");
     const nodes = [...(counter?.querySelectorAll("span") ?? [])].map(
       (cell) => cell.firstChild,
     );
     controller.setOptions({ loop: true });
-    expect(
-      [...(counter?.querySelectorAll("span") ?? [])].map(
-        (cell) => cell.firstChild,
-      ),
-    ).toEqual(nodes);
+    const kept = [...(counter?.querySelectorAll("span") ?? [])].map(
+      (cell) => cell.firstChild,
+    );
+    for (const [index, node] of nodes.entries()) expect(kept[index]).toBe(node);
     expect(
       dialog().querySelectorAll("[aria-live], [role=status]"),
     ).toHaveLength(1);

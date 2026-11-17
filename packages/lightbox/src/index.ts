@@ -646,12 +646,13 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
   ) {
     if (duration <= 0 || typeof node.animate !== "function")
       return Promise.resolve();
+    let animation: Animation;
+    try {
+      animation = node.animate(frames, { duration, easing, fill: "both" });
+    } catch {
+      return Promise.resolve();
+    }
     return new Promise<void>((resolve) => {
-      const animation = node.animate(frames, {
-        duration,
-        easing,
-        fill: "both",
-      });
       s.animations.add(animation);
       syncAnimating(s);
       let settled = false;
@@ -958,9 +959,9 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
     if (text === s.counterText) return;
     s.counterText = text;
     const doc = s.dialog.ownerDocument;
-    const parts = text.match(/\d+|\D+/g) ?? [];
+    const parts = text.match(/\p{Nd}+(?:[^\p{Nd}\s]\p{Nd}+)*|\P{Nd}+/gu) ?? [];
     const kind = (part: string) =>
-      /\d/.test(part)
+      /\p{Nd}/u.test(part)
         ? "re-lightbox-counter-number"
         : "re-lightbox-counter-text";
     let nodes = [...s.counter.children] as HTMLElement[];
@@ -985,9 +986,10 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
         if (node.textContent !== part) node.textContent = part;
         continue;
       }
+      const digits = [...part];
       const cells = [...node.children] as HTMLElement[];
-      while (cells.length > part.length) cells.shift()?.remove();
-      while (cells.length < part.length) {
+      while (cells.length > digits.length) cells.shift()?.remove();
+      while (cells.length < digits.length) {
         const cell = doc.createElement("span");
         cell.className = "re-lightbox-counter-cell";
         cell.append(doc.createElement("span"));
@@ -995,7 +997,7 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
         cells.unshift(cell);
       }
       for (const [at, cell] of cells.entries()) {
-        const digit = part[at];
+        const digit = digits[at];
         const current = cell.lastElementChild as HTMLElement;
         if (current.textContent === digit) continue;
         while (cell.firstElementChild !== current)

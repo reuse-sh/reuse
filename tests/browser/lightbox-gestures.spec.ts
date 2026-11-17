@@ -195,17 +195,18 @@ test.describe("lightbox controls with a mouse and keys", () => {
     expect(one && two && one.x < two.x).toBe(true);
   });
 
-  test("a theme easing the browser rejects still lets the viewer close", async ({
-    page,
-  }) => {
-    await mount(page, "", ["lightbox/base.css", "lightbox/theme.css"]);
-    await page.addStyleTag({
-      content: ".re-lightbox { --re-lightbox-ease: bounce; }",
+  for (const ease of ["bounce", "ease, linear"])
+    test(`a theme easing the browser rejects (${ease}) still lets the viewer close`, async ({
+      page,
+    }) => {
+      await mount(page, "", ["lightbox/base.css", "lightbox/theme.css"]);
+      await page.addStyleTag({
+        content: `.re-lightbox { --re-lightbox-ease: ${ease}; }`,
+      });
+      await openMounted(page);
+      await page.evaluate(() => (window as Window).lightbox.close());
+      await expect(page.locator("dialog")).toHaveCount(0);
     });
-    await openMounted(page);
-    await page.evaluate(() => (window as Window).lightbox.close());
-    await expect(page.locator("dialog")).toHaveCount(0);
-  });
 
   test("three quick ArrowRight presses travel three photos in one direction", async ({
     page,
