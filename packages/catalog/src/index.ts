@@ -152,7 +152,7 @@ export const libraries: Library[] = [
       ],
       [
         "Return to what is on screen",
-        "Close goes back to the current photo's tile, after bringing it into view in its own carousel, and fades in place when the tile cannot be seen or the strip is still moving. The page scrolls and takes clicks during the flight, and the tile's container never cuts the photo before it lands.",
+        "Close goes back to the current photo's tile, after bringing it into view in its own carousel, and fades in place when the tile cannot be seen or the strip is still moving. The page scrolls and takes clicks during the flight, focus moved there stays, and the tile's container does not cut the photo before it nears the tile.",
         "tests/browser/lightbox-close.spec.ts",
       ],
       [

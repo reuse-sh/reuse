@@ -327,6 +327,7 @@ type Session = {
   animations: Set<Animation>;
   finishAnimations: Set<(landed?: boolean) => void>;
   previousFocus: HTMLElement | null;
+  releasedFocus?: Element | null;
   input?: "keyboard" | "pointer";
   restoreScroll: () => void;
   hiddenOrigin?: { element: HTMLElement; visibility: string };
@@ -2028,7 +2029,13 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
     if (s.dialog.open) s.dialog.close();
     s.dialog.remove();
     s.restoreScroll();
-    returnFocus(s);
+    const active = s.dialog.ownerDocument.activeElement;
+    if (
+      s.releasedFocus === undefined ||
+      active === s.releasedFocus ||
+      active === s.dialog.ownerDocument.body
+    )
+      returnFocus(s);
   }
 
   function leaveFullscreen(s: Session) {
@@ -3703,8 +3710,10 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
     if (typeof dialog.showPopover !== "function") return;
     dialog.inert = true;
     dialog.close();
+    dialog.style.display = "block";
     dialog.popover = "manual";
     dialog.showPopover();
+    s.releasedFocus = dialog.ownerDocument.activeElement;
   }
 
   // closed waits for the history back, unless open() or destroy() comes first.
@@ -4025,7 +4034,7 @@ export function bindLightboxGallery(
     if (!isElement(target)) return;
     const images = [
       ...root.querySelectorAll<HTMLImageElement>(options.selector || "img"),
-    ];
+    ].filter((image) => !image.classList.contains("re-lightbox-landing"));
     const image = images.find(
       (candidate) =>
         candidate === target ||

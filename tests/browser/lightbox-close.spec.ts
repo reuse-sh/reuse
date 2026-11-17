@@ -13,7 +13,7 @@ type Lightbox = {
   close(): Promise<void>;
   next(): void;
   goTo(index: number): void;
-  getState(): { index: number; isOpen: boolean };
+  getState(): { index: number; isOpen: boolean; count: number };
   on(type: string, listener: () => void): () => void;
 };
 type Carousel = {
@@ -653,6 +653,74 @@ test.describe("focus after close", { tag: "@desktop" }, () => {
     await page.getByAltText("Photo 2").click();
     await expect(page.locator("dialog")).toHaveAttribute("data-phase", "open");
     expect(await focused(page)).toEqual({ id: "BUTTON", ring: false });
+  });
+
+  const slowClose = (page: Page, rule = "") =>
+    page.evaluate((extra) => {
+      const style = document.createElement("style");
+      style.textContent = `.re-lightbox{--re-lightbox-close-duration:2s}${extra}`;
+      document.head.append(style);
+    }, rule);
+
+  test("a click on another photo during the close flight opens the gallery without the landing copy", async ({
+    page,
+  }) => {
+    await galleryPage(page);
+    await slowClose(page);
+    await page.getByAltText("Photo 2").click();
+    await expect(page.locator("dialog")).toHaveAttribute("data-phase", "open");
+    await page.keyboard.press("Escape");
+    await expect(page.locator(".re-lightbox-landing")).toHaveCount(1);
+    await page.locator("#gallery").getByAltText("Photo 3").click();
+    await expect(page.locator("dialog")).toHaveAttribute("data-phase", "open");
+    expect(
+      await page.evaluate(() => {
+        const { index, count } = (window as Window).lightbox.getState();
+        return { index, count };
+      }),
+    ).toEqual({ index: 2, count: 3 });
+  });
+
+  test("a page that hides closed dialogs still shows the close flight", async ({
+    page,
+  }) => {
+    await galleryPage(page);
+    await slowClose(page, "dialog:not([open]){display:none}");
+    await page.getByAltText("Photo 2").click();
+    await expect(page.locator("dialog")).toHaveAttribute("data-phase", "open");
+    await page.keyboard.press("Escape");
+    await expect(page.locator("dialog")).toHaveAttribute(
+      "data-phase",
+      "closing",
+    );
+    expect(
+      await page.evaluate(() => {
+        const dialog = document.querySelector("dialog") as HTMLElement;
+        const frame = dialog.querySelector(
+          '.re-lightbox-slide[aria-hidden="false"] .re-lightbox-frame',
+        ) as HTMLElement;
+        return [
+          getComputedStyle(dialog).display,
+          frame.getBoundingClientRect().width > 0,
+        ];
+      }),
+    ).toEqual(["block", true]);
+  });
+
+  test("focus moved to a field during the close flight stays there", async ({
+    page,
+  }) => {
+    await galleryPage(page);
+    await slowClose(page);
+    await page.evaluate(() =>
+      document.body.insertAdjacentHTML("afterbegin", '<input id="search">'),
+    );
+    await page.getByAltText("Photo 2").click();
+    await expect(page.locator("dialog")).toHaveAttribute("data-phase", "open");
+    await page.keyboard.press("Escape");
+    await page.locator("#search").click();
+    await expect(page.locator("dialog")).toHaveCount(0);
+    expect((await focused(page)).id).toBe("search");
   });
 
   test("a mouse close focuses the tile without a ring", async ({ page }) => {

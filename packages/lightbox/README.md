@@ -17,7 +17,7 @@ These are the rules the code keeps. An adaptation on any framework keeps them to
 - **Behave like the platform's photo viewer.** Gestures, keys and timing match iOS Photos, macOS Photos and Google Photos unless a recorded decision says otherwise.
 - **Dismiss like a photos app.** A vertical swipe carries the photo, fades the backdrop and the controls with it, and closes past a distance or a speed. A cancelled pointer never closes.
 - **Let the photo lead.** Controls fade in after the photo starts moving and leave before it. They hide while zoomed and after a still pointer, never while hovered or focused.
-- **Return to what is on screen.** Close goes back to the current photo's tile, after bringing it into view in its own carousel, and fades in place when the tile cannot be seen or the strip is still moving. The page scrolls and takes clicks during the flight, and the tile's container never cuts the photo before it lands.
+- **Return to what is on screen.** Close goes back to the current photo's tile, after bringing it into view in its own carousel, and fades in place when the tile cannot be seen or the strip is still moving. The page scrolls and takes clicks during the flight, focus moved there stays, and the tile's container does not cut the photo before it nears the tile.
 - **Fetch the pixels the screen shows.** Each image loads the source that fits the rendered size, a zoom asks for more, and the preview stays until the sharper file has decoded.
 - **Zoom to real pixels.** Zoom levels follow the image's own resolution. Panning stretches past the edge and glides on release.
 - **Never block a frame.** No layout read or framework render runs per pointer move, scroll or wheel event.

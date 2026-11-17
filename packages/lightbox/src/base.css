@@ -46,6 +46,8 @@
   display: none;
 }
 .re-lightbox-slide {
+  --re-carousel-gap: initial;
+  --re-carousel-slide-width: initial;
   position: relative;
   display: grid;
   flex: 0 0 100%;
