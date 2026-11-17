@@ -9,7 +9,8 @@ type Lightbox = {
   getState(): { index: number; isOpen: boolean; zoom: { scale: number } };
   on(type: string, listener: (event: { index: number }) => void): () => void;
 };
-type Window = typeof globalThis & { lightbox: Lightbox; changes: number[] };
+type Window = globalThis.Window &
+  typeof globalThis & { lightbox: Lightbox; changes: number[] };
 
 async function open(
   page: Page,
@@ -166,6 +167,42 @@ test("without the Fullscreen API there is no fullscreen button", async ({
   );
   await open(page, { controls: { fullscreen: true } });
   await expect(page.locator(".re-lightbox-fullscreen")).toHaveCount(0);
+});
+
+test("in RTL previous sits on the right and next on the left, each icon mirrored", async ({
+  page,
+}) => {
+  await mount(page, "", ["lightbox/base.css", "lightbox/theme.css"]);
+  await page.evaluate(async () => {
+    document.documentElement.dir = "rtl";
+    const { createLightbox } = await import("/modules/lightbox/index.js");
+    const icon = () =>
+      document.createElementNS("http://www.w3.org/2000/svg", "svg");
+    createLightbox({ history: false, icons: { prev: icon, next: icon } }).open(
+      Array.from({ length: 3 }, () => ({
+        src: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='1200' height='800'/%3E",
+        width: 1200,
+        height: 800,
+      })),
+      1,
+    );
+  });
+  await page.waitForTimeout(400);
+  const arrows = await page.evaluate(() =>
+    [".re-lightbox-prev", ".re-lightbox-next"].map((selector) => {
+      const button = document.querySelector(selector) as HTMLElement;
+      const { left, right } = button.getBoundingClientRect();
+      return {
+        left: Math.round(left),
+        right: Math.round(right),
+        scale: getComputedStyle(button.querySelector("svg") as Element).scale,
+      };
+    }),
+  );
+  expect(arrows).toEqual([
+    { left: 1000 - 16 - 44, right: 1000 - 16, scale: "-1 1" },
+    { left: 16, right: 16 + 44, scale: "-1 1" },
+  ]);
 });
 
 test("a side column sits at the end edge, left in RTL, and turns into the bottom strip at 700px", async ({

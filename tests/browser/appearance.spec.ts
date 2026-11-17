@@ -206,7 +206,7 @@ test("plain gradient presets match the JavaScript generator without page scripts
   await expect(page.locator("#missing")).toHaveCSS("background-image", "none");
   await expect(page.locator("#nested")).toHaveCSS(
     "background-image",
-    actual.expected.at(-1),
+    actual.expected.at(-1) as string,
   );
 });
 

@@ -17,7 +17,8 @@ type Records = {
   writes: { types: string[]; png?: { type: string; width: number } }[];
   vibrate: unknown[];
 };
-type Window = typeof globalThis & { lightbox: Lightbox; records: Records };
+type Window = globalThis.Window &
+  typeof globalThis & { lightbox: Lightbox; records: Records };
 
 async function open(
   page: Page,
@@ -493,7 +494,7 @@ test.describe("lightbox rotation", { tag: "@touch" }, () => {
     expect(relayouts).toEqual({ queued: 0, count: 1 });
     expect(
       await page.evaluate(
-        () => (window as typeof globalThis & { changes: number[] }).changes,
+        () => (window as Window & { changes: number[] }).changes,
       ),
     ).toEqual([]);
   });
@@ -518,7 +519,7 @@ test.describe("lightbox rotation", { tag: "@touch" }, () => {
     expect(Math.abs(slide?.x ?? Number.NaN)).toBeLessThan(1);
     expect(
       await page.evaluate(
-        () => (window as typeof globalThis & { changes: number[] }).changes,
+        () => (window as Window & { changes: number[] }).changes,
       ),
     ).toEqual([]);
   });

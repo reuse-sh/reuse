@@ -518,12 +518,12 @@ export async function countLayoutReads(page: Page) {
     const seen = new WeakSet<Event>();
     let current: string | undefined;
     const counted = <T extends (...args: never[]) => unknown>(read: T) =>
-      function (this: unknown, ...args: Parameters<T>) {
+      function (this: unknown, ...args: Parameters<T>): ReturnType<T> {
         reads.total++;
         if (current)
           reads.insideListener[current] =
             (reads.insideListener[current] ?? 0) + 1;
-        return read.apply(this, args);
+        return read.apply(this, args) as ReturnType<T>;
       };
     Element.prototype.getBoundingClientRect = counted(
       Element.prototype.getBoundingClientRect,

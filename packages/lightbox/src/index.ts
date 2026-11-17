@@ -325,7 +325,7 @@ type Session = {
   pauses: Set<string>;
   abort: AbortController;
   animations: Set<Animation>;
-  finishAnimations: Set<() => void>;
+  finishAnimations: Set<(landed?: boolean) => void>;
   previousFocus: HTMLElement | null;
   input?: "keyboard" | "pointer";
   restoreScroll: () => void;
@@ -1094,9 +1094,9 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
     });
   }
 
-  function cancelAnimations(s: Session) {
+  function cancelAnimations(s: Session, landed = false) {
     freezeZoom(s);
-    for (const finish of [...s.finishAnimations]) finish();
+    for (const finish of [...s.finishAnimations]) finish(landed);
   }
 
   function liveZoom(s: Session): Zoom {
@@ -1250,7 +1250,21 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
     const origin = originOf(state.index);
     const rect = origin ? rendered(origin) : undefined;
     const box = s.viewport.getBoundingClientRect();
-    const slide = s.slides[state.index]?.getBoundingClientRect();
+    let slide = s.slides[state.index]?.getBoundingClientRect();
+    const shift = slide ? slide.left - box.left : 0;
+    if (
+      closing &&
+      Math.abs(shift) > 1 &&
+      !s.pointers.size &&
+      !s.carousel.getState().isDragging
+    ) {
+      syncingCarousel = true;
+      s.carousel.goTo(state.index, "instant");
+      syncingCarousel = false;
+      slide = s.slides[state.index]?.getBoundingClientRect();
+      if (slide && Math.abs(slide.left - box.left) <= 1)
+        live.transform = `translate(${shift}px, 0px) ${live.transform}`;
+    }
     const viewport = view(s);
     const size = fit(state.index, s);
     const duration = flightDuration(s, closing);
@@ -1405,7 +1419,7 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
   function resized(s: Session) {
     s.resizeFrame = undefined;
     if (session !== s) return;
-    cancelAnimations(s);
+    cancelAnimations(s, true);
     const before = state.zoom;
     const from = fit(state.index, s);
     const resting = s.rest !== undefined && sameZoom(before, s.rest);

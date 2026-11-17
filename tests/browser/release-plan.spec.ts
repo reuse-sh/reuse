@@ -45,7 +45,7 @@ function registry(missing: string[], status = 404) {
     const hit = missing.some((path) => url.endsWith(path));
     return new Response("", { status: hit ? status : 200 });
   };
-  return { lookup, requested };
+  return { lookup: lookup as typeof fetch, requested };
 }
 
 test("pending changesets refresh the version pull request without asking npm", async () => {

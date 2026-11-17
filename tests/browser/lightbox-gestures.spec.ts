@@ -12,7 +12,8 @@ type Lightbox = {
   };
   on(type: string, listener: () => void): () => void;
 };
-type Window = typeof globalThis & { lightbox: Lightbox; settles: number };
+type Window = globalThis.Window &
+  typeof globalThis & { lightbox: Lightbox; settles: number };
 
 async function open(
   page: Page,

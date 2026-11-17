@@ -1,0 +1,20 @@
+{
+  "extends": "../tsconfig.base.json",
+  "compilerOptions": {
+    "lib": ["ES2023", "DOM", "DOM.Iterable"],
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "allowJs": true,
+    "noEmit": true,
+    "types": ["node"],
+    "paths": {
+      "/modules/carousel/*": ["../packages/carousel/src/*"],
+      "/modules/gallery/*": ["../packages/gallery/src/*"],
+      "/modules/lightbox/*": ["../packages/lightbox/src/*"],
+      "http://reuse.test/modules/lightbox/browser/lightbox.js": [
+        "../packages/lightbox/src/index.ts"
+      ]
+    }
+  },
+  "include": ["browser/**/*.ts", "model/**/*.ts"]
+}

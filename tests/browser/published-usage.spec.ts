@@ -128,7 +128,7 @@ for (const [path, recipe] of Object.entries(usageRecipes)) {
       const painted = await page
         .locator("canvas")
         .first()
-        .evaluate((canvas) => {
+        .evaluate((canvas: HTMLCanvasElement) => {
           const pixels = canvas
             .getContext("2d")
             ?.getImageData(0, 0, canvas.width, canvas.height).data;
