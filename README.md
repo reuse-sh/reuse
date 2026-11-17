@@ -8,7 +8,7 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/reuse-sh/reuse/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/reuse-sh/reuse/ci.yml?branch=main&label=checks" alt="Checks"></a>
+  <a href="https://github.com/reuse-sh/reuse/actions/workflows/release.yml"><img src="https://img.shields.io/github/actions/workflow/status/reuse-sh/reuse/release.yml?branch=main&label=release" alt="Release"></a>
   <a href="https://www.npmjs.com/org/reuse-sh"><img src="https://img.shields.io/badge/npm-%40reuse--sh-111" alt="npm scope @reuse-sh"></a>
   <a href="LICENSE"><img src="https://img.shields.io/github/license/reuse-sh/reuse?color=111" alt="MIT license"></a>
   <a href="https://reuse.sh"><img src="https://img.shields.io/badge/docs-reuse.sh-111" alt="Documentation"></a>
