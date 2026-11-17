@@ -354,3 +354,40 @@ test("the last photo without loop goes back to the first, at once under reduced 
     ),
   ).toBe("0");
 });
+
+test("the photos theme is white with the controls and fades to black over 300ms without them", async ({
+  page,
+}) => {
+  await mount(page, "", [
+    "lightbox/base.css",
+    "lightbox/theme.css",
+    "lightbox/themes/photos.css",
+  ]);
+  await page.evaluate(async () => {
+    const { createLightbox } = await import("/modules/lightbox/index.js");
+    createLightbox({ history: false, autoHide: 600 }).open([
+      {
+        src: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='1200' height='800'/%3E",
+        width: 1200,
+        height: 800,
+      },
+    ]);
+  });
+  const backdrop = page.locator(".re-lightbox-backdrop");
+  const color = () =>
+    backdrop.evaluate((element) => getComputedStyle(element).backgroundColor);
+  await expect.poll(color).toBe("rgb(255, 255, 255)");
+  await expect(page.locator("dialog")).toHaveAttribute("data-chrome", "hidden");
+  const midway = await page.evaluate(
+    () =>
+      new Promise<string>((resolve) =>
+        setTimeout(() => {
+          const element = document.querySelector(".re-lightbox-backdrop");
+          resolve(element ? getComputedStyle(element).backgroundColor : "");
+        }, 120),
+      ),
+  );
+  expect(midway).not.toBe("rgb(255, 255, 255)");
+  expect(midway).not.toBe("rgb(0, 0, 0)");
+  await expect.poll(color).toBe("rgb(0, 0, 0)");
+});
