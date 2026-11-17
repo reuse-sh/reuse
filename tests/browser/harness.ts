@@ -309,13 +309,83 @@ export async function swipe(
     );
     return;
   }
+  await mousePath(page, duration, at, hold);
+}
+
+// Each mouse event carries the time its point was due, as touches do; only CDP sets that
+// time on trusted input, so the other engines get synthesized pointer events.
+async function mousePath(
+  page: Page,
+  duration: number,
+  at: (share: number) => Point,
+  hold: number,
+) {
+  const cdp = isChromium(page)
+    ? await page.context().newCDPSession(page)
+    : undefined;
+  const start = Date.now();
+  const send = async (phase: "down" | "move" | "up", due: number) => {
+    const point = at(Math.min(1, due / duration));
+    const pressed = phase === "down" || (phase === "move" && due > 0);
+    if (cdp) {
+      await cdp.send("Input.dispatchMouseEvent", {
+        type: { down: "mousePressed", move: "mouseMoved", up: "mouseReleased" }[
+          phase
+        ] as "mouseMoved",
+        x: point.x,
+        y: point.y,
+        button: phase === "move" && !pressed ? "none" : "left",
+        buttons: pressed ? 1 : 0,
+        clickCount: phase === "move" ? 0 : 1,
+        timestamp: (start + due) / 1000,
+      });
+      return;
+    }
+    await page.evaluate(
+      ([type, x, y, buttons, time]) => {
+        const capture = Element.prototype.setPointerCapture;
+        if (!("synthesized" in capture))
+          Element.prototype.setPointerCapture = Object.assign(
+            function (this: Element, id: number) {
+              try {
+                capture.call(this, id);
+              } catch {}
+            },
+            { synthesized: true },
+          );
+        const event = new PointerEvent(type, {
+          bubbles: true,
+          cancelable: true,
+          composed: true,
+          pointerId: 1,
+          pointerType: "mouse",
+          isPrimary: true,
+          clientX: x,
+          clientY: y,
+          button: type === "pointermove" ? -1 : 0,
+          buttons,
+        });
+        Object.defineProperty(event, "timeStamp", {
+          value: time - performance.timeOrigin,
+        });
+        document.elementFromPoint(x, y)?.dispatchEvent(event);
+      },
+      [
+        { down: "pointerdown", move: "pointermove", up: "pointerup" }[phase],
+        point.x,
+        point.y,
+        pressed ? 1 : 0,
+        start + due,
+      ] as const,
+    );
+  };
   for await (const share of timeline(page, duration)) {
-    const point = at(share);
-    await page.mouse.move(point.x, point.y);
-    if (share === 0) await page.mouse.down();
+    await send("move", share * duration);
+    if (share === 0) await send("down", 0);
   }
   if (hold > 0) await page.waitForTimeout(hold);
-  await page.mouse.up();
+  await send("up", duration + hold);
+  await cdp?.detach();
 }
 
 export async function pinch(
