@@ -1,7 +1,12 @@
 // @vitest-environment jsdom
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { bindLightboxGallery, createLightbox, type Lightbox } from "./index.js";
+import {
+  bindLightboxGallery,
+  createLightbox,
+  type Lightbox,
+  lightboxItemFromImage,
+} from "./index.js";
 
 const gallery = Array.from({ length: 6 }, (_, i) => ({
   src: `https://example.test/full-${i}.jpg`,
@@ -612,8 +617,7 @@ describe("lightbox lifecycle", () => {
     loaders[0].dispatchEvent(new Event("load"));
     expect(image?.src).toBe(gallery[0].previewSrc);
     resolveDecode();
-    await Promise.resolve();
-    expect(image?.src).toBe(gallery[0].src);
+    await vi.waitFor(() => expect(image?.src).toBe(gallery[0].src));
     controller.goTo(1);
     loaders[1].dispatchEvent(new Event("load"));
     controller.destroy();
@@ -639,9 +643,55 @@ describe("lightbox lifecycle", () => {
     const controller = create();
     controller.open([{ src: "https://example.test/missing.jpg" }]);
     loaders[0].dispatchEvent(new Event("error"));
-    expect(dialog().querySelector('[role="status"]')?.textContent).toBe(
+    const error = dialog().querySelector('.re-lightbox-error[role="status"]');
+    expect(error?.querySelector("p")?.textContent).toBe(
       "Image could not be loaded.",
     );
+    error?.querySelector("button")?.click();
+    expect(dialog().querySelector(".re-lightbox-error")).toBeNull();
+    expect(loaders.at(-1)).not.toBe(loaders[0]);
+    expect(loaders.at(-1)?.src).toBe("https://example.test/missing.jpg");
+  });
+
+  it("drops the zoom of a photo whose first load failed and asks for no other file", () => {
+    const loaders: HTMLImageElement[] = [];
+    const source = Object.getOwnPropertyDescriptor(
+      HTMLImageElement.prototype,
+      "src",
+    );
+    vi.spyOn(HTMLImageElement.prototype, "src", "set").mockImplementation(
+      function (this: HTMLImageElement, value: string) {
+        source?.set?.call(this, value);
+        if (!this.className) loaders.push(this);
+      },
+    );
+    const controller = create({ maxZoom: undefined });
+    controller.open([
+      {
+        src: "https://example.test/3600.jpg",
+        srcset:
+          "https://example.test/900.jpg 900w, https://example.test/3600.jpg 3600w",
+        width: 3600,
+        height: 2400,
+      },
+    ]);
+    const zoom = dialog().querySelector<HTMLButtonElement>(".re-lightbox-zoom");
+    expect(zoom?.hidden).toBe(false);
+    controller.zoomTo(2);
+    expect(controller.getState().zoom.scale).toBe(2);
+    const sizes = loaders[0].getAttribute("sizes");
+    loaders[0].dispatchEvent(new Event("error"));
+    expect(controller.getState().zoom.scale).toBe(1);
+    expect(zoom?.hidden).toBe(true);
+    expect(dialog().dataset.zoomable).toBe("false");
+    vi.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockReturnValue(
+      new DOMRect(0, 0, 640, 480),
+    );
+    window.dispatchEvent(new Event("resize"));
+    controller.zoomTo(2);
+    expect(controller.getState().zoom.scale).toBe(1);
+    expect(sizes).toBe("960px");
+    expect(loaders[0].getAttribute("sizes")).toBe(sizes);
   });
 
   it("handles touch double tap, pinch, cancellation and pull dismissal", async () => {
@@ -931,6 +981,9 @@ describe("lightbox public API", () => {
     );
     loaders[0].dispatchEvent(new Event("error"));
     controller.zoomTo(2);
+    expect(controller.getState().zoom.scale).toBe(1);
+    controller.goTo(1);
+    controller.zoomTo(2);
     const texts = [
       ...dialog().querySelectorAll<HTMLElement>("*"),
       dialog(),
@@ -947,10 +1000,10 @@ describe("lightbox public API", () => {
     ).toEqual([]);
     expect(dialog().getAttribute("aria-label")).toBe("Bildergalerie");
     expect(dialog().querySelector(".re-lightbox-counter")?.textContent).toBe(
-      "1 von 3",
+      "2 von 3",
     );
-    expect(dialog().querySelector('[role="status"]')?.textContent).toBe(
-      "Das Bild konnte nicht geladen werden.",
+    expect(dialog().querySelector(".re-lightbox-error")?.textContent).toBe(
+      "Das Bild konnte nicht geladen werden.Erneut versuchen",
     );
     expect(
       dialog().querySelector(".re-lightbox-zoom")?.getAttribute("aria-label"),
@@ -1169,6 +1222,80 @@ describe("lightbox public API", () => {
     controller.setItems(gallery.slice(0, 2), 0);
     expect(controller.getState()).toMatchObject({ index: 0, count: 2 });
     expect(dialog().querySelectorAll(".re-lightbox-slide")).toHaveLength(2);
+  });
+
+  it("reads an item from the link, data attributes, the tile and its figure", () => {
+    const root = document.createElement("div");
+    root.innerHTML = `
+      <figure><a href="/large.JPG?w=2000" data-caption="Link caption"><img src="/small.jpg" alt="a"></a><figcaption> Figure caption </figcaption></figure>
+      <a href="/photos/2" data-caption="Link caption"><img src="/tile.jpg" data-lightbox-src="/full.jpg" data-lightbox-srcset="/900.jpg 900w, /1800.jpg 1800w" data-lightbox-sizes="50vw" data-lightbox-width="1800" data-lightbox-height="1200" alt="b"></a>
+      <img src="/same.jpg" data-caption="Image caption" alt="c">`;
+    document.body.append(root);
+    const images = [...root.querySelectorAll("img")];
+    for (const image of images) {
+      Object.defineProperty(image, "naturalWidth", { value: 300 });
+      Object.defineProperty(image, "naturalHeight", { value: 200 });
+    }
+    expect(images.map((image) => lightboxItemFromImage(image))).toEqual([
+      {
+        src: "/large.JPG?w=2000",
+        srcset: undefined,
+        sizes: undefined,
+        previewSrc: images[0].src,
+        width: undefined,
+        height: undefined,
+        alt: "a",
+        caption: "Figure caption",
+        origin: images[0],
+      },
+      {
+        src: "/full.jpg",
+        srcset: "/900.jpg 900w, /1800.jpg 1800w",
+        sizes: "50vw",
+        previewSrc: images[1].src,
+        width: 1800,
+        height: 1200,
+        alt: "b",
+        caption: "Link caption",
+        origin: images[1],
+      },
+      {
+        src: images[2].src,
+        srcset: undefined,
+        sizes: undefined,
+        previewSrc: images[2].src,
+        width: 300,
+        height: 200,
+        alt: "c",
+        caption: "Image caption",
+        origin: images[2],
+      },
+    ]);
+  });
+
+  it("opens a linked image's full file from bindLightboxGallery", () => {
+    const loaded: string[] = [];
+    const source = Object.getOwnPropertyDescriptor(
+      HTMLImageElement.prototype,
+      "src",
+    );
+    vi.spyOn(HTMLImageElement.prototype, "src", "set").mockImplementation(
+      function (this: HTMLImageElement, value: string) {
+        source?.set?.call(this, value);
+        if (!this.className) loaded.push(this.getAttribute("src") ?? "");
+      },
+    );
+    const root = document.createElement("div");
+    root.innerHTML = `<a href="/large.jpg"><img src="/small.jpg" alt=""></a>`;
+    document.body.append(root);
+    const controller = bindLightboxGallery(root, {
+      duration: 0,
+      history: false,
+    });
+    controllers.push(controller);
+    root.querySelector("img")?.click();
+    expect(loaded).toContain("/large.jpg");
+    expect(loaded).not.toContain("/small.jpg");
   });
 
   it("opens only the images of the clicked group", () => {

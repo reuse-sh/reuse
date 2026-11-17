@@ -1,4 +1,5 @@
 import { type Carousel, createCarousel } from "@reuse-sh/carousel";
+import { createThinkingDots } from "@reuse-sh/loaders";
 import {
   type ChromeInput,
   type ChromeModel,
@@ -21,6 +22,7 @@ import {
   zoomAround,
   zoomLimits,
 } from "./geometry.js";
+import { fileWidth, isImageFile, largestWidth } from "./sources.js";
 
 export type { Point, Rect, Size, Zoom } from "./geometry.js";
 
@@ -100,6 +102,8 @@ export interface LightboxEvent {
 
 export interface LightboxItem {
   src: string;
+  srcset?: string;
+  sizes?: string;
   previewSrc?: string;
   width?: number;
   height?: number;
@@ -177,8 +181,13 @@ export interface Lightbox {
 type LoadedSlide = {
   frame: HTMLDivElement;
   image: HTMLImageElement;
-  loader: HTMLImageElement;
+  loader?: HTMLImageElement;
+  /** The pixel width of the file on screen, once the full file shows. */
   natural?: number;
+  status: "idle" | "loading" | "settled" | "failed";
+  load: (priority: "high" | "low") => void;
+  /** The full file's swap, held until the open flight with the preview has landed. */
+  commit?: () => void;
   cancel: () => void;
 };
 
@@ -246,6 +255,10 @@ type Session = {
   lastTap?: { time: number; point: Point };
   suppressClickUntil: number;
   wheelTimer?: ReturnType<typeof setTimeout>;
+  flying: boolean;
+  watchedScale: number;
+  sharpScale: number;
+  sharpTimer?: ReturnType<typeof setTimeout>;
   fade?: {
     animation?: Animation;
     jumped: boolean;
@@ -376,6 +389,9 @@ const PINCH_OVER = 1.25;
 const PINCH_CLOSE = 0.75;
 const EDGE_PAGE = 0.3;
 const KEY_PAN = 0.1;
+const LOADING_DELAY = 300;
+const ZOOM_IDLE = 150;
+const SPINNER_SIZE = 32;
 
 type Pinned = { index: number; zoom: Zoom; left: boolean; right: boolean };
 
@@ -642,13 +658,29 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
     return s.box;
   }
 
+  function tileImage(index: number) {
+    const origin = originOf(index);
+    return origin?.localName === "img"
+      ? (origin as HTMLImageElement)
+      : origin?.querySelector("img");
+  }
+
+  function previewOf(index: number) {
+    const tile = tileImage(index);
+    return tile?.complete && tile.naturalWidth
+      ? tile.currentSrc || tile.src
+      : items[index].previewSrc;
+  }
+
+  // Before the file arrives, the shown preview or the tile gives the proportions.
   function imageSize(index: number, s: Session): Size {
     const item = items[index];
-    const image = s.loaded.get(index)?.image;
-    return {
-      width: item.width || image?.naturalWidth || view(s).width,
-      height: item.height || image?.naturalHeight || view(s).height,
-    };
+    if (item.width && item.height)
+      return { width: item.width, height: item.height };
+    for (const image of [s.loaded.get(index)?.image, tileImage(index)])
+      if (image?.naturalWidth && image.naturalHeight)
+        return { width: image.naturalWidth, height: image.naturalHeight };
+    return view(s);
   }
 
   function fit(index: number, s: Session): Size {
@@ -657,8 +689,10 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
 
   function limits(s: Session, index = state.index) {
     const item = items[index];
+    const entry = s.loaded.get(index);
+    if (entry?.status === "failed") return { max: 1, tap: 1 };
     return zoomLimits({
-      fileWidth: s.loaded.get(index)?.natural ?? item?.width,
+      fileWidth: largestWidth(item?.srcset) ?? entry?.natural ?? item?.width,
       fittedWidth: fit(index, s).width,
       svg: Boolean(item && isSvg(item.src)),
       maxZoom: settings.maxZoom,
@@ -697,6 +731,11 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
     if (!settings.icons?.zoom)
       s.zoomButton.textContent = state.zoom.scale > 1 ? "−" : "+";
     s.dialog.dataset.zoomed = String(state.zoom.scale > 1);
+    if (s.watchedScale !== state.zoom.scale) {
+      s.watchedScale = state.zoom.scale;
+      clearTimeout(s.sharpTimer);
+      s.sharpTimer = setTimeout(() => sharpen(s), ZOOM_IDLE);
+    }
     if (s.zoomed !== state.zoom.scale > 1) {
       s.zoomed = state.zoom.scale > 1;
       chromeInput(s, { type: s.zoomed ? "zoom" : "unzoom" }, notify);
@@ -1014,12 +1053,43 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
     ]);
   }
 
+  // A zoom asks for a larger file only once its scale has rested, through sizes.
+  function requestSizes(s: Session) {
+    for (const [index, entry] of s.loaded) {
+      const item = items[index];
+      if (!item.srcset || !entry.loader || entry.status === "failed") continue;
+      const width = fit(index, s).width;
+      const scale =
+        index === state.index ? Math.min(s.sharpScale, state.zoom.scale) : 1;
+      const sizes =
+        scale > 1
+          ? `${Math.ceil(width * scale)}px`
+          : item.sizes || `${Math.ceil(width)}px`;
+      if (entry.loader.getAttribute("sizes") !== sizes)
+        entry.loader.setAttribute("sizes", sizes);
+    }
+  }
+
+  function sharpen(s: Session) {
+    s.sharpTimer = undefined;
+    if (session !== s) return;
+    const apply = () => {
+      if (session !== s) return;
+      s.sharpScale = state.zoom.scale;
+      requestSizes(s);
+    };
+    const win = s.dialog.ownerDocument.defaultView;
+    if (state.zoom.scale > 1 || !win?.requestIdleCallback) apply();
+    else win.requestIdleCallback(apply);
+  }
+
   function layout(s: Session) {
     for (const [index, entry] of s.loaded) {
       const size = fit(index, s);
       entry.frame.style.width = `${size.width}px`;
       entry.frame.style.height = `${size.height}px`;
     }
+    requestSizes(s);
     if (state.zoom.scale > 1) {
       const scale = Math.min(state.zoom.scale, limits(s).max);
       publish({
@@ -1073,6 +1143,22 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
     }
   }
 
+  // The current image loads first; the neighbors wait until it has decoded or failed, and
+  // Save-Data keeps them at their previews.
+  function startLoads(s: Session) {
+    const current = s.loaded.get(state.index);
+    if (current?.status === "idle") current.load("high");
+    if (current?.status === "loading") return;
+    const connection = (
+      s.dialog.ownerDocument.defaultView?.navigator as
+        | (Navigator & { connection?: { saveData?: boolean } })
+        | undefined
+    )?.connection;
+    if (connection?.saveData) return;
+    for (const entry of s.loaded.values())
+      if (entry.status === "idle") entry.load("low");
+  }
+
   function loadSlides(s: Session) {
     trimSlides(s);
     for (let step = -preload; step <= preload; step++) {
@@ -1087,60 +1173,145 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
       image.alt = item.alt || "";
       image.draggable = false;
       image.decoding = "async";
-      const loader = doc.createElement("img");
-      loader.decoding = "async";
       let alive = true;
       let cleanup: undefined | (() => void);
+      let wait: ReturnType<typeof setTimeout> | undefined;
+      let spinner: undefined | (() => void);
       frame.append(image);
       s.slides[index].append(frame);
-      const swap = () => {
+      const stopWaiting = () => {
+        clearTimeout(wait);
+        wait = undefined;
+        spinner?.();
+        spinner = undefined;
+      };
+      const showSpinner = () => {
         if (!alive || session !== s) return;
-        if (!item.width && loader.naturalWidth)
-          item.width = loader.naturalWidth;
-        if (!item.height && loader.naturalHeight)
-          item.height = loader.naturalHeight;
-        if (loader.naturalWidth) entry.natural = loader.naturalWidth;
-        image.src = item.src;
+        const status = doc.createElement("span");
+        status.className = "re-lightbox-loading";
+        status.setAttribute("role", "status");
+        status.setAttribute("aria-label", s.strings.loading);
+        const canvas = doc.createElement("canvas");
+        canvas.setAttribute("aria-hidden", "true");
+        status.append(canvas);
+        frame.append(status);
+        let dots: ReturnType<typeof createThinkingDots> | undefined;
+        try {
+          dots = createThinkingDots(canvas, { size: SPINNER_SIZE });
+        } catch {}
+        spinner = () => {
+          dots?.destroy();
+          status.remove();
+        };
+      };
+      const show = (source: HTMLImageElement, width: number) => {
+        if (!alive || session !== s) return;
+        if (entry.natural !== undefined && width <= entry.natural) return;
+        entry.natural = width;
+        if (source.naturalWidth && source.naturalHeight) {
+          const ratio = source.naturalHeight / source.naturalWidth;
+          if (!item.width)
+            item.width = item.height ? Math.round(item.height / ratio) : width;
+          if (!item.height) item.height = Math.round(item.width * ratio);
+        }
+        image.src = source.currentSrc || source.src;
         frame.removeAttribute("data-loading");
         layout(s);
       };
       const failed = () => {
-        if (!alive) return;
         frame.removeAttribute("data-loading");
         frame.dataset.error = "true";
-        if (!item.previewSrc) {
-          const error = doc.createElement("span");
-          error.className = "re-lightbox-error";
-          error.setAttribute("role", "status");
-          error.textContent = s.strings.error;
-          frame.append(error);
+        const error = doc.createElement("div");
+        error.className = "re-lightbox-error";
+        error.setAttribute("role", "status");
+        const message = doc.createElement("p");
+        message.textContent = s.strings.error;
+        const retry = doc.createElement("button");
+        retry.type = "button";
+        retry.className = "re-lightbox-retry";
+        retry.textContent = s.strings.retry;
+        retry.addEventListener(
+          "click",
+          () => {
+            if (doc.activeElement === retry)
+              s.viewport.focus({ preventScroll: true });
+            error.remove();
+            delete frame.dataset.error;
+            frame.dataset.loading = "true";
+            entry.load(index === state.index ? "high" : "low");
+          },
+          { signal: s.abort.signal },
+        );
+        error.append(message, retry);
+        frame.append(error);
+      };
+      const load = (priority: "high" | "low") => {
+        const loader = doc.createElement("img");
+        loader.decoding = "async";
+        loader.setAttribute("fetchpriority", priority);
+        entry.loader = loader;
+        entry.status = "loading";
+        wait = setTimeout(showSpinner, LOADING_DELAY);
+        const settle = (status: "settled" | "failed") => {
+          if (entry.status !== "loading") return;
+          entry.status = status;
+          stopWaiting();
+          startLoads(s);
+        };
+        loader.onload = () => {
+          const source = loader.currentSrc || loader.src;
+          const width = fileWidth(loader, item.srcset, doc.baseURI);
+          const decoded = () => {
+            if (!alive || session !== s || entry.loader !== loader) return;
+            if (entry.status === "failed") return;
+            if ((loader.currentSrc || loader.src) !== source) return;
+            if (s.flying && image.hasAttribute("src"))
+              entry.commit = () => show(loader, width);
+            else show(loader, width);
+            settle("settled");
+          };
+          if (typeof loader.decode !== "function") decoded();
+          else
+            void loader.decode().then(decoded, () => {
+              if (loader.complete && loader.naturalWidth) decoded();
+            });
+        };
+        loader.onerror = () => {
+          if (!alive || session !== s || entry.loader !== loader) return;
+          if (entry.status !== "loading") return;
+          failed();
+          settle("failed");
+          if (!state.isClosing) layout(s);
+        };
+        if (item.srcset) {
+          loader.srcset = item.srcset;
+          requestSizes(s);
         }
+        loader.src = item.src;
       };
-      loader.onload = () => {
-        if (typeof loader.decode === "function")
-          void loader.decode().then(swap, failed);
-        else swap();
-      };
-      loader.onerror = failed;
-      if (item.previewSrc) image.src = item.previewSrc;
+      const preview = previewOf(index);
+      if (preview) image.src = preview;
       frame.dataset.loading = "true";
       const entry: LoadedSlide = {
         frame,
         image,
-        loader,
+        status: "idle",
+        load,
         cancel: () => {
           alive = false;
-          loader.onload = null;
-          loader.onerror = null;
-          loader.removeAttribute("src");
+          stopWaiting();
+          entry.commit = undefined;
+          if (entry.loader) {
+            entry.loader.onload = null;
+            entry.loader.onerror = null;
+            entry.loader.removeAttribute("srcset");
+            entry.loader.removeAttribute("src");
+          }
           image.removeAttribute("src");
           cleanup?.();
         },
       };
       s.loaded.set(index, entry);
-      loader.src = item.src;
-      if (loader.complete && loader.naturalWidth)
-        loader.onload(new Event("load"));
       cleanup = settings.renderContent?.({
         item,
         index,
@@ -1149,6 +1320,7 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
       });
     }
     layout(s);
+    startLoads(s);
   }
 
   function activeChanged(s: Session, index: number) {
@@ -1295,6 +1467,7 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
     if (session === s) session = undefined;
     s.abort.abort();
     clearTimeout(s.wheelTimer);
+    clearTimeout(s.sharpTimer);
     clearTimeout(s.chromeTimer);
     clearTimeout(s.tapTimer);
     if (s.motion)
@@ -2322,6 +2495,9 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
       pointers: new Map(),
       box: measure(viewport),
       suppressClickUntil: 0,
+      flying: true,
+      watchedScale: 1,
+      sharpScale: 1,
     };
     session = s;
     if (doc.defaultView) enterHistory(doc.defaultView);
@@ -2523,6 +2699,12 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
     emit("open", s);
     void flight(s, false).then(() => {
       if (session !== s || state.isClosing) return;
+      s.flying = false;
+      for (const entry of s.loaded.values()) {
+        const commit = entry.commit;
+        entry.commit = undefined;
+        commit?.();
+      }
       if (s.phase === "opening") setPhase(s, "open");
       emit("opened", s);
     });
@@ -2759,16 +2941,50 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
   return controller;
 }
 
+function dimension(value: string | undefined) {
+  const number = Number(value);
+  return value && Number.isFinite(number) && number > 0 ? number : undefined;
+}
+
 export function lightboxItemFromImage(
   image: HTMLImageElement,
-  source = image.dataset.lightboxSrc || image.currentSrc || image.src,
+  source?: string,
 ): LightboxItem {
+  const base = image.baseURI;
+  const link = image.closest<HTMLAnchorElement>("a[href]");
+  const href = link?.getAttribute("href");
+  const tile = image.currentSrc || image.src;
+  const src =
+    source ||
+    (href && isImageFile(href, base) ? href : undefined) ||
+    image.dataset.lightboxSrc ||
+    tile;
+  const resolve = (url: string) => {
+    try {
+      return new URL(url, base).href;
+    } catch {
+      return url;
+    }
+  };
+  const sameFile = resolve(src) === resolve(tile);
+  const width = dimension(image.dataset.lightboxWidth);
+  const height = dimension(image.dataset.lightboxHeight);
+  const caption =
+    image
+      .closest("figure")
+      ?.querySelector(":scope > figcaption")
+      ?.textContent?.trim() ||
+    image.dataset.caption ||
+    link?.dataset.caption;
   return {
-    src: source,
-    previewSrc: image.currentSrc || image.src,
-    width: image.naturalWidth || undefined,
-    height: image.naturalHeight || undefined,
+    src,
+    srcset: image.dataset.lightboxSrcset || undefined,
+    sizes: image.dataset.lightboxSizes || undefined,
+    previewSrc: tile,
+    width: width ?? ((sameFile && image.naturalWidth) || undefined),
+    height: height ?? ((sameFile && image.naturalHeight) || undefined),
     alt: image.alt,
+    caption: caption || undefined,
     origin: image,
   };
 }

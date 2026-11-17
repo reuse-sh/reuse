@@ -175,6 +175,9 @@ importers:
       '@reuse-sh/carousel':
         specifier: workspace:*
         version: link:../carousel
+      '@reuse-sh/loaders':
+        specifier: workspace:*
+        version: link:../loaders
     devDependencies:
       '@types/react':
         specifier: 19.3.0
