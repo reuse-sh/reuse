@@ -102,12 +102,12 @@
       filter 200ms var(--ease-ui);
   }
   .cc-swap svg:last-child,
-  [data-paused] .cc-swap svg:first-child {
+  [aria-pressed="false"] .cc-swap svg:first-child {
     opacity: 0;
     transform: scale(0.4);
     filter: blur(3px);
   }
-  [data-paused] .cc-swap svg:last-child {
+  [aria-pressed="false"] .cc-swap svg:last-child {
     opacity: 1;
     transform: none;
     filter: none;
@@ -161,10 +161,7 @@
     transform: translateX(-100%);
   }
   .cc-pill[aria-current] .cc-pill-fill {
-    transform: none;
-  }
-  [data-playing] .cc-pill[aria-current] .cc-pill-fill {
-    transform: translateX(-100%);
+    transform: translateX(calc((var(--cc-fill, 1) - 1) * 100%));
   }
   .cc-pill:focus-visible {
     outline: none;
@@ -219,12 +216,11 @@
     @apply absolute inset-0 bg-card;
     transform: translateX(-100%);
   }
-  .cc-segment[data-past] .cc-segment-fill,
-  .cc-segment[aria-current] .cc-segment-fill {
+  .cc-segment[data-past] .cc-segment-fill {
     transform: none;
   }
-  [data-playing] .cc-segment[aria-current] .cc-segment-fill {
-    transform: translateX(-100%);
+  .cc-segment[aria-current] .cc-segment-fill {
+    transform: translateX(calc((var(--cc-fill, 1) - 1) * 100%));
   }
   .cc-story-play {
     @apply grid w-7 h-7;
@@ -278,6 +274,8 @@
     @apply rounded-xl;
   }
   .cc-thumbs {
+    --re-carousel-gap: calc(var(--spacing) * 2);
+    --re-carousel-slide-width: calc(var(--spacing) * 17);
     @apply relative flex gap-2 mt-2.5 -mr-1 mb-0 -ml-1 p-1 overflow-x-auto;
     scrollbar-width: none;
   }
@@ -314,21 +312,21 @@
   .cc-c-edge .cc-slide {
     @apply aspect-portrait rounded-xl;
   }
-  .cc-edge:where([data-more-end]) .cc-view {
+  .cc-edge .cc-view:where([data-re-at-start]:not([data-re-at-end])) {
     mask-image: linear-gradient(
       to right,
       var(--scrim) calc(100% - 56px),
       transparent
     );
   }
-  .cc-edge:where([data-more-start]) .cc-view {
+  .cc-edge .cc-view:where([data-re-at-end]:not([data-re-at-start])) {
     mask-image: linear-gradient(
       to left,
       var(--scrim) calc(100% - 56px),
       transparent
     );
   }
-  .cc-edge:where([data-more-start][data-more-end]) .cc-view {
+  .cc-edge .cc-view:where(:not([data-re-at-start], [data-re-at-end])) {
     mask-image: linear-gradient(
       to right,
       transparent,
@@ -385,7 +383,7 @@
     @apply rounded-control;
   }
   .cc-scrub {
-    --cc-p: 0;
+    --re-carousel-progress: 0;
     @apply relative h-7 mt-3;
     outline: none;
     touch-action: none;
@@ -403,7 +401,7 @@
   .cc-scrub-fill {
     @apply absolute inset-0 bg-foreground;
     transform-origin: left;
-    transform: scaleX(var(--cc-p));
+    transform: scaleX(var(--re-carousel-progress));
   }
   .cc-scrub-ticks span {
     @apply absolute;
@@ -415,7 +413,7 @@
   }
   .cc-scrub-handle {
     @apply absolute top-2;
-    left: calc(var(--cc-p) * 100%);
+    left: calc(var(--re-carousel-progress) * 100%);
     @apply w-3 h-3 -ml-1.5 rounded-full bg-foreground;
     box-shadow: 0 0 0 3px var(--background);
     transform: scale(0.75);
@@ -450,7 +448,7 @@
     transition: color 150ms ease;
   }
   .cc-tab:hover,
-  .cc-tab[data-current] {
+  .cc-tab[aria-current="true"] {
     @apply text-foreground;
   }
   .cc-tab:focus-visible {

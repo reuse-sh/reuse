@@ -1,3 +1,16 @@
+import type { CarouselInternals } from "./internal.js";
+
+export interface CarouselStrings {
+  previous: string;
+  next: string;
+  goTo(index: number, count: number): string;
+  counter(index: number, count: number): string;
+  slide(index: number, count: number): string;
+  play: string;
+  pause: string;
+  progress: string;
+}
+
 export interface CarouselOptions {
   slides?: string;
   align?: "start" | "center";
@@ -9,6 +22,7 @@ export interface CarouselOptions {
   releaseDuration?: number;
   moveMotion?: "spring" | "native";
   wheel?: "vertical";
+  strings?: Partial<CarouselStrings>;
   onChange?: (state: CarouselState) => void;
 }
 
@@ -21,6 +35,16 @@ export interface CarouselState {
   readonly isPlaying: boolean;
   readonly isDragging: boolean;
   readonly isLooping: boolean;
+  readonly pageCount: number;
+  readonly pageIndex: number;
+  readonly visible: readonly number[];
+  readonly autoplayProgress: number;
+  readonly seamSlides: readonly number[];
+}
+
+export interface CarouselHandle {
+  setPosition(px: number): void;
+  release(): void;
 }
 
 export interface Carousel {
@@ -34,6 +58,13 @@ export interface Carousel {
   play(): void;
   pause(): void;
   hold(reason: string, isHeld: boolean): void;
+  take(owner: string, options?: { onInterrupt?: () => void }): CarouselHandle;
+  setOptions(
+    options: Pick<
+      CarouselOptions,
+      "autoplay" | "loop" | "group" | "align" | "drag"
+    >,
+  ): void;
   destroy(): void;
 }
 
@@ -60,6 +91,13 @@ function scrollPadding(viewport: HTMLElement, value: string): number {
   const padding = probe.offsetWidth;
   box.remove();
   return padding;
+}
+
+function generic(element: HTMLElement) {
+  return (
+    !element.hasAttribute("role") &&
+    (element.localName === "div" || element.localName === "span")
+  );
 }
 
 function clamp(value: number, max: number): number {
@@ -108,14 +146,26 @@ const stateAttributes = [
   "data-re-at-end",
 ];
 
-export function createCarousel(
-  viewport: HTMLElement,
-  options: CarouselOptions = {},
-): Carousel {
-  const document = viewport.ownerDocument;
-  const browserWindow = document.defaultView;
-  if (!browserWindow) throw new Error("Carousel requires a browser document.");
-  const window = browserWindow;
+const internalKey = Symbol.for("@reuse-sh/carousel internals");
+
+function internalsOf(carousel: Carousel) {
+  return (carousel as unknown as Record<symbol, CarouselInternals | undefined>)[
+    internalKey
+  ];
+}
+
+const defaultStrings: CarouselStrings = {
+  previous: "Previous slide",
+  next: "Next slide",
+  goTo: (index, count) => `Go to slide ${index + 1} of ${count}`,
+  counter: (index, count) => `${index + 1} / ${count}`,
+  slide: (index, count) => `${index + 1} of ${count}`,
+  play: "Play slideshow",
+  pause: "Pause slideshow",
+  progress: "Slide position",
+};
+
+function validate(options: CarouselOptions) {
   if (
     options.group !== undefined &&
     options.group !== "page" &&
@@ -129,6 +179,21 @@ export function createCarousel(
   ) {
     throw new RangeError("Carousel autoplay must be a positive interval.");
   }
+}
+
+const liveOptions = ["autoplay", "loop", "group", "align", "drag"] as const;
+
+export function createCarousel(
+  viewport: HTMLElement,
+  initialOptions: CarouselOptions = {},
+): Carousel {
+  const document = viewport.ownerDocument;
+  const browserWindow = document.defaultView;
+  if (!browserWindow) throw new Error("Carousel requires a browser document.");
+  const window = browserWindow;
+  const options = { ...initialOptions };
+  validate(options);
+  const strings = { ...defaultStrings, ...options.strings };
   if (
     options.releaseMotion !== undefined &&
     options.releaseMotion !== "spring" &&
@@ -160,12 +225,22 @@ export function createCarousel(
   const ownedSlides = new Set<HTMLElement>();
   const slideStyles = new Map<
     HTMLElement,
-    { transform: string; translate: string; snap: string }
+    { translate: string; snap: string }
   >();
+  const rendered = new Map<HTMLElement, string>();
   const spacers: HTMLElement[] = [];
   const observedSlides = new Set<HTMLElement>();
   let span = 0;
   let starts: number[] = [];
+  let aligned: number[] = [];
+  let anchor = 0;
+  let seam: readonly number[] = Object.freeze([]);
+  let taken: {
+    owner: string;
+    base: number;
+    px: number;
+    onInterrupt?: () => void;
+  } | null = null;
   let stops: boolean[] = [];
   const listeners = new Set<(state: CarouselState) => void>();
   const holds = new Set<string>();
@@ -205,6 +280,7 @@ export function createCarousel(
     samples: { time: number; position: number }[];
   } | null = null;
   let grabbedTouch: number | undefined;
+  let fingers = 0;
   let instantFrame = 0;
   let deferredSmooth: number | undefined;
   let smoothTarget: number | undefined;
@@ -219,6 +295,21 @@ export function createCarousel(
   } | null = null;
   let scrolling = false;
   let suppressClick = false;
+  let widths: number[] = [];
+  let width = 0;
+  let pages: number[] = [];
+  let waited = 0;
+  let runningSince: number | undefined;
+  let clockFrame = 0;
+  let unsettled = false;
+  // Screen readers announce changes to a live region already in the page, not one inserted with its text.
+  const live = document.createElement("div");
+  live.setAttribute("aria-live", "polite");
+  live.setAttribute("aria-atomic", "true");
+  live.style.cssText =
+    "position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; border: 0; overflow: hidden; clip-path: inset(50%); white-space: nowrap;";
+  const ownsRole = generic(viewport);
+  const roled = new Map<HTMLElement, boolean>();
   let state: CarouselState = Object.freeze({
     index: 0,
     count: 0,
@@ -228,7 +319,15 @@ export function createCarousel(
     isPlaying: false,
     isDragging: false,
     isLooping: false,
+    pageCount: 0,
+    pageIndex: 0,
+    visible: Object.freeze([]),
+    autoplayProgress: 0,
+    seamSlides: seam,
   });
+  let emitted = state;
+  const events: [string, CarouselState][] = [];
+  let dispatching = false;
 
   function listen(
     target: EventTarget,
@@ -244,17 +343,29 @@ export function createCarousel(
     return clamp(rtl ? -viewport.scrollLeft : viewport.scrollLeft, max);
   }
 
-  function renderLoop() {
-    if (!span) return;
-    const middle = position() + viewport.clientWidth / 2;
+  function render() {
+    const current = position() + stretch;
     slides.forEach((slide, index) => {
-      const center = starts[index] + slide.offsetWidth / 2;
-      const cycles = Math.round((middle - center) / span);
-      const distance = cycles * span * (rtl ? -1 : 1);
-      const original = slideStyles.get(slide)?.transform ?? "";
-      slide.style.transform = distance
-        ? `translateX(${distance}px) ${original}`.trim()
-        : original;
+      const size = widths[index] ?? 0;
+      const cycle = span
+        ? Math.round((current + width / 2 - starts[index] - size / 2) / span)
+        : 0;
+      const offset = size
+        ? Math.round(
+            ((aligned[index] + cycle * span - current) / size) * 1000,
+          ) / 1000
+        : 0;
+      const key = `${cycle}|${offset}`;
+      if (rendered.get(slide) === key) return;
+      rendered.set(slide, key);
+      if (span) {
+        slide.style.setProperty(
+          "--re-carousel-shift",
+          `${cycle * span * (rtl ? -1 : 1)}px`,
+        );
+        slide.setAttribute("data-re-cycle", String(cycle));
+      }
+      slide.style.setProperty("--re-carousel-offset", String(offset));
     });
   }
 
@@ -266,6 +377,7 @@ export function createCarousel(
         ? `${rtl ? value : -value}px`
         : (slideStyles.get(slide)?.translate ?? "");
     }
+    render();
   }
 
   function moveTo(virtual: number) {
@@ -297,7 +409,7 @@ export function createCarousel(
 
   function updateCursor() {
     viewport.style.cursor =
-      enabled && dragReady && max > 0 && !destroyed
+      enabled && dragReady && options.drag !== false && max > 0 && !destroyed
         ? pointer
           ? "grabbing"
           : "grab"
@@ -313,7 +425,7 @@ export function createCarousel(
     const snap = viewport.style.scrollSnapType;
     viewport.style.scrollSnapType = "none";
     scrollTo(target, "instant");
-    renderLoop();
+    render();
     position();
     viewport.style.scrollSnapType = snap;
   }
@@ -354,17 +466,65 @@ export function createCarousel(
       enabled &&
       !holds.size &&
       !internalHolds.size &&
-      targets.some((target) => target > 0) &&
-      (span > 0 || position() < max - 1)
+      targets.some((target) => target > 0)
     );
+  }
+
+  function autoplayFraction() {
+    if (options.autoplay === undefined) return 0;
+    const running =
+      runningSince === undefined ? 0 : window.performance.now() - runningSince;
+    return Math.min(1, (waited + running) / options.autoplay);
+  }
+
+  function pageOf(index: number) {
+    let page = 0;
+    pages.forEach((start, at) => {
+      if ((targets[start] ?? 0) <= (targets[index] ?? 0) + 1) page = at;
+    });
+    return page;
+  }
+
+  function visibleSlides(current: number) {
+    const shown: number[] = [];
+    slides.forEach((_slide, index) => {
+      const size = widths[index] ?? 0;
+      let left = (starts[index] ?? 0) - current;
+      if (span) left += Math.round((width / 2 - left - size / 2) / span) * span;
+      const overlap = Math.min(left + size, width) - Math.max(left, 0);
+      if (size > 0 && overlap >= size / 2 - 0.5) shown.push(index);
+    });
+    return shown;
+  }
+
+  function emit(type: string, detail: CarouselState) {
+    viewport.dispatchEvent(
+      new window.CustomEvent(`re-carousel:${type}`, {
+        bubbles: true,
+        detail,
+      }),
+    );
+  }
+
+  function restartWait() {
+    waited = 0;
+    if (runningSince !== undefined) runningSince = window.performance.now();
+    if (timer !== undefined) {
+      clearTimeout(timer);
+      timer = setTimeout(advance, options.autoplay);
+    }
+    if (options.autoplay !== undefined)
+      viewport.style.setProperty("--re-carousel-autoplay-progress", "0");
   }
 
   function publish(index = state.index) {
     if (destroyed) return;
+    if (index !== state.index) restartWait();
     const current = position();
     viewport.toggleAttribute("data-re-static", max <= 0);
     viewport.toggleAttribute("data-re-at-start", !span && current < 1);
     viewport.toggleAttribute("data-re-at-end", !span && current > max - 1);
+    const visible = visibleSlides(current);
     const next: CarouselState = {
       index,
       count: slides.length,
@@ -380,6 +540,15 @@ export function createCarousel(
       isPlaying: isPlaying(),
       isDragging: pointer?.moved ?? false,
       isLooping: span > 0,
+      pageCount: pages.length,
+      pageIndex: pageOf(index),
+      visible:
+        visible.length === state.visible.length &&
+        visible.every((slide, at) => slide === state.visible[at])
+          ? state.visible
+          : Object.freeze(visible),
+      autoplayProgress: Math.floor(autoplayFraction() * 100) / 100,
+      seamSlides: seam,
     };
     if (
       (Object.keys(next) as (keyof CarouselState)[]).every(
@@ -391,15 +560,77 @@ export function createCarousel(
     state = Object.freeze(next);
     options.onChange?.(state);
     for (const listener of listeners) listener(state);
+    const from = emitted;
+    const to = state;
+    emitted = to;
+    if (to.index !== from.index) events.push(["change", to]);
+    if (to.isPlaying !== from.isPlaying)
+      events.push([to.isPlaying ? "play" : "pause", to]);
+    if (dispatching) return;
+    dispatching = true;
+    for (let event = events.shift(); event; event = events.shift())
+      emit(...event);
+    dispatching = false;
+  }
+
+  function tick() {
+    clockFrame = window.requestAnimationFrame(tick);
+    const fraction = autoplayFraction();
+    viewport.style.setProperty(
+      "--re-carousel-autoplay-progress",
+      String(fraction),
+    );
+    if (Math.floor(fraction * 100) / 100 !== state.autoplayProgress) publish();
+  }
+
+  function advance() {
+    timer = undefined;
+    waited = 0;
+    runningSince = undefined;
+    if (span || state.canNext) step(1);
+    else goTo(0);
+    schedule();
   }
 
   function schedule() {
+    const playing = !destroyed && isPlaying();
+    const now = window.performance.now();
+    if (runningSince !== undefined) waited += now - runningSince;
+    runningSince = playing ? now : undefined;
     clearTimeout(timer);
     timer = undefined;
-    publish();
-    if (!destroyed && isPlaying()) {
-      timer = setTimeout(() => controller.next(), options.autoplay);
+    window.cancelAnimationFrame(clockFrame);
+    clockFrame = 0;
+    if (playing) {
+      timer = setTimeout(
+        advance,
+        Math.max(0, (options.autoplay ?? 0) - waited),
+      );
+      clockFrame = window.requestAnimationFrame(tick);
     }
+    publish();
+  }
+
+  function snaps(index: number) {
+    return (
+      (options.group ?? 1) === 1 || index === anchor || pages.includes(index)
+    );
+  }
+
+  function alignSnap(index: number) {
+    const slide = slides[index];
+    if (slide)
+      slide.style.scrollSnapAlign = snaps(index)
+        ? (options.align ?? "start")
+        : "none";
+  }
+
+  function setAnchor(index: number) {
+    if (index === anchor) return;
+    const previous = anchor;
+    anchor = index;
+    alignSnap(previous);
+    alignSnap(index);
   }
 
   function nearestIndex(current = position()) {
@@ -407,10 +638,13 @@ export function createCarousel(
       Math.abs(targetAt(index, current) - current);
     let nearest = 0;
     for (let index = 1; index < targets.length; index++) {
-      if (distance(index) < distance(nearest) - 0.5) nearest = index;
+      if (snaps(index) && distance(index) < distance(nearest) - 0.5)
+        nearest = index;
     }
     const shown = state.index;
-    return shown < targets.length && distance(shown) <= distance(nearest) + 0.5
+    return shown < targets.length &&
+      snaps(shown) &&
+      distance(shown) <= distance(nearest) + 0.5
       ? shown
       : nearest;
   }
@@ -420,6 +654,7 @@ export function createCarousel(
     let best = -1;
     let bestDistance = Number.POSITIVE_INFINITY;
     targets.forEach((_target, index) => {
+      if (!snaps(index)) return;
       const base = targetAt(index, current);
       for (const candidate of span
         ? [base - span, base, base + span]
@@ -438,7 +673,7 @@ export function createCarousel(
     let first = -1;
     let nearest = Number.POSITIVE_INFINITY;
     targets.forEach((_target, index) => {
-      if (!stops[index]) return;
+      if (!stops[index] || !snaps(index)) return;
       const base = targetAt(index, from);
       for (const candidate of span
         ? [base - span, base, base + span]
@@ -512,13 +747,13 @@ export function createCarousel(
       const { target } = spring;
       spring = null;
       moveTo(target);
-      renderLoop();
+      render();
       settle();
       return;
     }
     moveTo(spring.value);
     recenterLoop();
-    renderLoop();
+    render();
     spring.frame = window.requestAnimationFrame(springFrame);
   }
 
@@ -557,7 +792,8 @@ export function createCarousel(
   }
 
   function settle() {
-    if (pointer || spring || grabbedTouch !== undefined) return;
+    if (pointer || spring || taken || fingers || grabbedTouch !== undefined)
+      return;
     if (
       pendingPosition !== undefined &&
       Math.abs(position() - pendingPosition) > 1
@@ -596,6 +832,7 @@ export function createCarousel(
       return;
     }
     scrolling = false;
+    setAnchor(index);
     if (span && enabled) {
       const current = position();
       const centered = loopPosition(current);
@@ -604,6 +841,10 @@ export function createCarousel(
     viewport.style.scrollSnapType = previousSnap;
     publish(index);
     schedule();
+    if (unsettled) {
+      unsettled = false;
+      emit("settle", state);
+    }
   }
 
   function interrupt(restoreSnap = true) {
@@ -613,7 +854,7 @@ export function createCarousel(
     pendingPosition = undefined;
     if (!restoreSnap) viewport.style.scrollSnapType = "none";
     scrollTo(position(), "instant");
-    if (restoreSnap) viewport.style.scrollSnapType = previousSnap;
+    if (restoreSnap && !taken) viewport.style.scrollSnapType = previousSnap;
     if (stretch) settleTimer = setTimeout(settle, 180);
     publish(nearestIndex());
   }
@@ -658,13 +899,23 @@ export function createCarousel(
     reference = pendingPosition ?? position(),
     flick = false,
   ) {
-    if (destroyed || !enabled || !slides.length || !Number.isFinite(index))
+    if (
+      destroyed ||
+      !enabled ||
+      taken ||
+      !slides.length ||
+      !Number.isFinite(index)
+    )
       return;
     const rounded = Math.round(index);
     const next =
       span > 0
         ? ((rounded % slides.length) + slides.length) % slides.length
         : clamp(rounded, slides.length - 1);
+    if (max <= 0) {
+      publish(next);
+      return;
+    }
     let target = targetAt(next, reference);
     if (span && direction === 1 && target <= reference + 0.5) target += span;
     if (span && direction === -1 && target >= reference - 0.5) target -= span;
@@ -686,6 +937,8 @@ export function createCarousel(
       (stretch !== 0 || motion !== "native");
     const moving = glide && releaseSpeed === undefined ? spring : null;
     if (!moving) stopSpring();
+    unsettled = true;
+    setAnchor(index);
     let target = destination;
     pendingPosition = target;
     pendingIndex = index;
@@ -709,16 +962,14 @@ export function createCarousel(
       setStretch(0);
       scrollTo(target, behavior);
     }
-    renderLoop();
+    render();
     publish(pendingIndex);
     clearTimeout(settleTimer);
     settleTimer = setTimeout(settle, 180);
     schedule();
   }
 
-  function step(direction: 1 | -1) {
-    if (!enabled || destroyed || !slides.length || max === 0) return;
-    const current = state.index;
+  function stepIndex(current: number, direction: 1 | -1) {
     const at = targets[current] ?? 0;
     if (span && options.group === "page") {
       let count = 1;
@@ -727,18 +978,14 @@ export function createCarousel(
         const index =
           (current + direction * count + slides.length) % slides.length;
         const previous = (index - direction + slides.length) % slides.length;
-        distance +=
-          direction === 1
-            ? slides[previous].offsetWidth
-            : slides[index].offsetWidth;
-        if (distance >= viewport.clientWidth) break;
+        distance += direction === 1 ? widths[previous] : widths[index];
+        if (distance >= width) break;
         count++;
       }
-      goTo(current + direction * count, "smooth", direction);
-      return;
+      return current + direction * count;
     }
     if (options.group === "page") {
-      const distance = clamp(at + direction * viewport.clientWidth, max);
+      const distance = clamp(at + direction * width, max);
       let target = current;
       if (direction === 1) {
         target = targets.findIndex((value) => value >= distance - 1);
@@ -748,10 +995,41 @@ export function createCarousel(
           if (targets[index] <= distance + 1) target = index;
         }
       }
-      goTo(target);
-      return;
+      return target;
     }
-    goTo(current + direction * (options.group ?? 1), "smooth", direction);
+    return current + direction * (options.group ?? 1);
+  }
+
+  function measurePages() {
+    if (!slides.length) return [];
+    const found = [0];
+    if (max <= 0) return found;
+    for (let index = 0; ; ) {
+      const next = span
+        ? stepIndex(index, 1)
+        : Math.min(stepIndex(index, 1), slides.length - 1);
+      if (span ? next >= slides.length : next <= index) break;
+      index = next;
+      if (span || targets[index] > targets[found[found.length - 1]] + 1)
+        found.push(index);
+    }
+    return found;
+  }
+
+  function step(direction: 1 | -1) {
+    if (!enabled || destroyed || !slides.length || max === 0) return;
+    goTo(stepIndex(state.index, direction), "smooth", direction);
+  }
+
+  function say(text: string) {
+    if (!live.isConnected) viewport.after(live);
+    live.textContent = text;
+  }
+
+  function announced(move: () => void) {
+    const before = state.index;
+    move();
+    if (state.index !== before) say(strings.slide(state.index, state.count));
   }
 
   function readSlides() {
@@ -807,9 +1085,12 @@ export function createCarousel(
     for (const spacer of spacers) spacer.remove();
     spacers.length = 0;
     for (const [slide, original] of slideStyles) {
-      slide.style.transform = original.transform;
       slide.style.translate = original.translate;
+      slide.style.removeProperty("--re-carousel-shift");
+      slide.style.removeProperty("--re-carousel-offset");
+      slide.removeAttribute("data-re-cycle");
     }
+    rendered.clear();
     stretch = 0;
     span = 0;
     slides = readSlides();
@@ -822,42 +1103,43 @@ export function createCarousel(
       viewportWidth -
       padding -
       scrollPadding(viewport, styles.scrollPaddingInlineEnd);
-    targets = slides.map((slide) => {
+    for (const slide of slides) {
       if (!slide.classList.contains("re-carousel__slide")) {
         slide.classList.add("re-carousel__slide");
         ownedSlides.add(slide);
       }
       if (!slideStyles.has(slide))
         slideStyles.set(slide, {
-          transform: slide.style.transform,
           translate: slide.style.translate,
           snap: slide.style.scrollSnapAlign,
         });
-      slide.style.scrollSnapAlign = options.align ?? "start";
-      const left = offsetLeft(slide) - origin;
-      const start = rtl ? viewportWidth - left - slide.offsetWidth : left;
-      const target =
-        options.align === "center"
-          ? start - (viewportWidth - slide.offsetWidth) / 2
-          : start - padding;
-      return clamp(target, max);
-    });
+    }
+    widths = slides.map((slide) => slide.offsetWidth);
     stops = slides.map(
       (slide) => window.getComputedStyle(slide).scrollSnapStop === "always",
     );
-    starts = slides.map((slide) => {
+    starts = slides.map((slide, index) => {
       const left = offsetLeft(slide) - origin;
-      return rtl ? viewportWidth - left - slide.offsetWidth : left;
+      return rtl ? viewportWidth - left - widths[index] : left;
     });
+    aligned = starts.map(
+      (start, index) =>
+        start -
+        (options.align === "center"
+          ? (viewportWidth - widths[index]) / 2
+          : padding),
+    );
+    targets = aligned.map((target) => clamp(target, max));
     const gap = Number.parseFloat(styles.columnGap) || 0;
     const cycle = slides.length
-      ? starts[slides.length - 1] -
-        starts[0] +
-        slides[slides.length - 1].offsetWidth +
-        gap
+      ? (starts.at(-1) ?? 0) - starts[0] + (widths.at(-1) ?? 0) + gap
       : 0;
-    const largest = Math.max(0, ...slides.map((slide) => slide.offsetWidth));
-    if (options.loop && max > 0 && cycle >= viewportWidth + largest) {
+    if (
+      options.loop &&
+      max > 0 &&
+      !widths.includes(0) &&
+      cycle >= viewportWidth + Math.max(0, ...widths)
+    ) {
       span = cycle;
       for (let index = 0; index < 2; index++) {
         const spacer = document.createElement("span");
@@ -868,20 +1150,27 @@ export function createCarousel(
       }
       viewport.prepend(spacers[0]);
       viewport.append(spacers[1]);
-      targets = starts.map(
-        (start, index) =>
-          span +
-          start -
-          (options.align === "center"
-            ? (viewportWidth - slides[index].offsetWidth) / 2
-            : padding),
-      );
       starts = starts.map((start) => start + span);
+      aligned = aligned.map((target) => target + span);
+      targets = aligned;
       max = Math.max(
         viewport.scrollWidth - viewportWidth,
         span * 3 - viewportWidth - gap,
       );
     }
+    width = viewportWidth;
+    pages = measurePages();
+    const seen = span
+      ? slides
+          .map((_slide, index) => index)
+          .filter(
+            (index) =>
+              starts[index] - starts[0] < width ||
+              starts[index] + widths[index] - starts[0] > span - gap - width,
+          )
+      : [];
+    if (seen.join() !== seam.join()) seam = Object.freeze(seen);
+    label();
     for (const slide of observedSlides) {
       if (!slides.includes(slide)) {
         observer?.unobserve(slide);
@@ -896,14 +1185,18 @@ export function createCarousel(
     const index = active ? slides.indexOf(active) : -1;
     const retained = index < 0 ? clamp(state.index, slides.length - 1) : index;
     const goalIndex = goal ? slides.indexOf(goal) : -1;
-    const moving = goalIndex >= 0 || Boolean(pointer?.moved) || scrolling;
+    const moving =
+      goalIndex >= 0 || Boolean(pointer?.moved) || scrolling || taken !== null;
     clearTimeout(settleTimer);
     pendingIndex = undefined;
     pendingPosition = undefined;
+    anchor = retained;
+    for (let at = 0; at < slides.length; at++) alignSnap(at);
     if (enabled)
       scrollTo((targets[retained] ?? 0) + (moving ? offset : 0), "instant");
     else disabledPosition = clamp(disabledPosition, max);
-    renderLoop();
+    if (taken) taken.base = position() - taken.px;
+    render();
     shiftPointer(position() - before);
     viewport.style.scrollSnapType = snap;
     updateCursor();
@@ -931,6 +1224,30 @@ export function createCarousel(
     }
   }
 
+  function label() {
+    for (const [slide, ownsLabel] of roled) {
+      if (slides.includes(slide)) continue;
+      unlabel(slide, ownsLabel);
+      roled.delete(slide);
+    }
+    slides.forEach((slide, index) => {
+      if (!roled.has(slide)) {
+        if (!generic(slide)) return;
+        slide.setAttribute("role", "group");
+        slide.setAttribute("aria-roledescription", "slide");
+        roled.set(slide, !slide.hasAttribute("aria-label"));
+      }
+      if (roled.get(slide))
+        slide.setAttribute("aria-label", strings.slide(index, slides.length));
+    });
+  }
+
+  function unlabel(slide: HTMLElement, ownsLabel: boolean) {
+    slide.removeAttribute("role");
+    slide.removeAttribute("aria-roledescription");
+    if (ownsLabel) slide.removeAttribute("aria-label");
+  }
+
   function hold(reason: string, isHeld: boolean) {
     if (destroyed) return;
     if (isHeld) holds.add(reason);
@@ -943,6 +1260,19 @@ export function createCarousel(
     if (isHeld) internalHolds.add(reason);
     else internalHolds.delete(reason);
     schedule();
+  }
+
+  function untake() {
+    taken = null;
+    internalHold("take", false);
+  }
+
+  function interruptTake() {
+    const hand = taken;
+    if (!hand) return;
+    untake();
+    unsettled = true;
+    hand.onInterrupt?.();
   }
 
   function endDrag(snap: boolean, time = window.performance.now()) {
@@ -982,13 +1312,13 @@ export function createCarousel(
     } else if (moved && snap)
       goTo(nearestIndex(current), "smooth", undefined, speed, current);
     else if (moved || snap || stretch) settle();
-    else viewport.style.scrollSnapType = previousSnap;
+    else if (!taken) viewport.style.scrollSnapType = previousSnap;
     publish();
   }
 
   const controller: Carousel = {
-    next: () => step(1),
-    prev: () => step(-1),
+    next: () => announced(() => step(1)),
+    prev: () => announced(() => step(-1)),
     goTo: (index, behavior) => goTo(index, behavior),
     getState: () => state,
     subscribe(listener) {
@@ -1022,13 +1352,76 @@ export function createCarousel(
       schedule();
     },
     hold,
+    take(owner, { onInterrupt } = {}) {
+      const inert = { setPosition() {}, release() {} };
+      if (destroyed || reducedMotion?.matches) return inert;
+      if (pointer || fingers || grabbedTouch !== undefined) {
+        unsettled = true;
+        return inert;
+      }
+      const previous = taken;
+      stopSpring();
+      setStretch(0);
+      clearTimeout(settleTimer);
+      pendingIndex = undefined;
+      pendingPosition = undefined;
+      const hand = { owner, base: position(), px: 0, onInterrupt };
+      taken = hand;
+      viewport.style.scrollSnapType = "none";
+      internalHold("take", true);
+      if (previous && previous.owner !== owner) previous.onInterrupt?.();
+      return {
+        setPosition(px) {
+          if (taken !== hand || !enabled || reducedMotion?.matches) return;
+          if (!Number.isFinite(px)) return;
+          hand.px = px;
+          const goal = hand.base + px;
+          scrollTo(span ? loopPosition(goal) : clamp(goal, max), "instant");
+          render();
+          publish(nearestIndex());
+        },
+        release() {
+          if (taken !== hand) return;
+          untake();
+          if (snapMode !== "none" && enabled && max > 0 && slides.length)
+            goTo(nearestIndex(), "smooth");
+          else viewport.style.scrollSnapType = previousSnap;
+        },
+      };
+    },
+    setOptions(next) {
+      if (destroyed) return;
+      validate(next);
+      const changed = liveOptions.filter(
+        (name) => Object.hasOwn(next, name) && next[name] !== options[name],
+      );
+      if (!changed.length) return;
+      const hadAutoplay = options.autoplay !== undefined;
+      for (const name of changed)
+        Object.assign(options, { [name]: next[name] });
+      if (changed.includes("autoplay")) {
+        if (options.autoplay === undefined) {
+          requestedPlaying = false;
+          viewport.style.removeProperty("--re-carousel-autoplay-progress");
+        } else if (!hadAutoplay) requestedPlaying = true;
+        waited = 0;
+        runningSince = undefined;
+      }
+      if (options.drag === false) endDrag(false);
+      if (changed.some((name) => name !== "autoplay" && name !== "drag"))
+        refresh();
+      updateCursor();
+      schedule();
+    },
     destroy() {
       if (destroyed) return;
       endDrag(false);
       destroyed = true;
+      taken = null;
       clearTimeout(timer);
       clearTimeout(settleTimer);
       clearTimeout(quietTimer);
+      window.cancelAnimationFrame(clockFrame);
       window.cancelAnimationFrame(instantFrame);
       window.cancelAnimationFrame(refreshFrame);
       stopSpring();
@@ -1039,6 +1432,13 @@ export function createCarousel(
       listeners.clear();
       if (!hadClass) viewport.classList.remove("re-carousel");
       for (const name of stateAttributes) viewport.removeAttribute(name);
+      viewport.style.removeProperty("--re-carousel-autoplay-progress");
+      if (ownsRole) {
+        viewport.removeAttribute("role");
+        viewport.removeAttribute("aria-roledescription");
+      }
+      for (const [slide, ownsLabel] of roled) unlabel(slide, ownsLabel);
+      live.remove();
       const restoredPosition = span
         ? (targets[state.index] ?? span) - span
         : position();
@@ -1050,9 +1450,11 @@ export function createCarousel(
         );
       }
       for (const [slide, original] of slideStyles) {
-        slide.style.transform = original.transform;
         slide.style.translate = original.translate;
         slide.style.scrollSnapAlign = original.snap;
+        slide.style.removeProperty("--re-carousel-shift");
+        slide.style.removeProperty("--re-carousel-offset");
+        slide.removeAttribute("data-re-cycle");
       }
       for (const slide of ownedSlides) {
         slide.classList.remove("re-carousel__slide");
@@ -1082,8 +1484,8 @@ export function createCarousel(
     : undefined;
   const intersection = window.IntersectionObserver
     ? new window.IntersectionObserver(
-        ([entry]) => internalHold("offscreen", !entry.isIntersecting),
-        { threshold: 0 },
+        ([entry]) => internalHold("offscreen", entry.intersectionRatio < 0.5),
+        { threshold: 0.5 },
       )
     : undefined;
 
@@ -1118,6 +1520,11 @@ export function createCarousel(
     const delta = input.clientX - pointer.x;
     if (!pointer.moved && Math.abs(delta) < 5) return;
     if (!pointer.moved) {
+      if (taken) {
+        interruptTake();
+        if (!pointer) return;
+        pointer.position = position() + (rtl ? -delta : delta);
+      }
       pointer.moved = true;
       capture(viewport, pointer.id);
       viewport.style.scrollSnapType = "none";
@@ -1135,7 +1542,7 @@ export function createCarousel(
     });
     if (pointer.samples.length > 8) pointer.samples.shift();
     recenterLoop();
-    renderLoop();
+    render();
     publish(nearestIndex());
   }
 
@@ -1177,6 +1584,11 @@ export function createCarousel(
 
   viewport.classList.add("re-carousel");
   if (initialTabIndex === null) viewport.tabIndex = 0;
+  if (ownsRole) {
+    viewport.setAttribute("role", "region");
+    viewport.setAttribute("aria-roledescription", "carousel");
+  }
+  viewport.after(live);
   listen(viewport, "scroll", () => {
     if (!enabled) {
       if (Math.abs(position() - disabledPosition) > 0.5) {
@@ -1184,11 +1596,17 @@ export function createCarousel(
       }
       return;
     }
+    if (taken) {
+      render();
+      publish(nearestIndex());
+      return;
+    }
     if (pointer?.moved) recenterLoop();
     scrolling = true;
+    unsettled = true;
     lastScroll = window.performance.now();
     trackScroll();
-    renderLoop();
+    render();
     publish(pendingIndex ?? nearestIndex());
     clearTimeout(settleTimer);
     settleTimer = setTimeout(settle, 180);
@@ -1234,10 +1652,12 @@ export function createCarousel(
     ) {
       return;
     }
-    if (key.key === "Home") goTo(0);
-    else if (key.key === "End") goTo(slides.length - 1);
-    else if (key.key === (rtl ? "ArrowLeft" : "ArrowRight")) step(1);
-    else if (key.key === (rtl ? "ArrowRight" : "ArrowLeft")) step(-1);
+    if (key.key === "Home") announced(() => goTo(0));
+    else if (key.key === "End") announced(() => goTo(slides.length - 1));
+    else if (key.key === (rtl ? "ArrowLeft" : "ArrowRight"))
+      announced(() => step(1));
+    else if (key.key === (rtl ? "ArrowRight" : "ArrowLeft"))
+      announced(() => step(-1));
     else return;
     key.preventDefault();
   });
@@ -1263,6 +1683,12 @@ export function createCarousel(
   listen(viewport, "pointerdown", (event) => {
     const input = event as PointerEvent;
     const target = input.target as HTMLElement;
+    if (taken && input.pointerType !== "mouse") {
+      grabbedTouch = input.pointerId;
+      interrupt(false);
+      interruptTake();
+      return;
+    }
     if (
       !enabled ||
       options.drag === false ||
@@ -1309,10 +1735,42 @@ export function createCarousel(
   };
   listen(viewport, "pointerup", releaseTouch);
   listen(viewport, "pointercancel", releaseTouch);
+  // A native pan cancels its pointer while the finger stays down, so fingers are counted from touch events.
+  const countFingers = (event: Event) => {
+    const before = fingers;
+    fingers = Array.from((event as TouchEvent).touches).filter((touch) =>
+      viewport.contains(touch.target as Node),
+    ).length;
+    if (fingers || !before || !unsettled) return;
+    clearTimeout(settleTimer);
+    settleTimer = setTimeout(settle, 180);
+  };
+  listen(viewport, "touchstart", countFingers, { passive: true });
+  for (const type of ["touchend", "touchcancel"])
+    listen(window, type, countFingers, { passive: true });
   observer?.observe(viewport);
   refresh();
   mutation?.observe(viewport, { childList: true, subtree: true });
   intersection?.observe(viewport);
+  const reach: CarouselInternals = {
+    viewport,
+    strings,
+    slides: () => slides,
+    pages: () =>
+      pages.map((index) => ({
+        index,
+        at: span
+          ? ((targets[index] ?? 0) - (targets[0] ?? 0)) / span
+          : max > 0
+            ? (targets[index] ?? 0) / max
+            : 0,
+      })),
+    requested: () => requestedPlaying && options.autoplay !== undefined,
+    align: () => options.align,
+    goTo: (index, behavior, announce) =>
+      announce ? announced(() => goTo(index, behavior)) : goTo(index, behavior),
+  };
+  Object.defineProperty(controller, internalKey, { value: reach });
   return controller;
 }
 
@@ -1336,5 +1794,51 @@ export function syncCarousels(...carousels: Carousel[]): () => void {
   });
   return () => {
     for (const unsubscribe of unsubscribes) unsubscribe();
+  };
+}
+
+export function connectThumbnails(
+  main: Carousel,
+  thumbnails: Carousel,
+): () => void {
+  const strip = internalsOf(thumbnails);
+  if (!strip) throw new TypeError("connectThumbnails needs two carousels.");
+  const align = strip.align();
+  thumbnails.setOptions({ align: "center" });
+  let shown = -1;
+  let count = -1;
+  const mark = () => {
+    strip.slides().forEach((slide, index) => {
+      if (index === shown) slide.setAttribute("aria-current", "true");
+      else slide.removeAttribute("aria-current");
+    });
+  };
+  const follow = (state: CarouselState) => {
+    if (state.index === shown) return;
+    strip.goTo(state.index, shown < 0 ? "instant" : "smooth");
+    shown = state.index;
+    mark();
+  };
+  const unsubscribe = main.subscribe(follow);
+  const recount = thumbnails.subscribe((state) => {
+    if (state.count === count) return;
+    count = state.count;
+    mark();
+  });
+  follow(main.getState());
+  const choose = (event: Event) => {
+    const index = strip
+      .slides()
+      .findIndex((slide) => slide.contains(event.target as Node));
+    if (index >= 0) internalsOf(main)?.goTo(index, "smooth", true);
+  };
+  strip.viewport.addEventListener("click", choose);
+  return () => {
+    unsubscribe();
+    recount();
+    strip.viewport.removeEventListener("click", choose);
+    shown = -1;
+    mark();
+    thumbnails.setOptions({ align });
   };
 }
