@@ -119,7 +119,8 @@ export const libraries: Library[] = [
       ],
       [
         "Zoom around the point you touch",
-        "Pinch, wheel and double-tap zoom around the pointer or fingers, and panning stops at the image's edges.",
+        "Pinch, wheel and double-tap zoom in around the pointer or fingers, and a tap, click or the zoom button zooms back out to the whole photo.",
+        "tests/browser/lightbox-zoom.spec.ts",
       ],
       [
         "Keep focus inside and give it back",
@@ -157,10 +158,12 @@ export const libraries: Library[] = [
       [
         "Zoom to real pixels",
         "Zoom levels follow the image's own resolution. Panning stretches past the edge and glides on release.",
+        "tests/browser/lightbox-zoom.spec.ts",
       ],
       [
         "Never block a frame",
         "No layout read or framework render runs per pointer move, scroll or wheel event.",
+        "tests/browser/performance.spec.ts",
       ],
       [
         "Give focus back quietly",
@@ -187,7 +190,7 @@ export const libraries: Library[] = [
       ],
       [
         "zoomTo(scale, focus?), toggleZoom(focus?)",
-        "Zooms to a scale around a point, or between fit and the tap zoom.",
+        "Zooms to a scale around a point, up to the photo's maximum, or between fit and the tap zoom.",
       ],
       [
         "getState(), subscribe(listener)",
@@ -210,6 +213,7 @@ export const libraries: Library[] = [
     notes: [
       'A click on the image zooms by default, and a click beside it closes. On a phone a tap on the photo shows or hides the controls once the 300ms double-tap window passes, a double tap zooms, and a tap beside it closes. For a publishing gallery, set imageClick: "close", which also turns off the double tap.',
       "A vertical swipe either way closes past 120px or 0.5px/ms, measured over the last 80ms before the finger lifts. The controls hide after autoHide ms of a still mouse, 2500 by default, and while zoomed, and come back on a key, a 24px move, or a tap. The open and close flights take --re-lightbox-open-duration and --re-lightbox-close-duration on the --re-lightbox-ease curve.",
+      "Zoom follows the file's pixels: a double tap, a click or the zoom button goes to 1:1, or to tapZoom (2.5) when that is larger, and maxZoom (1) is a multiple of 1:1. A photo the screen already shows at full resolution has no zoom, and an SVG zooms up to maxZoom times its fitted size, 4 by default. A pinch below 0.75 closes, Ctrl or Cmd with the wheel and a trackpad pinch zoom, and a plain wheel does nothing until you zoom in, then pans. While zoomed the arrow keys pan and a pan glides on release; the next photo is a second swipe once the photo rests against its edge.",
       "Paging runs on the carousel package. Only the current and neighboring images stay loaded. Next and previous scroll smoothly, and a jump from a distant thumbnail fades through the backdrop so unloaded pages never flash past.",
       "Images are the core. Video, audio, iframe and HTML slides are separate modules: @reuse-sh/lightbox/video, /audio, /iframe, /html and /embed each export a content factory that you pass in the content option. An item picks its module by type; without one it is an image. The embed module turns YouTube and Vimeo links into players and registerEmbed adds more. HTML slides take a function that returns a Node, never an HTML string. Live Photos and HDR are not supported.",
       'For a page without a bundler or an import map, such as a theme or a plugin, load @reuse-sh/lightbox/browser/lightbox.js with <script type="module">. It is one minified ES module with a source map and the carousel inside. Each media module is a separate file in the same folder that imports lightbox.js by a relative path, and the carousel link is carousel-link.js beside them, so copy the folder whole.',

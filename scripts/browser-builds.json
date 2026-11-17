@@ -8,6 +8,6 @@
       "lightbox": "dist/index.js",
       "carousel-link": "dist/carousel.js"
     },
-    "budgets": { "lightbox.js": 19.55, "carousel-link.js": 0.29 }
+    "budgets": { "lightbox.js": 21.13, "carousel-link.js": 0.29 }
   }
 }

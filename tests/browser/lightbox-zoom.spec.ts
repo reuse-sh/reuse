@@ -1,0 +1,308 @@
+import { expect, type Page, test } from "@playwright/test";
+import {
+  ctrlWheel,
+  mount,
+  type Point,
+  pinch,
+  pinchThenPan,
+  safariPinch,
+  swipe,
+  tap,
+} from "./harness";
+
+type Zoom = { scale: number; x: number; y: number };
+type Lightbox = {
+  getState(): {
+    index: number;
+    isOpen: boolean;
+    isClosing: boolean;
+    isAnimating: boolean;
+    zoom: Zoom;
+  };
+  zoomTo(scale: number, focus?: Point): void;
+};
+type Window = typeof globalThis & { lightbox: Lightbox };
+
+async function open(
+  page: Page,
+  {
+    width,
+    height,
+    count = 1,
+  }: { width: number; height: number; count?: number },
+) {
+  await mount(page, "", ["lightbox/base.css", "lightbox/theme.css"]);
+  await page.evaluate(
+    async ([w, h, n]) => {
+      const canvas = document.createElement("canvas");
+      canvas.width = w;
+      canvas.height = h;
+      const context = canvas.getContext("2d") as CanvasRenderingContext2D;
+      const gradient = context.createLinearGradient(0, 0, w, h);
+      gradient.addColorStop(0, "#345");
+      gradient.addColorStop(1, "#c96");
+      context.fillStyle = gradient;
+      context.fillRect(0, 0, w, h);
+      const blob = await new Promise<Blob | null>((resolve) =>
+        canvas.toBlob(resolve, "image/jpeg", 0.8),
+      );
+      const src = URL.createObjectURL(blob as Blob);
+      const { createLightbox } = await import("/modules/lightbox/index.js");
+      const lightbox = createLightbox({ history: false });
+      Object.assign(window, { lightbox });
+      lightbox.open(
+        Array.from({ length: n }, () => ({ src, width: w, height: h })),
+        0,
+      );
+    },
+    [width, height, count] as const,
+  );
+  await expect(page.locator("dialog")).toHaveAttribute("data-phase", "open");
+  await expect(page.locator(".re-lightbox-frame[data-loading]")).toHaveCount(0);
+}
+
+const state = (page: Page) =>
+  page.evaluate(() => (window as Window).lightbox.getState());
+
+async function zoomTo(page: Page, scale: number, focus: Point) {
+  await page.evaluate(
+    ([value, at]) => (window as Window).lightbox.zoomTo(value, at),
+    [scale, focus] as const,
+  );
+  await still(page);
+}
+
+async function still(page: Page) {
+  await expect.poll(async () => (await state(page)).isAnimating).toBe(false);
+}
+
+async function photo(page: Page) {
+  const box = await page
+    .locator('.re-lightbox-slide[aria-hidden="false"] .re-lightbox-frame')
+    .boundingBox();
+  if (!box) throw new Error("Missing photo");
+  return box;
+}
+
+async function screen(page: Page) {
+  const box = await page.locator(".re-lightbox-viewport").boundingBox();
+  if (!box) throw new Error("Missing viewport");
+  return box;
+}
+
+function share(
+  box: { x: number; y: number; width: number; height: number },
+  at: Point,
+) {
+  return { x: (at.x - box.x) / box.width, y: (at.y - box.y) / box.height };
+}
+
+async function expectUnder(page: Page, at: Point, held: Point) {
+  const box = await photo(page);
+  expect(Math.abs(box.x + held.x * box.width - at.x)).toBeLessThanOrEqual(1);
+  expect(Math.abs(box.y + held.y * box.height - at.y)).toBeLessThanOrEqual(1);
+}
+
+test.describe("lightbox zoom with a mouse, wheel and trackpad", {
+  tag: "@desktop",
+}, () => {
+  test("a photo the screen shows whole has no zoom button, zoom cursor or click zoom", async ({
+    page,
+  }) => {
+    await open(page, { width: 800, height: 600 });
+    await expect(page.locator(".re-lightbox-zoom")).toBeHidden();
+    const box = await photo(page);
+    const cursor = await page
+      .locator('.re-lightbox-slide[aria-hidden="false"] .re-lightbox-frame')
+      .evaluate((frame) => getComputedStyle(frame).cursor);
+    expect(cursor).toBe("auto");
+    await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2);
+    await page.waitForTimeout(400);
+    expect(await state(page)).toMatchObject({
+      isOpen: true,
+      zoom: { scale: 1, x: 0, y: 0 },
+    });
+  });
+
+  test("a click zooms a 4000x3000 photo to its file pixels around the pointer and the next one returns to the center", async ({
+    page,
+  }) => {
+    await open(page, { width: 4000, height: 3000 });
+    await expect(page.locator(".re-lightbox-zoom")).toBeVisible();
+    const before = await photo(page);
+    // Mouse events carry whole pixels.
+    const at = {
+      x: Math.round(before.x + before.width * 0.4),
+      y: Math.round(before.y + before.height * 0.45),
+    };
+    const held = share(before, at);
+    await page.mouse.click(at.x, at.y);
+    await still(page);
+    expect(Math.abs((await photo(page)).width - 4000)).toBeLessThanOrEqual(1);
+    await expectUnder(page, at, held);
+    await page.mouse.click(at.x, at.y);
+    await still(page);
+    expect((await state(page)).zoom).toEqual({ scale: 1, x: 0, y: 0 });
+  });
+
+  test("a drag 200px past the right edge stretches 70px and springs back to the edge", async ({
+    page,
+  }) => {
+    await open(page, { width: 4000, height: 3000 });
+    await zoomTo(page, 10, { x: 5000, y: 0 });
+    const edge = (await screen(page)).x + (await screen(page)).width;
+    const right = async () => {
+      const box = await photo(page);
+      return box.x + box.width;
+    };
+    expect(Math.abs((await right()) - edge)).toBeLessThanOrEqual(1);
+    const drag = swipe(
+      page,
+      { x: 720, y: 450 },
+      { x: 520, y: 450 },
+      {
+        speed: 0.5,
+        hold: 800,
+      },
+    );
+    await expect.poll(async () => Math.round(edge - (await right()))).toBe(70);
+    await drag;
+    await page.waitForTimeout(600);
+    expect(Math.abs((await right()) - edge)).toBeLessThanOrEqual(1);
+  });
+
+  test("a flick at 1px/ms glides about 180px further and stops at the edge", async ({
+    page,
+  }) => {
+    await open(page, { width: 4000, height: 3000 });
+    await zoomTo(page, 10, { x: 0, y: 0 });
+    await swipe(page, { x: 900, y: 450 }, { x: 700, y: 450 }, { speed: 1 });
+    await still(page);
+    const glide = -200 - (await state(page)).zoom.x;
+    expect(glide).toBeGreaterThan(100);
+    expect(glide).toBeLessThan(230);
+    await zoomTo(page, 1, { x: 0, y: 0 });
+    await zoomTo(page, 10, { x: 5000, y: 0 });
+    const limit = (await state(page)).zoom.x;
+    await swipe(page, { x: 900, y: 450 }, { x: 700, y: 450 }, { speed: 1 });
+    await still(page);
+    expect((await state(page)).zoom.x).toBe(limit);
+  });
+
+  test("an ordinary wheel does nothing at fit, and Ctrl with the wheel zooms around the pointer", async ({
+    page,
+  }) => {
+    await open(page, { width: 4000, height: 3000, count: 3 });
+    const at = { x: 600, y: 400 };
+    await page.mouse.move(at.x, at.y);
+    await page.mouse.wheel(0, 120);
+    await page.waitForTimeout(300);
+    expect(await state(page)).toMatchObject({
+      index: 0,
+      zoom: { scale: 1, x: 0, y: 0 },
+    });
+    const held = share(await photo(page), at);
+    for (let step = 0; step < 3; step++) {
+      await ctrlWheel(page, at, -40);
+      await page.waitForTimeout(16);
+    }
+    await page.waitForTimeout(300);
+    expect((await state(page)).zoom.scale).toBeGreaterThan(1.5);
+    await expectUnder(page, at, held);
+  });
+
+  test("Safari's gesture events zoom to their scale", async ({ page }) => {
+    await open(page, { width: 4000, height: 3000 });
+    await safariPinch(page, { x: 720, y: 450 }, { scale: 2 });
+    expect((await state(page)).zoom.scale).toBeCloseTo(2, 5);
+  });
+});
+
+test.describe("lightbox zoom with fingers", { tag: "@touch" }, () => {
+  async function center(page: Page) {
+    const box = await photo(page);
+    return { x: box.x + box.width / 2, y: box.y + box.height / 2 };
+  }
+
+  test("a double tap leaves a photo the screen shows whole at fit", async ({
+    page,
+  }) => {
+    await open(page, { width: 800, height: 600 });
+    await expect(page.locator(".re-lightbox-zoom")).toBeHidden();
+    await tap(page, await center(page), { count: 2 });
+    await page.waitForTimeout(500);
+    expect((await state(page)).zoom.scale).toBe(1);
+  });
+
+  test("a double tap zooms a 4000x3000 photo to its file pixels around the finger", async ({
+    page,
+  }) => {
+    await open(page, { width: 4000, height: 3000 });
+    const before = await photo(page);
+    const at = {
+      x: before.x + before.width * 0.4,
+      y: before.y + before.height * 0.45,
+    };
+    const held = share(before, at);
+    await tap(page, at, { count: 2 });
+    await expect
+      .poll(async () => (await state(page)).zoom.scale)
+      .toBeGreaterThan(1);
+    await still(page);
+    expect(Math.abs((await photo(page)).width - 4000)).toBeLessThanOrEqual(1);
+    await expectUnder(page, at, held);
+  });
+
+  test("a pinch to 0.6 closes, and one to 0.85 springs back to fit with the controls hidden", async ({
+    page,
+  }) => {
+    await open(page, { width: 4000, height: 3000 });
+    await pinch(page, await center(page), { from: 200, to: 170 });
+    await still(page);
+    expect(await state(page)).toMatchObject({
+      isOpen: true,
+      zoom: { scale: 1, x: 0, y: 0 },
+    });
+    await expect(page.locator("dialog")).toHaveAttribute(
+      "data-chrome",
+      "hidden",
+    );
+    await pinch(page, await center(page), { from: 300, to: 180 });
+    await expect.poll(async () => (await state(page)).isOpen).toBe(false);
+  });
+
+  test("lifting one of two fingers lets the other pan the photo", async ({
+    page,
+  }) => {
+    await open(page, { width: 4000, height: 3000 });
+    await zoomTo(page, 3, { x: 0, y: 0 });
+    await pinchThenPan(page, await center(page), {
+      from: 200,
+      to: 240,
+      pan: { x: -150, y: 0 },
+    });
+    await still(page);
+    const { zoom } = await state(page);
+    expect(zoom.scale).toBeGreaterThan(3.2);
+    expect(zoom.scale).toBeLessThanOrEqual(3.6);
+    expect(zoom.x).toBeLessThan(-100);
+  });
+
+  test("at the right edge the first swipe stretches and the second pages to the next photo at fit", async ({
+    page,
+  }) => {
+    await open(page, { width: 4000, height: 3000, count: 3 });
+    await zoomTo(page, 10, { x: 5000, y: 0 });
+    const box = await screen(page);
+    const y = box.y + box.height / 2;
+    const from = { x: box.x + box.width * 0.7, y };
+    const to = { x: box.x + box.width * 0.3, y };
+    await swipe(page, from, to, { speed: 0.5, hold: 150 });
+    await still(page);
+    expect((await state(page)).index).toBe(0);
+    expect((await state(page)).zoom.scale).toBeGreaterThan(1);
+    await swipe(page, from, to, { speed: 0.5, hold: 150 });
+    await expect.poll(async () => (await state(page)).index).toBe(1);
+    expect((await state(page)).zoom).toEqual({ scale: 1, x: 0, y: 0 });
+  });
+});

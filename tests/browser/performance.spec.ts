@@ -5,6 +5,7 @@ import {
   mount,
   photo,
   recordFrames,
+  safariPinch,
   swipe,
 } from "./harness";
 
@@ -116,9 +117,7 @@ test.describe("lightbox performance", { tag: "@desktop" }, () => {
     expect(insideListener.scroll ?? 0).toBe(0);
   });
 
-  // Ctrl and the wheel zoom around the pointer by reading the viewport rect on every event.
-  // The zoom rework removes the read and turns the last assertion into toBe(0).
-  test("still reads layout inside a wheel listener until the zoom rework", async ({
+  test("reads no layout inside a wheel, gesture or zoomed pan listener, and at most once in 100 wheel events", async ({
     page,
   }) => {
     const reads = await countLayoutReads(page);
@@ -133,8 +132,31 @@ test.describe("lightbox performance", { tag: "@desktop" }, () => {
       await ctrlWheel(page, middle, delta);
       await page.waitForTimeout(16);
     }
-    const { insideListener, eventsHandled } = await reads.read();
+    await safariPinch(page, middle, { scale: 2 });
+    await page.waitForTimeout(300);
+    await swipe(page, middle, { x: 520, y: 350 }, { speed: 0.5 });
+    const { insideListener, eventsHandled, total } = await reads.read();
     expect(eventsHandled.wheel).toBe(6);
-    expect(insideListener.wheel ?? 0).toBeGreaterThan(0);
+    expect(eventsHandled.gesturechange).toBeGreaterThan(0);
+    expect(eventsHandled.pointermove).toBeGreaterThan(0);
+    expect(insideListener.wheel ?? 0).toBe(0);
+    expect(insideListener.gesturechange ?? 0).toBe(0);
+    expect(insideListener.pointermove ?? 0).toBe(0);
+    await page.evaluate(() => {
+      const viewport = document.querySelector(".re-lightbox-viewport");
+      for (let event = 0; event < 100; event++)
+        viewport?.dispatchEvent(
+          new WheelEvent("wheel", {
+            bubbles: true,
+            cancelable: true,
+            ctrlKey: event % 2 === 0,
+            clientX: 700,
+            clientY: 400,
+            deltaX: 4,
+            deltaY: event % 4 < 2 ? -20 : 20,
+          }),
+        );
+    });
+    expect((await reads.read()).total - total).toBeLessThanOrEqual(1);
   });
 });
