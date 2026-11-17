@@ -81,6 +81,9 @@
   max-width: none;
   object-fit: contain;
   user-select: none;
+}
+.re-lightbox[data-protect] .re-lightbox-image {
+  -webkit-touch-callout: none;
   -webkit-user-drag: none;
 }
 .re-lightbox-image:not([src]) {

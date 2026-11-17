@@ -565,3 +565,36 @@ export async function frameInterval(page: Page, interval: number) {
     };
   }, interval);
 }
+
+// One finger along a polyline, at a constant speed over the whole path.
+export async function touchDrag(page: Page, path: Point[], duration: number) {
+  const lengths = path
+    .slice(1)
+    .map((point, index) =>
+      Math.hypot(point.x - path[index].x, point.y - path[index].y),
+    );
+  const total = lengths.reduce((sum, length) => sum + length, 0);
+  await touchPath(
+    page,
+    duration,
+    (share) => {
+      let left = share * total;
+      for (const [index, length] of lengths.entries()) {
+        if (left <= length || index === lengths.length - 1) {
+          const part = length ? Math.min(1, left / length) : 1;
+          const from = path[index];
+          const to = path[index + 1];
+          return [
+            {
+              x: from.x + (to.x - from.x) * part,
+              y: from.y + (to.y - from.y) * part,
+            },
+          ];
+        }
+        left -= length;
+      }
+      return [path[path.length - 1]];
+    },
+    0,
+  );
+}

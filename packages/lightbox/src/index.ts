@@ -160,6 +160,7 @@ export interface LightboxOptions {
   strings?: Partial<LightboxStrings>;
   slots?: Partial<Record<LightboxSlotName, LightboxSlot>>;
   getOrigin?: (index: number) => HTMLElement | null;
+  protect?: boolean;
   /** Reports discrete actions, completed pointer gestures, and wheel input after 150ms idle. */
   onChange?: (state: LightboxState) => void;
 }
@@ -257,6 +258,7 @@ type Session = {
     pinned?: Pinned;
     axis?: "x" | "y" | "pan";
     half: number;
+    buzzed?: boolean;
     samples: Sample[];
   };
   pinned?: Pinned;
@@ -1201,7 +1203,8 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
       const image = doc.createElement("img");
       image.className = "re-lightbox-image";
       image.alt = item.alt || "";
-      image.draggable = false;
+      if (settings.protect) image.draggable = false;
+      else image.dataset.carouselNoDrag = "";
       image.decoding = "async";
       let alive = true;
       let cleanup: undefined | (() => void);
@@ -1908,6 +1911,39 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
     publish({});
   }
 
+  function copyImage(s: Session, event: KeyboardEvent) {
+    const win = s.dialog.ownerDocument.defaultView;
+    const Item = (
+      win as (Window & { ClipboardItem?: typeof ClipboardItem }) | null
+    )?.ClipboardItem;
+    if (
+      settings.protect ||
+      !win ||
+      !Item ||
+      typeof win.navigator.clipboard?.write !== "function" ||
+      Item.supports?.("image/png") === false ||
+      win.getSelection()?.toString()
+    )
+      return;
+    event.preventDefault();
+    const image = s.loaded.get(state.index)?.image;
+    const blob = new Promise<Blob>((resolve, reject) => {
+      if (!image?.complete || !image.naturalWidth) throw new Error("No image");
+      const canvas = s.dialog.ownerDocument.createElement("canvas");
+      canvas.width = image.naturalWidth;
+      canvas.height = image.naturalHeight;
+      canvas.getContext("2d")?.drawImage(image, 0, 0);
+      canvas.toBlob(
+        (result) => (result ? resolve(result) : reject(new Error("No blob"))),
+        "image/png",
+      );
+    });
+    blob.catch(() => {});
+    win.navigator.clipboard
+      .write([new Item({ "image/png": blob })])
+      .catch(() => {});
+  }
+
   function installGestures(s: Session) {
     const signal = s.abort.signal;
     const point = (event: PointerEvent): Point => ({
@@ -2076,6 +2112,10 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
           } else if (gesture.axis === "y") {
             event.preventDefault();
             dismissDrag(s, dx, dy, gesture.half);
+            if (!gesture.buzzed && Math.abs(dy) > DISMISS_DISTANCE) {
+              gesture.buzzed = true;
+              s.dialog.ownerDocument.defaultView?.navigator.vibrate?.(10);
+            }
           }
         }
       },
@@ -2187,6 +2227,40 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
       "lostpointercapture",
       (event) => {
         if (event.target === s.viewport) release(event);
+      },
+      { signal },
+    );
+    s.viewport.addEventListener(
+      "dragstart",
+      (event) => {
+        if (
+          !(event.target instanceof Element) ||
+          !event.target.matches(".re-lightbox-image")
+        )
+          return;
+        if (
+          settings.protect ||
+          state.zoom.scale > 1 ||
+          s.gesture?.axis === "pan" ||
+          s.dialog.dataset.panning
+        ) {
+          event.preventDefault();
+          return;
+        }
+        s.pointers.clear();
+        resetGesture();
+      },
+      { signal },
+    );
+    s.viewport.addEventListener(
+      "contextmenu",
+      (event) => {
+        if (
+          settings.protect &&
+          event.target instanceof Element &&
+          event.target.matches(".re-lightbox-image")
+        )
+          event.preventDefault();
       },
       { signal },
     );
@@ -2453,6 +2527,7 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
     dialog.setAttribute("aria-label", settings.label || strings.dialog);
     dialog.dataset.chrome = "shown";
     dialog.dataset.phase = "entering";
+    if (settings.protect) dialog.dataset.protect = "";
     const viewport = doc.createElement("div");
     viewport.className = "re-lightbox-viewport";
     viewport.tabIndex = 0;
@@ -2668,15 +2743,21 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
         chromeInput(s, { type: "key" });
         if (
           event.defaultPrevented ||
-          event.altKey ||
-          event.ctrlKey ||
-          event.metaKey ||
           (event.target instanceof Element &&
             event.target.closest(
               "input,textarea,select,[contenteditable=true],[data-lightbox-interactive]",
             ))
         )
           return;
+        if (
+          (event.ctrlKey || event.metaKey) &&
+          !event.altKey &&
+          event.key.toLowerCase() === "c"
+        ) {
+          copyImage(s, event);
+          return;
+        }
+        if (event.altKey || event.ctrlKey || event.metaKey) return;
         const pan = {
           ArrowLeft: [KEY_PAN, 0],
           ArrowRight: [-KEY_PAN, 0],

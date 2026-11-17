@@ -134,7 +134,7 @@ describe("lightbox lifecycle", () => {
     expect(document.querySelector("dialog")).toBeNull();
   });
 
-  it("pages with mouse drag over an image without turning the drag into zoom", () => {
+  it("pages with a mouse drag beside the image without turning the drag into zoom", () => {
     vi.useFakeTimers({
       toFake: ["requestAnimationFrame", "cancelAnimationFrame", "performance"],
     });
@@ -143,8 +143,8 @@ describe("lightbox lifecycle", () => {
     const viewport = dialog().querySelector<HTMLElement>(
       ".re-lightbox-viewport",
     );
-    const image = dialog().querySelector(".re-lightbox-image");
-    if (!viewport || !image) throw new Error("Missing image");
+    const slide = dialog().querySelector(".re-lightbox-slide");
+    if (!viewport || !slide) throw new Error("Missing slide");
     const pointer = (target: EventTarget, type: string, x: number) => {
       const event = new MouseEvent(type, {
         bubbles: true,
@@ -159,7 +159,7 @@ describe("lightbox lifecycle", () => {
       });
       target.dispatchEvent(event);
     };
-    pointer(image, "pointerdown", 850);
+    pointer(slide, "pointerdown", 850);
     pointer(window, "pointermove", 150);
     pointer(window, "pointerup", 150);
     viewport.dispatchEvent(new Event("scrollend"));
