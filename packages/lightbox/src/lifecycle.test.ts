@@ -929,6 +929,45 @@ describe("lightbox public API", () => {
     ]);
   });
 
+  it("returns focus to the current photo's tile, read after beforeclose, else to the opener", async () => {
+    const [opener, first, second, swapped, picked] = Array.from(
+      { length: 5 },
+      () => document.createElement("button"),
+    );
+    document.body.append(opener, first, second, swapped, picked);
+    opener.focus();
+    let tile = second;
+    const controller = create({
+      history: false,
+      getOrigin: (index) => (index === 2 ? picked : null),
+    });
+    controller.on("beforeclose", () => {
+      tile = swapped;
+    });
+    const items = [
+      { ...gallery[0], origin: first },
+      { ...gallery[1], origin: () => tile },
+      gallery[2],
+      gallery[3],
+    ];
+    controller.open(items, 1);
+    expect(second.style.visibility).toBe("hidden");
+    await controller.close();
+    expect(document.activeElement).toBe(swapped);
+    expect(second.style.visibility).toBe("");
+
+    opener.focus();
+    controller.open(items, 2);
+    expect(picked.style.visibility).toBe("hidden");
+    await controller.close();
+    expect(document.activeElement).toBe(picked);
+
+    opener.focus();
+    controller.open(items, 3);
+    await controller.close();
+    expect(document.activeElement).toBe(opener);
+  });
+
   it("closes once when beforeclose calls close, and reports closed when open replaces a viewer", async () => {
     const controller = create({ history: false });
     const events: string[] = [];

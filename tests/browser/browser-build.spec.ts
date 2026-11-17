@@ -70,6 +70,7 @@ window.gallery = bindLightboxGallery(document.getElementById("gallery"));
 for (const [name, file] of [
   ["@reuse-sh/carousel", "carousel/dist/browser/carousel.js"],
   ["@reuse-sh/lightbox", "lightbox/dist/browser/lightbox.js"],
+  ["@reuse-sh/lightbox", "lightbox/dist/browser/carousel.js"],
 ] as const) {
   test(`${file} opens with its banner and imports nothing by name`, async () => {
     const source = await readFile(join(packages, file), "utf8");

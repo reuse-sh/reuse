@@ -71,6 +71,9 @@
   outline: 2px solid currentColor;
   outline-offset: 3px;
 }
+[data-re-focus-quiet]:focus-visible {
+  outline: none;
+}
 .re-lightbox-counter {
   padding: var(--re-lightbox-counter-padding);
   border-radius: var(--re-lightbox-counter-radius);

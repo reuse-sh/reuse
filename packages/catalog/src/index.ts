@@ -111,7 +111,7 @@ export const libraries: Library[] = [
       ],
       [
         "Open from the thumbnail and return to it",
-        "The image grows out of its cropped preview and goes back to the same place on close.",
+        "The image grows out of its cropped preview and shrinks back into the current photo's tile on close.",
       ],
       [
         "Load only what is near",
@@ -123,7 +123,7 @@ export const libraries: Library[] = [
       ],
       [
         "Keep focus inside and give it back",
-        "The viewer is a native modal dialog, and closing it returns focus to the element that opened it.",
+        "The viewer is a native modal dialog, and closing it returns focus to the current photo's tile, or else to the element that opened it.",
       ],
       [
         "Leave the page as it was",
@@ -148,6 +148,7 @@ export const libraries: Library[] = [
       [
         "Return to what is on screen",
         "Close goes back to the current photo's tile, after bringing it into view in its own carousel, and fades in place when the tile cannot be seen or the strip is still moving.",
+        "tests/browser/lightbox-close.spec.ts",
       ],
       [
         "Fetch the pixels the screen shows",
@@ -164,6 +165,7 @@ export const libraries: Library[] = [
       [
         "Give focus back quietly",
         "Focus returns to the photo's tile without a ring after a pointer close, and with one after a keyboard close.",
+        "tests/browser/lightbox-close.spec.ts",
       ],
     ],
     api: [
@@ -177,11 +179,11 @@ export const libraries: Library[] = [
       ],
       [
         "open(items, index?)",
-        "Opens at an index. Items carry src, alt, caption, the natural size and an optional origin.",
+        "Opens at an index. Items carry src, alt, caption, the natural size and an optional origin, an element or a function that returns one.",
       ],
       [
         "close(), next(), prev(), goTo(index)",
-        "Moves through the set from code. Close returns to the origin thumbnail.",
+        "Moves through the set from code. Close returns to the current photo's tile.",
       ],
       [
         "zoomTo(scale, focus?), toggleZoom(focus?)",
@@ -210,7 +212,7 @@ export const libraries: Library[] = [
       "A vertical swipe either way closes past 120px or 0.5px/ms, measured over the last 80ms before the finger lifts. The controls hide after autoHide ms of a still mouse, 2500 by default, and while zoomed, and come back on a key, a 24px move, or a tap. The open and close flights take --re-lightbox-open-duration and --re-lightbox-close-duration on the --re-lightbox-ease curve.",
       "Paging runs on the carousel package. Only the current and neighboring images stay loaded. Next and previous scroll smoothly, and a jump from a distant thumbnail fades through the backdrop so unloaded pages never flash past.",
       "Images are the core. Video, audio, iframe and HTML slides are separate modules: @reuse-sh/lightbox/video, /audio, /iframe, /html and /embed each export a content factory that you pass in the content option. An item picks its module by type; without one it is an image. The embed module turns YouTube and Vimeo links into players and registerEmbed adds more. HTML slides take a function that returns a Node, never an HTML string. Live Photos and HDR are not supported.",
-      'For a page without a bundler or an import map, such as a theme or a plugin, load @reuse-sh/lightbox/browser/lightbox.js with <script type="module">. It is one minified ES module with a source map and the carousel inside. Each media module and the carousel link are separate files in the same folder that import lightbox.js by a relative path, so copy the folder whole.',
+      'For a page without a bundler or an import map, such as a theme or a plugin, load @reuse-sh/lightbox/browser/lightbox.js with <script type="module">. It is one minified ES module with a source map and the carousel inside. Each media module is a separate file in the same folder that imports lightbox.js by a relative path, and the carousel link is carousel.js beside them, so copy the folder whole.',
       "Styles come in two files: base.css holds the layout and states in @layer re.base and is required, and theme.css holds the default dark theme in @layer re.theme. Other themes sit in themes/. Every theme value is a --re-lightbox-* custom property. dist/unlayered/ holds the same files without layers for sites whose own unlayered styles would win.",
       "Every visible and spoken text comes from the strings option, such as counter(index, count) and close, with English defaults, so a translation passes only the strings it changes.",
       "Slots add your own controls: toolbarStart, toolbarEnd, footer and aside each take a function that returns a node with optional update(state) and destroy(). Slot buttons take the theme's look with the re-lightbox-button class and hide with the other controls. Share is not built in; build it as a slot.",

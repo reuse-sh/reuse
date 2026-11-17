@@ -23,12 +23,18 @@ LightboxOptions:
 - history?: boolean, default true at the top level and false in a frame, one history entry without a URL change; Back closes the lightbox with the usual flight, another close goes back only when the top entry is the lightbox's own, and opening again adds no entry
 - strings?: Partial<LightboxStrings>
 - slots?: Partial<Record<LightboxSlotName, LightboxSlot>>
-- getOrigin?: (index: number) => HTMLElement | null, the tile for an index, before item.origin
+- getOrigin?: (index: number) => HTMLElement | null, the tile for an index, before item.origin; a "+N" tile that stands for hidden photos is returned for each of them
 - onChange?: (state: LightboxState) => void, discrete actions, completed pointer gestures, and wheel input after 150ms idle
 
 Every option except loop is read again at each open. loop is read when the controller is created and changed by setOptions, also while the viewer is open.
 
-LightboxItem: src, previewSrc?, width?, height?, alt?, caption?, thumbnailSrc?, origin? (HTMLElement | null).
+LightboxItem: src, previewSrc?, width?, height?, alt?, caption?, thumbnailSrc?, origin? (HTMLElement | null | (() => HTMLElement | null)).
+
+The origin of the current photo is read again whenever the photo changes, to hide that tile with visibility: hidden, and once more after beforeclose, for the close flight and the focus. While the viewer is open only the current photo's tile is hidden; close and destroy restore it.
+
+Close flies to the current photo's tile and lands there under whatever the page stacks above the tile, such as a sticky header: one copy of the photo flies in the dialog and fades with the backdrop, a second copy, an img.re-lightbox-landing placed right after the tile, flies on the same clock and lands opaque. Both are removed once the flight ends. The photo fades in place instead when the current slide is off its place in the strip by more than 1px, as during a swipe or a settling move, or when the tile is detached, fails checkVisibility(), has no size or lies off screen. A close during the open flight reverses it from where the photo is, with no second copy. A close while zoomed or dragged unwinds both in the same flight. The close releases the scroll lock at once and holds the dialog at position: absolute at the current scroll position until it is removed, so a page that scrolls meanwhile carries the photo with the tile.
+
+After close, focus goes to the current photo's tile, or to its closest link or button, when the tile is in the document and rendered, and otherwise to the element that had focus before open, always with preventScroll. A close by Escape or by a key on the close button shows the focus ring. A close by a mouse, a finger, a pen or Back does not: focus uses focusVisible: false, and where an engine still matches :focus-visible, as WebKit does after a keyboard open, the element carries data-re-focus-quiet until the next key or blur. theme.css hides the outline of [data-re-focus-quiet]:focus-visible; a page with its own focus styles hides its ring by the same attribute.
 
 LightboxState: isOpen, isClosing, isAnimating, index, count, zoom, chrome. zoom is { scale, x, y } around the viewport center. isAnimating is true during a flight, a paging move or an animated zoom. chrome is "shown" | "hidden", also data-chrome on the dialog. The controls hide after autoHide ms of a still mouse, on a zoom, at the start of a pinch and on a tap; a key, focus moving into them, a 24px mouse move from where they hid, a tap and a return to scale 1 show them. Nothing hides them while a control is hovered or has a visible focus.
 
@@ -66,20 +72,13 @@ The viewer is a native modal dialog paged by @reuse-sh/carousel. Escape closes i
 
 A touch or pen swipe whose first 10px run more vertically than sideways carries the photo, scales it to 1 - 0.25 × progress, where progress is the distance over half the viewport height, and fades the backdrop to 1 - progress and the controls to 1 - 2 × progress. It closes past 120px or 0.5px/ms over the last 80ms before release, flying from where the photo is, and otherwise returns in --re-lightbox-open-duration. pointercancel never closes. A mouse drag never dismisses.
 
+@reuse-sh/lightbox/carousel exports connectCarousel(lightbox: Lightbox, carousel: Carousel, options?: { slideOf?: (index: number) => number }): () => void. On every settle the page carousel goes to slideOf(index), the identity by default, with goTo(slide, "instant"), so the page behind is in place before a close. While the viewer is open it holds the carousel's autoplay with hold("lightbox", true) and releases it after closed; a pause() from the visitor stays. The carousel's own holds still apply, so focus returned to a tile inside the strip keeps autoplay waiting until it leaves. The returned function removes the link and the hold. The browser build ships it as browser/carousel.js with no imports.
+
 Dialog attributes for styles: data-chrome, data-zoomed, data-zoomable, data-panning, and data-phase, one of entering, opening, open, dragging, returning and closing. The React hook useLightbox(options) returns the same controller with its state; it belongs to the package and adds no second implementation. It applies changed options at the next open and a changed loop at once.
 
 ## Planned
 
 The carousel and lightbox work in progress adds the names below. They are fixed now so the controls, the media modules and the site can be built against them. Each moves into the sections above once the code ships it.
-
-### Close to the tile on screen
-
-LightboxItem additions: origin may also be a function () => HTMLElement | null. The origin is read after beforeclose.
-
-Entry point @reuse-sh/lightbox/carousel:
-- connectCarousel(lightbox: Lightbox, carousel: Carousel, options?: { slideOf?: (index: number) => number }): () => void. On every settle the page carousel jumps to the current photo's slide; autoplay is held while the lightbox is open. The returned function removes the link.
-
-After a pointer close the focused tile does not match :focus-visible, or carries data-re-focus-quiet until the next key.
 
 ### Built-in controls, thumbnails, caption and slideshow
 
