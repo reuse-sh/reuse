@@ -5,7 +5,9 @@ import {
   cover,
   elasticZoom,
   rubber,
+  shapeOf,
   unrubber,
+  widthFit,
   zoomAround,
   zoomLimits,
 } from "./geometry.js";
@@ -57,20 +59,76 @@ describe("image geometry", () => {
     const limits = (fileWidth: number | undefined, extra = {}) =>
       zoomLimits({
         fileWidth,
-        fittedWidth: 1000,
+        image: { width: 2000, height: 1500 },
+        viewport: { width: 1064, height: 900 },
+        padding: 32,
         svg: false,
         maxZoom: undefined,
         tapZoom: 2.5,
         ...extra,
       });
-    expect(limits(4000)).toEqual({ max: 4, tap: 4 });
-    expect(limits(1500)).toEqual({ max: 1.5, tap: 1.5 });
-    expect(limits(1500, { maxZoom: 2 })).toEqual({ max: 3, tap: 2.5 });
-    expect(limits(800)).toEqual({ max: 1, tap: 1 });
-    expect(limits(1000)).toEqual({ max: 1, tap: 1 });
-    expect(limits(undefined)).toEqual({ max: 1, tap: 1 });
-    expect(limits(100, { svg: true })).toEqual({ max: 4, tap: 2.5 });
-    expect(limits(100, { svg: true, maxZoom: 2 })).toEqual({ max: 2, tap: 2 });
+    expect(limits(4000)).toEqual({ min: 1, max: 4, tap: 4 });
+    expect(limits(1500)).toEqual({ min: 1, max: 1.5, tap: 1.5 });
+    expect(limits(1500, { maxZoom: 2 })).toEqual({ min: 1, max: 3, tap: 2.5 });
+    expect(limits(800)).toEqual({ min: 1, max: 1, tap: 1 });
+    expect(limits(1000)).toEqual({ min: 1, max: 1, tap: 1 });
+    expect(limits(undefined)).toEqual({ min: 1, max: 1, tap: 1 });
+    expect(limits(100, { svg: true })).toEqual({ min: 1, max: 4, tap: 2.5 });
+    expect(limits(100, { svg: true, maxZoom: 2 })).toEqual({
+      min: 1,
+      max: 2,
+      tap: 2,
+    });
+  });
+  it("fits a tall photo to the width and calls only very tall or very wide photos special", () => {
+    const phone = { width: 390, height: 844 };
+    expect(widthFit({ width: 1170, height: 8000 }, phone, 32)).toEqual({
+      width: 326,
+      height: (8000 * 326) / 1170,
+    });
+    expect(widthFit({ width: 100, height: 900 }, phone, 32)).toEqual({
+      width: 100,
+      height: 900,
+    });
+    expect(shapeOf({ width: 1170, height: 8000 }, phone, 32)).toBe("tall");
+    expect(shapeOf({ width: 1170, height: 3000 }, phone, 32)).toBe("regular");
+    expect(shapeOf({ width: 300, height: 1500 }, phone, 32)).toBe("regular");
+    expect(shapeOf({ width: 6000, height: 1000 }, phone, 32)).toBe("wide");
+    expect(shapeOf({ width: 3000, height: 1000 }, phone, 32)).toBe("regular");
+  });
+  it("lets a tall photo zoom out to its whole height and a wide one tap to the screen height", () => {
+    const phone = { width: 390, height: 844 };
+    const limits = (
+      image: { width: number; height: number },
+      fileWidth = image.width,
+      extra = {},
+    ) =>
+      zoomLimits({
+        fileWidth,
+        image,
+        viewport: phone,
+        padding: 32,
+        svg: false,
+        maxZoom: undefined,
+        tapZoom: 2.5,
+        ...extra,
+      });
+    const tall = limits({ width: 1170, height: 8000 });
+    expect(tall.min).toBeCloseTo(780 / 8000 / (326 / 1170));
+    expect(tall.max).toBeCloseTo(1170 / 326);
+    expect(tall.tap).toBe(tall.min);
+    expect(limits({ width: 300, height: 8000 }).max).toBe(1);
+    expect(limits({ width: 300, height: 8000 }).tap).toBeCloseTo(780 / 8000);
+    const wide = limits({ width: 6000, height: 1000 });
+    expect(wide.min).toBe(1);
+    expect(wide.tap).toBeCloseTo(844 / ((1000 * 326) / 6000));
+    expect(wide.max).toBeCloseTo(6000 / 326);
+    expect(limits({ width: 6000, height: 1000 }, 1200).tap).toBeCloseTo(
+      1200 / 326,
+    );
+    expect(limits({ width: 6000, height: 1000 }, 100, { svg: true }).tap).toBe(
+      4,
+    );
   });
   it("preserves image ratio while cropping a square thumbnail", () => {
     expect(
