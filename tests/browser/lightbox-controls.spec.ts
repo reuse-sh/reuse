@@ -377,15 +377,21 @@ test("the photos theme is white with the controls and fades to black over 300ms 
   const color = () =>
     backdrop.evaluate((element) => getComputedStyle(element).backgroundColor);
   await expect.poll(color).toBe("rgb(255, 255, 255)");
-  await expect(page.locator("dialog")).toHaveAttribute("data-chrome", "hidden");
   const midway = await page.evaluate(
     () =>
-      new Promise<string>((resolve) =>
-        setTimeout(() => {
-          const element = document.querySelector(".re-lightbox-backdrop");
-          resolve(element ? getComputedStyle(element).backgroundColor : "");
-        }, 120),
-      ),
+      new Promise<string>((resolve) => {
+        const dialog = document.querySelector("dialog");
+        const element = document.querySelector(".re-lightbox-backdrop");
+        if (!dialog || !element) return resolve("");
+        new MutationObserver((_, observer) => {
+          if (dialog.dataset.chrome !== "hidden") return;
+          observer.disconnect();
+          setTimeout(
+            () => resolve(getComputedStyle(element).backgroundColor),
+            100,
+          );
+        }).observe(dialog, { attributes: true });
+      }),
   );
   expect(midway).not.toBe("rgb(255, 255, 255)");
   expect(midway).not.toBe("rgb(0, 0, 0)");
