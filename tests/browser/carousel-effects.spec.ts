@@ -323,4 +323,69 @@ test.describe("carousel groups and drivers on touch", { tag: "@touch" }, () => {
     expect(after).toMatchObject({ interrupted: 1, snap: "" });
     expect(after.left % 120).toBe(0);
   });
+
+  const A = { x: 200, y: 100, id: 0 };
+  const B = { x: 200, y: 600, id: 1 };
+  for (const [name, steps, lift] of [
+    [
+      "a vertical page swipe that starts on a taken strip leaves it on a snap point",
+      [
+        ["touchStart", [A]],
+        ["touchMove", [{ ...A, y: 60 }]],
+        ["touchMove", [{ ...A, y: 20 }]],
+        ["touchEnd", []],
+      ],
+      [],
+    ],
+    [
+      "a second finger outside the strip does not keep it from settling",
+      [
+        ["touchStart", [A, B]],
+        ["touchEnd", [A]],
+      ],
+      [B],
+    ],
+  ] as const)
+    test(name, async ({ page, browserName }) => {
+      test.skip(browserName !== "chromium", "needs trusted CDP touches");
+      await setup(
+        page,
+        `<div id="strip" style="width:360px;--re-carousel-gap:0px">${row(9, 120)}</div><div style="height:3000px"></div>`,
+        { loop: true },
+      );
+      await page.evaluate(() => {
+        const { carousel } = window as unknown as { carousel: Strip };
+        const record = { settles: 0 };
+        document
+          .getElementById("strip")
+          ?.addEventListener("re-carousel:settle", () => record.settles++);
+        carousel.take("marquee").setPosition(50);
+        Object.assign(window, { record });
+      });
+      const cdp = await page.context().newCDPSession(page);
+      for (const [type, touchPoints] of steps) {
+        await cdp.send("Input.dispatchTouchEvent", {
+          type,
+          touchPoints: [...touchPoints],
+        });
+        await page.waitForTimeout(100);
+      }
+      await page.waitForTimeout(400);
+      await framesUntilIdle(page, scrollLeft, 300);
+      const after = await page.evaluate(() => ({
+        settles: (window as unknown as { record: { settles: number } }).record
+          .settles,
+        snap: document.getElementById("strip")?.style.scrollSnapType,
+        left: document.getElementById("strip")?.scrollLeft ?? 1,
+      }));
+      expect(after.settles).toBeGreaterThan(0);
+      expect(after.snap).toBe("");
+      expect(after.left % 120).toBe(0);
+      if (lift.length)
+        await cdp.send("Input.dispatchTouchEvent", {
+          type: "touchEnd",
+          touchPoints: [...lift],
+        });
+      await cdp.detach();
+    });
 });

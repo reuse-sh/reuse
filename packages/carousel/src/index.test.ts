@@ -1694,7 +1694,7 @@ describe("effects, groups and drivers", () => {
     const touch = (type: string, count: number) =>
       viewport.dispatchEvent(
         Object.assign(new Event(type, { bubbles: true }), {
-          touches: Array.from({ length: count }, () => ({})),
+          touches: Array.from({ length: count }, () => ({ target: viewport })),
         }),
       );
     touch("touchstart", 1);

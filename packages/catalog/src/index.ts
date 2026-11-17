@@ -344,7 +344,7 @@ export const libraries: Library[] = [
       ],
       [
         "Swipe by the group the buttons use",
-        "With group set, only the first slide of each group snaps, so a swipe and a released drag move a group like next() does.",
+        "With group set, only the first slide of each group and the slide a move was sent to snap, so a swipe and a released drag move a group like next() does.",
         "tests/browser/carousel-effects.spec.ts",
       ],
       [
@@ -422,7 +422,7 @@ export const libraries: Library[] = [
       "The loop draws a slide in another period through --re-carousel-shift, which the package CSS applies as translate, and marks the period in data-re-cycle (-1, 0 or 1). It never writes a slide's own transform, so put an effect on transform. A translate of your own replaces the shift on a moved slide unless it adds var(--re-carousel-shift, 0px), and a drag past the end of a strip that does not loop stretches it through translate.",
       "Every slide carries --re-carousel-offset: its distance from where it would rest aligned, in slide widths. It is 0 for a slide resting where it aligns, which is the active slide except at the ends of a strip that does not loop, negative before it and positive after it in the reading direction, the same for a slide the loop moved, and it changes every frame while the strip moves.",
       "A scroll-driven animation on a slide follows its layout position, so on a looping strip add --re-carousel-shift to the timeline range or read --re-carousel-offset instead.",
-      'With group: 3 or group: "page", only the first slide of each group keeps scroll-snap-align, so touch and trackpad swipes move a group like the buttons. The others get scroll-snap-align: none, and destroy gives back their own value.',
+      'With group: 3 or group: "page", only the first slide of each group, and the slide a move was sent to, keeps scroll-snap-align, so touch and trackpad swipes move a group like the buttons. The others get scroll-snap-align: none, and destroy gives back their own value.',
       'state.seamSlides lists the slides a looping strip shows while it crosses the seam: the first slides and the last slides that each fill one viewport width. When the server renders the strip, give the images in those slides loading="eager" and leave the rest lazy, so crossing the seam never shows an image that is still loading.',
       'To let the first and last slides of a centered strip reach the middle without a loop, set align: "center" and give the viewport padding-inline and scroll-padding-inline of half the difference between the viewport and a slide, such as #prints { --re-carousel-slide-width: 320px; padding-inline: calc(50% - 160px); scroll-padding-inline: calc(50% - 160px); } for a viewport as wide as its parent.',
       "The viewport carries data-re-dragging during a mouse drag, data-re-scrolling during a fast swipe or wheel scroll, data-re-static when nothing overflows, and data-re-at-start and data-re-at-end at the edges of a strip that does not loop. The package CSS turns off hover on the slides while data-re-scrolling is set and hides [data-carousel-prev], [data-carousel-next] and [data-carousel-dots] beside a static strip.",

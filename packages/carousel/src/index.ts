@@ -1349,14 +1349,11 @@ export function createCarousel(
     hold,
     take(owner, { onInterrupt } = {}) {
       const inert = { setPosition() {}, release() {} };
-      if (
-        destroyed ||
-        reducedMotion?.matches ||
-        pointer ||
-        fingers ||
-        grabbedTouch !== undefined
-      )
+      if (destroyed || reducedMotion?.matches) return inert;
+      if (pointer || fingers || grabbedTouch !== undefined) {
+        unsettled = true;
         return inert;
+      }
       const previous = taken;
       stopSpring();
       setStretch(0);
@@ -1520,6 +1517,7 @@ export function createCarousel(
     if (!pointer.moved) {
       if (taken) {
         interruptTake();
+        if (!pointer) return;
         pointer.position = position() + (rtl ? -delta : delta);
       }
       pointer.moved = true;
@@ -1733,13 +1731,17 @@ export function createCarousel(
   listen(viewport, "pointercancel", releaseTouch);
   // A native pan cancels its pointer while the finger stays down, so fingers are counted from touch events.
   const countFingers = (event: Event) => {
-    fingers = (event as TouchEvent).touches.length;
-    if (fingers || !unsettled) return;
+    const before = fingers;
+    fingers = Array.from((event as TouchEvent).touches).filter((touch) =>
+      viewport.contains(touch.target as Node),
+    ).length;
+    if (fingers || !before || !unsettled) return;
     clearTimeout(settleTimer);
     settleTimer = setTimeout(settle, 180);
   };
-  for (const type of ["touchstart", "touchend", "touchcancel"])
-    listen(viewport, type, countFingers, { passive: true });
+  listen(viewport, "touchstart", countFingers, { passive: true });
+  for (const type of ["touchend", "touchcancel"])
+    listen(window, type, countFingers, { passive: true });
   observer?.observe(viewport);
   refresh();
   mutation?.observe(viewport, { childList: true, subtree: true });
