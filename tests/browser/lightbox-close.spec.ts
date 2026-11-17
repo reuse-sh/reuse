@@ -205,21 +205,30 @@ test("a slow beforeclose does not eat into the close flight", {
   tag: "@desktop",
 }, async ({ page }) => {
   await stripPage(page);
+  // A 5s close keeps the flight running however late the first frame after close() paints.
+  await page.addStyleTag({
+    content: ".re-lightbox{--re-lightbox-close-duration:5s}",
+  });
   await openAt(page, 0);
-  const elapsed = await page.evaluate(async () => {
+  const flight = await page.evaluate(async () => {
     const win = window as Window;
     win.lightbox.on("beforeclose", () => {
       const until = performance.now() + 120;
       while (performance.now() < until);
     });
     void win.lightbox.close();
-    await new Promise(requestAnimationFrame);
+    const vetted = performance.now();
+    const painted = await new Promise<number>(requestAnimationFrame);
     const frame = document.querySelector(
       '.re-lightbox-slide[aria-hidden="false"] .re-lightbox-frame',
     ) as HTMLElement;
-    return Number(frame.getAnimations()[0]?.currentTime);
+    return {
+      elapsed: Number(frame.getAnimations()[0]?.currentTime),
+      late: painted - vetted,
+    };
   });
-  expect(elapsed).toBeLessThan(60);
+  // Time the browser takes to paint after close() returns is not time beforeclose took.
+  expect(flight.elapsed - flight.late, JSON.stringify(flight)).toBeLessThan(60);
 });
 
 test("closing at 4x zoom panned to a corner unwinds into the tile", async ({
