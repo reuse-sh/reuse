@@ -22,6 +22,10 @@ These are the rules the code keeps. An adaptation on any framework keeps them to
 - **Zoom to real pixels.** Zoom levels follow the image's own resolution. Panning stretches past the edge and glides on release.
 - **Never block a frame.** No layout read or framework render runs per pointer move, scroll or wheel event.
 - **Give focus back quietly.** Focus returns to the photo's tile without a ring after a pointer close, and with one after a keyboard close.
+- **Show every shape readably.** A long screenshot opens at the screen's width and scrolls, a panorama zooms to the screen's height, a transparent photo sits on its own backing, and an SVG takes the size its file declares.
+- **Hand the photo to the system.** The photo is a real image: the browser's menu saves and copies it, it drags out as a file, and Cmd or Ctrl and C copies it. protect turns these off.
+- **Stay light in large galleries.** A thousand photos open as fast as ten. Slides outside the preload window are empty shells, the strip's positions are arithmetic, and the next photo in the direction of travel loads first.
+- **Survive every interruption.** Opening, closing, swiping, zooming, resizing, appending or destroying at any moment leaves no dialog, timer, hidden tile, scroll lock or extra history entry behind.
 
 <!-- principles:end -->
 

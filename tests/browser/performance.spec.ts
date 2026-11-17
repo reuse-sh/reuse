@@ -1,9 +1,11 @@
 import { expect, type Page, test } from "@playwright/test";
 import {
+  countGeometryReads,
   countLayoutReads,
   ctrlWheel,
   mount,
   photo,
+  recordFrames,
   safariPinch,
   swipe,
   traceMainThread,
@@ -34,11 +36,14 @@ async function browseTenPhotos(
   await page.waitForTimeout(500);
   const { width, height } = page.viewportSize() ?? { width: 0, height: 0 };
   const middle = { x: width / 2, y: height / 2 };
+  // A mouse drag that starts on the photo drags the file out, so the swipe runs in the band
+  // above the 800px tall photo, where the next photo never passes while the strip settles.
+  const above = { x: middle.x, y: (height - 800) / 4 };
   for (let photo = 1; photo < count; photo++) {
     await swipe(
       page,
-      { x: middle.x + 200, y: middle.y },
-      { x: middle.x - 200, y: middle.y },
+      { x: above.x + 200, y: above.y },
+      { x: above.x - 200, y: above.y },
       { speed: 2 },
     );
     // A swipe that catches the strip more than 200px short of the photo it is heading to ends
@@ -104,6 +109,92 @@ test.describe("lightbox performance", { tag: "@desktop" }, () => {
     expect(zoomed).toBeGreaterThan(1);
     expect(tasks.length).toBeGreaterThan(100);
     expect(tasks.filter((time) => time > 20)).toEqual([]);
+  });
+
+  test("opens 1000 photos within 100ms, keeps at most 7 slide images and pages ten without a long frame or reading each slide", async ({
+    page,
+    browserName,
+  }) => {
+    test.skip(
+      browserName !== "chromium",
+      "Frame budgets are measured in Chromium.",
+    );
+    const reads = await countGeometryReads(page, ".re-lightbox-slide");
+    await mount(
+      page,
+      `<img id="tile" src="${photo(0)}" alt="" width="120" height="80">`,
+      ["lightbox/base.css", "lightbox/theme.css"],
+    );
+    const opened = await page.evaluate(
+      async (sources) => {
+        const { createLightbox } = await import("/modules/lightbox/index.js");
+        const lightbox = createLightbox({ history: false, preload: 2 });
+        const origin = document.getElementById("tile");
+        const items = sources.map((src, index) => ({
+          src,
+          width: 1200,
+          height: 800,
+          origin: index === 0 ? origin : null,
+        }));
+        const images = document.getElementsByClassName("re-lightbox-image");
+        const record = { most: 0, on: true };
+        const count = () => {
+          record.most = Math.max(record.most, images.length);
+          if (record.on) requestAnimationFrame(count);
+        };
+        Object.assign(window, { lightbox, record });
+        const start = performance.now();
+        const frame = new Promise<{ elapsed: number; flying: boolean }>(
+          (resolve) =>
+            requestAnimationFrame(() =>
+              resolve({
+                elapsed: performance.now() - start,
+                flying: document.getAnimations().length > 0,
+              }),
+            ),
+        );
+        lightbox.open(items, 0);
+        count();
+        return frame;
+      },
+      Array.from({ length: 1000 }, (_, index) => photo(index)),
+    );
+    expect(opened.flying).toBe(true);
+    expect(opened.elapsed).toBeLessThan(100);
+    const { width, height } = page.viewportSize() ?? { width: 0, height: 0 };
+    const above = { x: width / 2, y: (height - 800) / 4 };
+    // Chromium spends a 33-50ms frame on the first mouse move into a page, with 11 photos as with 1000.
+    await page.mouse.move(above.x + 200, above.y);
+    await page.waitForTimeout(600);
+    const recording = await recordFrames(page);
+    await reads.start();
+    for (let step = 0; step < 10; step++) {
+      await swipe(
+        page,
+        { x: above.x + 200, y: above.y },
+        { x: above.x - 200, y: above.y },
+        { speed: 2 },
+      );
+      await page.waitForTimeout(400);
+    }
+    const { frames } = await recording.stop();
+    const slidesRead = await reads.read();
+    const { index, most } = await page.evaluate(() => {
+      const scope = window as unknown as {
+        lightbox: { getState(): { index: number } };
+        record: { most: number; on: boolean };
+      };
+      scope.record.on = false;
+      return {
+        index: scope.lightbox.getState().index,
+        most: scope.record.most,
+      };
+    });
+    expect(index).toBe(10);
+    expect(most).toBeLessThanOrEqual(7);
+    expect(slidesRead.elements).toBeLessThanOrEqual(1);
+    expect(frames.length).toBeGreaterThan(100);
+    expect(frames.filter((frame) => frame > 20)).toEqual([]);
   });
 
   test("pages ten photos and zooms with base.css alone", async ({ page }) => {

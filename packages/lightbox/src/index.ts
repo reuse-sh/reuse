@@ -17,12 +17,22 @@ import {
   panLimits,
   type Rect,
   type Size,
+  shapeOf,
   unrubber,
+  widthFit,
   type Zoom,
   zoomAround,
   zoomLimits,
 } from "./geometry.js";
-import { fileWidth, isImageFile, largestWidth } from "./sources.js";
+import {
+  fileWidth,
+  formatOf,
+  isImageFile,
+  largestWidth,
+  lookupFormat,
+  type MediaFormat,
+  svgSize,
+} from "./sources.js";
 
 const carouselInternals = Symbol.for("@reuse-sh/carousel internals");
 
@@ -152,6 +162,7 @@ export interface LightboxOptions {
   strings?: Partial<LightboxStrings>;
   slots?: Partial<Record<LightboxSlotName, LightboxSlot>>;
   getOrigin?: (index: number) => HTMLElement | null;
+  protect?: boolean;
   /** Reports discrete actions, completed pointer gestures, and wheel input after 150ms idle. */
   onChange?: (state: LightboxState) => void;
 }
@@ -203,6 +214,8 @@ type Session = {
   loaded: Map<number, LoadedSlide>;
   carousel: Carousel;
   carouselLoops: boolean;
+  heading: 1 | -1;
+  marked?: number;
   strings: LightboxStrings;
   slots: ReturnType<LightboxSlot>[];
   motion?: { frame: number; left: number; still: number };
@@ -247,8 +260,9 @@ type Session = {
     touch: boolean;
     pinched: boolean;
     pinned?: Pinned;
-    axis?: "x" | "y";
+    axis?: "x" | "y" | "pan";
     half: number;
+    buzzed?: boolean;
     samples: Sample[];
   };
   pinned?: Pinned;
@@ -260,6 +274,8 @@ type Session = {
   flying: boolean;
   watchedScale: number;
   sharpScale: number;
+  rest?: Zoom;
+  resizeFrame?: number;
   sharpTimer?: ReturnType<typeof setTimeout>;
   fade?: {
     animation?: Animation;
@@ -397,8 +413,19 @@ const SPINNER_SIZE = 32;
 
 type Pinned = { index: number; zoom: Zoom; left: boolean; right: boolean };
 
-function isSvg(src: string) {
-  return /^data:image\/svg\+xml[;,]|\.svg(?:$|[?#])/i.test(src);
+// A node from another document's window fails instanceof against this window's classes.
+function isNode(value: unknown): value is Node {
+  return typeof (value as Node | null)?.nodeType === "number";
+}
+
+function isElement(value: unknown): value is Element {
+  return isNode(value) && value.nodeType === 1;
+}
+
+function isHTMLElement(value: unknown): value is HTMLElement {
+  return (
+    isElement(value) && value.namespaceURI === "http://www.w3.org/1999/xhtml"
+  );
 }
 
 function sameZoom(a: Zoom, b: Zoom) {
@@ -586,8 +613,7 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
     const active = s.dialog.ownerDocument.activeElement;
     return s.chromeRoots.some((root) => {
       if (s.chrome.lastPointerIsMouse && root.matches(":hover")) return true;
-      if (!(active instanceof Element) || active === s.openingFocus)
-        return false;
+      if (!isElement(active) || active === s.openingFocus) return false;
       if (!root.contains(active)) return false;
       try {
         return active.matches(":focus-visible");
@@ -685,18 +711,38 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
     return view(s);
   }
 
+  function tall(index: number, s: Session) {
+    return shapeOf(imageSize(index, s), view(s), padding) === "tall";
+  }
+
   function fit(index: number, s: Session): Size {
-    return contain(imageSize(index, s), view(s), padding);
+    return (tall(index, s) ? widthFit : contain)(
+      imageSize(index, s),
+      view(s),
+      padding,
+    );
+  }
+
+  function restZoom(s: Session, index: number): Zoom {
+    const zoom = tall(index, s)
+      ? { scale: 1, x: 0, y: panLimits(1, fit(index, s), view(s)).y }
+      : { ...identity };
+    s.rest = zoom;
+    return zoom;
   }
 
   function limits(s: Session, index = state.index) {
     const item = items[index];
     const entry = s.loaded.get(index);
-    if (entry?.status === "failed") return { max: 1, tap: 1 };
+    if (entry?.status === "failed") return { min: 1, max: 1, tap: 1 };
     return zoomLimits({
       fileWidth: largestWidth(item?.srcset) ?? entry?.natural ?? item?.width,
-      fittedWidth: fit(index, s).width,
-      svg: Boolean(item && isSvg(item.src)),
+      image: imageSize(index, s),
+      viewport: view(s),
+      padding,
+      svg: Boolean(
+        item && formatOf(item.src, s.dialog.ownerDocument.baseURI) === "svg",
+      ),
       maxZoom: settings.maxZoom,
       tapZoom: settings.tapZoom ?? 2.5,
     });
@@ -704,15 +750,20 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
 
   function applyZoom(s: Session, notify = true) {
     const frame = s.loaded.get(state.index)?.frame;
+    const range = limits(s);
     if (s.phase !== "dragging") {
       if (frame) frame.style.transform = zoomTransform(state.zoom);
       syncingCarousel = true;
       s.carousel.setEnabled(
-        state.zoom.scale === 1 && s.pointers.size < 2 && items.length > 1,
+        state.zoom.scale <= 1 &&
+          state.zoom.scale >= range.min - 1e-3 &&
+          s.gesture?.axis !== "pan" &&
+          s.pointers.size < 2 &&
+          items.length > 1,
       );
       syncingCarousel = false;
     }
-    const zoomable = limits(s).max > 1;
+    const zoomable = range.max > 1 || range.min < 1;
     const clickable = String(
       zoomable && (settings.imageClick ?? "zoom") === "zoom",
     );
@@ -725,14 +776,15 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
       s.zoomButton.hidden = hidden;
     }
     s.viewport.style.touchAction = state.zoom.scale > 1 ? "none" : "pan-x";
+    const out = range.tap < 1 ? state.zoom.scale >= 1 : state.zoom.scale > 1;
     s.zoomButton.setAttribute(
       "aria-label",
-      state.zoom.scale > 1 ? s.strings.zoomOut : s.strings.zoomIn,
+      out ? s.strings.zoomOut : s.strings.zoomIn,
     );
     s.zoomButton.setAttribute("aria-pressed", String(state.zoom.scale > 1));
-    if (!settings.icons?.zoom)
-      s.zoomButton.textContent = state.zoom.scale > 1 ? "−" : "+";
+    if (!settings.icons?.zoom) s.zoomButton.textContent = out ? "−" : "+";
     s.dialog.dataset.zoomed = String(state.zoom.scale > 1);
+    s.dialog.dataset.zoom = out ? "out" : "in";
     if (s.watchedScale !== state.zoom.scale) {
       s.watchedScale = state.zoom.scale;
       clearTimeout(s.sharpTimer);
@@ -777,7 +829,7 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
       s.animations.add(animation);
       syncAnimating(s);
       let settled = false;
-      const finish = () => {
+      const finish = (landed = false) => {
         if (settled) return;
         settled = true;
         clearTimeout(timer);
@@ -787,18 +839,20 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
         // commitStyles throws on an element that is no longer rendered, such
         // as one inside a dialog the browser already closed.
         try {
-          if (node.isConnected) animation.commitStyles?.();
+          if (landed) Object.assign(node.style, frames.at(-1));
+          else if (node.isConnected) animation.commitStyles?.();
         } catch {}
         animation.cancel();
         resolve();
       };
-      // A timeline that has not advanced by the deadline still lands the last keyframe.
-      const timer = setTimeout(() => {
-        animation.finish();
-        finish();
-      }, duration + 80);
+      // A timeline that has not advanced by the deadline still lands the last keyframe. It is
+      // written directly, since WebKit commits the first keyframe of an animation that never got a frame.
+      const timer = setTimeout(() => finish(true), duration + 80);
       s.finishAnimations.add(finish);
-      void animation.finished.then(finish, finish);
+      void animation.finished.then(
+        () => finish(),
+        () => finish(),
+      );
     });
   }
 
@@ -1086,13 +1140,15 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
   }
 
   function layout(s: Session) {
+    const resting = s.rest !== undefined && sameZoom(state.zoom, s.rest);
     for (const [index, entry] of s.loaded) {
       const size = fit(index, s);
       entry.frame.style.width = `${size.width}px`;
       entry.frame.style.height = `${size.height}px`;
     }
     requestSizes(s);
-    if (state.zoom.scale > 1) {
+    if (resting) publish({ zoom: restZoom(s, state.index) });
+    else if (state.zoom.scale > 1) {
       const scale = Math.min(state.zoom.scale, limits(s).max);
       publish({
         zoom:
@@ -1104,27 +1160,61 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
     applyZoom(s);
   }
 
+  function resized(s: Session) {
+    s.resizeFrame = undefined;
+    if (session !== s) return;
+    cancelAnimations(s);
+    const before = state.zoom;
+    const from = fit(state.index, s);
+    const resting = s.rest !== undefined && sameZoom(before, s.rest);
+    s.box = measure(s.viewport);
+    s.pinned = undefined;
+    if (resting) updateState({ zoom: restZoom(s, state.index) });
+    else {
+      const to = fit(state.index, s);
+      const range = limits(s);
+      const scale = clamp(before.scale, range.min, range.max);
+      const ratio = scale / before.scale;
+      updateState({
+        zoom: boundZoom(
+          {
+            scale,
+            x: ((before.x * to.width) / from.width) * ratio,
+            y: ((before.y * to.height) / from.height) * ratio,
+          },
+          to,
+          view(s),
+        ),
+      });
+    }
+    layout(s);
+    syncingCarousel = true;
+    s.carousel.setEnabled(true);
+    s.carousel.refresh();
+    s.carousel.goTo(state.index, "instant");
+    syncingCarousel = false;
+    applyZoom(s, false);
+    if (!sameZoom(before, state.zoom)) publish({});
+  }
+
   function visibleRange(s: Session) {
+    const count = s.slides.length;
+    const size = count ? s.slides[0].getBoundingClientRect().width : 0;
+    if (!size) return [];
     const width = s.viewport.clientWidth;
-    const rtl =
-      s.dialog.ownerDocument.defaultView?.getComputedStyle(s.viewport)
-        .direction === "rtl";
     const start = Math.abs(s.viewport.scrollLeft);
-    const span =
-      s.carouselLoops && s.carousel.getState().isLooping
-        ? s.slides.reduce((sum, slide) => sum + slide.offsetWidth, 0)
-        : 0;
-    return s.slides.flatMap((slide, index) => {
-      const base = rtl
-        ? s.viewport.scrollWidth - slide.offsetLeft - slide.offsetWidth
-        : slide.offsetLeft;
-      return (span ? [base - span, base, base + span] : [base]).some(
-        (left) =>
-          left < start + width - 1 && left + slide.offsetWidth > start + 1,
-      )
-        ? [index]
-        : [];
-    });
+    const looped = s.carouselLoops && s.carousel.getState().isLooping;
+    const visible = new Set<number>();
+    for (
+      let k = Math.floor((start + 1) / size) - 1;
+      k * size < start + width - 1;
+      k++
+    ) {
+      if (k * size + size <= start + 1) continue;
+      if (looped && k >= 0 && k < 3 * count) visible.add(wrap(k));
+      else if (k >= 0 && k < count) visible.add(k);
+    }
+    return [...visible].sort((a, b) => a - b);
   }
 
   function distanceTo(index: number) {
@@ -1157,8 +1247,16 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
         | undefined
     )?.connection;
     if (connection?.saveData) return;
-    for (const entry of s.loaded.values())
-      if (entry.status === "idle") entry.load("low");
+    const order: number[] = [];
+    for (let step = 1; step <= preload; step++)
+      for (const side of [s.heading, -s.heading]) {
+        const index = state.index + side * step;
+        order.push(looping() ? wrap(index) : index);
+      }
+    for (const index of [...order, ...s.loaded.keys()]) {
+      const entry = s.loaded.get(index);
+      if (entry?.status === "idle") entry.load("low");
+    }
   }
 
   function loadSlides(s: Session) {
@@ -1173,7 +1271,7 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
       const image = doc.createElement("img");
       image.className = "re-lightbox-image";
       image.alt = item.alt || "";
-      image.draggable = false;
+      if (settings.protect) image.draggable = false;
       image.decoding = "async";
       let alive = true;
       let cleanup: undefined | (() => void);
@@ -1206,17 +1304,43 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
           status.remove();
         };
       };
-      const show = (source: HTMLImageElement, width: number) => {
+      const fetcher = (url: string) =>
+        (doc.defaultView ?? globalThis).fetch(url);
+      let shown = "";
+      const display = (url: string) => {
+        shown = url;
+        image.src = url;
+        const mark = (format: MediaFormat | undefined) => {
+          if (format && format !== "opaque") frame.dataset.transparent = "true";
+          else delete frame.dataset.transparent;
+        };
+        const format = formatOf(url, doc.baseURI);
+        mark(format);
+        if (!format)
+          void lookupFormat(url, doc.baseURI, fetcher).then((found) => {
+            if (alive && shown === url) mark(found);
+          });
+      };
+      const show = (source: HTMLImageElement, width: number, size?: Size) => {
         if (!alive || session !== s) return;
         if (entry.natural !== undefined && width <= entry.natural) return;
         entry.natural = width;
-        if (source.naturalWidth && source.naturalHeight) {
-          const ratio = source.naturalHeight / source.naturalWidth;
+        const shape =
+          size ??
+          (source.naturalWidth && source.naturalHeight
+            ? { width: source.naturalWidth, height: source.naturalHeight }
+            : undefined);
+        if (shape) {
+          const ratio = shape.height / shape.width;
           if (!item.width)
-            item.width = item.height ? Math.round(item.height / ratio) : width;
+            item.width = item.height
+              ? Math.round(item.height / ratio)
+              : size
+                ? Math.round(size.width)
+                : width;
           if (!item.height) item.height = Math.round(item.width * ratio);
         }
-        image.src = source.currentSrc || source.src;
+        display(source.currentSrc || source.src);
         frame.removeAttribute("data-loading");
         layout(s);
       };
@@ -1263,14 +1387,36 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
         loader.onload = () => {
           const source = loader.currentSrc || loader.src;
           const width = fileWidth(loader, item.srcset, doc.baseURI);
-          const decoded = () => {
-            if (!alive || session !== s || entry.loader !== loader) return;
-            if (entry.status === "failed") return;
-            if ((loader.currentSrc || loader.src) !== source) return;
+          const current = () =>
+            alive &&
+            session === s &&
+            entry.loader === loader &&
+            entry.status !== "failed" &&
+            (loader.currentSrc || loader.src) === source;
+          const ready = (size?: Size) => {
+            if (!current()) return;
             if (s.flying && image.hasAttribute("src"))
-              entry.commit = () => show(loader, width);
-            else show(loader, width);
+              entry.commit = () => show(loader, width, size);
+            else show(loader, width, size);
             settle("settled");
+          };
+          // An SVG shows once its own size is read, since browsers decode a viewBox-only file at most 300px wide.
+          const decoded = () => {
+            if (!current()) return;
+            const sized = Boolean(item.width && item.height);
+            const format = formatOf(source, doc.baseURI);
+            if (format && (format !== "svg" || sized)) return ready();
+            void lookupFormat(source, doc.baseURI, fetcher)
+              .then((found) =>
+                found === "svg" && !sized
+                  ? svgSize(
+                      source,
+                      fetcher,
+                      new (doc.defaultView ?? globalThis).DOMParser(),
+                    )
+                  : undefined,
+              )
+              .then(ready, () => ready());
           };
           if (typeof loader.decode !== "function") decoded();
           else
@@ -1292,7 +1438,7 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
         loader.src = item.src;
       };
       const preview = previewOf(index);
-      if (preview) image.src = preview;
+      if (preview) display(preview);
       frame.dataset.loading = "true";
       const entry: LoadedSlide = {
         frame,
@@ -1338,7 +1484,8 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
     const forward =
       looping() && Math.abs(gap) > items.length / 2 ? gap < 0 : gap > 0;
     s.pinned = undefined;
-    publish({ index, zoom: { ...identity } });
+    s.heading = forward ? 1 : -1;
+    publish({ index, zoom: restZoom(s, index) });
     update(s, forward ? 1 : -1);
     s.status.textContent = s.strings.slide(index, items.length);
     emit("change", s);
@@ -1427,13 +1574,24 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
     s.counter.hidden = single;
     s.prev.disabled = !looping() && state.index === 0;
     s.next.disabled = !looping() && state.index === items.length - 1;
-    for (const [index, slide] of s.slides.entries()) {
-      slide.inert = index !== state.index;
-      slide.setAttribute("aria-hidden", String(index !== state.index));
-      slide.setAttribute("aria-label", s.strings.slide(index, items.length));
+    const mark = (index: number, current: boolean) => {
+      const slide = s.slides[index];
+      if (slide) {
+        slide.inert = !current;
+        slide.setAttribute("aria-hidden", String(!current));
+      }
+      s.thumbs[index]?.setAttribute("aria-current", String(current));
+    };
+    if (s.marked === undefined) {
+      for (const [index, slide] of s.slides.entries()) {
+        mark(index, index === state.index);
+        slide.setAttribute("aria-label", s.strings.slide(index, items.length));
+      }
+    } else if (s.marked !== state.index) {
+      mark(s.marked, false);
+      mark(state.index, true);
     }
-    for (const [index, thumb] of s.thumbs.entries())
-      thumb.setAttribute("aria-current", String(index === state.index));
+    s.marked = state.index;
     centerThumb(s);
     applyZoom(s);
   }
@@ -1472,9 +1630,11 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
     clearTimeout(s.sharpTimer);
     clearTimeout(s.chromeTimer);
     clearTimeout(s.tapTimer);
-    if (s.motion)
-      s.dialog.ownerDocument.defaultView?.cancelAnimationFrame(s.motion.frame);
+    const win = s.dialog.ownerDocument.defaultView;
+    if (s.motion) win?.cancelAnimationFrame(s.motion.frame);
     s.motion = undefined;
+    if (s.resizeFrame !== undefined) win?.cancelAnimationFrame(s.resizeFrame);
+    s.resizeFrame = undefined;
     finishFade(s, false);
     cancelAnimations(s);
     s.carousel.destroy();
@@ -1535,7 +1695,8 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
   function setZoom(scale: number, focus: Point, notify: boolean) {
     const s = session;
     if (!s || state.isClosing || !Number.isFinite(scale)) return;
-    const nextScale = clamp(scale, 1, limits(s).max);
+    const range = limits(s);
+    const nextScale = clamp(scale, range.min, range.max);
     if (nextScale > 1 && state.zoom.scale <= 1) {
       syncingCarousel = true;
       s.carousel.goTo(state.index, "instant");
@@ -1545,14 +1706,11 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
     if (animated && s.animations.size > 0 && !s.zoomMotion)
       interruptImageMotion(s);
     if (!animated) freezeZoom(s);
-    const zoom =
-      nextScale === 1
-        ? { ...identity }
-        : boundZoom(
-            zoomAround(state.zoom, nextScale, focus),
-            fit(state.index, s),
-            view(s),
-          );
+    const zoom = boundZoom(
+      zoomAround(state.zoom, nextScale, focus),
+      fit(state.index, s),
+      view(s),
+    );
     const frame = s.loaded.get(state.index)?.frame;
     if (frame && animated) {
       frame.style.clipPath = "";
@@ -1569,7 +1727,7 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
   function toggleZoom(focus?: Point) {
     const s = session;
     if (!s) return;
-    zoomTo(state.zoom.scale > 1 ? 1 : limits(s).tap, focus);
+    zoomTo(Math.abs(state.zoom.scale - 1) > 1e-3 ? 1 : limits(s).tap, focus);
   }
 
   function panBy(s: Session, dx: number, dy: number) {
@@ -1707,8 +1865,10 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
   function dismissDrag(s: Session, dx: number, dy: number, half: number) {
     const progress = clamp(Math.abs(dy) / half, 0, 1);
     const frame = s.loaded.get(state.index)?.frame;
+    const { scale, x, y } = state.zoom;
+    const shrink = 1 - progress * 0.25;
     if (frame)
-      frame.style.transform = `translate(${dx}px, ${dy}px) scale(${1 - progress * 0.25})`;
+      frame.style.transform = `translate(${x * shrink + dx}px, ${y * shrink + dy}px) scale(${scale * shrink})`;
     s.backdrop.style.opacity = String(1 - progress);
     s.dialog.style.setProperty(
       "--re-lightbox-chrome-opacity",
@@ -1755,16 +1915,21 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
     pinched: boolean,
   ) {
     const scale = state.zoom.scale;
-    if (pinched && scale < PINCH_CLOSE && event.type === "pointerup") {
+    const { min, max } = limits(s);
+    if (pinched && scale < PINCH_CLOSE * min && event.type === "pointerup") {
       void close();
       if (state.isClosing || session !== s) return;
     }
-    const { max } = limits(s);
     const content = fit(state.index, s);
     const viewport = view(s);
     const reduced = prefersReducedMotion(s);
     let target: Zoom;
-    if (scale <= 1) target = { ...identity };
+    if (scale < min)
+      target = boundZoom(
+        zoomAround(state.zoom, min, gesture.focus),
+        content,
+        viewport,
+      );
     else if (scale > max)
       target = boundZoom(
         zoomAround(state.zoom, max, gesture.focus),
@@ -1773,7 +1938,7 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
       );
     else {
       const speed =
-        pinch || reduced || event.type !== "pointerup"
+        pinch || reduced || event.type !== "pointerup" || gesture.axis === "x"
           ? { x: 0, y: 0 }
           : releaseVelocity(gesture.samples, event.timeStamp, {
               x: event.clientX,
@@ -1828,6 +1993,96 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
     publish({});
   }
 
+  function copyImage(s: Session, event: KeyboardEvent) {
+    const win = s.dialog.ownerDocument.defaultView;
+    const Item = (
+      win as (Window & { ClipboardItem?: typeof ClipboardItem }) | null
+    )?.ClipboardItem;
+    if (
+      settings.protect ||
+      !win ||
+      !Item ||
+      typeof win.navigator.clipboard?.write !== "function" ||
+      Item.supports?.("image/png") === false ||
+      win.getSelection()?.toString()
+    )
+      return;
+    event.preventDefault();
+    const doc = s.dialog.ownerDocument;
+    const image = s.loaded.get(state.index)?.image;
+    const source = image?.currentSrc || image?.src;
+    const size = imageSize(state.index, s);
+    const draw = async (file: Blob) => {
+      const canvas = doc.createElement("canvas");
+      const context = canvas.getContext("2d");
+      if (!context) throw new Error("No canvas");
+      if (file.type.split(";")[0].trim() === "image/svg+xml") {
+        const url = win.URL.createObjectURL(file);
+        try {
+          const svg = new win.Image();
+          await new Promise((resolve, reject) => {
+            svg.onload = resolve;
+            svg.onerror = reject;
+            svg.src = url;
+          });
+          canvas.width = Math.round(size.width);
+          canvas.height = Math.round(size.height);
+          context.drawImage(svg, 0, 0, canvas.width, canvas.height);
+        } finally {
+          win.URL.revokeObjectURL(url);
+        }
+      } else {
+        const bitmap = await win.createImageBitmap(file);
+        canvas.width = bitmap.width;
+        canvas.height = bitmap.height;
+        context.drawImage(bitmap, 0, 0);
+        bitmap.close();
+      }
+      return new Promise<Blob>((resolve, reject) =>
+        canvas.toBlob(
+          (result) => (result ? resolve(result) : reject(new Error("No blob"))),
+          "image/png",
+        ),
+      );
+    };
+    const shown = () => {
+      if (!image?.complete || !image.naturalWidth) throw new Error("No image");
+      const canvas = doc.createElement("canvas");
+      const svg = formatOf(source ?? "", doc.baseURI) === "svg";
+      canvas.width = Math.round(svg ? size.width : image.naturalWidth);
+      canvas.height = Math.round(svg ? size.height : image.naturalHeight);
+      canvas
+        .getContext("2d")
+        ?.drawImage(image, 0, 0, canvas.width, canvas.height);
+      return new Promise<Blob>((resolve, reject) =>
+        canvas.toBlob(
+          (result) => (result ? resolve(result) : reject(new Error("No blob"))),
+          "image/png",
+        ),
+      );
+    };
+    // Only a tainted canvas fetches the file, since a page's connect-src may refuse data: and blob:.
+    const blob = (async () => {
+      try {
+        return await shown();
+      } catch (error) {
+        if ((error as Error).name !== "SecurityError") throw error;
+      }
+      if (!source) throw new Error("No image");
+      const response = await win.fetch(source, {
+        mode: "cors",
+        credentials: "same-origin",
+      });
+      if (!response.ok) throw new Error("No file");
+      const file = await response.blob();
+      return file.type === "image/png" ? file : draw(file);
+    })();
+    blob.catch(() => {});
+    win.navigator.clipboard
+      .write([new Item({ "image/png": blob })])
+      .catch(() => {});
+  }
+
   function installGestures(s: Session) {
     const signal = s.abort.signal;
     const point = (event: PointerEvent): Point => ({
@@ -1863,13 +2118,31 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
         samples: [],
       };
     };
+    s.dialog.addEventListener(
+      "pointerdown",
+      (event) => {
+        if (
+          !isElement(event.target) ||
+          !event.target.matches(".re-lightbox-image")
+        )
+          return;
+        if (
+          event.pointerType === "mouse" &&
+          !settings.protect &&
+          state.zoom.scale <= 1
+        )
+          event.target.setAttribute("data-carousel-no-drag", "");
+        else event.target.removeAttribute("data-carousel-no-drag");
+      },
+      { signal, capture: true },
+    );
     s.viewport.addEventListener(
       "pointerdown",
       (event) => {
         if (
           event.button !== 0 ||
           state.isClosing ||
-          (event.target instanceof Element &&
+          (isElement(event.target) &&
             event.target.closest(
               "button, a, input, textarea, select, [data-lightbox-interactive]",
             ))
@@ -1932,10 +2205,11 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
         if (points.length > 1 && gesture.distance > 0) {
           event.preventDefault();
           const middle = midpoint(points);
+          const range = limits(s);
           const scale = clamp(
             (gesture.zoom.scale * distance(points)) / gesture.distance,
-            PINCH_MIN,
-            PINCH_OVER * limits(s).max,
+            PINCH_MIN * range.min,
+            PINCH_OVER * range.max,
           );
           const zoom = zoomAround(gesture.zoom, scale, focus(gesture.midpoint));
           zoom.x += middle.x - gesture.midpoint.x;
@@ -1943,35 +2217,62 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
           gesture.focus = focus(middle);
           updateState({ zoom });
           applyZoom(s, false);
-        } else if (gesture.zoom.scale > 1 || gesture.pinched) {
-          event.preventDefault();
-          if (gesture.moved && !s.dialog.dataset.panning)
-            s.dialog.dataset.panning = "true";
-          updateState({
-            zoom: elasticZoom(
-              {
-                scale: gesture.zoom.scale,
-                x: gesture.raw.x + dx,
-                y: gesture.raw.y + dy,
-              },
+        } else {
+          if (
+            gesture.touch &&
+            points.length === 1 &&
+            gesture.zoom.scale <= 1 &&
+            !gesture.pinched &&
+            !gesture.axis &&
+            Math.hypot(dx, dy) >= 10
+          ) {
+            const limit = panLimits(
+              gesture.zoom.scale,
               fit(state.index, s),
               view(s),
-            ),
-          });
-          applyZoom(s, false);
-        } else if (gesture.touch && points.length === 1) {
-          if (!gesture.axis && Math.hypot(dx, dy) >= 10) {
-            gesture.axis = Math.abs(dy) > Math.abs(dx) ? "y" : "x";
-            if (gesture.axis === "y") {
-              gesture.half = view(s).height / 2;
+            ).y;
+            gesture.axis =
+              Math.abs(dy) <= Math.abs(dx)
+                ? "x"
+                : limit > 0.5 && !(dy > 0 && gesture.zoom.y >= limit - 0.5)
+                  ? "pan"
+                  : "y";
+            if (gesture.axis !== "x") {
               s.carousel.setEnabled(false);
               s.viewport.setPointerCapture?.(event.pointerId);
+            }
+            if (gesture.axis === "y") {
+              gesture.half = view(s).height / 2;
               setPhase(s, "dragging");
             }
           }
-          if (gesture.axis === "y") {
+          if (
+            gesture.zoom.scale > 1 ||
+            gesture.pinched ||
+            gesture.axis === "pan"
+          ) {
+            event.preventDefault();
+            if (gesture.moved && !s.dialog.dataset.panning)
+              s.dialog.dataset.panning = "true";
+            updateState({
+              zoom: elasticZoom(
+                {
+                  scale: gesture.zoom.scale,
+                  x: gesture.raw.x + (gesture.axis === "pan" ? 0 : dx),
+                  y: gesture.raw.y + dy,
+                },
+                fit(state.index, s),
+                view(s),
+              ),
+            });
+            applyZoom(s, false);
+          } else if (gesture.axis === "y") {
             event.preventDefault();
             dismissDrag(s, dx, dy, gesture.half);
+            if (!gesture.buzzed && Math.abs(dy) > DISMISS_DISTANCE) {
+              gesture.buzzed = true;
+              s.dialog.ownerDocument.defaultView?.navigator.vibrate?.(10);
+            }
           }
         }
       },
@@ -2027,7 +2328,7 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
         const doubleTap =
           settings.imageClick !== "close" &&
           settings.doubleTapZoom !== false &&
-          (state.zoom.scale > 1 || limits(s).max > 1);
+          (state.zoom.scale !== 1 || limits(s).max > 1 || limits(s).min < 1);
         if (!onPhoto || settings.imageClick === "close") {
           void close();
           if (state.isClosing || session !== s) return;
@@ -2069,6 +2370,7 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
       if (gesture)
         settle(s, gesture, event, hadPinch, hadPinch || gesture.pinched);
       resetGesture();
+      if (gesture?.axis === "pan" && session === s) applyZoom(s, false);
       if (hadPinch) s.lastTap = undefined;
     };
     s.dialog.ownerDocument.defaultView?.addEventListener("pointerup", release, {
@@ -2087,12 +2389,46 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
       { signal },
     );
     s.viewport.addEventListener(
+      "dragstart",
+      (event) => {
+        if (
+          !isElement(event.target) ||
+          !event.target.matches(".re-lightbox-image")
+        )
+          return;
+        if (
+          settings.protect ||
+          state.zoom.scale > 1 ||
+          s.gesture?.axis === "pan" ||
+          s.dialog.dataset.panning
+        ) {
+          event.preventDefault();
+          return;
+        }
+        s.pointers.clear();
+        resetGesture();
+      },
+      { signal },
+    );
+    s.viewport.addEventListener(
+      "contextmenu",
+      (event) => {
+        if (
+          settings.protect &&
+          isElement(event.target) &&
+          event.target.matches(".re-lightbox-image")
+        )
+          event.preventDefault();
+      },
+      { signal },
+    );
+    s.viewport.addEventListener(
       "click",
       (event) => {
         if (Date.now() < s.suppressClickUntil || state.isClosing) return;
         const target = event.target;
         if (
-          !(target instanceof Element) ||
+          !isElement(target) ||
           target.closest(
             "[data-lightbox-interactive],button,a,input,textarea,select",
           )
@@ -2119,7 +2455,14 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
       "wheel",
       (event) => {
         const zooming = event.ctrlKey || event.metaKey;
-        if (!zooming && (state.isClosing || state.zoom.scale <= 1)) return;
+        if (
+          !zooming &&
+          (state.isClosing ||
+            (state.zoom.scale <= 1 &&
+              (!tall(state.index, s) ||
+                Math.abs(event.deltaX) > Math.abs(event.deltaY))))
+        )
+          return;
         event.preventDefault();
         if (
           state.isClosing ||
@@ -2218,7 +2561,11 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
       drag: true,
       loop: looping(),
       onChange: (value) => {
-        if (!syncingCarousel && session?.viewport === viewport)
+        if (
+          !syncingCarousel &&
+          session?.viewport === viewport &&
+          session.resizeFrame === undefined
+        )
           activeChanged(session, value.index);
       },
     });
@@ -2346,6 +2693,7 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
     dialog.setAttribute("aria-label", settings.label || strings.dialog);
     dialog.dataset.chrome = "shown";
     dialog.dataset.phase = "entering";
+    if (settings.protect) dialog.dataset.protect = "";
     const viewport = doc.createElement("div");
     viewport.className = "re-lightbox-viewport";
     viewport.tabIndex = 0;
@@ -2454,8 +2802,9 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
       );
     };
     makeThumbs();
-    const previousFocus =
-      doc.activeElement instanceof HTMLElement ? doc.activeElement : null;
+    const previousFocus = isHTMLElement(doc.activeElement)
+      ? doc.activeElement
+      : null;
     (settings.container ?? doc.body).append(dialog);
     const restoreScroll = lockScroll(doc);
     try {
@@ -2473,6 +2822,7 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
       loaded: new Map(),
       carousel: connect(viewport),
       carouselLoops: looping(),
+      heading: 1,
       strings,
       slots: [],
       thumbStrip,
@@ -2513,7 +2863,7 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
       isAnimating: false,
       index: clamp(Math.floor(index), 0, items.length - 1),
       count: items.length,
-      zoom: { ...identity },
+      zoom: restZoom(s, clamp(Math.floor(index), 0, items.length - 1)),
       chrome: "shown",
     });
     mountSlots(s, {
@@ -2561,22 +2911,32 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
         chromeInput(s, { type: "key" });
         if (
           event.defaultPrevented ||
-          event.altKey ||
-          event.ctrlKey ||
-          event.metaKey ||
-          (event.target instanceof Element &&
+          (isElement(event.target) &&
             event.target.closest(
               "input,textarea,select,[contenteditable=true],[data-lightbox-interactive]",
             ))
         )
           return;
+        if (
+          (event.ctrlKey || event.metaKey) &&
+          !event.altKey &&
+          (event.key.toLowerCase() === "c" ||
+            (!/^[a-z]$/i.test(event.key) && event.code === "KeyC"))
+        ) {
+          copyImage(s, event);
+          return;
+        }
+        if (event.altKey || event.ctrlKey || event.metaKey) return;
         const pan = {
           ArrowLeft: [KEY_PAN, 0],
           ArrowRight: [-KEY_PAN, 0],
           ArrowUp: [0, KEY_PAN],
           ArrowDown: [0, -KEY_PAN],
         }[event.key];
-        if (pan && state.zoom.scale > 1) {
+        if (
+          pan &&
+          (state.zoom.scale > 1 || (pan[0] === 0 && tall(state.index, s)))
+        ) {
           event.preventDefault();
           panBy(s, pan[0] * view(s).width, pan[1] * view(s).height);
         } else if (event.key === "ArrowLeft" || event.key === "ArrowRight") {
@@ -2607,13 +2967,9 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
     doc.defaultView?.addEventListener(
       "resize",
       () => {
-        cancelAnimations(s);
-        s.box = measure(viewport);
-        s.pinned = undefined;
-        const zoomed = state.zoom.scale !== 1;
-        if (zoomed) updateState({ zoom: { ...identity } });
-        layout(s);
-        if (zoomed) publish({});
+        s.resizeFrame ??= doc.defaultView?.requestAnimationFrame(() =>
+          resized(s),
+        );
       },
       { signal: abort.signal },
     );
@@ -2687,7 +3043,7 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
         const target = event.target;
         if (
           target !== s.openingFocus &&
-          target instanceof Node &&
+          isNode(target) &&
           s.chromeRoots.some((root) => root.contains(target))
         )
           chromeInput(s, { type: "focus" });
@@ -2866,13 +3222,14 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
     sources = [...input];
     s.slides = slides;
     s.loaded = loaded;
+    s.marked = undefined;
     s.makeThumbs();
     s.centeredThumb = Number.NaN;
     const changed = target !== state.index;
     if ((changed || !kept || s.carouselLoops) && state.zoom.scale > 1) {
-      updateState({ zoom: { ...identity } });
+      updateState({ zoom: restZoom(s, target) });
       applyZoom(s);
-    }
+    } else if (changed || !kept) updateState({ zoom: restZoom(s, target) });
     syncingCarousel = true;
     if (s.carouselLoops !== looping()) reconnect(s, target);
     else {
@@ -3006,7 +3363,13 @@ export function bindLightboxGallery(
     items?: (root: HTMLElement) => readonly LightboxItem[];
   } = {},
 ) {
-  const controller = createLightbox(options);
+  const controller = createLightbox({
+    ...options,
+    // Read at each open, so a page that swaps its body still gets the dialog in the live one.
+    get container() {
+      return options.container ?? root.ownerDocument.body;
+    },
+  });
   const click = (event: MouseEvent) => {
     if (
       event.defaultPrevented ||
@@ -3018,7 +3381,7 @@ export function bindLightboxGallery(
     )
       return;
     const target = event.target;
-    if (!(target instanceof Element)) return;
+    if (!isElement(target)) return;
     const images = [
       ...root.querySelectorAll<HTMLImageElement>(options.selector || "img"),
     ];

@@ -697,3 +697,107 @@ export async function frameInterval(page: Page, interval: number) {
     };
   }, interval);
 }
+
+// One finger along a polyline, at a constant speed over the whole path.
+export async function touchDrag(page: Page, path: Point[], duration: number) {
+  const lengths = path
+    .slice(1)
+    .map((point, index) =>
+      Math.hypot(point.x - path[index].x, point.y - path[index].y),
+    );
+  const total = lengths.reduce((sum, length) => sum + length, 0);
+  await touchPath(
+    page,
+    duration,
+    (share) => {
+      let left = share * total;
+      for (const [index, length] of lengths.entries()) {
+        if (left <= length || index === lengths.length - 1) {
+          const part = length ? Math.min(1, left / length) : 1;
+          const from = path[index];
+          const to = path[index + 1];
+          return [
+            {
+              x: from.x + (to.x - from.x) * part,
+              y: from.y + (to.y - from.y) * part,
+            },
+          ];
+        }
+        left -= length;
+      }
+      return [path[path.length - 1]];
+    },
+    0,
+  );
+}
+
+// Call before mount. Records which elements matching the selector had their geometry read
+// between start() and read().
+export async function countGeometryReads(page: Page, selector: string) {
+  await page.addInitScript((match) => {
+    const record = { on: false, elements: new Set<Element>(), total: 0 };
+    const note = (element: Element) => {
+      if (!record.on || !element.matches(match)) return;
+      record.total++;
+      record.elements.add(element);
+    };
+    for (const name of [
+      "offsetLeft",
+      "offsetTop",
+      "offsetWidth",
+      "offsetHeight",
+    ] as const) {
+      const property = Object.getOwnPropertyDescriptor(
+        HTMLElement.prototype,
+        name,
+      );
+      const get = property?.get;
+      if (!get) continue;
+      Object.defineProperty(HTMLElement.prototype, name, {
+        ...property,
+        get(this: HTMLElement) {
+          note(this);
+          return get.call(this);
+        },
+      });
+    }
+    for (const name of [
+      "clientWidth",
+      "clientHeight",
+      "scrollWidth",
+      "scrollLeft",
+    ] as const) {
+      const property = Object.getOwnPropertyDescriptor(Element.prototype, name);
+      const get = property?.get;
+      if (!get) continue;
+      Object.defineProperty(Element.prototype, name, {
+        ...property,
+        get(this: Element) {
+          note(this);
+          return get.call(this);
+        },
+      });
+    }
+    const rect = Element.prototype.getBoundingClientRect;
+    Element.prototype.getBoundingClientRect = function (this: Element) {
+      note(this);
+      return rect.call(this);
+    };
+    Object.assign(window, { __geometryReads: record });
+  }, selector);
+  type Record = { on: boolean; elements: Set<Element>; total: number };
+  return {
+    start: () =>
+      page.evaluate(() => {
+        (window as unknown as { __geometryReads: Record }).__geometryReads.on =
+          true;
+      }),
+    read: () =>
+      page.evaluate(() => {
+        const record = (window as unknown as { __geometryReads: Record })
+          .__geometryReads;
+        record.on = false;
+        return { elements: record.elements.size, total: record.total };
+      }),
+  };
+}

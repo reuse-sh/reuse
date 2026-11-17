@@ -93,6 +93,27 @@ export function lightboxSession(): World {
     alt: tile.alt,
     origin: tile,
   }));
+  const tile = (index: number) => {
+    const image = document.createElement("img");
+    image.alt = `Tile ${index}`;
+    document.body.append(image);
+    tiles.push(image);
+    return image;
+  };
+  const touch = (target: EventTarget, type: string, y: number) => {
+    const event = new MouseEvent(type, {
+      bubbles: true,
+      cancelable: true,
+      button: 0,
+      clientX: 512,
+      clientY: y,
+    });
+    Object.defineProperties(event, {
+      pointerId: { value: 1 },
+      pointerType: { value: "touch" },
+    });
+    target.dispatchEvent(event);
+  };
   const viewport = () =>
     document.querySelector<HTMLElement>(".re-lightbox-viewport");
   const settled = () => {
@@ -115,9 +136,29 @@ export function lightboxSession(): World {
         strip.dispatchEvent(new Event("scroll"));
         strip.dispatchEvent(new Event("scrollend"));
       },
+      dismiss: () => {
+        const strip = viewport();
+        if (!strip) return;
+        touch(strip, "pointerdown", 300);
+        touch(strip, "pointermove", 450);
+        touch(window, "pointerup", 450);
+      },
       zoom: () => lightbox.toggleZoom(),
       resize: () => {
         window.dispatchEvent(new Event("resize"));
+      },
+      append: () => {
+        if (destroyed) return;
+        const index = tiles.length;
+        lightbox.append([
+          {
+            src: `https://example.test/full-${index}.jpg`,
+            width: 1600,
+            height: 1200,
+            alt: `Tile ${index}`,
+            origin: tile(index),
+          },
+        ]);
       },
       destroy: () => {
         lightbox.destroy();
@@ -147,12 +188,18 @@ export function lightboxSession(): World {
         history.length - startHistory <= 1,
     },
     fingerprint: () => {
-      const { isOpen, isClosing, index, zoom } = lightbox.getState();
+      const { isOpen, isClosing, isAnimating, index, count, zoom, chrome } =
+        lightbox.getState();
       return [
         isOpen,
         isClosing,
+        isAnimating,
         index,
+        count,
         zoom.scale,
+        zoom.x,
+        zoom.y,
+        chrome,
         destroyed,
         document.querySelectorAll("dialog").length,
         vi.getTimerCount(),

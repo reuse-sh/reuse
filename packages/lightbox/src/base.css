@@ -42,6 +42,7 @@
   position: relative;
   display: grid;
   flex: 0 0 100%;
+  grid-template: 100% / 100%;
   width: 100%;
   height: 100%;
   place-items: center;
@@ -54,10 +55,17 @@
   flex: none;
   transform-origin: center;
 }
-.re-lightbox[data-zoomable="true"] .re-lightbox-frame {
+.re-lightbox-frame[data-transparent]:not([data-loading], [data-error]) {
+  background: var(--re-lightbox-media-background);
+}
+.re-lightbox[data-zoom="in"]:where([data-zoomable="true"]) .re-lightbox-frame {
   cursor: zoom-in;
 }
-.re-lightbox[data-zoomed="true"] .re-lightbox-frame {
+.re-lightbox[data-zoom="out"]:where(
+    [data-zoomed="true"],
+    [data-zoomable="true"]
+  )
+  .re-lightbox-frame {
   cursor: zoom-out;
 }
 .re-lightbox[data-zoomed="true"] .re-lightbox-frame:active {
@@ -77,6 +85,9 @@
   max-width: none;
   object-fit: contain;
   user-select: none;
+}
+.re-lightbox[data-protect] .re-lightbox-image {
+  -webkit-touch-callout: none;
   -webkit-user-drag: none;
 }
 .re-lightbox-image:not([src]) {
