@@ -206,20 +206,29 @@ test("a slow beforeclose does not eat into the close flight", {
 }, async ({ page }) => {
   await stripPage(page);
   await openAt(page, 0);
-  const elapsed = await page.evaluate(async () => {
+  const flight = await page.evaluate(async () => {
     const win = window as Window;
     win.lightbox.on("beforeclose", () => {
       const until = performance.now() + 120;
       while (performance.now() < until);
     });
-    void win.lightbox.close();
-    await new Promise(requestAnimationFrame);
     const frame = document.querySelector(
       '.re-lightbox-slide[aria-hidden="false"] .re-lightbox-frame',
     ) as HTMLElement;
-    return Number(frame.getAnimations()[0]?.currentTime);
+    void win.lightbox.close();
+    const vetted = performance.now();
+    const timeline = document.timeline.currentTime;
+    const painted = await new Promise<number>(requestAnimationFrame);
+    return {
+      elapsed: Number(frame.getAnimations()[0]?.currentTime),
+      open: frame.isConnected,
+      vetted,
+      timeline,
+      painted,
+      now: performance.now(),
+    };
   });
-  expect(elapsed).toBeLessThan(60);
+  expect(flight.elapsed, JSON.stringify(flight)).toBeLessThan(60);
 });
 
 test("closing at 4x zoom panned to a corner unwinds into the tile", async ({
