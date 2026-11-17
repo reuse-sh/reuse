@@ -2,7 +2,7 @@ import { expect, type Page, test } from "@playwright/test";
 import { mount, photo } from "./harness";
 
 async function open(page: Page, options: Record<string, unknown> = {}) {
-  await mount(page, "", ["lightbox/styles.css"]);
+  await mount(page, "", ["lightbox/base.css", "lightbox/theme.css"]);
   await page.evaluate(
     async ([sources, extra]) => {
       const { createLightbox } = await import("/modules/lightbox/index.js");

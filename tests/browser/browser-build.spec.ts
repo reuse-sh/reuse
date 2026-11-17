@@ -15,7 +15,8 @@ test("the browser builds run on a theme page with plain files and no import map"
         contentType: "text/html",
         body: `<!doctype html><html><head><meta charset="utf-8">
 <link rel="stylesheet" href="/assets/carousel/styles.css">
-<link rel="stylesheet" href="/assets/lightbox/styles.css">
+<link rel="stylesheet" href="/assets/lightbox/base.css">
+<link rel="stylesheet" href="/assets/lightbox/theme.css">
 <script type="module">
 import { createCarousel } from "/assets/carousel/browser/carousel.js";
 import { bindLightboxGallery } from "/assets/lightbox/browser/lightbox.js";
@@ -69,6 +70,7 @@ window.gallery = bindLightboxGallery(document.getElementById("gallery"));
 for (const [name, file] of [
   ["@reuse-sh/carousel", "carousel/dist/browser/carousel.js"],
   ["@reuse-sh/lightbox", "lightbox/dist/browser/lightbox.js"],
+  ["@reuse-sh/lightbox", "lightbox/dist/browser/carousel-link.js"],
 ] as const) {
   test(`${file} opens with its banner and imports nothing by name`, async () => {
     const source = await readFile(join(packages, file), "utf8");
@@ -85,3 +87,20 @@ for (const [name, file] of [
     expect(source).toMatch(/\/\/# sourceMappingURL=\S+\.js\.map\s*$/);
   });
 }
+
+test("the lightbox build wraps base.css and theme.css in their layers and keeps copies without them", async () => {
+  const dist = join(packages, "lightbox/dist");
+  for (const [file, layer] of [
+    ["base.css", "re.base"],
+    ["theme.css", "re.theme"],
+  ] as const) {
+    const source = await readFile(join(packages, "lightbox/src", file), "utf8");
+    const layered = await readFile(join(dist, file), "utf8");
+    expect(layered.split("\n").slice(0, 2)).toEqual([
+      "@layer re.base, re.theme;",
+      `@layer ${layer} {`,
+    ]);
+    expect(layered).toContain(source);
+    expect(await readFile(join(dist, "unlayered", file), "utf8")).toBe(source);
+  }
+});

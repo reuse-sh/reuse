@@ -47,6 +47,8 @@ const rules: readonly (readonly [(o: LightboxStyle) => boolean, string])[] = [
     always,
     `.re-lightbox-style {
   --re-lightbox-pad: 16px;
+  --re-lightbox-inset: var(--re-lightbox-pad);
+  --re-lightbox-gap: 8px;
   --re-lightbox-side: 0px;
   --re-lightbox-caption: 0px;
   --re-lightbox-strip: 0px;
@@ -57,6 +59,8 @@ const rules: readonly (readonly [(o: LightboxStyle) => boolean, string])[] = [
   --re-lightbox-background: #fcfcfc;
   --re-lightbox-foreground: #1f1f1f;
   --re-lightbox-control: #fff;
+  --re-lightbox-control-hover: #f4f4f4;
+  --re-lightbox-placeholder: rgb(0 0 0 / 5%);
 }
 .re-lightbox-style *, .re-lightbox-style *::before, .re-lightbox-style *::after { box-sizing: border-box; }
 .re-lightbox-style .re-lightbox-viewport {
@@ -73,12 +77,10 @@ const rules: readonly (readonly [(o: LightboxStyle) => boolean, string])[] = [
   transition: background-color 150ms ease, transform 160ms cubic-bezier(0.23, 1, 0.32, 1), opacity 300ms ease;
 }
 .re-lightbox-style .re-lightbox-button svg { width: 18px; height: 18px; }
+.re-lightbox-style .re-lightbox-retry { box-shadow: var(--re-lightbox-ring); }
 .re-lightbox-style .re-lightbox-button:hover { background: #f4f4f4; }
 .re-lightbox-style .re-lightbox-button:active:not(:disabled) { transform: scale(0.95); }
 .re-lightbox-style .re-lightbox-button:disabled { opacity: 0.3; }
-.re-lightbox-style .re-lightbox-close, .re-lightbox-style .re-lightbox-zoom { top: var(--re-lightbox-pad); }
-.re-lightbox-style .re-lightbox-close { right: var(--re-lightbox-pad); }
-.re-lightbox-style .re-lightbox-zoom { right: calc(var(--re-lightbox-pad) + 48px); }
 .re-lightbox-style .re-lightbox-footer {
   right: calc(var(--re-lightbox-side) + var(--re-lightbox-pad));
   bottom: calc(var(--re-lightbox-under) + var(--re-lightbox-pad));
@@ -166,6 +168,18 @@ const rules: readonly (readonly [(o: LightboxStyle) => boolean, string])[] = [
 }`,
   ],
   [
+    (o) => o.arrows === "Toolbar",
+    `.re-lightbox-style > :is(.re-lightbox-prev, .re-lightbox-next) { display: none; }`,
+  ],
+  [
+    (o) => o.counter === "Toolbar",
+    ".re-lightbox-style .re-lightbox-footer > .re-lightbox-counter { display: none; }",
+  ],
+  [
+    (o) => hasBar(o) && o.zoomButton,
+    ".re-lightbox-style .re-lightbox-toolbar .re-lightbox-zoom { display: none; }",
+  ],
+  [
     hasBar,
     `.re-lightbox-style { --re-lightbox-bar: 58px; }
 .re-lightbox-style-toolbar {
@@ -187,20 +201,23 @@ const rules: readonly (readonly [(o: LightboxStyle) => boolean, string])[] = [
   ],
   [
     (o) => o.caption === "Panel",
-    `.re-lightbox-style { --re-lightbox-side: 240px; }
-.re-lightbox-style-panel {
-  position: absolute;
-  z-index: 1;
+    `.re-lightbox-style { --re-lightbox-side: 240px; --re-lightbox-aside-width: var(--re-lightbox-side); }
+.re-lightbox-style .re-lightbox-aside {
   top: 0;
   right: 0;
   bottom: 0;
-  display: flex;
-  flex-direction: column;
+  left: auto;
   width: var(--re-lightbox-side);
-  padding: 72px 24px 24px;
+  height: auto;
   background: #fff;
   box-shadow: -1px 0 0 rgb(0 0 0 / 6%);
   color: #1f1f1f;
+}
+.re-lightbox-style-panel {
+  display: flex;
+  flex-direction: column;
+  min-height: 100%;
+  padding: 72px 24px 24px;
 }
 .re-lightbox-style-panel :where(h2, p) { margin: 0; }
 .re-lightbox-style-panel h2 { font-size: 19px; font-weight: 560; line-height: 26px; letter-spacing: -0.01em; }
@@ -214,6 +231,8 @@ const rules: readonly (readonly [(o: LightboxStyle) => boolean, string])[] = [
   --re-lightbox-background: #09090a;
   --re-lightbox-foreground: #fff;
   --re-lightbox-control: rgb(255 255 255 / 8%);
+  --re-lightbox-control-hover: rgb(255 255 255 / 14%);
+  --re-lightbox-placeholder: rgb(255 255 255 / 6%);
 }
 .re-lightbox-style .re-lightbox-button:hover { background: rgb(255 255 255 / 14%); }`,
   ],
@@ -247,7 +266,7 @@ const rules: readonly (readonly [(o: LightboxStyle) => boolean, string])[] = [
   ],
   [
     (o) => dark(o) && o.caption === "Panel",
-    `.re-lightbox-style-panel { background: #151517; box-shadow: -1px 0 0 rgb(255 255 255 / 8%); color: #fff; }
+    `.re-lightbox-style .re-lightbox-aside { background: #151517; box-shadow: -1px 0 0 rgb(255 255 255 / 8%); color: #fff; }
 .re-lightbox-style-panel-place { color: rgb(255 255 255 / 50%); }
 .re-lightbox-style-panel-text { color: rgb(255 255 255 / 70%); }`,
   ],
@@ -279,14 +298,14 @@ const rules: readonly (readonly [(o: LightboxStyle) => boolean, string])[] = [
     (o) => o.caption === "Panel",
     `@media (max-width: 559px) {
   .re-lightbox-style { --re-lightbox-side: 0px; --re-lightbox-under: 120px; }
-  .re-lightbox-style-panel {
+  .re-lightbox-style .re-lightbox-aside {
     top: auto;
     left: 0;
     width: auto;
     height: var(--re-lightbox-under);
-    padding: 16px;
     box-shadow: 0 -1px 0 rgb(0 0 0 / 6%);
   }
+  .re-lightbox-style-panel { padding: 16px; }
   .re-lightbox-style-panel h2 { font-size: 16px; line-height: 22px; }
   .re-lightbox-style-panel-place { font-size: 13px; }
   .re-lightbox-style-panel-text { margin-top: 6px; font-size: 13px; line-height: 19px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
@@ -295,7 +314,7 @@ const rules: readonly (readonly [(o: LightboxStyle) => boolean, string])[] = [
   [
     (o) => dark(o) && o.caption === "Panel",
     `@media (max-width: 559px) {
-  .re-lightbox-style-panel { box-shadow: 0 -1px 0 rgb(255 255 255 / 8%); }
+  .re-lightbox-style .re-lightbox-aside { box-shadow: 0 -1px 0 rgb(255 255 255 / 8%); }
 }`,
   ],
   [
@@ -315,101 +334,166 @@ export function lightboxStyleCss(options: LightboxStyle) {
 }
 
 /**
- * The chrome script one style needs, as module source, or null when the package's
- * own layout is enough. addChrome(lightbox, items) runs right after lightbox.open().
+ * The chrome module one style needs, as module source, or null when the package's
+ * own controls and options are enough. chromeSlots(getItems, icons) returns the
+ * slots option; hideWhenIdle(lightbox) returns its cleanup.
  */
 export function lightboxChrome(options: LightboxStyle) {
   const bar = hasBar(options);
   const panel = options.caption === "Panel";
-  const strip = options.thumbnails;
   const idle = options.autoHide;
-  if (!bar && !panel && !strip && !idle) return null;
-  const parts: string[] = [];
+  if (!bar && !panel && !idle) return null;
+  const modules: string[] = [];
+  const slots: string[] = [];
   if (bar) {
     const order = [
-      options.arrows === "Toolbar" && `part("prev")`,
-      options.counter === "Toolbar" && `part("counter")`,
-      options.arrows === "Toolbar" && `part("next")`,
+      options.arrows === "Toolbar" && "prev",
+      options.counter === "Toolbar" && "counter",
+      options.arrows === "Toolbar" && "next",
     ].filter(Boolean);
-    parts.push(`  const bar = document.createElement("div");
-  bar.className = "re-lightbox-style-toolbar";
-  bar.setAttribute("role", "group");
-  bar.setAttribute("aria-label", "Photo controls");
-  bar.append(${order.join(", ")});${
-    options.zoomButton
-      ? `
-  const divider = document.createElement("span");
-  divider.className = "re-lightbox-style-toolbar-divider";
-  divider.setAttribute("aria-hidden", "true");
-  bar.append(divider, part("zoom"));`
-      : ""
-  }
-  part("footer").append(bar);`);
+    slots.push(`    footer: ({ lightbox, document }) => {
+      const button = (name, label, text, action) => {
+        const element = document.createElement("button");
+        element.type = "button";
+        element.className = "re-lightbox-button";
+        element.setAttribute("aria-label", label);
+        const icon = icons[name]?.();
+        if (icon) element.append(icon);
+        else element.textContent = text;
+        element.addEventListener("click", action);
+        return element;
+      };
+      const bar = document.createElement("div");
+      bar.className = "re-lightbox-style-toolbar";
+      bar.setAttribute("role", "group");
+      bar.setAttribute("aria-label", "Photo controls");${
+        options.arrows === "Toolbar"
+          ? `
+      const prev = button("prev", "Previous image", "‹", () => lightbox.prev());
+      const next = button("next", "Next image", "›", () => lightbox.next());`
+          : ""
+      }${
+        options.counter === "Toolbar"
+          ? `
+      const counter = document.createElement("output");
+      counter.className = "re-lightbox-counter";
+      counter.setAttribute("aria-live", "polite");`
+          : ""
+      }
+      bar.append(${order.join(", ")});${
+        options.zoomButton
+          ? `
+      const divider = document.createElement("span");
+      divider.className = "re-lightbox-style-toolbar-divider";
+      divider.setAttribute("aria-hidden", "true");
+      const zoom = button("zoom", "Zoom in", "+", () => lightbox.toggleZoom());
+      bar.append(divider, zoom);`
+          : ""
+      }
+      return {
+        node: bar,
+        update: (state) => {${
+          options.arrows === "Toolbar"
+            ? `
+          prev.disabled = state.index === 0;
+          next.disabled = state.index === state.count - 1;`
+            : ""
+        }${
+          options.counter === "Toolbar"
+            ? `
+          counter.value = \`\${state.index + 1} / \${state.count}\`;`
+            : ""
+        }${
+          options.zoomButton
+            ? `
+          const zoomed = state.zoom.scale > 1;
+          zoom.setAttribute("aria-label", zoomed ? "Zoom out" : "Zoom in");
+          zoom.setAttribute("aria-pressed", String(zoomed));
+          if (!icons.zoom) zoom.textContent = zoomed ? "−" : "+";`
+            : ""
+        }
+        },
+      };
+    },`);
   }
   if (panel)
-    parts.push(`  const panel = document.createElement("aside");
-  panel.className = "re-lightbox-style-panel";
-  panel.innerHTML = \`<h2></h2><p class="re-lightbox-style-panel-place"></p><p class="re-lightbox-style-panel-text"></p>\`;
-  dialog.append(panel);
-  const [title, place, text] = panel.children;
-  syncs.push((state) => {
-    const item = items[state.index];
-    title.textContent = item.caption;
-    place.textContent = \`\${state.index + 1} of \${state.count}\`;
-    text.textContent = \`\${item.alt}.\`;
-  });`);
-  if (strip)
-    parts.push(`  const strip = part("thumbnails");
-  let shown = -1;
-  syncs.push((state) => {
-    const thumb = strip.children[state.index];
-    if (!thumb || state.index === shown || strip.scrollWidth <= strip.clientWidth) return;
-    const left = thumb.offsetLeft - (strip.clientWidth - thumb.offsetWidth) / 2;
-    strip.scrollTo({ left: Math.max(0, left), behavior: shown < 0 ? "instant" : "smooth" });
-    shown = state.index;
-  });`);
-  if (idle)
-    parts.push(`  let timer = 0;
-  const wake = () => {
-    dialog.removeAttribute("data-idle");
-    clearTimeout(timer);
-    timer = setTimeout(() => dialog.setAttribute("data-idle", ""), 2000);
+    slots.push(`    aside: ({ document }) => {
+      const panel = document.createElement("aside");
+      panel.className = "re-lightbox-style-panel";
+      const title = document.createElement("h2");
+      const place = document.createElement("p");
+      place.className = "re-lightbox-style-panel-place";
+      const text = document.createElement("p");
+      text.className = "re-lightbox-style-panel-text";
+      panel.append(title, place, text);
+      return {
+        node: panel,
+        update: (state) => {
+          const item = getItems()[state.index];
+          if (!item) return;
+          title.textContent = item.caption ?? "";
+          place.textContent = \`\${state.index + 1} of \${state.count}\`;
+          text.textContent = \`\${item.alt}.\`;
+        },
+      };
+    },`);
+  if (slots.length)
+    modules.push(`export function chromeSlots(getItems, icons = {}) {
+  return {
+${slots.join("\n")}
   };
+}`);
+  if (idle)
+    modules.push(`export function hideWhenIdle(lightbox) {
   const types = ["pointermove", "pointerdown", "keydown", "wheel"];
-  for (const type of types) dialog.addEventListener(type, wake, { passive: true });
-  wake();
-  cleanups.push(() => clearTimeout(timer));`);
-  return `export function addChrome(lightbox, items) {
-  const dialog = document.querySelector("dialog.re-lightbox-style");
-  const part = (name) => dialog.querySelector(\`.re-lightbox-\${name}\`);
-  const syncs = [];
-  const cleanups = [];
-
-${parts.join("\n\n")}
-
-  const sync = (state) => syncs.forEach((fn) => fn(state));
-  sync(lightbox.getState());
-  const stop = lightbox.subscribe((state) => {
-    if (state.isOpen) sync(state);
-    else if (!state.isClosing) {
-      stop();
-      cleanups.forEach((fn) => fn());
-    }
+  let dialog = null;
+  let timer = 0;
+  const wake = () => {
+    dialog?.removeAttribute("data-idle");
+    clearTimeout(timer);
+    timer = setTimeout(() => dialog?.setAttribute("data-idle", ""), 2000);
+  };
+  const release = () => {
+    clearTimeout(timer);
+    for (const type of types) dialog?.removeEventListener(type, wake);
+    dialog = null;
+  };
+  const stopOpen = lightbox.on("open", (event) => {
+    release();
+    dialog = event.slide?.closest("dialog") ?? null;
+    for (const type of types) dialog?.addEventListener(type, wake, { passive: true });
+    wake();
   });
-}`;
+  const stopClosed = lightbox.on("closed", release);
+  return () => {
+    stopOpen();
+    stopClosed();
+    release();
+  };
+}`);
+  return modules.join("\n\n");
 }
 
 export function lightboxCode(options: LightboxStyle) {
   const chromeSource = lightboxChrome(options);
-  const chrome = chromeSource !== null;
-  const lines = [
+  const slots = chromeSource?.includes("chromeSlots") ?? false;
+  const idle = chromeSource?.includes("hideWhenIdle") ?? false;
+  const names = [slots && "chromeSlots", idle && "hideWhenIdle"].filter(
+    Boolean,
+  );
+  const lines = (items: string) => [
     ...(options.thumbnails ? ["thumbnails: true,"] : []),
+    "autoHide: false,",
     `className: "${LIGHTBOX_STYLE_CLASS}",`,
+    ...(slots ? [`slots: chromeSlots(${items}),`] : []),
   ];
-  const body = (indent: string) =>
-    lines.map((line) => `${indent}${line}`).join("\n");
-  const imports = `import "@reuse-sh/lightbox/styles.css";
-import "./lightbox-style.css";${chrome ? `\nimport { addChrome } from "./lightbox-chrome.js";` : ""}`;
+  const body = (indent: string, items: string) =>
+    lines(items)
+      .map((line) => `${indent}${line}`)
+      .join("\n");
+  const imports = `import "@reuse-sh/lightbox/base.css";
+import "@reuse-sh/lightbox/theme.css";
+import "./lightbox-style.css";${names.length ? `\nimport { ${names.join(", ")} } from "./lightbox-chrome.js";` : ""}`;
   return {
     html: `<div data-gallery>
   <a href="/photos/coast.jpg">
@@ -426,28 +510,16 @@ const gallery = document.querySelector("[data-gallery]");
 const getItem = (image) => ({
   ...lightboxItemFromImage(image),
   caption: image.dataset.caption,${options.thumbnails ? "\n  thumbnailSrc: image.currentSrc || image.src," : ""}
-});
+});${slots ? `\nconst items = () => [...gallery.querySelectorAll("img")].map(getItem);` : ""}
 const lightbox = bindLightboxGallery(gallery, {
-${body("  ")}
+${body("  ", "items")}
   getItem,
-});${
-      chrome
-        ? `
-let opened = false;
-const stop = lightbox.subscribe((state) => {
-  if (state.isOpen && !opened) {
-    const items = [...gallery.querySelectorAll("img")].map(getItem);
-    addChrome(lightbox, items);
-  }
-  opened = state.isOpen;
-});`
-        : ""
-    }`,
+});${idle ? "\nconst stopIdle = hideWhenIdle(lightbox);" : ""}`,
     react: `"use client";
 
 import type { LightboxItem } from "@reuse-sh/lightbox";
 import { useLightbox } from "@reuse-sh/lightbox/react";
-import { useRef } from "react";
+import { ${idle ? "useEffect, " : ""}useRef } from "react";
 ${imports}
 
 const photos: LightboxItem[] = [
@@ -457,13 +529,13 @@ const photos: LightboxItem[] = [
 
 export function Gallery() {
   const lightbox = useLightbox({
-${body("    ")}
-  });
+${body("    ", "() => photos")}
+  });${idle ? "\n  const { on } = lightbox;\n  useEffect(() => hideWhenIdle({ on }), [on]);" : ""}
   const root = useRef<HTMLDivElement>(null);
   const open = (index: number) => {
     const images = root.current?.querySelectorAll<HTMLImageElement>("img");
     const items = photos.map((photo, i) => ({ ...photo, origin: images?.[i] }));
-    lightbox.open(items, index);${chrome ? "\n    addChrome(lightbox, items);" : ""}
+    lightbox.open(items, index);
   };
   return (
     <div ref={root} className="grid grid-cols-2 gap-3">
@@ -481,6 +553,6 @@ ${body("    ")}
 }`,
     css: lightboxStyleCss(options),
     chrome: chromeSource,
-    cleanup: `${chrome ? "stop();\n" : ""}lightbox.destroy();`,
+    cleanup: `${idle ? "stopIdle();\n" : ""}lightbox.destroy();`,
   };
 }

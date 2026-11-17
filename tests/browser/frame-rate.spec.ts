@@ -64,7 +64,7 @@ function waitForRest(page: Page, start: "next()" | "pointerup") {
           watch(performance.now());
           (window as unknown as { carousel: { next(): void } }).carousel.next();
         } else
-          addEventListener("pointerup", (event) => watch(event.timeStamp), {
+          addEventListener("pointerup", () => watch(performance.now()), {
             once: true,
           });
       }),

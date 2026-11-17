@@ -14,4 +14,5 @@ export interface CarouselInternals {
   requested(): boolean;
   align(): "start" | "center" | undefined;
   goTo(index: number, behavior?: ScrollBehavior, announce?: boolean): void;
+  silence(): void;
 }

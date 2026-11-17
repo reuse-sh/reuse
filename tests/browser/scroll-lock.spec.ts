@@ -10,7 +10,7 @@ test("opening the lightbox keeps page content and right-anchored fixed elements 
     page,
     `<main id="content" style="max-width:600px;margin:0 auto;height:3000px">Page</main>
 <div id="fixed" style="position:fixed;top:0;right:0;padding-right:var(--re-scrollbar-gap, 0px)">Menu</div>`,
-    ["lightbox/styles.css"],
+    ["lightbox/base.css", "lightbox/theme.css"],
   );
   const measure = () =>
     page.evaluate(() => {

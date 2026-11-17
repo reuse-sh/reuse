@@ -4,7 +4,8 @@
 @import "@reuse-sh/gradients/tailwind.css";
 @import "@reuse-sh/shadows/styles.css" layer(components);
 @import "@reuse-sh/carousel/styles.css" layer(components);
-@import "@reuse-sh/lightbox/styles.css" layer(components);
+@import "@reuse-sh/lightbox/base.css" layer(components);
+@import "@reuse-sh/lightbox/theme.css" layer(components);
 @import "@reuse-sh/annotations/styles.css" layer(components);
 @import "@reuse-sh/loaders/styles.css" layer(components);
 @import "@reuse-sh/interactions/styles.css" layer(components);
@@ -234,6 +235,9 @@
   }
   :focus-visible {
     @apply outline-2 outline-offset-2 outline-ring;
+  }
+  [data-re-focus-quiet]:focus-visible {
+    @apply outline-none;
   }
   ::selection {
     @apply bg-selection text-foreground;

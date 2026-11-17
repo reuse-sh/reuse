@@ -111,89 +111,115 @@ export const libraries: Library[] = [
       ],
       [
         "Open from the thumbnail and return to it",
-        "The image grows out of its cropped preview and goes back to the same place on close.",
+        "The image grows out of its cropped preview and shrinks back into the current photo's tile on close.",
       ],
       [
         "Load only what is near",
-        "Only the current and neighboring images load, and a long jump skips the pages in between.",
+        "Only the current and neighboring images load, the current one first, the neighbors not at all under Save-Data, and a long jump skips the pages in between.",
+        "tests/browser/lightbox-images.spec.ts",
       ],
       [
         "Zoom around the point you touch",
-        "Pinch, wheel and double-tap zoom around the pointer or fingers, and panning stops at the image's edges.",
+        "Pinch, wheel and double-tap zoom in around the pointer or fingers, and a tap, click or the zoom button zooms back out to the whole photo.",
+        "tests/browser/lightbox-zoom.spec.ts",
       ],
       [
         "Keep focus inside and give it back",
-        "The viewer is a native modal dialog, and closing it returns focus to the element that opened it.",
+        "The viewer is a native modal dialog, and closing it returns focus to the current photo's tile, or else to the element that opened it.",
       ],
       [
         "Leave the page as it was",
-        "Destroy restores the page scroll, the hidden thumbnail, and every style and listener the viewer touched.",
+        "Destroy restores the page scroll, the hidden thumbnail, and every style and listener the viewer touched. Back closes the viewer, and its one history entry leaves without a navigation.",
+        "tests/browser/lightbox-api.spec.ts",
       ],
       [
         "Behave like the platform's photo viewer",
         "Gestures, keys and timing match iOS Photos, macOS Photos and Google Photos unless a recorded decision says otherwise.",
+        "tests/browser/lightbox-gestures.spec.ts",
       ],
       [
         "Dismiss like a photos app",
         "A vertical swipe carries the photo, fades the backdrop and the controls with it, and closes past a distance or a speed. A cancelled pointer never closes.",
+        "tests/browser/lightbox-gestures.spec.ts",
       ],
       [
         "Let the photo lead",
         "Controls fade in after the photo starts moving and leave before it. They hide while zoomed and after a still pointer, never while hovered or focused.",
+        "tests/browser/lightbox-gestures.spec.ts",
       ],
       [
         "Return to what is on screen",
         "Close goes back to the current photo's tile, after bringing it into view in its own carousel, and fades in place when the tile cannot be seen or the strip is still moving.",
+        "tests/browser/lightbox-close.spec.ts",
       ],
       [
         "Fetch the pixels the screen shows",
         "Each image loads the source that fits the rendered size, a zoom asks for more, and the preview stays until the sharper file has decoded.",
+        "tests/browser/lightbox-images.spec.ts",
       ],
       [
         "Zoom to real pixels",
         "Zoom levels follow the image's own resolution. Panning stretches past the edge and glides on release.",
+        "tests/browser/lightbox-zoom.spec.ts",
       ],
       [
         "Never block a frame",
         "No layout read or framework render runs per pointer move, scroll or wheel event.",
+        "tests/browser/performance.spec.ts",
       ],
       [
         "Give focus back quietly",
         "Focus returns to the photo's tile without a ring after a pointer close, and with one after a keyboard close.",
+        "tests/browser/lightbox-close.spec.ts",
       ],
     ],
     api: [
       [
         "createLightbox(options?)",
-        "Creates a viewer. Options include thumbnails, imageClick, doubleTapZoom, maxZoom, padding, className and icons.",
+        "Creates a viewer. Options include loop, history, strings, slots, thumbnails, imageClick, doubleTapZoom, autoHide, maxZoom, padding, className and icons, read again at every open.",
       ],
       [
         "bindLightboxGallery(root, options?)",
-        "Opens every image inside root in the viewer, in page order. Its destroy also removes the click listener.",
+        "Opens the images inside root in the viewer, in page order, only those of the clicked image's data-lightbox-group or group(image). Each image opens the file its link points to, else data-lightbox-src, with data-lightbox-srcset, -sizes, -width and -height and its figure's caption. items(root) supplies the list instead. Its destroy also removes the click listener.",
       ],
       [
         "open(items, index?)",
-        "Opens at an index. Items carry src, alt, caption, the natural size and an optional origin.",
+        "Opens at an index. Items carry src, srcset, sizes, alt, caption, the natural size and an optional origin, an element or a function that returns one.",
       ],
       [
         "close(), next(), prev(), goTo(index)",
-        "Moves through the set from code. Close returns to the origin thumbnail.",
+        "Moves through the set from code. Close returns to the current photo's tile.",
       ],
       [
         "zoomTo(scale, focus?), toggleZoom(focus?)",
-        "Zooms to a scale around a point, or between fit and the tap zoom.",
+        "Zooms to a scale around a point, up to the photo's maximum, or between fit and the tap zoom.",
       ],
       [
         "getState(), subscribe(listener)",
-        "Reads and listens to the index, zoom and open state.",
+        "Reads and listens to the index, zoom, open, animation and controls state.",
+      ],
+      [
+        "on(type, listener)",
+        "Listens to open, opened, change, settle, beforeclose and closed. preventDefault() in beforeclose keeps the viewer open.",
+      ],
+      [
+        "append(items), setItems(items, index?)",
+        "Adds images at the end or replaces the list while the viewer is open, without moving the current image.",
+      ],
+      [
+        "setOptions({ loop }), getSlide(index)",
+        "Turns the loop on or off while open, and returns the element of a slide.",
       ],
       ["destroy()", "Removes listeners and restores the page."],
     ],
     notes: [
-      'A click on the image zooms by default. For a publishing gallery, set imageClick: "close" and doubleTapZoom: false.',
+      'A click on the image zooms by default, and a click beside it closes. On a phone a tap on the photo shows or hides the controls once the 300ms double-tap window passes, a double tap zooms, and a tap beside it closes. For a publishing gallery, set imageClick: "close", which also turns off the double tap.',
+      "A vertical swipe either way closes past 120px or 0.5px/ms, measured over the last 80ms before the finger lifts. The controls hide after autoHide ms of a still mouse, 2500 by default, and while zoomed, and come back on a key, a 24px move, or a tap. The open and close flights take --re-lightbox-open-duration and --re-lightbox-close-duration on the --re-lightbox-ease curve.",
+      "Zoom follows the file's pixels: a double tap, a click or the zoom button goes to 1:1, or to tapZoom (2.5) when that is larger, and maxZoom (1) is a multiple of 1:1. A photo the screen already shows at full resolution has no zoom, and an SVG zooms up to maxZoom times its fitted size, 4 by default. A pinch below 0.75 closes, Ctrl or Cmd with the wheel and a trackpad pinch zoom, and a plain wheel does nothing until you zoom in, then pans. While zoomed the arrow keys pan and a pan glides on release; the next photo is a second swipe once the photo rests against its edge.",
       "Paging runs on the carousel package. Only the current and neighboring images stay loaded. Next and previous scroll smoothly, and a jump from a distant thumbnail fades through the backdrop so unloaded pages never flash past.",
+      "Give an item a srcset and the viewer picks the file: it sets sizes to the photo's shown width, or uses yours, and 150ms after a zoom comes to rest asks for the zoomed width, swapping the file in only once it has decoded and never for a smaller one. While the photo flies open it shows the tile's loaded pixels or previewSrc. The current photo loads at high fetch priority and its neighbors at low priority once it has decoded, and Save-Data skips the neighbors. A photo still loading after 300ms shows a spinner from @reuse-sh/loaders over the --re-lightbox-placeholder background, and a failed one shows strings.error with a strings.retry button.",
       "Images are the core. Video, audio, iframe and HTML slides are separate modules: @reuse-sh/lightbox/video, /audio, /iframe, /html and /embed each export a content factory that you pass in the content option. An item picks its module by type; without one it is an image. The embed module turns YouTube and Vimeo links into players and registerEmbed adds more. HTML slides take a function that returns a Node, never an HTML string. Live Photos and HDR are not supported.",
-      'For a page without a bundler or an import map, such as a theme or a plugin, load @reuse-sh/lightbox/browser/lightbox.js with <script type="module">. It is one minified ES module with a source map and the carousel inside. Each media module and the carousel link are separate files in the same folder that import lightbox.js by a relative path, so copy the folder whole.',
+      'For a page without a bundler or an import map, such as a theme or a plugin, load @reuse-sh/lightbox/browser/lightbox.js with <script type="module">. It is one minified ES module with a source map and the carousel inside. Each media module is a separate file in the same folder that imports lightbox.js by a relative path, and the carousel link is carousel-link.js beside them, so copy the folder whole.',
       "Styles come in two files: base.css holds the layout and states in @layer re.base and is required, and theme.css holds the default dark theme in @layer re.theme. Other themes sit in themes/. Every theme value is a --re-lightbox-* custom property. dist/unlayered/ holds the same files without layers for sites whose own unlayered styles would win.",
       "Every visible and spoken text comes from the strings option, such as counter(index, count) and close, with English defaults, so a translation passes only the strings it changes.",
       "Slots add your own controls: toolbarStart, toolbarEnd, footer and aside each take a function that returns a node with optional update(state) and destroy(). Slot buttons take the theme's look with the re-lightbox-button class and hide with the other controls. Share is not built in; build it as a slot.",

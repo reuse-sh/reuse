@@ -32,8 +32,14 @@
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js"
     },
-    "./styles.css": "./dist/styles.css",
+    "./base.css": "./dist/base.css",
+    "./theme.css": "./dist/theme.css",
+    "./unlayered/*": "./dist/unlayered/*",
     "./browser/*": "./dist/browser/*",
+    "./carousel": {
+      "types": "./dist/carousel.d.ts",
+      "import": "./dist/carousel.js"
+    },
     "./react": {
       "types": "./dist/react.d.ts",
       "import": "./dist/react.js"
@@ -57,7 +63,8 @@
     "@types/react": "19.3.0"
   },
   "dependencies": {
-    "@reuse-sh/carousel": "workspace:*"
+    "@reuse-sh/carousel": "workspace:*",
+    "@reuse-sh/loaders": "workspace:*"
   },
   "publishConfig": {
     "access": "public"

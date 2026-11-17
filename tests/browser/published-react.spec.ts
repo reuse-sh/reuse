@@ -89,3 +89,75 @@ test("published React tabs paint both backgrounds on one root and release them o
   ).toBe(false);
   await expect(page.locator(".re-moving-highlight")).toHaveCount(0);
 });
+
+test("useLightbox applies changed options at the next open and a changed loop at once", async ({
+  page,
+}) => {
+  const input = resolve("apps/site/lightbox-options.tsx");
+  const bundle = await rolldown({
+    input,
+    platform: "browser",
+    transform: {
+      jsx: { runtime: "automatic" },
+      define: { "process.env.NODE_ENV": '"production"' },
+    },
+    plugins: [
+      {
+        name: "lightbox-options",
+        resolveId(id: string) {
+          if (id === input) return input;
+        },
+        load(id: string) {
+          if (id !== input) return;
+          return `import { useLightbox } from "@reuse-sh/lightbox/react";
+import { useState } from "react";
+import { createRoot } from "react-dom/client";
+import { flushSync } from "react-dom";
+const items = [0, 1, 2].map((index) => ({ src: "data:image/gif;base64,R0lGODlhAQABAAAAACw=", width: 1200, height: 800, alt: "Photo " + index }));
+function App() {
+  const [label, setLabel] = useState("First");
+  const [loop, setLoop] = useState(false);
+  const lightbox = useLightbox({ label, loop, history: false, duration: 0 });
+  window.__app = { lightbox, set: (next) => flushSync(() => { setLabel(next.label ?? label); setLoop(next.loop ?? loop); }) };
+  return <button type="button" onClick={() => lightbox.open(items, 2)}>Open</button>;
+}
+createRoot(document.getElementById("app")).render(<App />);`;
+        },
+      },
+    ],
+  });
+  const result = await bundle.generate({ format: "iife", name: "Options" });
+  await bundle.close();
+  await mount(page, '<div id="app"></div>', [
+    "lightbox/base.css",
+    "lightbox/theme.css",
+  ]);
+  const output = result.output.find(
+    (output: { type: string }) => output.type === "chunk",
+  );
+  await page.addScriptTag({ content: output.code });
+  type App = {
+    __app: {
+      lightbox: { next(): void; getState(): { index: number } };
+      set(next: { label?: string; loop?: boolean }): void;
+    };
+  };
+  await page.getByRole("button", { name: "Open" }).click();
+  await expect(page.locator("dialog")).toHaveAttribute("aria-label", "First");
+  await page.keyboard.press("Escape");
+  await expect(page.locator("dialog")).toHaveCount(0);
+  await page.evaluate(() =>
+    (window as unknown as App).__app.set({ label: "Second" }),
+  );
+  await page.getByRole("button", { name: "Open" }).click();
+  await expect(page.locator("dialog")).toHaveAttribute("aria-label", "Second");
+  await page.evaluate(() =>
+    (window as unknown as App).__app.set({ loop: true }),
+  );
+  await page.evaluate(() => (window as unknown as App).__app.lightbox.next());
+  expect(
+    await page.evaluate(
+      () => (window as unknown as App).__app.lightbox.getState().index,
+    ),
+  ).toBe(0);
+});

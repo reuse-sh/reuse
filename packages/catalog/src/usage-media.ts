@@ -8,13 +8,14 @@ export const mediaUsage: Readonly<Record<string, UsageRecipe>> = {
         blocks: [
           {
             kind: "prose",
-            text: "Import the package stylesheet once in your main CSS. The components layer lets Tailwind utilities adapt its presentation.",
+            text: "Import the package stylesheets once in your main CSS: base.css holds the layout and theme.css the default theme. The components layer lets Tailwind utilities adapt their presentation.",
           },
           {
             kind: "code",
             id: "lightbox-getting-started-package-styles",
             language: "css",
-            code: '@import "@reuse-sh/lightbox/styles.css" layer(components);',
+            code: `@import "@reuse-sh/lightbox/base.css" layer(components);
+@import "@reuse-sh/lightbox/theme.css" layer(components);`,
             role: "setup",
           },
         ],
@@ -59,7 +60,7 @@ export function Gallery() {
         blocks: [
           {
             kind: "prose",
-            text: "Links still open the image without JavaScript. The native dialog keeps focus inside, Escape closes it, and close restores the opening element. The React hook destroys its viewer on unmount.",
+            text: "Links still open the image without JavaScript. The native dialog keeps focus inside, Escape closes it, and close returns focus to the current photo's tile. The React hook destroys its viewer on unmount.",
           },
         ],
       },
@@ -90,13 +91,14 @@ export function Gallery() {
         blocks: [
           {
             kind: "prose",
-            text: "Import the package stylesheet once. Keep application layout styles scoped to this integration.",
+            text: "Import the package stylesheets once: base.css holds the layout and theme.css the default theme. Keep application layout styles scoped to this integration.",
           },
           {
             kind: "code",
             id: "lightbox-getting-started-css",
             language: "css",
-            code: '@import "@reuse-sh/lightbox/styles.css";',
+            code: `@import "@reuse-sh/lightbox/base.css";
+@import "@reuse-sh/lightbox/theme.css";`,
             role: "usage",
           },
         ],
@@ -124,7 +126,7 @@ const gallery = bindLightboxGallery(document.querySelector("#gallery"), {});`,
         blocks: [
           {
             kind: "prose",
-            text: "Links still open the image without JavaScript. The native dialog keeps focus inside, Escape closes it, and close restores the opening element.",
+            text: "Links still open the image without JavaScript. The native dialog keeps focus inside, Escape closes it, and close returns focus to the current photo's tile.",
           },
         ],
       },
@@ -153,13 +155,14 @@ const gallery = bindLightboxGallery(document.querySelector("#gallery"), {});`,
         blocks: [
           {
             kind: "prose",
-            text: "Import the package stylesheet once in your main CSS. The components layer lets Tailwind utilities adapt its presentation.",
+            text: "Import the package stylesheets once in your main CSS: base.css holds the layout and theme.css the default theme. The components layer lets Tailwind utilities adapt their presentation.",
           },
           {
             kind: "code",
             id: "lightbox-examples-product-package-styles",
             language: "css",
-            code: '@import "@reuse-sh/lightbox/styles.css" layer(components);',
+            code: `@import "@reuse-sh/lightbox/base.css" layer(components);
+@import "@reuse-sh/lightbox/theme.css" layer(components);`,
             role: "setup",
           },
         ],
@@ -207,7 +210,7 @@ export function ProductGallery() {
         blocks: [
           {
             kind: "prose",
-            text: "The small item list describes the two actual product assets. Keep image dimensions and alt text with each asset. Native gallery binding collects images in DOM order. Links still open the image without JavaScript. The native dialog keeps focus inside, Escape closes it, and close restores the opening element. The React hook destroys its viewer on unmount.",
+            text: "The small item list describes the two actual product assets. Keep image dimensions and alt text with each asset. Native gallery binding collects images in DOM order. Links still open the image without JavaScript. The native dialog keeps focus inside, Escape closes it, and close returns focus to the current photo's tile. The React hook destroys its viewer on unmount.",
           },
         ],
       },
@@ -237,13 +240,14 @@ export function ProductGallery() {
         blocks: [
           {
             kind: "prose",
-            text: "Import the package stylesheet once. Keep application layout styles scoped to this integration.",
+            text: "Import the package stylesheets once: base.css holds the layout and theme.css the default theme. Keep application layout styles scoped to this integration.",
           },
           {
             kind: "code",
             id: "lightbox-examples-product-css",
             language: "css",
-            code: '@import "@reuse-sh/lightbox/styles.css";',
+            code: `@import "@reuse-sh/lightbox/base.css";
+@import "@reuse-sh/lightbox/theme.css";`,
             role: "usage",
           },
         ],
@@ -271,7 +275,7 @@ const gallery = bindLightboxGallery(document.querySelector("#gallery"), { thumbn
         blocks: [
           {
             kind: "prose",
-            text: "The small item list describes the two actual product assets. Keep image dimensions and alt text with each asset. Native gallery binding collects images in DOM order. Links still open the image without JavaScript. The native dialog keeps focus inside, Escape closes it, and close restores the opening element.",
+            text: "The small item list describes the two actual product assets. Keep image dimensions and alt text with each asset. Native gallery binding collects images in DOM order. Links still open the image without JavaScript. The native dialog keeps focus inside, Escape closes it, and close returns focus to the current photo's tile.",
           },
         ],
       },
@@ -300,13 +304,14 @@ const gallery = bindLightboxGallery(document.querySelector("#gallery"), { thumbn
         blocks: [
           {
             kind: "prose",
-            text: "Import the package stylesheet once in your main CSS. The components layer lets Tailwind utilities adapt its presentation.",
+            text: "Import the package stylesheets once in your main CSS: base.css holds the layout and theme.css the default theme. The components layer lets Tailwind utilities adapt their presentation.",
           },
           {
             kind: "code",
             id: "lightbox-examples-chat-package-styles",
             language: "css",
-            code: '@import "@reuse-sh/lightbox/styles.css" layer(components);',
+            code: `@import "@reuse-sh/lightbox/base.css" layer(components);
+@import "@reuse-sh/lightbox/theme.css" layer(components);`,
             role: "setup",
           },
         ],
@@ -347,7 +352,7 @@ export function MessageAttachments({ sources }: { sources: string[] }) {
         blocks: [
           {
             kind: "prose",
-            text: "Mount the message component for every message rather than passing every conversation attachment to a global viewer. Destroy the binding when a message is removed. Links still open the image without JavaScript. The native dialog keeps focus inside, Escape closes it, and close restores the opening element. The React hook destroys its viewer on unmount.",
+            text: "Mount the message component for every message rather than passing every conversation attachment to a global viewer. Destroy the binding when a message is removed. Links still open the image without JavaScript. The native dialog keeps focus inside, Escape closes it, and close returns focus to the current photo's tile. The React hook destroys its viewer on unmount.",
           },
         ],
       },
@@ -379,13 +384,14 @@ export function MessageAttachments({ sources }: { sources: string[] }) {
         blocks: [
           {
             kind: "prose",
-            text: "Import the package stylesheet once. Keep application layout styles scoped to this integration.",
+            text: "Import the package stylesheets once: base.css holds the layout and theme.css the default theme. Keep application layout styles scoped to this integration.",
           },
           {
             kind: "code",
             id: "lightbox-examples-chat-css",
             language: "css",
-            code: '@import "@reuse-sh/lightbox/styles.css";',
+            code: `@import "@reuse-sh/lightbox/base.css";
+@import "@reuse-sh/lightbox/theme.css";`,
             role: "usage",
           },
         ],
@@ -415,7 +421,7 @@ const gallery = { destroy: () => galleries.forEach((entry) => entry.destroy()) }
         blocks: [
           {
             kind: "prose",
-            text: "Bind each message gallery instead of passing every conversation attachment to a global viewer. Destroy the binding when a message is removed. Links still open the image without JavaScript. The native dialog keeps focus inside, Escape closes it, and close restores the opening element.",
+            text: "Bind each message gallery instead of passing every conversation attachment to a global viewer. Destroy the binding when a message is removed. Links still open the image without JavaScript. The native dialog keeps focus inside, Escape closes it, and close returns focus to the current photo's tile.",
           },
         ],
       },
@@ -444,13 +450,14 @@ const gallery = { destroy: () => galleries.forEach((entry) => entry.destroy()) }
         blocks: [
           {
             kind: "prose",
-            text: "Import the package stylesheet once in your main CSS. The components layer lets Tailwind utilities adapt its presentation.",
+            text: "Import the package stylesheets once in your main CSS: base.css holds the layout and theme.css the default theme. The components layer lets Tailwind utilities adapt their presentation.",
           },
           {
             kind: "code",
             id: "lightbox-examples-journal-package-styles",
             language: "css",
-            code: '@import "@reuse-sh/lightbox/styles.css" layer(components);',
+            code: `@import "@reuse-sh/lightbox/base.css" layer(components);
+@import "@reuse-sh/lightbox/theme.css" layer(components);`,
             role: "setup",
           },
         ],
@@ -495,7 +502,7 @@ export function Gallery() {
         blocks: [
           {
             kind: "prose",
-            text: "A cropped article thumbnail does not constrain the full-size viewer image. Use descriptive captions through the image data-caption attribute, and keep nearby article text outside the gallery root if it contains unrelated images. Links still open the image without JavaScript. The native dialog keeps focus inside, Escape closes it, and close restores the opening element. The React hook destroys its viewer on unmount.",
+            text: "A cropped article thumbnail does not constrain the full-size viewer image. Use descriptive captions through the image data-caption attribute, and keep nearby article text outside the gallery root if it contains unrelated images. Links still open the image without JavaScript. The native dialog keeps focus inside, Escape closes it, and close returns focus to the current photo's tile. The React hook destroys its viewer on unmount.",
           },
         ],
       },
@@ -526,13 +533,14 @@ export function Gallery() {
         blocks: [
           {
             kind: "prose",
-            text: "Import the package stylesheet once. Keep application layout styles scoped to this integration.",
+            text: "Import the package stylesheets once: base.css holds the layout and theme.css the default theme. Keep application layout styles scoped to this integration.",
           },
           {
             kind: "code",
             id: "lightbox-examples-journal-css",
             language: "css",
-            code: '@import "@reuse-sh/lightbox/styles.css";',
+            code: `@import "@reuse-sh/lightbox/base.css";
+@import "@reuse-sh/lightbox/theme.css";`,
             role: "usage",
           },
         ],
@@ -560,7 +568,7 @@ const gallery = bindLightboxGallery(document.querySelector("#gallery"), { imageC
         blocks: [
           {
             kind: "prose",
-            text: "A cropped article thumbnail does not constrain the full-size viewer image. Use descriptive captions through the image data-caption attribute, and keep nearby article text outside the gallery root if it contains unrelated images. Links still open the image without JavaScript. The native dialog keeps focus inside, Escape closes it, and close restores the opening element.",
+            text: "A cropped article thumbnail does not constrain the full-size viewer image. Use descriptive captions through the image data-caption attribute, and keep nearby article text outside the gallery root if it contains unrelated images. Links still open the image without JavaScript. The native dialog keeps focus inside, Escape closes it, and close returns focus to the current photo's tile.",
           },
         ],
       },
@@ -598,7 +606,7 @@ const gallery = bindLightboxGallery(document.querySelector("#gallery"), { imageC
         blocks: [
           {
             kind: "prose",
-            text: "`src` is the full-size image URL. `previewSrc` is an optional smaller image shown while that asset loads. `width` and `height` describe the full-size asset, not the thumbnail crop; omit unknown dimensions so the viewer can learn them after loading.",
+            text: "`src` is the full-size image URL. `previewSrc` is an optional smaller image shown while that asset loads, when the origin thumbnail has not loaded. `width` and `height` describe the full-size asset, not the thumbnail crop; omit unknown dimensions so the viewer can learn them after loading.",
           },
           {
             kind: "prose",
@@ -611,13 +619,14 @@ const gallery = bindLightboxGallery(document.querySelector("#gallery"), { imageC
         blocks: [
           {
             kind: "prose",
-            text: "Import the package stylesheet once in your main CSS. The components layer lets Tailwind utilities adapt its presentation.",
+            text: "Import the package stylesheets once in your main CSS: base.css holds the layout and theme.css the default theme. The components layer lets Tailwind utilities adapt their presentation.",
           },
           {
             kind: "code",
             id: "lightbox-guides-media-package-styles",
             language: "css",
-            code: '@import "@reuse-sh/lightbox/styles.css" layer(components);',
+            code: `@import "@reuse-sh/lightbox/base.css" layer(components);
+@import "@reuse-sh/lightbox/theme.css" layer(components);`,
             role: "setup",
           },
         ],
@@ -678,7 +687,7 @@ export function ImageLink() {
         blocks: [
           {
             kind: "prose",
-            text: "A successful image load and decode replaces the preview with `src`. If the full-size image fails, a loaded preview remains visible. Without `previewSrc`, the viewer shows “Image could not be loaded.” Navigation and closing remain available.",
+            text: "A successful image load and decode replaces the preview with `src`. If the full-size image fails, the viewer shows “Image could not be loaded.” with a “Try again” button over the preview. Navigation and closing remain available.",
           },
           {
             kind: "prose",
@@ -711,7 +720,7 @@ export function ImageLink() {
         blocks: [
           {
             kind: "prose",
-            text: "`src` is the full-size image URL. `previewSrc` is an optional smaller image shown while that asset loads. `width` and `height` describe the full-size asset, not the thumbnail crop; omit unknown dimensions so the viewer can learn them after loading.",
+            text: "`src` is the full-size image URL. `previewSrc` is an optional smaller image shown while that asset loads, when the origin thumbnail has not loaded. `width` and `height` describe the full-size asset, not the thumbnail crop; omit unknown dimensions so the viewer can learn them after loading.",
           },
           {
             kind: "prose",
@@ -724,7 +733,7 @@ export function ImageLink() {
         blocks: [
           {
             kind: "prose",
-            text: "Keep the full-size URL on the anchor and repeat it in `data-lightbox-src` for gallery binding. The other data attributes below are application metadata, mapped by `getItem` during setup.",
+            text: "Keep the full-size URL on the anchor; gallery binding opens it when its path ends in an image extension, and `data-lightbox-src` names the file otherwise. The other data attributes below are application metadata, mapped by `getItem` during setup.",
           },
           {
             kind: "code",
@@ -732,8 +741,7 @@ export function ImageLink() {
             language: "html",
             code: `<div id="gallery">
   <a href="/images/print-large.jpg">
-    <img src="/images/print.jpg" data-lightbox-src="/images/print-large.jpg"
-      alt="Blue marble print" width="640" height="480"
+    <img src="/images/print.jpg" alt="Blue marble print" width="640" height="480"
       data-caption="Archival pigment on paper" data-width="2400" data-height="1800" />
   </a>
 </div>`,
@@ -748,7 +756,8 @@ export function ImageLink() {
             kind: "code",
             id: "lightbox-guides-media-css",
             language: "css",
-            code: '@import "@reuse-sh/lightbox/styles.css";',
+            code: `@import "@reuse-sh/lightbox/base.css";
+@import "@reuse-sh/lightbox/theme.css";`,
             role: "usage",
           },
         ],
@@ -758,7 +767,7 @@ export function ImageLink() {
         blocks: [
           {
             kind: "prose",
-            text: "`lightboxItemFromImage` supplies the preview, alt text and origin. Override its dimensions with the full-size metadata, or leave them undefined when unknown; the helper otherwise reads the thumbnail dimensions.",
+            text: "`lightboxItemFromImage` supplies the source, preview, alt text, caption and origin. It reads `data-lightbox-width` and `data-lightbox-height`, and the thumbnail's own size only when the thumbnail is the full file. Override the dimensions with your full-size metadata, or leave them undefined when unknown.",
           },
           {
             kind: "code",
@@ -792,7 +801,7 @@ const gallery = bindLightboxGallery(document.querySelector("#gallery"), {
         blocks: [
           {
             kind: "prose",
-            text: "A successful image load and decode replaces the preview with `src`. If the full-size image fails, a loaded preview remains visible. Without `previewSrc`, the viewer shows “Image could not be loaded.” Navigation and closing remain available.",
+            text: "A successful image load and decode replaces the preview with `src`. If the full-size image fails, the viewer shows “Image could not be loaded.” with a “Try again” button over the preview. Navigation and closing remain available.",
           },
           {
             kind: "prose",
@@ -1758,7 +1767,8 @@ const gallery = createJustifiedGallery(document.querySelector("#prints"), { last
             id: "justified-gallery-examples-lightbox-package-styles",
             language: "css",
             code: `@import "@reuse-sh/gallery/styles.css" layer(components);
-@import "@reuse-sh/lightbox/styles.css" layer(components);`,
+@import "@reuse-sh/lightbox/base.css" layer(components);
+@import "@reuse-sh/lightbox/theme.css" layer(components);`,
             role: "setup",
           },
         ],
@@ -1854,7 +1864,8 @@ export function PrintRows() {
             id: "justified-gallery-examples-lightbox-css",
             language: "css",
             code: `@import "@reuse-sh/gallery/styles.css";
-@import "@reuse-sh/lightbox/styles.css";
+@import "@reuse-sh/lightbox/base.css";
+@import "@reuse-sh/lightbox/theme.css";
 
 #prints { --re-justified-row-height: 180px; }
 #prints button { padding: 0; border: 0; background: none; cursor: zoom-in; }`,
