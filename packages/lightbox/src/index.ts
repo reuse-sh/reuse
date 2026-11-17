@@ -325,7 +325,7 @@ type Session = {
   pauses: Set<string>;
   abort: AbortController;
   animations: Set<Animation>;
-  finishAnimations: Set<() => void>;
+  finishAnimations: Set<(landed?: boolean) => void>;
   previousFocus: HTMLElement | null;
   input?: "keyboard" | "pointer";
   restoreScroll: () => void;
@@ -1094,9 +1094,9 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
     });
   }
 
-  function cancelAnimations(s: Session) {
+  function cancelAnimations(s: Session, landed = false) {
     freezeZoom(s);
-    for (const finish of [...s.finishAnimations]) finish();
+    for (const finish of [...s.finishAnimations]) finish(landed);
   }
 
   function liveZoom(s: Session): Zoom {
@@ -1405,7 +1405,7 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
   function resized(s: Session) {
     s.resizeFrame = undefined;
     if (session !== s) return;
-    cancelAnimations(s);
+    cancelAnimations(s, true);
     const before = state.zoom;
     const from = fit(state.index, s);
     const resting = s.rest !== undefined && sameZoom(before, s.rest);

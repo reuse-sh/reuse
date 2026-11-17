@@ -124,3 +124,25 @@ test("a distant jump under reduced motion lands at once without fading", async (
   expect(frames.every((frame) => frame.opacity === 1)).toBe(true);
   expect(frames.at(-1)?.index).toBe(6);
 });
+
+test("a resize during the opening flight still ends with an opaque photo and backdrop", async ({
+  page,
+}) => {
+  await mount(page, "", ["lightbox/base.css", "lightbox/theme.css"]);
+  await page.evaluate(async (src) => {
+    const { createLightbox } = await import("/modules/lightbox/index.js");
+    createLightbox({ duration: 1000 }).open([
+      { src, width: 1200, height: 800, alt: "Photo" },
+    ]);
+  }, photo(0));
+  await page.waitForTimeout(300);
+  await page.setViewportSize({ width: 800, height: 600 });
+  await page.waitForTimeout(1200);
+  const opacity = await page.evaluate(() =>
+    [".re-lightbox-frame", ".re-lightbox-backdrop"].map(
+      (selector) =>
+        getComputedStyle(document.querySelector(selector) as Element).opacity,
+    ),
+  );
+  expect(opacity).toEqual(["1", "1"]);
+});
