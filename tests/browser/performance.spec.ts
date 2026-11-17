@@ -41,7 +41,19 @@ async function browseTenPhotos(
       { x: middle.x - 200, y: middle.y },
       { speed: 2 },
     );
-    await page.waitForTimeout(400);
+    // A swipe that catches the strip still gliding from the last one pages from there.
+    await expect
+      .poll(() =>
+        page.evaluate(() => {
+          const { index, isAnimating } = (
+            window as unknown as {
+              gallery: { getState(): { index: number; isAnimating: boolean } };
+            }
+          ).gallery.getState();
+          return { index, isAnimating };
+        }),
+      )
+      .toEqual({ index: photo, isAnimating: false });
   }
   const index = await page.evaluate(
     () =>
