@@ -41,7 +41,7 @@
 
     const root = document.querySelector('[data-native-gallery]');
     const carousel = createCarousel(root, { align:'center', loop:true });
-    const lightbox = bindLightboxGallery(root, { thumbnails:true });
+    const lightbox = bindLightboxGallery(root, { thumbnails:"bottom" });
     document.querySelector('[data-next]').addEventListener('click', () => carousel.next());
     document.querySelector('[data-previous]').addEventListener('click', () => carousel.prev());
     const unsubscribe = carousel.subscribe(state => { document.querySelector('[data-current]').textContent = `${state.index + 1} / ${state.count}`; });

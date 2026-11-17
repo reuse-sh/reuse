@@ -143,7 +143,7 @@ function PhotoLightbox({
     const node = root.current;
     if (!node) return;
     const lightbox = createLightbox({
-      thumbnails: true,
+      thumbnails: "bottom",
       icons: lightboxIcons,
       className: "re-lightbox-demo",
     });

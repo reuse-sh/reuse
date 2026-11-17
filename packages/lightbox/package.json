@@ -36,6 +36,26 @@
     "./theme.css": "./dist/theme.css",
     "./unlayered/*": "./dist/unlayered/*",
     "./browser/*": "./dist/browser/*",
+    "./video": {
+      "types": "./dist/video.d.ts",
+      "import": "./dist/video.js"
+    },
+    "./audio": {
+      "types": "./dist/audio.d.ts",
+      "import": "./dist/audio.js"
+    },
+    "./iframe": {
+      "types": "./dist/iframe.d.ts",
+      "import": "./dist/iframe.js"
+    },
+    "./html": {
+      "types": "./dist/html.d.ts",
+      "import": "./dist/html.js"
+    },
+    "./embed": {
+      "types": "./dist/embed.d.ts",
+      "import": "./dist/embed.js"
+    },
     "./carousel": {
       "types": "./dist/carousel.d.ts",
       "import": "./dist/carousel.js"

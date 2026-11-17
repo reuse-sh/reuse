@@ -28,6 +28,7 @@ import {
   fileWidth,
   formatOf,
   isImageFile,
+  largestSource,
   largestWidth,
   lookupFormat,
   type MediaFormat,
@@ -95,6 +96,34 @@ export type LightboxSlot = (context: {
   destroy?: () => void;
 };
 
+export type LightboxControl =
+  | "close"
+  | "arrows"
+  | "counter"
+  | "zoom"
+  | "fullscreen"
+  | "download"
+  | "slideshow";
+
+const defaultControls: Record<LightboxControl, boolean> = {
+  close: true,
+  arrows: true,
+  counter: true,
+  zoom: true,
+  fullscreen: false,
+  download: false,
+  slideshow: false,
+};
+
+export type LightboxIcon =
+  | "close"
+  | "prev"
+  | "next"
+  | "zoom"
+  | "fullscreen"
+  | "download"
+  | "slideshow";
+
 export type LightboxEventName =
   | "open"
   | "opened"
@@ -113,7 +142,14 @@ export interface LightboxEvent {
 }
 
 export interface LightboxItem {
-  src: string;
+  /** The image file; an item with a type uses it as its media source where its module says so. */
+  src?: string;
+  /** Picks the content module whose type matches; without one the item is an image. */
+  type?: string;
+  video?: { src: string; poster?: string };
+  embed?: string;
+  /** Builds an HTML slide's content; HTML strings are never parsed. */
+  html?: () => Node;
   srcset?: string;
   sizes?: string;
   previewSrc?: string;
@@ -142,6 +178,34 @@ export interface LightboxContentContext {
   image: HTMLImageElement;
 }
 
+export interface LightboxMountContext {
+  item: LightboxItem;
+  index: number;
+  /** Aborts when the slide unmounts. */
+  signal: AbortSignal;
+  /** True when the player should start once it is current: the autoplay option and an open by a user action. */
+  autoplay: boolean;
+}
+
+export interface LightboxMounted {
+  unmount(): void;
+  /** Without pause the slide unmounts when another photo becomes current. */
+  pause?(): void;
+  /** Called when the slide becomes current; plays unless the person paused it. */
+  resume?(): void;
+  /** Width over height, 16 / 9 when missing. */
+  aspect?: number;
+  /** The slide takes pointer events, and the viewer's gestures leave it alone. */
+  interactive?: boolean;
+  /** Settles once the player can show itself; the poster and the spinner stay until then. */
+  ready?: Promise<unknown>;
+}
+
+export interface LightboxContent {
+  type: string;
+  mount(container: HTMLElement, context: LightboxMountContext): LightboxMounted;
+}
+
 export interface LightboxOptions {
   container?: HTMLElement;
   label?: string;
@@ -150,13 +214,20 @@ export interface LightboxOptions {
   maxZoom?: number;
   tapZoom?: number;
   preload?: number;
-  thumbnails?: boolean;
+  controls?: Partial<Record<LightboxControl, boolean>>;
+  thumbnails?: false | "bottom" | "side";
+  caption?: "bottom" | "side";
+  slideshow?: { interval?: number };
   padding?: number;
   duration?: number;
   autoHide?: number | false;
   className?: string;
-  icons?: Partial<Record<"close" | "prev" | "next" | "zoom", () => Node>>;
+  icons?: Partial<Record<LightboxIcon, () => Node>>;
   renderContent?: (context: LightboxContentContext) => undefined | (() => void);
+  /** Content modules for items with a type, such as video() from @reuse-sh/lightbox/video. */
+  content?: readonly LightboxContent[];
+  /** Starts the current player once it shows, when the viewer opened from a user action; default true. */
+  autoplay?: boolean;
   loop?: boolean;
   history?: boolean;
   strings?: Partial<LightboxStrings>;
@@ -191,8 +262,15 @@ export interface Lightbox {
   destroy(): void;
 }
 
+type MediaSlide = {
+  content: LightboxContent;
+  mounted?: LightboxMounted;
+  abort?: AbortController;
+};
+
 type LoadedSlide = {
   frame: HTMLDivElement;
+  media?: MediaSlide;
   image: HTMLImageElement;
   loader?: HTMLImageElement;
   /** The pixel width of the file on screen, once the full file shows. */
@@ -206,8 +284,17 @@ type LoadedSlide = {
 
 type Sample = { time: number; x: number; y: number };
 
+type Slideshow = {
+  interval: number;
+  waited: number;
+  since?: number;
+  timer?: ReturnType<typeof setTimeout>;
+  frame?: number;
+};
+
 type Session = {
   dialog: HTMLDialogElement;
+  stage: HTMLDivElement;
   viewport: HTMLDivElement;
   backdrop: HTMLDivElement;
   slides: HTMLDivElement[];
@@ -227,8 +314,15 @@ type Session = {
   tapTimer?: ReturnType<typeof setTimeout>;
   openingFocus: HTMLElement | null;
   zoomed: boolean;
+  footer: HTMLDivElement;
   thumbStrip?: HTMLDivElement;
+  thumbCarousel?: Carousel;
+  roving: number;
   centeredThumb: number;
+  aside?: HTMLDivElement;
+  slideshow?: Slideshow;
+  /** Reasons the slideshow waits, kept while it is off so a start honors them. */
+  pauses: Set<string>;
   abort: AbortController;
   animations: Set<Animation>;
   finishAnimations: Set<() => void>;
@@ -237,13 +331,16 @@ type Session = {
   restoreScroll: () => void;
   hiddenOrigin?: { element: HTMLElement; visibility: string };
   landing?: HTMLImageElement;
-  counter: HTMLSpanElement;
+  counter?: HTMLSpanElement;
   counterText: string;
   status: HTMLDivElement;
   caption: HTMLParagraphElement;
-  prev: HTMLButtonElement;
-  next: HTMLButtonElement;
-  zoomButton: HTMLButtonElement;
+  prev?: HTMLButtonElement;
+  next?: HTMLButtonElement;
+  zoomButton?: HTMLButtonElement;
+  fullscreenButton?: HTMLButtonElement;
+  download?: HTMLAnchorElement;
+  slideshowButton?: HTMLButtonElement;
   thumbs: HTMLButtonElement[];
   makeSlide: () => HTMLDivElement;
   makeThumbs: () => void;
@@ -274,6 +371,7 @@ type Session = {
   flying: boolean;
   watchedScale: number;
   sharpScale: number;
+  autoplay: boolean;
   rest?: Zoom;
   resizeFrame?: number;
   sharpTimer?: ReturnType<typeof setTimeout>;
@@ -374,10 +472,18 @@ function goBack(win: Window) {
   return landing;
 }
 
-function validateItems(items: readonly LightboxItem[]) {
+function validateItems(
+  items: readonly LightboxItem[],
+  content: readonly LightboxContent[] = [],
+) {
   if (!items.length) throw new TypeError("Lightbox needs at least one image.");
   return items.map((item) => {
-    if (!item || typeof item.src !== "string" || !item.src.trim())
+    if (item?.type !== undefined) {
+      if (!content.some((module) => module.type === item.type))
+        throw new TypeError(
+          `Lightbox items of type ${item.type} need their module in the content option.`,
+        );
+    } else if (!item || typeof item.src !== "string" || !item.src.trim())
       throw new TypeError("Lightbox images need a source.");
     if (
       (item.width !== undefined &&
@@ -577,6 +683,122 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
   function setPhase(s: Session, phase: Session["phase"]) {
     s.phase = phase;
     s.dialog.dataset.phase = phase;
+    holdSlideshow(s, "phase", phase !== "open");
+  }
+
+  function slideshowRuns(s: Session) {
+    return (
+      session === s &&
+      !state.isClosing &&
+      !s.pauses.size &&
+      items.length > 1 &&
+      !s.dialog.ownerDocument.hidden
+    );
+  }
+
+  // The wait keeps what it ran before a pause, so a pause only delays the next photo.
+  function scheduleSlideshow(s: Session) {
+    const show = s.slideshow;
+    if (!show) return;
+    const win = s.dialog.ownerDocument.defaultView;
+    const now = win?.performance.now() ?? 0;
+    if (show.since !== undefined) show.waited += now - show.since;
+    clearTimeout(show.timer);
+    if (show.frame !== undefined) win?.cancelAnimationFrame(show.frame);
+    show.timer = show.frame = undefined;
+    const runs = slideshowRuns(s);
+    show.since = runs ? now : undefined;
+    if (!runs || !win) return;
+    show.timer = setTimeout(
+      () => advanceSlideshow(s),
+      Math.max(0, show.interval - show.waited),
+    );
+    if (prefersReducedMotion(s)) return;
+    const tick = () => {
+      const since = show.since;
+      if (since === undefined) return;
+      s.slideshowButton?.style.setProperty(
+        "--re-lightbox-slideshow-progress",
+        String(
+          Math.min(
+            1,
+            (show.waited + win.performance.now() - since) / show.interval,
+          ),
+        ),
+      );
+      show.frame = win.requestAnimationFrame(tick);
+    };
+    tick();
+  }
+
+  function holdSlideshow(s: Session, reason: string, isHeld: boolean) {
+    if (s.pauses.has(reason) === isHeld) return;
+    if (isHeld) s.pauses.add(reason);
+    else s.pauses.delete(reason);
+    scheduleSlideshow(s);
+  }
+
+  function restartSlideshow(s: Session) {
+    const show = s.slideshow;
+    if (!show) return;
+    show.waited = 0;
+    show.since = undefined;
+    s.slideshowButton?.style.setProperty(
+      "--re-lightbox-slideshow-progress",
+      "0",
+    );
+    scheduleSlideshow(s);
+  }
+
+  function advanceSlideshow(s: Session) {
+    if (session !== s || !s.slideshow) return;
+    if (s.pointers.size) {
+      restartSlideshow(s);
+      return;
+    }
+    if (looping() || state.index < items.length - 1) step(1);
+    else {
+      // The last photo springs back to the first, as the carousel's autoplay does.
+      finishFade(s, true);
+      syncingCarousel = true;
+      activeChanged(s, 0);
+      s.carousel.goTo(0, "smooth");
+      syncingCarousel = false;
+    }
+    restartSlideshow(s);
+  }
+
+  function toggleSlideshow(s: Session, on = !s.slideshow) {
+    const button = s.slideshowButton;
+    if (on === Boolean(s.slideshow)) return;
+    const show = s.slideshow;
+    if (show) {
+      clearTimeout(show.timer);
+      if (show.frame !== undefined)
+        s.dialog.ownerDocument.defaultView?.cancelAnimationFrame(show.frame);
+      s.slideshow = undefined;
+      s.slideshowButton?.style.removeProperty(
+        "--re-lightbox-slideshow-progress",
+      );
+    } else {
+      const interval = settings.slideshow?.interval;
+      s.slideshow = {
+        interval:
+          interval !== undefined && Number.isFinite(interval) && interval > 0
+            ? interval
+            : 4000,
+        waited: 0,
+      };
+      restartSlideshow(s);
+    }
+    if (on) s.dialog.dataset.slideshow = "playing";
+    else delete s.dialog.dataset.slideshow;
+    if (!button) return;
+    button.setAttribute(
+      "aria-label",
+      on ? s.strings.slideshowStop : s.strings.slideshowStart,
+    );
+    if (!settings.icons?.slideshow) button.textContent = on ? "❚❚" : "▶";
   }
 
   function easing(value: string) {
@@ -705,6 +927,15 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
     const item = items[index];
     if (item.width && item.height)
       return { width: item.width, height: item.height };
+    // A player has no pixels to stop at, so it fills the screen at its aspect.
+    if (item.type) {
+      const aspect = s.loaded.get(index)?.media?.mounted?.aspect || 16 / 9;
+      const { width, height } = view(s);
+      return {
+        width: Math.max(width, height * aspect),
+        height: Math.max(height, width / aspect),
+      };
+    }
     for (const image of [s.loaded.get(index)?.image, tileImage(index)])
       if (image?.naturalWidth && image.naturalHeight)
         return { width: image.naturalWidth, height: image.naturalHeight };
@@ -712,14 +943,16 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
   }
 
   function tall(index: number, s: Session) {
+    if (items[index].type) return false;
     return shapeOf(imageSize(index, s), view(s), padding) === "tall";
   }
 
   function fit(index: number, s: Session): Size {
+    // A player leaves 24px at each side for a swipe that pages past it.
     return (tall(index, s) ? widthFit : contain)(
       imageSize(index, s),
       view(s),
-      padding,
+      items[index].type ? Math.max(padding, 24) : padding,
     );
   }
 
@@ -734,14 +967,16 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
   function limits(s: Session, index = state.index) {
     const item = items[index];
     const entry = s.loaded.get(index);
-    if (entry?.status === "failed") return { min: 1, max: 1, tap: 1 };
+    if (entry?.status === "failed" || item?.type)
+      return { min: 1, max: 1, tap: 1 };
     return zoomLimits({
       fileWidth: largestWidth(item?.srcset) ?? entry?.natural ?? item?.width,
       image: imageSize(index, s),
       viewport: view(s),
       padding,
       svg: Boolean(
-        item && formatOf(item.src, s.dialog.ownerDocument.baseURI) === "svg",
+        item?.src &&
+          formatOf(item.src, s.dialog.ownerDocument.baseURI) === "svg",
       ),
       maxZoom: settings.maxZoom,
       tapZoom: settings.tapZoom ?? 2.5,
@@ -770,19 +1005,21 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
     if (s.dialog.dataset.zoomable !== clickable)
       s.dialog.dataset.zoomable = clickable;
     const hidden = !zoomable && state.zoom.scale <= 1;
-    if (s.zoomButton.hidden !== hidden) {
-      if (hidden && s.dialog.ownerDocument.activeElement === s.zoomButton)
+    const zoomButton = s.zoomButton;
+    if (zoomButton && zoomButton.hidden !== hidden) {
+      if (hidden && s.dialog.ownerDocument.activeElement === zoomButton)
         s.viewport.focus({ preventScroll: true });
-      s.zoomButton.hidden = hidden;
+      zoomButton.hidden = hidden;
     }
     s.viewport.style.touchAction = state.zoom.scale > 1 ? "none" : "pan-x";
     const out = range.tap < 1 ? state.zoom.scale >= 1 : state.zoom.scale > 1;
-    s.zoomButton.setAttribute(
+    zoomButton?.setAttribute(
       "aria-label",
       out ? s.strings.zoomOut : s.strings.zoomIn,
     );
-    s.zoomButton.setAttribute("aria-pressed", String(state.zoom.scale > 1));
-    if (!settings.icons?.zoom) s.zoomButton.textContent = out ? "−" : "+";
+    zoomButton?.setAttribute("aria-pressed", String(state.zoom.scale > 1));
+    if (zoomButton && !settings.icons?.zoom)
+      zoomButton.textContent = out ? "−" : "+";
     s.dialog.dataset.zoomed = String(state.zoom.scale > 1);
     s.dialog.dataset.zoom = out ? "out" : "in";
     if (s.watchedScale !== state.zoom.scale) {
@@ -793,6 +1030,7 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
     if (s.zoomed !== state.zoom.scale > 1) {
       s.zoomed = state.zoom.scale > 1;
       chromeInput(s, { type: s.zoomed ? "zoom" : "unzoom" }, notify);
+      holdSlideshow(s, "zoom", s.zoomed);
     }
   }
 
@@ -1036,7 +1274,11 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
       rect.right > 0 &&
       rect.top < viewport.height &&
       rect.left < viewport.width;
-    if (!visible || !origin) {
+    if (
+      !visible ||
+      !origin ||
+      (item.type && !entry.image.getAttribute("src"))
+    ) {
       return animate(
         s,
         entry.frame,
@@ -1259,6 +1501,84 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
     }
   }
 
+  function spin(s: Session, frame: HTMLElement) {
+    const doc = s.dialog.ownerDocument;
+    const status = doc.createElement("span");
+    status.className = "re-lightbox-loading";
+    status.setAttribute("role", "status");
+    status.setAttribute("aria-label", s.strings.loading);
+    const canvas = doc.createElement("canvas");
+    canvas.setAttribute("aria-hidden", "true");
+    status.append(canvas);
+    frame.append(status);
+    let dots: ReturnType<typeof createThinkingDots> | undefined;
+    try {
+      dots = createThinkingDots(canvas, { size: SPINNER_SIZE });
+    } catch {}
+    return () => {
+      dots?.destroy();
+      status.remove();
+    };
+  }
+
+  // A player mounts in its own layer above the poster, which stays under it.
+  function mountMedia(s: Session, index: number, entry: LoadedSlide) {
+    const media = entry.media;
+    if (!media || media.mounted || session !== s) return;
+    const doc = s.dialog.ownerDocument;
+    const holder = doc.createElement("div");
+    holder.className = "re-lightbox-media";
+    entry.frame.append(holder);
+    const abort = new AbortController();
+    const mounted = media.content.mount(holder, {
+      item: items[index],
+      index,
+      signal: abort.signal,
+      autoplay: s.autoplay,
+    });
+    media.abort = abort;
+    media.mounted = mounted;
+    if (mounted.interactive) {
+      holder.dataset.lightboxInteractive = "";
+      holder.dataset.carouselNoDrag = "";
+    }
+    if (mounted.ready) {
+      entry.frame.dataset.loading = "true";
+      const wait = setTimeout(() => {
+        stop = spin(s, entry.frame);
+      }, LOADING_DELAY);
+      let stop = () => clearTimeout(wait);
+      const settle = () => {
+        if (media.abort !== abort) return;
+        stop();
+        entry.frame.removeAttribute("data-loading");
+      };
+      abort.signal.addEventListener("abort", () => stop());
+      void mounted.ready.then(settle, settle);
+    }
+    layout(s);
+    if (index === state.index && !s.flying && !state.isClosing)
+      mounted.resume?.();
+  }
+
+  function unmountMedia(entry: LoadedSlide) {
+    const media = entry.media;
+    if (!media?.mounted) return;
+    const { mounted, abort } = media;
+    media.mounted = media.abort = undefined;
+    abort?.abort();
+    mounted.unmount();
+    entry.frame.querySelector(":scope > .re-lightbox-media")?.remove();
+    entry.frame.removeAttribute("data-loading");
+  }
+
+  function pauseMedia(entry: LoadedSlide | undefined) {
+    const mounted = entry?.media?.mounted;
+    if (!entry || !mounted) return;
+    if (mounted.pause) mounted.pause();
+    else unmountMedia(entry);
+  }
+
   function loadSlides(s: Session) {
     trimSlides(s);
     for (let step = -preload; step <= preload; step++) {
@@ -1273,6 +1593,33 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
       image.alt = item.alt || "";
       if (settings.protect) image.draggable = false;
       image.decoding = "async";
+      const content =
+        item.type === undefined
+          ? undefined
+          : settings.content?.find((module) => module.type === item.type);
+      if (content) {
+        frame.dataset.media = content.type;
+        const poster = item.video?.poster || previewOf(index);
+        if (poster) image.src = poster;
+        frame.append(image);
+        s.slides[index].append(frame);
+        const entry: LoadedSlide = {
+          frame,
+          image,
+          media: { content },
+          status: "settled",
+          load: () => {},
+          cancel: () => {
+            unmountMedia(entry);
+            image.removeAttribute("src");
+          },
+        };
+        s.loaded.set(index, entry);
+        // A poster flies open like a photo, and its player mounts once the flight lands.
+        if (!(s.flying && index === state.index && poster))
+          mountMedia(s, index, entry);
+        continue;
+      }
       let alive = true;
       let cleanup: undefined | (() => void);
       let wait: ReturnType<typeof setTimeout> | undefined;
@@ -1286,23 +1633,7 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
         spinner = undefined;
       };
       const showSpinner = () => {
-        if (!alive || session !== s) return;
-        const status = doc.createElement("span");
-        status.className = "re-lightbox-loading";
-        status.setAttribute("role", "status");
-        status.setAttribute("aria-label", s.strings.loading);
-        const canvas = doc.createElement("canvas");
-        canvas.setAttribute("aria-hidden", "true");
-        status.append(canvas);
-        frame.append(status);
-        let dots: ReturnType<typeof createThinkingDots> | undefined;
-        try {
-          dots = createThinkingDots(canvas, { size: SPINNER_SIZE });
-        } catch {}
-        spinner = () => {
-          dots?.destroy();
-          status.remove();
-        };
+        if (alive && session === s) spinner = spin(s, frame);
       };
       const fetcher = (url: string) =>
         (doc.defaultView ?? globalThis).fetch(url);
@@ -1435,7 +1766,7 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
           loader.srcset = item.srcset;
           requestSizes(s);
         }
-        loader.src = item.src;
+        loader.src = item.src ?? "";
       };
       const preview = previewOf(index);
       if (preview) display(preview);
@@ -1480,6 +1811,7 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
       old.frame.style.clipPath = "";
       old.frame.style.opacity = "";
     }
+    pauseMedia(old);
     const gap = index - state.index;
     const forward =
       looping() && Math.abs(gap) > items.length / 2 ? gap < 0 : gap > 0;
@@ -1487,13 +1819,18 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
     s.heading = forward ? 1 : -1;
     publish({ index, zoom: restZoom(s, index) });
     update(s, forward ? 1 : -1);
+    const entry = s.loaded.get(index);
+    if (entry?.media?.mounted) entry.media.mounted.resume?.();
+    else if (entry) mountMedia(s, index, entry);
     s.status.textContent = s.strings.slide(index, items.length);
+    restartSlideshow(s);
     emit("change", s);
   }
 
   function renderCounter(s: Session, direction: 1 | -1 | 0) {
+    const counter = s.counter;
     const text = s.strings.counter(state.index, items.length);
-    if (text === s.counterText) return;
+    if (!counter || text === s.counterText) return;
     s.counterText = text;
     const doc = s.dialog.ownerDocument;
     const parts = text.match(/\p{Nd}+(?:[^\p{Nd}\s]\p{Nd}+)*|\P{Nd}+/gu) ?? [];
@@ -1501,7 +1838,7 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
       /\p{Nd}/u.test(part)
         ? "re-lightbox-counter-number"
         : "re-lightbox-counter-text";
-    let nodes = [...s.counter.children] as HTMLElement[];
+    let nodes = [...counter.children] as HTMLElement[];
     if (
       nodes.length !== parts.length ||
       nodes.some((node, index) => node.className !== kind(parts[index]))
@@ -1511,12 +1848,12 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
         node.className = kind(part);
         return node;
       });
-      s.counter.replaceChildren(...nodes);
+      counter.replaceChildren(...nodes);
     }
     const roll =
       direction !== 0 &&
       !prefersReducedMotion(s) &&
-      typeof s.counter.animate === "function";
+      typeof counter.animate === "function";
     for (const [index, node] of nodes.entries()) {
       const part = parts[index];
       if (node.className === "re-lightbox-counter-text") {
@@ -1567,13 +1904,25 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
     loadSlides(s);
     hideOrigin(s);
     renderCounter(s, direction);
-    s.caption.textContent = items[state.index].caption || "";
+    const item = items[state.index];
+    s.caption.textContent = item.caption || "";
     const single = items.length < 2;
-    s.prev.hidden = single;
-    s.next.hidden = single;
-    s.counter.hidden = single;
-    s.prev.disabled = !looping() && state.index === 0;
-    s.next.disabled = !looping() && state.index === items.length - 1;
+    for (const control of [s.prev, s.next, s.counter, s.slideshowButton])
+      if (control) control.hidden = single;
+    if (s.prev) s.prev.disabled = !looping() && state.index === 0;
+    if (s.next)
+      s.next.disabled = !looping() && state.index === items.length - 1;
+    if (single) toggleSlideshow(s, false);
+    if (s.download) {
+      s.download.hidden = Boolean(item.type);
+      const href = largestSource(item.srcset, item.src ?? "");
+      let scheme = "";
+      try {
+        scheme = new URL(href, s.dialog.ownerDocument.baseURI).protocol;
+      } catch {}
+      if (scheme === "javascript:") s.download.removeAttribute("href");
+      else s.download.setAttribute("href", href);
+    }
     const mark = (index: number, current: boolean) => {
       const slide = s.slides[index];
       if (slide) {
@@ -1592,35 +1941,36 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
       mark(state.index, true);
     }
     s.marked = state.index;
+    if (!s.thumbStrip?.contains(s.dialog.ownerDocument.activeElement))
+      rove(s, state.index);
     centerThumb(s);
     applyZoom(s);
   }
 
+  function rove(s: Session, index: number) {
+    if (s.roving === index) return;
+    if (s.thumbs[s.roving]) s.thumbs[s.roving].tabIndex = -1;
+    if (s.thumbs[index]) s.thumbs[index].tabIndex = 0;
+    s.roving = index;
+  }
+
+  // The bottom strip is a carousel that centers the thumbnail; the side column has no carousel
+  // axis, so it scrolls the same way natively.
   function centerThumb(s: Session) {
     const strip = s.thumbStrip;
     const thumb = s.thumbs[state.index];
-    if (
-      !strip ||
-      !thumb ||
-      s.centeredThumb === state.index ||
-      strip.scrollWidth <= strip.clientWidth
-    )
-      return;
-    const reduced = prefersReducedMotion(s);
-    // An RTL strip scrolls through negative positions, where offsetLeft already lies.
-    const max = strip.scrollWidth - strip.clientWidth;
-    const rtl =
-      s.dialog.ownerDocument.defaultView?.getComputedStyle(strip).direction ===
-      "rtl";
-    strip.scrollTo({
-      left: clamp(
-        thumb.offsetLeft - (strip.clientWidth - thumb.offsetWidth) / 2,
-        rtl ? -max : 0,
-        rtl ? 0 : max,
-      ),
-      behavior: s.centeredThumb < 0 || reduced ? "instant" : "smooth",
-    });
+    if (!strip || !thumb || s.centeredThumb === state.index) return;
+    const behavior =
+      s.centeredThumb < 0 || prefersReducedMotion(s) ? "instant" : "smooth";
     s.centeredThumb = state.index;
+    if (s.thumbCarousel) {
+      s.thumbCarousel.goTo(state.index, behavior);
+      return;
+    }
+    strip.scrollTo({
+      top: thumb.offsetTop - (strip.clientHeight - thumb.offsetHeight) / 2,
+      behavior,
+    });
   }
 
   function teardown(s: Session) {
@@ -1637,7 +1987,10 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
     s.resizeFrame = undefined;
     finishFade(s, false);
     cancelAnimations(s);
+    toggleSlideshow(s, false);
+    leaveFullscreen(s);
     s.carousel.destroy();
+    s.thumbCarousel?.destroy();
     for (const entry of s.loaded.values()) entry.cancel();
     for (const slot of s.slots.splice(0)) slot.destroy?.();
     restoreOrigin(s);
@@ -1647,6 +2000,12 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
     s.dialog.remove();
     s.restoreScroll();
     returnFocus(s);
+  }
+
+  function leaveFullscreen(s: Session) {
+    const doc = s.dialog.ownerDocument;
+    if (doc.fullscreenElement === s.stage)
+      void doc.exitFullscreen().catch(() => {});
   }
 
   function returnFocus(s: Session) {
@@ -2000,6 +2359,7 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
     )?.ClipboardItem;
     if (
       settings.protect ||
+      items[state.index]?.type ||
       !win ||
       !Item ||
       typeof win.navigator.clipboard?.write !== "function" ||
@@ -2648,6 +3008,172 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
       void closeSession(true);
   }
 
+  // The caption panel shows when some photo has a caption, so the photo keeps one width while paging.
+  function placeAside(s: Session, relayout = false) {
+    const needed =
+      Boolean(settings.slots?.aside) ||
+      (settings.caption === "side" && items.some((item) => item.caption));
+    if (needed === Boolean(s.aside)) return;
+    if (s.aside) {
+      s.aside.remove();
+      s.chromeRoots = s.chromeRoots.filter((root) => root !== s.aside);
+      s.aside = undefined;
+      delete s.dialog.dataset.aside;
+    } else {
+      const aside = s.dialog.ownerDocument.createElement("div");
+      aside.className = "re-lightbox-aside";
+      if (settings.caption === "side") aside.append(s.caption);
+      s.stage.append(aside);
+      s.chromeRoots.push(aside);
+      s.aside = aside;
+      s.dialog.dataset.aside = "";
+    }
+    if (relayout) {
+      const win = s.dialog.ownerDocument.defaultView;
+      s.resizeFrame ??= win?.requestAnimationFrame(() => resized(s));
+    }
+  }
+
+  // A side column turns into the bottom strip below 720px, where the strip pages as a carousel.
+  function placeThumbs(s: Session) {
+    const strip = s.thumbStrip;
+    if (!strip) return;
+    const win = s.dialog.ownerDocument.defaultView;
+    const side =
+      settings.thumbnails === "side" &&
+      !win?.matchMedia?.("(max-width: 719.98px)").matches;
+    const layout = side ? "side" : "bottom";
+    if (s.dialog.dataset.thumbnails === layout) return;
+    s.dialog.dataset.thumbnails = layout;
+    s.thumbCarousel?.destroy();
+    s.thumbCarousel = undefined;
+    s.chromeRoots = s.chromeRoots.filter((root) => root !== strip);
+    if (side) {
+      s.stage.append(strip);
+      s.chromeRoots.push(strip);
+    } else {
+      s.footer.append(strip);
+      strip.tabIndex = -1;
+      s.thumbCarousel = createCarousel(strip, { drag: true, align: "center" });
+      (
+        s.thumbCarousel as unknown as Record<
+          symbol,
+          { silence(): void } | undefined
+        >
+      )[carouselInternals]?.silence();
+    }
+    s.centeredThumb = -1;
+    centerThumb(s);
+  }
+
+  function watchControls(s: Session) {
+    const doc = s.dialog.ownerDocument;
+    const win = doc.defaultView;
+    const signal = s.abort.signal;
+    doc.addEventListener(
+      "fullscreenchange",
+      () => {
+        const full = doc.fullscreenElement === s.stage;
+        s.fullscreenButton?.setAttribute(
+          "aria-label",
+          full ? s.strings.fullscreenExit : s.strings.fullscreenEnter,
+        );
+        if (full) s.dialog.dataset.fullscreen = "";
+        else delete s.dialog.dataset.fullscreen;
+      },
+      { signal },
+    );
+    doc.addEventListener("visibilitychange", () => scheduleSlideshow(s), {
+      signal,
+    });
+    const hover = (event: PointerEvent, target: EventTarget | null) => {
+      if (event.pointerType !== "mouse") return;
+      holdSlideshow(
+        s,
+        "hover",
+        isNode(target) && s.chromeRoots.some((root) => root.contains(target)),
+      );
+    };
+    s.dialog.addEventListener(
+      "pointerover",
+      (event) => hover(event, event.target),
+      {
+        signal,
+      },
+    );
+    s.dialog.addEventListener(
+      "pointerout",
+      (event) => hover(event, event.relatedTarget),
+      { signal },
+    );
+    if (s.slots.length && win?.MutationObserver) {
+      // :popover-open throws where popovers are missing, so each selector is tried alone.
+      const opened = () =>
+        holdSlideshow(
+          s,
+          "menu",
+          ['[aria-expanded="true"]', "details[open]", ":popover-open"].some(
+            (selector) => {
+              try {
+                return Boolean(s.stage.querySelector(selector));
+              } catch {
+                return false;
+              }
+            },
+          ),
+        );
+      const observer = new win.MutationObserver(opened);
+      observer.observe(s.stage, {
+        subtree: true,
+        attributes: true,
+        attributeFilter: ["aria-expanded", "open"],
+      });
+      s.stage.addEventListener("toggle", opened, { signal, capture: true });
+      signal.addEventListener("abort", () => observer.disconnect());
+    }
+    const strip = s.thumbStrip;
+    if (!strip) return;
+    strip.addEventListener(
+      "keydown",
+      (event) => {
+        const at = s.thumbs.indexOf(event.target as HTMLButtonElement);
+        if (at < 0 || event.altKey || event.ctrlKey || event.metaKey) return;
+        const side = s.dialog.dataset.thumbnails === "side";
+        const rtl = win?.getComputedStyle(strip).direction === "rtl";
+        const forward = side ? "ArrowDown" : rtl ? "ArrowLeft" : "ArrowRight";
+        const back = side ? "ArrowUp" : rtl ? "ArrowRight" : "ArrowLeft";
+        const to = {
+          [forward]: at + 1,
+          [back]: at - 1,
+          Home: 0,
+          End: s.thumbs.length - 1,
+        }[event.key];
+        if (to === undefined) return;
+        event.preventDefault();
+        const index = clamp(to, 0, s.thumbs.length - 1);
+        rove(s, index);
+        s.thumbs[index].focus();
+      },
+      // Ahead of the strip carousel's own keys, which would scroll it instead.
+      { signal, capture: true },
+    );
+    strip.addEventListener(
+      "focusout",
+      (event) => {
+        if (
+          !isNode(event.relatedTarget) ||
+          !strip.contains(event.relatedTarget)
+        )
+          rove(s, state.index);
+      },
+      { signal },
+    );
+    if (settings.thumbnails === "side")
+      win
+        ?.matchMedia?.("(max-width: 719.98px)")
+        .addEventListener("change", () => placeThumbs(s), { signal });
+  }
+
   function mountSlots(
     s: Session,
     places: Record<LightboxSlotName, (node: Node) => void>,
@@ -2665,7 +3191,7 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
 
   function open(input: readonly LightboxItem[], index = 0) {
     if (destroyed) throw new Error("This lightbox has been destroyed.");
-    const nextItems = validateItems(input);
+    const nextItems = validateItems(input, options.content);
     if (!Number.isFinite(index))
       throw new TypeError("Image index must be finite.");
     configure();
@@ -2694,6 +3220,11 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
     dialog.dataset.chrome = "shown";
     dialog.dataset.phase = "entering";
     if (settings.protect) dialog.dataset.protect = "";
+    const control = (name: LightboxControl) =>
+      settings.controls?.[name] ?? defaultControls[name];
+    const stage = doc.createElement("div");
+    stage.className = "re-lightbox-stage";
+    dialog.append(stage);
     const viewport = doc.createElement("div");
     viewport.className = "re-lightbox-viewport";
     viewport.tabIndex = 0;
@@ -2717,57 +3248,100 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
     const toolbarEnd = doc.createElement("div");
     toolbarEnd.className = "re-lightbox-toolbar-end";
     toolbar.append(toolbarStart, toolbarEnd);
-    dialog.append(backdrop, viewport, toolbar);
+    stage.append(backdrop, viewport, toolbar);
     const abort = new AbortController();
-    const button = (
-      name: "close" | "prev" | "next" | "zoom",
+    const button = <K extends "button" | "a">(
+      tag: K,
+      name: LightboxIcon,
       label: string,
       text: string,
-      action: () => void,
+      action: (() => void) | undefined,
       parent: HTMLElement,
     ) => {
-      const element = doc.createElement("button");
-      element.type = "button";
+      const element = doc.createElement(tag);
+      if (tag === "button") element.setAttribute("type", "button");
       element.className = `re-lightbox-button re-lightbox-${name}`;
       element.setAttribute("aria-label", label);
       const icon = settings.icons?.[name]?.();
       if (icon) element.append(icon);
       else element.textContent = text;
-      element.addEventListener("click", action, { signal: abort.signal });
+      if (action)
+        element.addEventListener("click", action, { signal: abort.signal });
       parent.append(element);
       return element;
     };
-    const zoomButton = button(
-      "zoom",
-      strings.zoomIn,
-      "+",
-      () => toggleZoom(),
-      toolbarEnd,
-    );
-    const closeButton = button(
-      "close",
-      strings.close,
-      "×",
-      () => {
-        void close();
-      },
-      toolbarEnd,
-    );
-    closeButton.autofocus = true;
-    const prev = button("prev", strings.previous, "‹", () => step(-1), dialog);
-    const next = button("next", strings.next, "›", () => step(1), dialog);
+    let counter: HTMLSpanElement | undefined;
+    if (control("counter")) {
+      counter = doc.createElement("span");
+      counter.className = "re-lightbox-counter";
+      counter.setAttribute("aria-hidden", "true");
+      toolbarStart.append(counter);
+    }
+    const zoomButton = control("zoom")
+      ? button(
+          "button",
+          "zoom",
+          strings.zoomIn,
+          "+",
+          () => toggleZoom(),
+          toolbarEnd,
+        )
+      : undefined;
+    const slideshowButton = control("slideshow")
+      ? button(
+          "button",
+          "slideshow",
+          strings.slideshowStart,
+          "▶",
+          () => toggleSlideshow(s),
+          toolbarEnd,
+        )
+      : undefined;
+    const fullscreenButton =
+      control("fullscreen") && doc.fullscreenEnabled
+        ? button(
+            "button",
+            "fullscreen",
+            strings.fullscreenEnter,
+            "⤢",
+            () => {
+              if (doc.fullscreenElement === stage)
+                void doc.exitFullscreen().catch(() => {});
+              else void stage.requestFullscreen().catch(() => {});
+            },
+            toolbarEnd,
+          )
+        : undefined;
+    const download = control("download")
+      ? button("a", "download", strings.download, "↓", undefined, toolbarEnd)
+      : undefined;
+    download?.setAttribute("download", "");
+    const closeButton = control("close")
+      ? button(
+          "button",
+          "close",
+          strings.close,
+          "×",
+          () => void close(),
+          toolbarEnd,
+        )
+      : undefined;
+    if (closeButton) closeButton.autofocus = true;
+    const prev = control("arrows")
+      ? button("button", "prev", strings.previous, "‹", () => step(-1), stage)
+      : undefined;
+    const next = control("arrows")
+      ? button("button", "next", strings.next, "›", () => step(1), stage)
+      : undefined;
     const footer = doc.createElement("div");
     footer.className = "re-lightbox-footer";
-    const counter = doc.createElement("span");
-    counter.className = "re-lightbox-counter";
-    counter.setAttribute("aria-hidden", "true");
     const caption = doc.createElement("p");
     caption.className = "re-lightbox-caption";
-    footer.append(caption, counter);
+    if (settings.caption !== "side") footer.append(caption);
     const status = doc.createElement("div");
     status.className = "re-lightbox-status";
     status.setAttribute("role", "status");
-    dialog.append(footer, status);
+    stage.append(footer, status);
     const thumbs: HTMLButtonElement[] = [];
     let thumbStrip: HTMLDivElement | undefined;
     if (settings.thumbnails) {
@@ -2775,7 +3349,6 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
       thumbStrip.className = "re-lightbox-thumbnails";
       thumbStrip.setAttribute("role", "group");
       thumbStrip.setAttribute("aria-label", strings.thumbnails);
-      footer.append(thumbStrip);
     }
     const makeThumbs = () => {
       if (!thumbStrip) return;
@@ -2784,6 +3357,7 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
         ...items.map((item, i) => {
           const thumb = doc.createElement("button");
           thumb.type = "button";
+          thumb.tabIndex = -1;
           thumb.setAttribute("aria-label", strings.thumbnail(i, items.length));
           const thumbnailSrc = item.thumbnailSrc || item.previewSrc;
           if (thumbnailSrc) {
@@ -2816,6 +3390,7 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
     }
     const s: Session = {
       dialog,
+      stage,
       viewport,
       backdrop,
       slides,
@@ -2825,8 +3400,11 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
       heading: 1,
       strings,
       slots: [],
+      footer,
       thumbStrip,
+      roving: -1,
       centeredThumb: -1,
+      pauses: new Set(["phase"]),
       abort,
       animations: new Set(),
       finishAnimations: new Set(),
@@ -2835,8 +3413,8 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
       phase: "entering",
       timing: { open: OPEN_DURATION, close: CLOSE_DURATION, ease: FLIGHT_EASE },
       chrome: initialChrome(false),
-      chromeRoots: [toolbar, prev, next, footer],
-      openingFocus: closeButton,
+      chromeRoots: [toolbar, footer, ...(prev && next ? [prev, next] : [])],
+      openingFocus: closeButton ?? viewport,
       zoomed: false,
       counter,
       counterText: "",
@@ -2845,6 +3423,9 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
       prev,
       next,
       zoomButton,
+      fullscreenButton,
+      download,
+      slideshowButton,
       thumbs,
       makeSlide,
       makeThumbs,
@@ -2854,6 +3435,9 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
       flying: true,
       watchedScale: 1,
       sharpScale: 1,
+      autoplay:
+        settings.autoplay !== false &&
+        (doc.defaultView?.navigator.userActivation?.isActive ?? true),
     };
     session = s;
     if (doc.defaultView) enterHistory(doc.defaultView);
@@ -2866,18 +3450,15 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
       zoom: restZoom(s, clamp(Math.floor(index), 0, items.length - 1)),
       chrome: "shown",
     });
+    placeAside(s);
     mountSlots(s, {
       toolbarStart: (node) => toolbarStart.append(node),
-      toolbarEnd: (node) => closeButton.before(node),
-      footer: (node) => caption.after(node),
-      aside: (node) => {
-        const aside = doc.createElement("div");
-        aside.className = "re-lightbox-aside";
-        aside.append(node);
-        dialog.append(aside);
-        s.chromeRoots.push(aside);
-      },
+      toolbarEnd: (node) =>
+        closeButton ? closeButton.before(node) : toolbarEnd.append(node),
+      footer: (node) => footer.append(node),
+      aside: (node) => s.aside?.append(node),
     });
+    placeThumbs(s);
     s.box = measure(viewport);
     update(s);
     s.carousel.goTo(state.index, "instant");
@@ -3050,7 +3631,8 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
       },
       { signal: abort.signal },
     );
-    closeButton.focus({ preventScroll: true });
+    (closeButton ?? viewport).focus({ preventScroll: true });
+    watchControls(s);
     readTiming(s);
     void win?.getComputedStyle(toolbar).opacity;
     setPhase(s, "opening");
@@ -3067,6 +3649,9 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
         entry.commit = undefined;
         commit?.();
       }
+      const current = s.loaded.get(state.index);
+      if (current?.media?.mounted) current.media.mounted.resume?.();
+      else if (current) mountMedia(s, state.index, current);
       if (s.phase === "opening") setPhase(s, "open");
       emit("opened", s);
     });
@@ -3127,6 +3712,8 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
     s.tapTimer = undefined;
     chromeInput(s, { type: "close" });
     publish({ isClosing: true });
+    leaveFullscreen(s);
+    for (const entry of s.loaded.values()) entry.media?.mounted?.pause?.();
     s.dialog.style.removeProperty("--re-lightbox-chrome-opacity");
     setPhase(s, "closing");
     s.restoreScroll();
@@ -3152,7 +3739,7 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
 
   function setItems(input: readonly LightboxItem[], index?: number) {
     if (destroyed) throw new Error("This lightbox has been destroyed.");
-    const nextItems = validateItems(input);
+    const nextItems = validateItems(input, options.content);
     if (index !== undefined && !Number.isFinite(index))
       throw new TypeError("Image index must be finite.");
     const s = session;
@@ -3172,7 +3759,8 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
     for (const [j, item] of nextItems.entries()) {
       if (from[j] >= 0) continue;
       const old = items.findIndex(
-        (candidate, i) => !taken.has(i) && candidate.src === item.src,
+        (candidate, i) =>
+          !taken.has(i) && item.src !== undefined && candidate.src === item.src,
       );
       if (old < 0) continue;
       taken.add(old);
@@ -3224,7 +3812,10 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
     s.loaded = loaded;
     s.marked = undefined;
     s.makeThumbs();
+    s.roving = -1;
+    s.thumbCarousel?.refresh();
     s.centeredThumb = Number.NaN;
+    placeAside(s, true);
     const changed = target !== state.index;
     if ((changed || !kept || s.carouselLoops) && state.zoom.scale > 1) {
       updateState({ zoom: restZoom(s, target) });
@@ -3339,6 +3930,23 @@ export function lightboxItemFromImage(
       ?.textContent?.trim() ||
     image.dataset.caption ||
     link?.dataset.caption;
+  // Without JavaScript the link still leads to the video or the page it plays.
+  const type = link?.dataset.lightboxType || image.dataset.lightboxType;
+  if (type) {
+    const media = href || src;
+    return {
+      type,
+      src: media,
+      embed: media,
+      video: { src: media, poster: tile },
+      previewSrc: tile,
+      width,
+      height,
+      alt: image.alt,
+      caption: caption || undefined,
+      origin: image,
+    };
+  }
   return {
     src,
     srcset: image.dataset.lightboxSrcset || undefined,
@@ -3391,30 +3999,39 @@ export function bindLightboxGallery(
         candidate.closest("a, button")?.contains(target),
     );
     if (!image) return;
-    event.preventDefault();
+    let list: readonly LightboxItem[];
+    let index: number;
     if (options.items) {
-      const list = options.items(root);
-      const index = list.findIndex(
+      list = options.items(root);
+      index = list.findIndex(
         (item) =>
           (typeof item.origin === "function" ? item.origin() : item.origin) ===
           image,
       );
-      controller.open(list, index < 0 ? images.indexOf(image) : index);
-      return;
-    }
-    const group =
-      options.group ??
-      ((element: HTMLImageElement) =>
-        element.closest<HTMLElement>("[data-lightbox-group]")?.dataset
-          .lightboxGroup ?? "");
-    const name = group(image);
-    const members = images.filter((candidate) => group(candidate) === name);
-    controller.open(
-      members.map((member) =>
+      if (index < 0) index = images.indexOf(image);
+    } else {
+      const group =
+        options.group ??
+        ((element: HTMLImageElement) =>
+          element.closest<HTMLElement>("[data-lightbox-group]")?.dataset
+            .lightboxGroup ?? "");
+      const name = group(image);
+      const members = images.filter((candidate) => group(candidate) === name);
+      list = members.map((member) =>
         (options.getItem || lightboxItemFromImage)(member),
-      ),
-      members.indexOf(image),
+      );
+      index = members.indexOf(image);
+    }
+    // A clicked link whose media type has no module is followed; others leave such items out.
+    const supported = list.filter(
+      (item) =>
+        item.type === undefined ||
+        options.content?.some((module) => module.type === item.type),
     );
+    const at = supported.indexOf(list[index]);
+    if (at < 0) return;
+    event.preventDefault();
+    controller.open(supported, at);
   };
   root.addEventListener("click", click);
   return {
