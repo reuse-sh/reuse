@@ -5,6 +5,7 @@ import {
   fileWidth,
   formatOf,
   isImageFile,
+  largestSource,
   largestWidth,
   lookupFormat,
   parseSrcset,
@@ -37,6 +38,16 @@ describe("srcset sources", () => {
     expect(largestWidth("a.jpg 900w, b.jpg 3600w, c.jpg 1800w")).toBe(3600);
     expect(largestWidth("a.jpg 1x, b.jpg 2x")).toBeUndefined();
     expect(largestWidth(undefined)).toBeUndefined();
+  });
+
+  it("downloads the widest candidate, else the densest, else src", () => {
+    expect(largestSource("a.jpg 900w, b.jpg 3600w, c.jpg 1800w", "s.jpg")).toBe(
+      "b.jpg",
+    );
+    expect(largestSource("a.jpg 1x, b.jpg 3x, c.jpg 2x", "s.jpg")).toBe(
+      "b.jpg",
+    );
+    expect(largestSource(undefined, "s.jpg")).toBe("s.jpg");
   });
 
   it("reads the loaded file's own width instead of the density-corrected natural width", () => {

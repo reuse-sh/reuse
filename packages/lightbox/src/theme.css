@@ -65,6 +65,28 @@
 .re-lightbox-close {
   transition: rotate 300ms ease;
 }
+.re-lightbox-download {
+  text-decoration: none;
+}
+.re-lightbox-slideshow {
+  position: relative;
+}
+.re-lightbox[data-slideshow] .re-lightbox-slideshow::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: conic-gradient(
+    currentColor calc(var(--re-lightbox-slideshow-progress, 0) * 1turn),
+    transparent 0
+  );
+  mask: radial-gradient(
+    farthest-side,
+    transparent calc(100% - 2px),
+    #000 calc(100% - 2px)
+  );
+  pointer-events: none;
+}
 @media (hover: hover) and (prefers-reduced-motion: no-preference) {
   .re-lightbox-close:hover {
     rotate: 90deg;
@@ -96,7 +118,10 @@
 }
 .re-lightbox-thumbnails {
   gap: var(--re-lightbox-thumbnail-gap);
-  padding: var(--re-lightbox-thumbnails-padding);
+  padding-block: var(--re-lightbox-thumbnails-padding);
+}
+.re-lightbox[data-thumbnails="side"] .re-lightbox-thumbnails {
+  padding: 0 var(--re-lightbox-thumbnails-padding);
 }
 .re-lightbox-thumbnails button {
   width: var(--re-lightbox-thumbnail-size);
@@ -113,6 +138,17 @@
 }
 .re-lightbox-aside {
   background: var(--re-lightbox-panel);
+}
+.re-lightbox-aside > .re-lightbox-caption {
+  padding: calc(
+      var(--re-lightbox-inset) +
+      var(--re-lightbox-button-size) +
+      var(--re-lightbox-gap)
+    )
+    var(--re-lightbox-inset) var(--re-lightbox-inset);
+  border-radius: 0;
+  background: none;
+  text-align: start;
 }
 .re-lightbox-frame:is([data-loading], [data-error]) {
   background: var(--re-lightbox-placeholder);

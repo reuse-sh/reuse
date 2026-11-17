@@ -217,7 +217,7 @@ test("in RTL an aside keeps the arrow and the footer beside it, and the active t
     const { createLightbox } = await import("/modules/lightbox/index.js");
     const lightbox = createLightbox({
       history: false,
-      thumbnails: true,
+      thumbnails: "bottom",
       slots: {
         aside: ({ document }) => ({ node: document.createElement("p") }),
       },

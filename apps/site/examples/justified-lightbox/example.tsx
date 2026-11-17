@@ -6,7 +6,7 @@ import { galleryPhotos } from "@/lib/photos";
 import "./rows.css";
 
 export function Example() {
-  const viewer = useLightbox({ thumbnails: true });
+  const viewer = useLightbox({ thumbnails: "bottom" });
   return (
     <JustifiedGallery className="re-jg-rows w-full" aria-label="Prints">
       {galleryPhotos.map((photo, index) => (

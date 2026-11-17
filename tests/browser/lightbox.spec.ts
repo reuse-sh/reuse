@@ -87,7 +87,7 @@ test("rapid paging never leaves an empty page on screen", async ({ page }) => {
 test("a distant thumbnail jump fades instead of scrolling past the photos between", async ({
   page,
 }) => {
-  await open(page, { thumbnails: true });
+  await open(page, { thumbnails: "bottom" });
   const width = await page.evaluate(
     () =>
       document.querySelector<HTMLElement>(".re-lightbox-viewport")
@@ -117,7 +117,7 @@ test("a distant jump under reduced motion lands at once without fading", async (
   page,
 }) => {
   await page.emulateMedia({ reducedMotion: "reduce" });
-  await open(page, { thumbnails: true });
+  await open(page, { thumbnails: "bottom" });
   const samples = sampleStrip(page, 300);
   await page.getByRole("button", { name: "Show image 7" }).click();
   const frames = await samples;
