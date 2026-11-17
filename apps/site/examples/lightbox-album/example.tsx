@@ -94,7 +94,7 @@ export function Example() {
                 draggable={false}
               />
               {more ? (
-                <span className="absolute inset-0 grid place-items-center bg-scrim/40 text-lg font-semibold text-primary-foreground">
+                <span className="absolute inset-0 grid place-items-center bg-scrim/50 text-lg font-semibold text-primary-foreground">
                   +{hidden}
                 </span>
               ) : null}
