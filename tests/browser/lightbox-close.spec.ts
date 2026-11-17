@@ -320,7 +320,6 @@ test("closing while a mouse drag holds the strip between two photos fades in pla
 }) => {
   await stripPage(page);
   await openAt(page, 1);
-  // A mouse drag that starts on the photo drags the file out, so this one starts above it.
   await page.mouse.move(500, 20);
   await page.mouse.down();
   for (let x = 480; x >= 300; x -= 20) await page.mouse.move(x, 20);
@@ -502,7 +501,7 @@ test("the photo flies whole out of a strip that clips its tile", async ({
 }) => {
   await stripPage(page);
   await openAt(page, 0);
-  const center = await page.evaluate(() => {
+  const corner = await page.evaluate(() => {
     const win = window as Window;
     win.closing = win.lightbox.close();
     for (const animation of document.getAnimations()) {
@@ -510,16 +509,16 @@ test("the photo flies whole out of a strip that clips its tile", async ({
       animation.currentTime =
         Number(animation.effect?.getComputedTiming().endTime ?? 0) * 0.4;
     }
-    const { x, y, width, height } = (
+    const { right, bottom } = (
       document.querySelector(
         '.re-lightbox-slide[aria-hidden="false"] .re-lightbox-frame',
       ) as HTMLElement
     ).getBoundingClientRect();
-    return { x: Math.round(x + width / 2), y: Math.round(y + height / 2) };
+    return { x: Math.round(right - 20), y: Math.round(bottom - 20) };
   });
   const strip = await page.locator("#strip").boundingBox();
-  expect(center.x).toBeGreaterThan((strip?.x ?? 0) + (strip?.width ?? 0));
-  const seen = await pixel(page, center.x, center.y);
+  expect(corner.x).toBeGreaterThan((strip?.x ?? 0) + (strip?.width ?? 0));
+  const seen = await pixel(page, corner.x, corner.y);
   for (const [channel, value] of [209, 71, 71].entries())
     expect(Math.abs(seen[channel] - value)).toBeLessThanOrEqual(3);
   await finishClose(page);

@@ -516,6 +516,7 @@ const KEY_PAN = 0.1;
 const LOADING_DELAY = 300;
 const ZOOM_IDLE = 150;
 const SPINNER_SIZE = 32;
+const LANDING_HANDOFF = 0.7;
 
 type Pinned = { index: number; zoom: Zoom; left: boolean; right: boolean };
 
@@ -1357,9 +1358,23 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
       animate(
         s,
         entry.frame,
-        [live, { ...clipped, opacity: 0 }],
+        [
+          { transform: live.transform, clipPath: live.clipPath },
+          { transform: clipped.transform, clipPath: clipped.clipPath },
+        ],
         duration,
         ease,
+      ),
+      animate(
+        s,
+        entry.frame,
+        [
+          { opacity: live.opacity },
+          { opacity: live.opacity, offset: LANDING_HANDOFF },
+          { opacity: 0 },
+        ],
+        duration,
+        "linear",
       ),
       animate(s, copy, [{ ...live, opacity: 1 }, clipped], duration, ease),
     ]);
@@ -1605,7 +1620,7 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
       const image = doc.createElement("img");
       image.className = "re-lightbox-image";
       image.alt = item.alt || "";
-      if (settings.protect) image.draggable = false;
+      image.draggable = false;
       image.decoding = "async";
       const content =
         item.type === undefined
@@ -2492,24 +2507,6 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
         samples: [],
       };
     };
-    s.dialog.addEventListener(
-      "pointerdown",
-      (event) => {
-        if (
-          !isElement(event.target) ||
-          !event.target.matches(".re-lightbox-image")
-        )
-          return;
-        if (
-          event.pointerType === "mouse" &&
-          !settings.protect &&
-          state.zoom.scale <= 1
-        )
-          event.target.setAttribute("data-carousel-no-drag", "");
-        else event.target.removeAttribute("data-carousel-no-drag");
-      },
-      { signal, capture: true },
-    );
     s.viewport.addEventListener(
       "pointerdown",
       (event) => {
@@ -2766,21 +2763,10 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
       "dragstart",
       (event) => {
         if (
-          !isElement(event.target) ||
-          !event.target.matches(".re-lightbox-image")
+          isElement(event.target) &&
+          event.target.matches(".re-lightbox-image")
         )
-          return;
-        if (
-          settings.protect ||
-          state.zoom.scale > 1 ||
-          s.gesture?.axis === "pan" ||
-          s.dialog.dataset.panning
-        ) {
           event.preventDefault();
-          return;
-        }
-        s.pointers.clear();
-        resetGesture();
       },
       { signal },
     );
@@ -2808,7 +2794,16 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
           )
         )
           return;
-        if (!target.closest(".re-lightbox-frame")) {
+        // A pan captures the pointer, which retargets its click to the viewport.
+        const box = s.loaded.get(state.index)?.frame.getBoundingClientRect();
+        const onPhoto =
+          target.closest(".re-lightbox-frame") !== null ||
+          (box !== undefined &&
+            event.clientX >= box.left &&
+            event.clientX <= box.right &&
+            event.clientY >= box.top &&
+            event.clientY <= box.bottom);
+        if (!onPhoto) {
           void close();
           return;
         }
@@ -3487,7 +3482,7 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
     dialog.addEventListener(
       "close",
       () => {
-        if (session !== s) return;
+        if (session !== s || s.phase === "closing") return;
         teardown(s);
         publish({
           isOpen: false,
@@ -3645,7 +3640,19 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
       },
       { signal: abort.signal },
     );
-    (closeButton ?? viewport).focus({ preventScroll: true });
+    const opening = closeButton ?? viewport;
+    // window.event is the click or tap that called open(); a key's click has detail 0.
+    const opener = win?.event;
+    const pointerOpen =
+      opener !== undefined &&
+      (/^(pointer|touch|mouse)/.test(opener.type) ||
+        (opener.type === "click" && (opener as MouseEvent).detail > 0));
+    opening.focus(
+      pointerOpen
+        ? { preventScroll: true, focusVisible: false }
+        : { preventScroll: true },
+    );
+    if (pointerOpen && matches(opening, ":focus-visible")) quietFocus(opening);
     watchControls(s);
     readTiming(s);
     void win?.getComputedStyle(toolbar).opacity;
@@ -3687,6 +3694,17 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
       width: `${box.width}px`,
       height: `${box.height}px`,
     });
+  }
+
+  // A modal dialog keeps the page inert, so the close flight moves to a manual popover: still
+  // above the page, but wheel, touch and clicks pass through to it.
+  function releasePage(s: Session) {
+    const dialog = s.dialog;
+    if (typeof dialog.showPopover !== "function") return;
+    dialog.inert = true;
+    dialog.close();
+    dialog.popover = "manual";
+    dialog.showPopover();
   }
 
   // closed waits for the history back, unless open() or destroy() comes first.
@@ -3732,6 +3750,7 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
     setPhase(s, "closing");
     s.restoreScroll();
     pinToPage(s);
+    releasePage(s);
     let closing: Promise<void> | undefined;
     closing = (async () => {
       await flight(s, true, landing);

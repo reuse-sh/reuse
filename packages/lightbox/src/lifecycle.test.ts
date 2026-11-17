@@ -175,7 +175,7 @@ describe("lightbox lifecycle", () => {
     );
   });
 
-  it("stops a paging move under a touch on the photo, and leaves a mouse press on it to the file drag", () => {
+  it("stops a paging move under a touch on the photo, and leaves a mouse press on it to the strip's drag", () => {
     vi.useFakeTimers({
       toFake: ["requestAnimationFrame", "cancelAnimationFrame", "performance"],
     });
@@ -201,7 +201,7 @@ describe("lightbox lifecycle", () => {
       image.dispatchEvent(event);
     };
     press("mouse");
-    expect(image.hasAttribute("data-carousel-no-drag")).toBe(true);
+    expect(image.hasAttribute("data-carousel-no-drag")).toBe(false);
     window.dispatchEvent(new MouseEvent("pointerup", { button: 0 }));
     controller.next();
     vi.advanceTimersByTime(48);

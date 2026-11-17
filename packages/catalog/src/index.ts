@@ -152,7 +152,7 @@ export const libraries: Library[] = [
       ],
       [
         "Return to what is on screen",
-        "Close goes back to the current photo's tile, after bringing it into view in its own carousel, and fades in place when the tile cannot be seen or the strip is still moving.",
+        "Close goes back to the current photo's tile, after bringing it into view in its own carousel, and fades in place when the tile cannot be seen or the strip is still moving. The page scrolls and takes clicks during the flight, and the tile's container never cuts the photo before it lands.",
         "tests/browser/lightbox-close.spec.ts",
       ],
       [
@@ -172,7 +172,7 @@ export const libraries: Library[] = [
       ],
       [
         "Give focus back quietly",
-        "Focus returns to the photo's tile without a ring after a pointer close, and with one after a keyboard close.",
+        "A click or a tap opens with focus on the close button and no ring. Focus returns to the photo's tile without a ring after a pointer close, and with one after a keyboard close.",
         "tests/browser/lightbox-close.spec.ts",
       ],
       [
@@ -182,7 +182,7 @@ export const libraries: Library[] = [
       ],
       [
         "Hand the photo to the system",
-        "The photo is a real image: the browser's menu saves and copies it, it drags out as a file, and Cmd or Ctrl and C copies it. protect turns these off.",
+        "The photo is a real image: the browser's menu saves and copies it, and Cmd or Ctrl and C copies it. protect turns these off. A mouse drag on it pages like a finger.",
         "tests/browser/lightbox-native.spec.ts",
       ],
       [
@@ -250,7 +250,7 @@ export const libraries: Library[] = [
       "A vertical swipe either way closes past 120px or 0.5px/ms, measured over the last 80ms before the finger lifts. The controls hide after autoHide ms of a still mouse, 2500 by default, and while zoomed, and come back on a key, a 24px move, or a tap. The open and close flights take --re-lightbox-open-duration and --re-lightbox-close-duration on the --re-lightbox-ease curve.",
       "Zoom follows the file's pixels: a double tap, a click or the zoom button goes to 1:1, or to tapZoom (2.5) when that is larger, and maxZoom (1) is a multiple of 1:1. A photo the screen already shows at full resolution has no zoom, and an SVG zooms up to maxZoom times its fitted size, 4 by default. A pinch below 0.75 closes, Ctrl or Cmd with the wheel and a trackpad pinch zoom, and a plain wheel does nothing until you zoom in, then pans. While zoomed the arrow keys pan and a pan glides on release; the next photo is a second swipe once the photo rests against its edge.",
       "A photo more than twice as tall as it is wide that would run past two screens at the screen's width opens at that width, top first, and scrolls; a swipe down closes it only from its top edge, and a double tap shows its whole height. A photo more than three times as wide as it is tall opens whole and zooms to the screen's height on a double tap. PNG, WebP, AVIF, GIF and SVG photos sit on --re-lightbox-media-background, #f2f2f2 in the default theme; JPEG gets none. An SVG takes its size from its own width and height, else its viewBox.",
-      "The photo is a real img: right click and a long press open the browser's image menu, a mouse drag carries the file out of the browser, and Cmd or Ctrl and C copies it as PNG where the browser supports image copy. protect: true turns off the menu, the drag and the copy. A swipe that passes the closing distance taps the vibration motor once where the device has one.",
+      "The photo is a real img: right click and a long press open the browser's image menu, a mouse drag on it pages like a swipe, and Cmd or Ctrl and C copies it as PNG where the browser supports image copy. protect: true turns off the menu and the copy. A swipe that passes the closing distance taps the vibration motor once where the device has one.",
       'Built-in controls: the counter sits top left before the toolbarStart slot, and zoom, slideshow, fullscreen, download, the toolbarEnd slot and close sit top right; the arrows sit at the sides, previous on the right and next on the left with mirrored icons on a right-to-left page, and hide below 480px. controls turns each one on or off, and fullscreen, download and slideshow start off. Fullscreen covers the viewer\'s stage, since browsers refuse a dialog, and is missing where document.fullscreenEnabled is false. Download links the widest srcset candidate, else src. thumbnails: "bottom" is a carousel strip that keeps the current thumbnail centered and takes one Tab stop with arrow keys inside; "side" is a column at the end edge that becomes the strip below 720px, and both hide below 480px of height. caption: "side" moves captions into the aside panel. The slideshow advances every slideshow.interval ms, 4000 by default, springs back to the first photo at the end without loop, and publishes --re-lightbox-slideshow-progress from 0 to 1.',
       "Paging runs on the carousel package. Only the current and neighboring images stay loaded. Next and previous scroll smoothly, and a jump from a distant thumbnail fades through the backdrop so unloaded pages never flash past.",
       "Give an item a srcset and the viewer picks the file: it sets sizes to the photo's shown width, or uses yours, and 150ms after a zoom comes to rest asks for the zoomed width, swapping the file in only once it has decoded and never for a smaller one. While the photo flies open it shows the tile's loaded pixels or previewSrc. The current photo loads at high fetch priority and its neighbors at low priority once it has decoded, and Save-Data skips the neighbors. A photo still loading after 300ms shows a spinner from @reuse-sh/loaders over the --re-lightbox-placeholder background, and a failed one shows strings.error with a strings.retry button.",
