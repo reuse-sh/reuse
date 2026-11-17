@@ -683,7 +683,11 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
     if (s.dialog.dataset.zoomable !== clickable)
       s.dialog.dataset.zoomable = clickable;
     const hidden = !zoomable && state.zoom.scale <= 1;
-    if (s.zoomButton.hidden !== hidden) s.zoomButton.hidden = hidden;
+    if (s.zoomButton.hidden !== hidden) {
+      if (hidden && s.dialog.ownerDocument.activeElement === s.zoomButton)
+        s.viewport.focus({ preventScroll: true });
+      s.zoomButton.hidden = hidden;
+    }
     s.viewport.style.touchAction = state.zoom.scale > 1 ? "none" : "pan-x";
     s.zoomButton.setAttribute(
       "aria-label",
@@ -776,6 +780,7 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
     if (!motion) return;
     const zoom = liveZoom(s);
     s.zoomMotion = undefined;
+    s.animations.delete(motion.animation);
     motion.animation.cancel();
     updateState({ zoom });
     applyZoom(s, false);
@@ -785,7 +790,10 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
     const from = liveZoom(s);
     const previous = s.zoomMotion;
     s.zoomMotion = undefined;
-    previous?.animation.cancel();
+    if (previous) {
+      s.animations.delete(previous.animation);
+      previous.animation.cancel();
+    }
     updateState({ zoom: to });
     applyZoom(s, false);
     const frame = s.loaded.get(state.index)?.frame;
@@ -1606,6 +1614,7 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
       const pinned = gesture.pinned;
       if (
         pinned &&
+        gesture.touch &&
         !pinched &&
         event.type === "pointerup" &&
         Math.abs(dx) > Math.abs(dy) &&
@@ -1851,6 +1860,8 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
           ) < DOUBLE_TAP_DISTANCE
         ) {
           toggleZoom(focus(current));
+          resetGesture();
+          return;
         } else {
           if (pending) chromeInput(s, { type: "tap" });
           if (doubleTap) {
@@ -1862,8 +1873,6 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
             }, DOUBLE_TAP_TIME);
           } else chromeInput(s, { type: "tap" });
         }
-        resetGesture();
-        return;
       }
       if (s.pointers.size > 0) {
         const focusPoint = gesture?.focus;
@@ -1929,9 +1938,13 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
       "wheel",
       (event) => {
         const zooming = event.ctrlKey || event.metaKey;
-        if (state.isClosing || (!zooming && state.zoom.scale <= 1)) return;
+        if (!zooming && (state.isClosing || state.zoom.scale <= 1)) return;
         event.preventDefault();
-        if (s.pointers.size > 0 || (s.animations.size > 0 && !s.zoomMotion))
+        if (
+          state.isClosing ||
+          s.pointers.size > 0 ||
+          (s.animations.size > 0 && !s.zoomMotion)
+        )
           return;
         freezeZoom(s);
         if (zooming) {
@@ -1970,7 +1983,7 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
       clientX?: number;
       clientY?: number;
     };
-    s.dialog.addEventListener(
+    s.viewport.addEventListener(
       "gesturestart",
       (event) => {
         event.preventDefault();
@@ -1987,7 +2000,7 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
       },
       { signal },
     );
-    s.dialog.addEventListener(
+    s.viewport.addEventListener(
       "gesturechange",
       (input) => {
         const event = input as GestureEvent;
@@ -2007,7 +2020,7 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
       },
       { signal },
     );
-    s.dialog.addEventListener(
+    s.viewport.addEventListener(
       "gestureend",
       (event) => {
         event.preventDefault();
@@ -2327,6 +2340,7 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
         s.chromeRoots.push(aside);
       },
     });
+    s.box = measure(viewport);
     update(s);
     s.carousel.goTo(state.index, "instant");
     dialog.addEventListener(
