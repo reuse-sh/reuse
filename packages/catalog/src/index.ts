@@ -1,4 +1,6 @@
 import type { UsagePlatform } from "./usage-types.js";
+
+export { type GestureRow, lightboxGestures } from "./gestures.js";
 /** A name and its explanation: an API entry or a principle. */
 export type Row = readonly [name: string, text: string];
 
@@ -172,11 +174,31 @@ export const libraries: Library[] = [
         "Focus returns to the photo's tile without a ring after a pointer close, and with one after a keyboard close.",
         "tests/browser/lightbox-close.spec.ts",
       ],
+      [
+        "Show every shape readably",
+        "A long screenshot opens at the screen's width and scrolls, a panorama zooms to the screen's height, a transparent photo sits on its own backing, and an SVG takes the size its file declares.",
+        "tests/browser/lightbox-media.spec.ts",
+      ],
+      [
+        "Hand the photo to the system",
+        "The photo is a real image: the browser's menu saves and copies it, it drags out as a file, and Cmd or Ctrl and C copies it. protect turns these off.",
+        "tests/browser/lightbox-native.spec.ts",
+      ],
+      [
+        "Stay light in large galleries",
+        "A thousand photos open as fast as ten. Slides outside the preload window are empty shells, the strip's positions are arithmetic, and the next photo in the direction of travel loads first.",
+        "tests/browser/performance.spec.ts",
+      ],
+      [
+        "Survive every interruption",
+        "Opening, closing, swiping, zooming, resizing, appending or destroying at any moment leaves no dialog, timer, hidden tile, scroll lock or extra history entry behind.",
+        "packages/lightbox/src/session.model.test.ts",
+      ],
     ],
     api: [
       [
         "createLightbox(options?)",
-        "Creates a viewer. Options include loop, history, strings, slots, thumbnails, imageClick, doubleTapZoom, autoHide, maxZoom, padding, className and icons, read again at every open.",
+        "Creates a viewer. Options include loop, history, strings, slots, thumbnails, imageClick, doubleTapZoom, autoHide, maxZoom, protect, padding, className and icons, read again at every open.",
       ],
       [
         "bindLightboxGallery(root, options?)",
@@ -216,6 +238,8 @@ export const libraries: Library[] = [
       'A click on the image zooms by default, and a click beside it closes. On a phone a tap on the photo shows or hides the controls once the 300ms double-tap window passes, a double tap zooms, and a tap beside it closes. For a publishing gallery, set imageClick: "close", which also turns off the double tap.',
       "A vertical swipe either way closes past 120px or 0.5px/ms, measured over the last 80ms before the finger lifts. The controls hide after autoHide ms of a still mouse, 2500 by default, and while zoomed, and come back on a key, a 24px move, or a tap. The open and close flights take --re-lightbox-open-duration and --re-lightbox-close-duration on the --re-lightbox-ease curve.",
       "Zoom follows the file's pixels: a double tap, a click or the zoom button goes to 1:1, or to tapZoom (2.5) when that is larger, and maxZoom (1) is a multiple of 1:1. A photo the screen already shows at full resolution has no zoom, and an SVG zooms up to maxZoom times its fitted size, 4 by default. A pinch below 0.75 closes, Ctrl or Cmd with the wheel and a trackpad pinch zoom, and a plain wheel does nothing until you zoom in, then pans. While zoomed the arrow keys pan and a pan glides on release; the next photo is a second swipe once the photo rests against its edge.",
+      "A photo more than twice as tall as it is wide that would run past two screens at the screen's width opens at that width, top first, and scrolls; a swipe down closes it only from its top edge, and a double tap shows its whole height. A photo more than three times as wide as it is tall opens whole and zooms to the screen's height on a double tap. PNG, WebP, AVIF, GIF and SVG photos sit on --re-lightbox-media-background, #f2f2f2 in the default theme; JPEG gets none. An SVG takes its size from its own width and height, else its viewBox.",
+      "The photo is a real img: right click and a long press open the browser's image menu, a mouse drag carries the file out of the browser, and Cmd or Ctrl and C copies it as PNG where the browser supports image copy. protect: true turns off the menu, the drag and the copy. A swipe that passes the closing distance taps the vibration motor once where the device has one.",
       "Paging runs on the carousel package. Only the current and neighboring images stay loaded. Next and previous scroll smoothly, and a jump from a distant thumbnail fades through the backdrop so unloaded pages never flash past.",
       "Give an item a srcset and the viewer picks the file: it sets sizes to the photo's shown width, or uses yours, and 150ms after a zoom comes to rest asks for the zoomed width, swapping the file in only once it has decoded and never for a smaller one. While the photo flies open it shows the tile's loaded pixels or previewSrc. The current photo loads at high fetch priority and its neighbors at low priority once it has decoded, and Save-Data skips the neighbors. A photo still loading after 300ms shows a spinner from @reuse-sh/loaders over the --re-lightbox-placeholder background, and a failed one shows strings.error with a strings.retry button.",
       "Images are the core. Video, audio, iframe and HTML slides are separate modules: @reuse-sh/lightbox/video, /audio, /iframe, /html and /embed each export a content factory that you pass in the content option. An item picks its module by type; without one it is an image. The embed module turns YouTube and Vimeo links into players and registerEmbed adds more. HTML slides take a function that returns a Node, never an HTML string. Live Photos and HDR are not supported.",
