@@ -109,6 +109,7 @@ ${chrome ?? ""}
         className,
         icons: ICONS,
         thumbnails: options.thumbnails,
+        ...(options.autoHide ? {} : { autoHide: false }),
         label: "Photos",
         padding: window.innerWidth < 560 ? 12 : 24,${slots ? "\n        slots: chromeSlots(() => items, ICONS)," : ""}
       });${idle ? "\n      stopIdle = hideWhenIdle(lightbox);" : ""}

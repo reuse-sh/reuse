@@ -1307,6 +1307,43 @@ describe("lightbox chrome, taps and keys", () => {
     expect(controller.getState().index).toBe(0);
   });
 
+  it("hides the controls on zoom after a tap, though the tapped control keeps :hover", () => {
+    const matches = Element.prototype.matches;
+    vi.spyOn(Element.prototype, "matches").mockImplementation(function (
+      this: Element,
+      selector: string,
+    ) {
+      return selector === ":hover"
+        ? this.classList.contains("re-lightbox-toolbar")
+        : matches.call(this, selector);
+    });
+    const controller = create();
+    controller.open(gallery);
+    controller.zoomTo(2);
+    expect(controller.getState().chrome).toBe("shown");
+    controller.zoomTo(1);
+    touch("pointerdown");
+    touch("pointercancel");
+    controller.zoomTo(2);
+    expect(controller.getState().chrome).toBe("hidden");
+  });
+
+  it("keeps a held dismiss drag where the finger is when the photo lays out again", () => {
+    const controller = create();
+    controller.open(gallery);
+    const frame = dialog().querySelector<HTMLElement>(
+      '.re-lightbox-slide[aria-hidden="false"] .re-lightbox-frame',
+    );
+    touch("pointerdown", 512, 300);
+    touch("pointermove", 512, 400);
+    const dragged = frame?.style.transform;
+    expect(dragged).toContain("translate(0px, 100px)");
+    window.dispatchEvent(new Event("resize"));
+    expect(frame?.style.transform).toBe(dragged);
+    touch("pointerup", 512, 400);
+    expect(controller.getState().isOpen).toBe(true);
+  });
+
   it("closes on Escape while zoomed", () => {
     const controller = create({ history: false });
     controller.open(gallery);
@@ -1356,7 +1393,7 @@ describe("lightbox chrome, taps and keys", () => {
     const tail = [...(counter?.children ?? [])].slice(1);
     controller.next();
     expect(counter?.textContent).toBe("10 / 12");
-    expect([...(counter?.children ?? [])].slice(2)).toEqual(tail);
+    expect([...(counter?.children ?? [])].slice(1)).toEqual(tail);
     expect(status?.textContent).toBe("Image 10 of 12");
     const nodes = [...(counter?.querySelectorAll("span") ?? [])].map(
       (cell) => cell.firstChild,

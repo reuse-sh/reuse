@@ -492,6 +492,16 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
     s.dialog.dataset.phase = phase;
   }
 
+  function easing(value: string) {
+    try {
+      return value && CSS.supports("transition-timing-function", value)
+        ? value
+        : FLIGHT_EASE;
+    } catch {
+      return FLIGHT_EASE;
+    }
+  }
+
   function readTiming(s: Session) {
     const style = s.dialog.ownerDocument.defaultView?.getComputedStyle(
       s.dialog,
@@ -508,14 +518,14 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
       close:
         fixed ??
         milliseconds(read("--re-lightbox-close-duration"), CLOSE_DURATION),
-      ease: read("--re-lightbox-ease").trim() || FLIGHT_EASE,
+      ease: easing(read("--re-lightbox-ease").trim()),
     };
   }
 
   function controlInUse(s: Session) {
     const active = s.dialog.ownerDocument.activeElement;
     return s.chromeRoots.some((root) => {
-      if (root.matches(":hover")) return true;
+      if (s.chrome.lastPointerIsMouse && root.matches(":hover")) return true;
       if (!(active instanceof Element) || active === s.openingFocus)
         return false;
       if (!root.contains(active)) return false;
@@ -591,11 +601,13 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
 
   function applyZoom(s: Session, notify = true) {
     const frame = s.loaded.get(state.index)?.frame;
-    if (frame)
-      frame.style.transform = `translate(${state.zoom.x}px, ${state.zoom.y}px) scale(${state.zoom.scale})`;
-    syncingCarousel = true;
-    s.carousel.setEnabled(state.zoom.scale <= 1 && items.length > 1);
-    syncingCarousel = false;
+    if (s.phase !== "dragging") {
+      if (frame)
+        frame.style.transform = `translate(${state.zoom.x}px, ${state.zoom.y}px) scale(${state.zoom.scale})`;
+      syncingCarousel = true;
+      s.carousel.setEnabled(state.zoom.scale <= 1 && items.length > 1);
+      syncingCarousel = false;
+    }
     s.viewport.style.touchAction = state.zoom.scale > 1 ? "none" : "pan-x";
     s.zoomButton.setAttribute(
       "aria-label",
@@ -944,45 +956,71 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
   function renderCounter(s: Session, direction: 1 | -1 | 0) {
     const text = s.strings.counter(state.index, items.length);
     if (text === s.counterText) return;
-    const after = [...text];
     s.counterText = text;
     const doc = s.dialog.ownerDocument;
-    const cells = [...s.counter.children] as HTMLElement[];
-    while (cells.length > after.length) cells.shift()?.remove();
-    while (cells.length < after.length) {
-      const cell = doc.createElement("span");
-      cell.className = "re-lightbox-counter-cell";
-      cell.append(doc.createElement("span"));
-      s.counter.prepend(cell);
-      cells.unshift(cell);
+    const parts = text.match(/\d+|\D+/g) ?? [];
+    const kind = (part: string) =>
+      /\d/.test(part)
+        ? "re-lightbox-counter-number"
+        : "re-lightbox-counter-text";
+    let nodes = [...s.counter.children] as HTMLElement[];
+    if (
+      nodes.length !== parts.length ||
+      nodes.some((node, index) => node.className !== kind(parts[index]))
+    ) {
+      nodes = parts.map((part) => {
+        const node = doc.createElement("span");
+        node.className = kind(part);
+        return node;
+      });
+      s.counter.replaceChildren(...nodes);
     }
     const roll =
       direction !== 0 &&
       !prefersReducedMotion(s) &&
       typeof s.counter.animate === "function";
-    for (const [index, cell] of cells.entries()) {
-      const char = after[index];
-      const current = cell.lastElementChild as HTMLElement;
-      if (current.textContent === char) continue;
-      while (cell.firstElementChild !== current)
-        cell.firstElementChild?.remove();
-      if (!roll || !current.textContent) {
-        current.textContent = char;
+    for (const [index, node] of nodes.entries()) {
+      const part = parts[index];
+      if (node.className === "re-lightbox-counter-text") {
+        if (node.textContent !== part) node.textContent = part;
         continue;
       }
-      const incoming = doc.createElement("span");
-      incoming.textContent = char;
-      cell.append(incoming);
-      const timing = { duration: 200, easing: "ease" };
-      incoming.animate(
-        [{ translate: `0 ${direction * 100}%` }, { translate: "0 0" }],
-        timing,
-      );
-      const leaving = current.animate(
-        [{ translate: "0 0" }, { translate: `0 ${direction * -100}%` }],
-        { ...timing, fill: "forwards" },
-      );
-      leaving.onfinish = () => current.remove();
+      const cells = [...node.children] as HTMLElement[];
+      while (cells.length > part.length) cells.shift()?.remove();
+      while (cells.length < part.length) {
+        const cell = doc.createElement("span");
+        cell.className = "re-lightbox-counter-cell";
+        cell.append(doc.createElement("span"));
+        node.prepend(cell);
+        cells.unshift(cell);
+      }
+      for (const [at, cell] of cells.entries()) {
+        const digit = part[at];
+        const current = cell.lastElementChild as HTMLElement;
+        if (current.textContent === digit) continue;
+        while (cell.firstElementChild !== current)
+          cell.firstElementChild?.remove();
+        const previous = current.textContent;
+        if (!roll || !previous) {
+          current.textContent = digit;
+          continue;
+        }
+        const incoming = doc.createElement("span");
+        incoming.textContent = digit;
+        cell.append(incoming);
+        current.dataset.char = previous;
+        current.textContent = "";
+        const timing = { duration: 200, easing: "ease" };
+        incoming.animate(
+          [{ translate: `0 ${direction * 100}%` }, { translate: "0 0" }],
+          timing,
+        );
+        const leaving = current.animate(
+          [{ translate: "0 0" }, { translate: `0 ${direction * -100}%` }],
+          { ...timing, fill: "forwards" },
+        );
+        leaving.onfinish = () => current.remove();
+      }
     }
   }
 

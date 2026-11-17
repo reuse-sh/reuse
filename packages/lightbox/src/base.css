@@ -147,6 +147,10 @@
 .re-lightbox-counter {
   white-space: pre;
 }
+.re-lightbox-counter-number {
+  direction: ltr;
+  unicode-bidi: isolate;
+}
 .re-lightbox-counter-cell {
   display: inline-grid;
   overflow: hidden;
@@ -154,6 +158,9 @@
 }
 .re-lightbox-counter-cell > * {
   grid-area: 1 / 1;
+}
+.re-lightbox-counter-cell > [data-char]::before {
+  content: attr(data-char);
 }
 .re-lightbox-status {
   position: absolute;

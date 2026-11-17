@@ -177,6 +177,36 @@ test.describe("lightbox controls with a mouse and keys", () => {
     await expect.poll(async () => (await state(page)).index).toBe(0);
   });
 
+  test("a right-to-left page keeps each number of the counter in reading order", async ({
+    page,
+  }) => {
+    await open(page, { count: 12 });
+    await page.evaluate(() => {
+      document.documentElement.dir = "rtl";
+    });
+    const cells = page.locator(
+      ".re-lightbox-counter-number:last-child .re-lightbox-counter-cell",
+    );
+    const [one, two] = await Promise.all([
+      cells.nth(0).boundingBox(),
+      cells.nth(1).boundingBox(),
+    ]);
+    expect(await cells.allTextContents()).toEqual(["1", "2"]);
+    expect(one && two && one.x < two.x).toBe(true);
+  });
+
+  test("a theme easing the browser rejects still lets the viewer close", async ({
+    page,
+  }) => {
+    await mount(page, "", ["lightbox/base.css", "lightbox/theme.css"]);
+    await page.addStyleTag({
+      content: ".re-lightbox { --re-lightbox-ease: bounce; }",
+    });
+    await openMounted(page);
+    await page.evaluate(() => (window as Window).lightbox.close());
+    await expect(page.locator("dialog")).toHaveCount(0);
+  });
+
   test("three quick ArrowRight presses travel three photos in one direction", async ({
     page,
   }) => {
@@ -200,6 +230,9 @@ test.describe("lightbox controls with a mouse and keys", () => {
     );
     for (let press = 0; press < 3; press++) {
       await page.keyboard.press("ArrowRight");
+      expect(await page.locator(".re-lightbox-counter").textContent()).toBe(
+        `${press + 2} / 6`,
+      );
       await page.waitForTimeout(80);
     }
     const strip = await positions;
