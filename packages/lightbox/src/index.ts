@@ -28,6 +28,7 @@ import {
   fileWidth,
   formatOf,
   isImageFile,
+  largestSource,
   largestWidth,
   lookupFormat,
   type MediaFormat,
@@ -95,6 +96,34 @@ export type LightboxSlot = (context: {
   destroy?: () => void;
 };
 
+export type LightboxControl =
+  | "close"
+  | "arrows"
+  | "counter"
+  | "zoom"
+  | "fullscreen"
+  | "download"
+  | "slideshow";
+
+const defaultControls: Record<LightboxControl, boolean> = {
+  close: true,
+  arrows: true,
+  counter: true,
+  zoom: true,
+  fullscreen: false,
+  download: false,
+  slideshow: false,
+};
+
+export type LightboxIcon =
+  | "close"
+  | "prev"
+  | "next"
+  | "zoom"
+  | "fullscreen"
+  | "download"
+  | "slideshow";
+
 export type LightboxEventName =
   | "open"
   | "opened"
@@ -150,12 +179,15 @@ export interface LightboxOptions {
   maxZoom?: number;
   tapZoom?: number;
   preload?: number;
-  thumbnails?: boolean;
+  controls?: Partial<Record<LightboxControl, boolean>>;
+  thumbnails?: false | "bottom" | "side";
+  caption?: "bottom" | "side";
+  slideshow?: { interval?: number };
   padding?: number;
   duration?: number;
   autoHide?: number | false;
   className?: string;
-  icons?: Partial<Record<"close" | "prev" | "next" | "zoom", () => Node>>;
+  icons?: Partial<Record<LightboxIcon, () => Node>>;
   renderContent?: (context: LightboxContentContext) => undefined | (() => void);
   loop?: boolean;
   history?: boolean;
@@ -206,8 +238,17 @@ type LoadedSlide = {
 
 type Sample = { time: number; x: number; y: number };
 
+type Slideshow = {
+  interval: number;
+  waited: number;
+  since?: number;
+  timer?: ReturnType<typeof setTimeout>;
+  frame?: number;
+};
+
 type Session = {
   dialog: HTMLDialogElement;
+  stage: HTMLDivElement;
   viewport: HTMLDivElement;
   backdrop: HTMLDivElement;
   slides: HTMLDivElement[];
@@ -227,8 +268,15 @@ type Session = {
   tapTimer?: ReturnType<typeof setTimeout>;
   openingFocus: HTMLElement | null;
   zoomed: boolean;
+  footer: HTMLDivElement;
   thumbStrip?: HTMLDivElement;
+  thumbCarousel?: Carousel;
+  roving: number;
   centeredThumb: number;
+  aside?: HTMLDivElement;
+  slideshow?: Slideshow;
+  /** Reasons the slideshow waits, kept while it is off so a start honors them. */
+  pauses: Set<string>;
   abort: AbortController;
   animations: Set<Animation>;
   finishAnimations: Set<() => void>;
@@ -237,13 +285,16 @@ type Session = {
   restoreScroll: () => void;
   hiddenOrigin?: { element: HTMLElement; visibility: string };
   landing?: HTMLImageElement;
-  counter: HTMLSpanElement;
+  counter?: HTMLSpanElement;
   counterText: string;
   status: HTMLDivElement;
   caption: HTMLParagraphElement;
-  prev: HTMLButtonElement;
-  next: HTMLButtonElement;
-  zoomButton: HTMLButtonElement;
+  prev?: HTMLButtonElement;
+  next?: HTMLButtonElement;
+  zoomButton?: HTMLButtonElement;
+  fullscreenButton?: HTMLButtonElement;
+  download?: HTMLAnchorElement;
+  slideshowButton?: HTMLButtonElement;
   thumbs: HTMLButtonElement[];
   makeSlide: () => HTMLDivElement;
   makeThumbs: () => void;
@@ -577,6 +628,117 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
   function setPhase(s: Session, phase: Session["phase"]) {
     s.phase = phase;
     s.dialog.dataset.phase = phase;
+    holdSlideshow(s, "phase", phase !== "open");
+  }
+
+  function slideshowRuns(s: Session) {
+    return (
+      session === s &&
+      !state.isClosing &&
+      !s.pauses.size &&
+      items.length > 1 &&
+      !s.dialog.ownerDocument.hidden
+    );
+  }
+
+  // The wait keeps what it ran before a pause, so a pause only delays the next photo.
+  function scheduleSlideshow(s: Session) {
+    const show = s.slideshow;
+    if (!show) return;
+    const win = s.dialog.ownerDocument.defaultView;
+    const now = win?.performance.now() ?? 0;
+    if (show.since !== undefined) show.waited += now - show.since;
+    clearTimeout(show.timer);
+    if (show.frame !== undefined) win?.cancelAnimationFrame(show.frame);
+    show.timer = show.frame = undefined;
+    const runs = slideshowRuns(s);
+    show.since = runs ? now : undefined;
+    if (!runs || !win) return;
+    show.timer = setTimeout(
+      () => advanceSlideshow(s),
+      Math.max(0, show.interval - show.waited),
+    );
+    if (prefersReducedMotion(s)) return;
+    const tick = () => {
+      const since = show.since;
+      if (since === undefined) return;
+      s.dialog.style.setProperty(
+        "--re-lightbox-slideshow-progress",
+        String(
+          Math.min(
+            1,
+            (show.waited + win.performance.now() - since) / show.interval,
+          ),
+        ),
+      );
+      show.frame = win.requestAnimationFrame(tick);
+    };
+    tick();
+  }
+
+  function holdSlideshow(s: Session, reason: string, isHeld: boolean) {
+    if (s.pauses.has(reason) === isHeld) return;
+    if (isHeld) s.pauses.add(reason);
+    else s.pauses.delete(reason);
+    scheduleSlideshow(s);
+  }
+
+  function restartSlideshow(s: Session) {
+    const show = s.slideshow;
+    if (!show) return;
+    show.waited = 0;
+    show.since = undefined;
+    s.dialog.style.setProperty("--re-lightbox-slideshow-progress", "0");
+    scheduleSlideshow(s);
+  }
+
+  function advanceSlideshow(s: Session) {
+    if (session !== s || !s.slideshow) return;
+    if (s.pointers.size) {
+      restartSlideshow(s);
+      return;
+    }
+    if (looping() || state.index < items.length - 1) step(1);
+    else {
+      // The last photo springs back to the first, as the carousel's autoplay does.
+      finishFade(s, true);
+      syncingCarousel = true;
+      activeChanged(s, 0);
+      s.carousel.goTo(0, "smooth");
+      syncingCarousel = false;
+    }
+    restartSlideshow(s);
+  }
+
+  function toggleSlideshow(s: Session, on = !s.slideshow) {
+    const button = s.slideshowButton;
+    if (on === Boolean(s.slideshow)) return;
+    const show = s.slideshow;
+    if (show) {
+      clearTimeout(show.timer);
+      if (show.frame !== undefined)
+        s.dialog.ownerDocument.defaultView?.cancelAnimationFrame(show.frame);
+      s.slideshow = undefined;
+      s.dialog.style.removeProperty("--re-lightbox-slideshow-progress");
+    } else {
+      const interval = settings.slideshow?.interval;
+      s.slideshow = {
+        interval:
+          interval !== undefined && Number.isFinite(interval) && interval > 0
+            ? interval
+            : 4000,
+        waited: 0,
+      };
+      restartSlideshow(s);
+    }
+    if (on) s.dialog.dataset.slideshow = "playing";
+    else delete s.dialog.dataset.slideshow;
+    if (!button) return;
+    button.setAttribute(
+      "aria-label",
+      on ? s.strings.slideshowStop : s.strings.slideshowStart,
+    );
+    if (!settings.icons?.slideshow) button.textContent = on ? "❚❚" : "▶";
   }
 
   function easing(value: string) {
@@ -770,19 +932,21 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
     if (s.dialog.dataset.zoomable !== clickable)
       s.dialog.dataset.zoomable = clickable;
     const hidden = !zoomable && state.zoom.scale <= 1;
-    if (s.zoomButton.hidden !== hidden) {
-      if (hidden && s.dialog.ownerDocument.activeElement === s.zoomButton)
+    const zoomButton = s.zoomButton;
+    if (zoomButton && zoomButton.hidden !== hidden) {
+      if (hidden && s.dialog.ownerDocument.activeElement === zoomButton)
         s.viewport.focus({ preventScroll: true });
-      s.zoomButton.hidden = hidden;
+      zoomButton.hidden = hidden;
     }
     s.viewport.style.touchAction = state.zoom.scale > 1 ? "none" : "pan-x";
     const out = range.tap < 1 ? state.zoom.scale >= 1 : state.zoom.scale > 1;
-    s.zoomButton.setAttribute(
+    zoomButton?.setAttribute(
       "aria-label",
       out ? s.strings.zoomOut : s.strings.zoomIn,
     );
-    s.zoomButton.setAttribute("aria-pressed", String(state.zoom.scale > 1));
-    if (!settings.icons?.zoom) s.zoomButton.textContent = out ? "−" : "+";
+    zoomButton?.setAttribute("aria-pressed", String(state.zoom.scale > 1));
+    if (zoomButton && !settings.icons?.zoom)
+      zoomButton.textContent = out ? "−" : "+";
     s.dialog.dataset.zoomed = String(state.zoom.scale > 1);
     s.dialog.dataset.zoom = out ? "out" : "in";
     if (s.watchedScale !== state.zoom.scale) {
@@ -793,6 +957,7 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
     if (s.zoomed !== state.zoom.scale > 1) {
       s.zoomed = state.zoom.scale > 1;
       chromeInput(s, { type: s.zoomed ? "zoom" : "unzoom" }, notify);
+      holdSlideshow(s, "zoom", s.zoomed);
     }
   }
 
@@ -1486,12 +1651,14 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
     publish({ index, zoom: restZoom(s, index) });
     update(s, forward ? 1 : -1);
     s.status.textContent = s.strings.slide(index, items.length);
+    restartSlideshow(s);
     emit("change", s);
   }
 
   function renderCounter(s: Session, direction: 1 | -1 | 0) {
+    const counter = s.counter;
     const text = s.strings.counter(state.index, items.length);
-    if (text === s.counterText) return;
+    if (!counter || text === s.counterText) return;
     s.counterText = text;
     const doc = s.dialog.ownerDocument;
     const parts = text.match(/\p{Nd}+(?:[^\p{Nd}\s]\p{Nd}+)*|\P{Nd}+/gu) ?? [];
@@ -1499,7 +1666,7 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
       /\p{Nd}/u.test(part)
         ? "re-lightbox-counter-number"
         : "re-lightbox-counter-text";
-    let nodes = [...s.counter.children] as HTMLElement[];
+    let nodes = [...counter.children] as HTMLElement[];
     if (
       nodes.length !== parts.length ||
       nodes.some((node, index) => node.className !== kind(parts[index]))
@@ -1509,12 +1676,12 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
         node.className = kind(part);
         return node;
       });
-      s.counter.replaceChildren(...nodes);
+      counter.replaceChildren(...nodes);
     }
     const roll =
       direction !== 0 &&
       !prefersReducedMotion(s) &&
-      typeof s.counter.animate === "function";
+      typeof counter.animate === "function";
     for (const [index, node] of nodes.entries()) {
       const part = parts[index];
       if (node.className === "re-lightbox-counter-text") {
@@ -1565,13 +1732,16 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
     loadSlides(s);
     hideOrigin(s);
     renderCounter(s, direction);
-    s.caption.textContent = items[state.index].caption || "";
+    const item = items[state.index];
+    s.caption.textContent = item.caption || "";
     const single = items.length < 2;
-    s.prev.hidden = single;
-    s.next.hidden = single;
-    s.counter.hidden = single;
-    s.prev.disabled = !looping() && state.index === 0;
-    s.next.disabled = !looping() && state.index === items.length - 1;
+    for (const control of [s.prev, s.next, s.counter, s.slideshowButton])
+      if (control) control.hidden = single;
+    if (s.prev) s.prev.disabled = !looping() && state.index === 0;
+    if (s.next)
+      s.next.disabled = !looping() && state.index === items.length - 1;
+    if (single) toggleSlideshow(s, false);
+    s.download?.setAttribute("href", largestSource(item.srcset, item.src));
     const mark = (index: number, current: boolean) => {
       const slide = s.slides[index];
       if (slide) {
@@ -1590,35 +1760,36 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
       mark(state.index, true);
     }
     s.marked = state.index;
+    if (!s.thumbStrip?.contains(s.dialog.ownerDocument.activeElement))
+      rove(s, state.index);
     centerThumb(s);
     applyZoom(s);
   }
 
+  function rove(s: Session, index: number) {
+    if (s.roving === index) return;
+    if (s.thumbs[s.roving]) s.thumbs[s.roving].tabIndex = -1;
+    if (s.thumbs[index]) s.thumbs[index].tabIndex = 0;
+    s.roving = index;
+  }
+
+  // The bottom strip is a carousel that centers the thumbnail; the side column has no carousel
+  // axis, so it scrolls the same way natively.
   function centerThumb(s: Session) {
     const strip = s.thumbStrip;
     const thumb = s.thumbs[state.index];
-    if (
-      !strip ||
-      !thumb ||
-      s.centeredThumb === state.index ||
-      strip.scrollWidth <= strip.clientWidth
-    )
-      return;
-    const reduced = prefersReducedMotion(s);
-    // An RTL strip scrolls through negative positions, where offsetLeft already lies.
-    const max = strip.scrollWidth - strip.clientWidth;
-    const rtl =
-      s.dialog.ownerDocument.defaultView?.getComputedStyle(strip).direction ===
-      "rtl";
-    strip.scrollTo({
-      left: clamp(
-        thumb.offsetLeft - (strip.clientWidth - thumb.offsetWidth) / 2,
-        rtl ? -max : 0,
-        rtl ? 0 : max,
-      ),
-      behavior: s.centeredThumb < 0 || reduced ? "instant" : "smooth",
-    });
+    if (!strip || !thumb || s.centeredThumb === state.index) return;
+    const behavior =
+      s.centeredThumb < 0 || prefersReducedMotion(s) ? "instant" : "smooth";
     s.centeredThumb = state.index;
+    if (s.thumbCarousel) {
+      s.thumbCarousel.goTo(state.index, behavior);
+      return;
+    }
+    strip.scrollTo({
+      top: thumb.offsetTop - (strip.clientHeight - thumb.offsetHeight) / 2,
+      behavior,
+    });
   }
 
   function teardown(s: Session) {
@@ -1635,7 +1806,10 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
     s.resizeFrame = undefined;
     finishFade(s, false);
     cancelAnimations(s);
+    toggleSlideshow(s, false);
+    leaveFullscreen(s);
     s.carousel.destroy();
+    s.thumbCarousel?.destroy();
     for (const entry of s.loaded.values()) entry.cancel();
     for (const slot of s.slots.splice(0)) slot.destroy?.();
     restoreOrigin(s);
@@ -1645,6 +1819,12 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
     s.dialog.remove();
     s.restoreScroll();
     returnFocus(s);
+  }
+
+  function leaveFullscreen(s: Session) {
+    const doc = s.dialog.ownerDocument;
+    if (doc.fullscreenElement === s.stage)
+      void doc.exitFullscreen().catch(() => {});
   }
 
   function returnFocus(s: Session) {
@@ -2646,6 +2826,172 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
       void closeSession(true);
   }
 
+  // The caption panel shows when some photo has a caption, so the photo keeps one width while paging.
+  function placeAside(s: Session) {
+    const needed =
+      Boolean(settings.slots?.aside) ||
+      (settings.caption === "side" && items.some((item) => item.caption));
+    if (needed === Boolean(s.aside)) return;
+    if (s.aside) {
+      s.aside.remove();
+      s.chromeRoots = s.chromeRoots.filter((root) => root !== s.aside);
+      s.aside = undefined;
+      delete s.dialog.dataset.aside;
+    } else {
+      const aside = s.dialog.ownerDocument.createElement("div");
+      aside.className = "re-lightbox-aside";
+      if (settings.caption === "side") aside.append(s.caption);
+      s.stage.append(aside);
+      s.chromeRoots.push(aside);
+      s.aside = aside;
+      s.dialog.dataset.aside = "";
+    }
+    if (s.slides.length && s.dialog.isConnected) {
+      const win = s.dialog.ownerDocument.defaultView;
+      s.resizeFrame ??= win?.requestAnimationFrame(() => resized(s));
+    }
+  }
+
+  // A side column turns into the bottom strip below 720px, where the strip pages as a carousel.
+  function placeThumbs(s: Session) {
+    const strip = s.thumbStrip;
+    if (!strip) return;
+    const win = s.dialog.ownerDocument.defaultView;
+    const side =
+      settings.thumbnails === "side" &&
+      !win?.matchMedia?.("(max-width: 719.98px)").matches;
+    const layout = side ? "side" : "bottom";
+    if (s.dialog.dataset.thumbnails === layout) return;
+    s.dialog.dataset.thumbnails = layout;
+    s.thumbCarousel?.destroy();
+    s.thumbCarousel = undefined;
+    s.chromeRoots = s.chromeRoots.filter((root) => root !== strip);
+    if (side) {
+      s.stage.append(strip);
+      s.chromeRoots.push(strip);
+    } else {
+      s.footer.append(strip);
+      strip.tabIndex = -1;
+      s.thumbCarousel = createCarousel(strip, { drag: true, align: "center" });
+      (
+        s.thumbCarousel as unknown as Record<
+          symbol,
+          { silence(): void } | undefined
+        >
+      )[carouselInternals]?.silence();
+    }
+    s.centeredThumb = -1;
+    centerThumb(s);
+  }
+
+  function watchControls(s: Session) {
+    const doc = s.dialog.ownerDocument;
+    const win = doc.defaultView;
+    const signal = s.abort.signal;
+    doc.addEventListener(
+      "fullscreenchange",
+      () => {
+        const full = doc.fullscreenElement === s.stage;
+        s.fullscreenButton?.setAttribute(
+          "aria-label",
+          full ? s.strings.fullscreenExit : s.strings.fullscreenEnter,
+        );
+        if (full) s.dialog.dataset.fullscreen = "";
+        else delete s.dialog.dataset.fullscreen;
+      },
+      { signal },
+    );
+    doc.addEventListener("visibilitychange", () => scheduleSlideshow(s), {
+      signal,
+    });
+    const hover = (event: PointerEvent, target: EventTarget | null) => {
+      if (event.pointerType !== "mouse") return;
+      holdSlideshow(
+        s,
+        "hover",
+        isNode(target) && s.chromeRoots.some((root) => root.contains(target)),
+      );
+    };
+    s.dialog.addEventListener(
+      "pointerover",
+      (event) => hover(event, event.target),
+      {
+        signal,
+      },
+    );
+    s.dialog.addEventListener(
+      "pointerout",
+      (event) => hover(event, event.relatedTarget),
+      { signal },
+    );
+    if (s.slots.length && win?.MutationObserver) {
+      // :popover-open throws where popovers are missing, so each selector is tried alone.
+      const opened = () =>
+        holdSlideshow(
+          s,
+          "menu",
+          ['[aria-expanded="true"]', "details[open]", ":popover-open"].some(
+            (selector) => {
+              try {
+                return Boolean(s.stage.querySelector(selector));
+              } catch {
+                return false;
+              }
+            },
+          ),
+        );
+      const observer = new win.MutationObserver(opened);
+      observer.observe(s.stage, {
+        subtree: true,
+        attributes: true,
+        attributeFilter: ["aria-expanded", "open"],
+      });
+      s.stage.addEventListener("toggle", opened, { signal, capture: true });
+      signal.addEventListener("abort", () => observer.disconnect());
+    }
+    const strip = s.thumbStrip;
+    if (!strip) return;
+    strip.addEventListener(
+      "keydown",
+      (event) => {
+        const at = s.thumbs.indexOf(event.target as HTMLButtonElement);
+        if (at < 0 || event.altKey || event.ctrlKey || event.metaKey) return;
+        const side = s.dialog.dataset.thumbnails === "side";
+        const rtl = win?.getComputedStyle(strip).direction === "rtl";
+        const forward = side ? "ArrowDown" : rtl ? "ArrowLeft" : "ArrowRight";
+        const back = side ? "ArrowUp" : rtl ? "ArrowRight" : "ArrowLeft";
+        const to = {
+          [forward]: at + 1,
+          [back]: at - 1,
+          Home: 0,
+          End: s.thumbs.length - 1,
+        }[event.key];
+        if (to === undefined) return;
+        event.preventDefault();
+        const index = clamp(to, 0, s.thumbs.length - 1);
+        rove(s, index);
+        s.thumbs[index].focus();
+      },
+      // Ahead of the strip carousel's own keys, which would scroll it instead.
+      { signal, capture: true },
+    );
+    strip.addEventListener(
+      "focusout",
+      (event) => {
+        if (
+          !isNode(event.relatedTarget) ||
+          !strip.contains(event.relatedTarget)
+        )
+          rove(s, state.index);
+      },
+      { signal },
+    );
+    if (settings.thumbnails === "side")
+      win
+        ?.matchMedia?.("(max-width: 719.98px)")
+        .addEventListener("change", () => placeThumbs(s), { signal });
+  }
+
   function mountSlots(
     s: Session,
     places: Record<LightboxSlotName, (node: Node) => void>,
@@ -2692,6 +3038,11 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
     dialog.dataset.chrome = "shown";
     dialog.dataset.phase = "entering";
     if (settings.protect) dialog.dataset.protect = "";
+    const control = (name: LightboxControl) =>
+      settings.controls?.[name] ?? defaultControls[name];
+    const stage = doc.createElement("div");
+    stage.className = "re-lightbox-stage";
+    dialog.append(stage);
     const viewport = doc.createElement("div");
     viewport.className = "re-lightbox-viewport";
     viewport.tabIndex = 0;
@@ -2715,57 +3066,100 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
     const toolbarEnd = doc.createElement("div");
     toolbarEnd.className = "re-lightbox-toolbar-end";
     toolbar.append(toolbarStart, toolbarEnd);
-    dialog.append(backdrop, viewport, toolbar);
+    stage.append(backdrop, viewport, toolbar);
     const abort = new AbortController();
-    const button = (
-      name: "close" | "prev" | "next" | "zoom",
+    const button = <K extends "button" | "a">(
+      tag: K,
+      name: LightboxIcon,
       label: string,
       text: string,
-      action: () => void,
+      action: (() => void) | undefined,
       parent: HTMLElement,
     ) => {
-      const element = doc.createElement("button");
-      element.type = "button";
+      const element = doc.createElement(tag);
+      if (tag === "button") element.setAttribute("type", "button");
       element.className = `re-lightbox-button re-lightbox-${name}`;
       element.setAttribute("aria-label", label);
       const icon = settings.icons?.[name]?.();
       if (icon) element.append(icon);
       else element.textContent = text;
-      element.addEventListener("click", action, { signal: abort.signal });
+      if (action)
+        element.addEventListener("click", action, { signal: abort.signal });
       parent.append(element);
       return element;
     };
-    const zoomButton = button(
-      "zoom",
-      strings.zoomIn,
-      "+",
-      () => toggleZoom(),
-      toolbarEnd,
-    );
-    const closeButton = button(
-      "close",
-      strings.close,
-      "×",
-      () => {
-        void close();
-      },
-      toolbarEnd,
-    );
-    closeButton.autofocus = true;
-    const prev = button("prev", strings.previous, "‹", () => step(-1), dialog);
-    const next = button("next", strings.next, "›", () => step(1), dialog);
+    let counter: HTMLSpanElement | undefined;
+    if (control("counter")) {
+      counter = doc.createElement("span");
+      counter.className = "re-lightbox-counter";
+      counter.setAttribute("aria-hidden", "true");
+      toolbarStart.append(counter);
+    }
+    const zoomButton = control("zoom")
+      ? button(
+          "button",
+          "zoom",
+          strings.zoomIn,
+          "+",
+          () => toggleZoom(),
+          toolbarEnd,
+        )
+      : undefined;
+    const slideshowButton = control("slideshow")
+      ? button(
+          "button",
+          "slideshow",
+          strings.slideshowStart,
+          "▶",
+          () => toggleSlideshow(s),
+          toolbarEnd,
+        )
+      : undefined;
+    const fullscreenButton =
+      control("fullscreen") && doc.fullscreenEnabled
+        ? button(
+            "button",
+            "fullscreen",
+            strings.fullscreenEnter,
+            "⤢",
+            () => {
+              if (doc.fullscreenElement === stage)
+                void doc.exitFullscreen().catch(() => {});
+              else void stage.requestFullscreen().catch(() => {});
+            },
+            toolbarEnd,
+          )
+        : undefined;
+    const download = control("download")
+      ? button("a", "download", strings.download, "↓", undefined, toolbarEnd)
+      : undefined;
+    download?.setAttribute("download", "");
+    const closeButton = control("close")
+      ? button(
+          "button",
+          "close",
+          strings.close,
+          "×",
+          () => void close(),
+          toolbarEnd,
+        )
+      : undefined;
+    if (closeButton) closeButton.autofocus = true;
+    const prev = control("arrows")
+      ? button("button", "prev", strings.previous, "‹", () => step(-1), stage)
+      : undefined;
+    const next = control("arrows")
+      ? button("button", "next", strings.next, "›", () => step(1), stage)
+      : undefined;
     const footer = doc.createElement("div");
     footer.className = "re-lightbox-footer";
-    const counter = doc.createElement("span");
-    counter.className = "re-lightbox-counter";
-    counter.setAttribute("aria-hidden", "true");
     const caption = doc.createElement("p");
     caption.className = "re-lightbox-caption";
-    footer.append(caption, counter);
+    if (settings.caption !== "side") footer.append(caption);
     const status = doc.createElement("div");
     status.className = "re-lightbox-status";
     status.setAttribute("role", "status");
-    dialog.append(footer, status);
+    stage.append(footer, status);
     const thumbs: HTMLButtonElement[] = [];
     let thumbStrip: HTMLDivElement | undefined;
     if (settings.thumbnails) {
@@ -2773,7 +3167,6 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
       thumbStrip.className = "re-lightbox-thumbnails";
       thumbStrip.setAttribute("role", "group");
       thumbStrip.setAttribute("aria-label", strings.thumbnails);
-      footer.append(thumbStrip);
     }
     const makeThumbs = () => {
       if (!thumbStrip) return;
@@ -2782,6 +3175,7 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
         ...items.map((item, i) => {
           const thumb = doc.createElement("button");
           thumb.type = "button";
+          thumb.tabIndex = -1;
           thumb.setAttribute("aria-label", strings.thumbnail(i, items.length));
           const thumbnailSrc = item.thumbnailSrc || item.previewSrc;
           if (thumbnailSrc) {
@@ -2814,6 +3208,7 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
     }
     const s: Session = {
       dialog,
+      stage,
       viewport,
       backdrop,
       slides,
@@ -2823,8 +3218,11 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
       heading: 1,
       strings,
       slots: [],
+      footer,
       thumbStrip,
+      roving: -1,
       centeredThumb: -1,
+      pauses: new Set(["phase"]),
       abort,
       animations: new Set(),
       finishAnimations: new Set(),
@@ -2833,8 +3231,8 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
       phase: "entering",
       timing: { open: OPEN_DURATION, close: CLOSE_DURATION, ease: FLIGHT_EASE },
       chrome: initialChrome(false),
-      chromeRoots: [toolbar, prev, next, footer],
-      openingFocus: closeButton,
+      chromeRoots: [toolbar, footer, ...(prev && next ? [prev, next] : [])],
+      openingFocus: closeButton ?? viewport,
       zoomed: false,
       counter,
       counterText: "",
@@ -2843,6 +3241,9 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
       prev,
       next,
       zoomButton,
+      fullscreenButton,
+      download,
+      slideshowButton,
       thumbs,
       makeSlide,
       makeThumbs,
@@ -2864,18 +3265,15 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
       zoom: restZoom(s, clamp(Math.floor(index), 0, items.length - 1)),
       chrome: "shown",
     });
+    placeAside(s);
     mountSlots(s, {
       toolbarStart: (node) => toolbarStart.append(node),
-      toolbarEnd: (node) => closeButton.before(node),
-      footer: (node) => caption.after(node),
-      aside: (node) => {
-        const aside = doc.createElement("div");
-        aside.className = "re-lightbox-aside";
-        aside.append(node);
-        dialog.append(aside);
-        s.chromeRoots.push(aside);
-      },
+      toolbarEnd: (node) =>
+        closeButton ? closeButton.before(node) : toolbarEnd.append(node),
+      footer: (node) => footer.append(node),
+      aside: (node) => s.aside?.append(node),
     });
+    placeThumbs(s);
     s.box = measure(viewport);
     update(s);
     s.carousel.goTo(state.index, "instant");
@@ -3048,7 +3446,8 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
       },
       { signal: abort.signal },
     );
-    closeButton.focus({ preventScroll: true });
+    (closeButton ?? viewport).focus({ preventScroll: true });
+    watchControls(s);
     readTiming(s);
     void win?.getComputedStyle(toolbar).opacity;
     setPhase(s, "opening");
@@ -3125,6 +3524,7 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
     s.tapTimer = undefined;
     chromeInput(s, { type: "close" });
     publish({ isClosing: true });
+    leaveFullscreen(s);
     s.dialog.style.removeProperty("--re-lightbox-chrome-opacity");
     setPhase(s, "closing");
     s.restoreScroll();
@@ -3222,7 +3622,9 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
     s.loaded = loaded;
     s.marked = undefined;
     s.makeThumbs();
+    s.roving = -1;
     s.centeredThumb = Number.NaN;
+    placeAside(s);
     const changed = target !== state.index;
     if ((changed || !kept || s.carouselLoops) && state.zoom.scale > 1) {
       updateState({ zoom: restZoom(s, target) });

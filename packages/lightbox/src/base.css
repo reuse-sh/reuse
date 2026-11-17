@@ -15,6 +15,11 @@
 .re-lightbox::backdrop {
   background: transparent;
 }
+.re-lightbox-stage {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+}
 .re-lightbox-backdrop {
   position: absolute;
   inset: 0;
@@ -155,11 +160,12 @@
   gap: var(--re-lightbox-gap, 10px);
   pointer-events: none;
 }
-.re-lightbox-footer > :not(.re-lightbox-counter) {
+.re-lightbox-footer > * {
   pointer-events: auto;
 }
-.re-lightbox-counter {
+.re-lightbox-toolbar-start > .re-lightbox-counter {
   white-space: pre;
+  pointer-events: none;
 }
 .re-lightbox-counter-number {
   direction: ltr;
@@ -194,21 +200,68 @@
 .re-lightbox-caption:empty {
   display: none;
 }
+.re-lightbox-aside > .re-lightbox-caption {
+  max-width: none;
+  max-height: none;
+  overflow: visible;
+}
 .re-lightbox-thumbnails {
   position: relative;
+  box-sizing: border-box;
   display: flex;
   max-width: 100%;
   overflow-x: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: none;
 }
-.re-lightbox-thumbnails button {
+.re-lightbox-thumbnails::-webkit-scrollbar {
+  display: none;
+}
+.re-lightbox[data-thumbnails="bottom"] .re-lightbox-thumbnails {
+  padding-inline: calc(50% - var(--re-lightbox-thumbnail-size, 44px) / 2);
+}
+.re-lightbox[data-thumbnails="side"] .re-lightbox-thumbnails::before,
+.re-lightbox[data-thumbnails="side"] .re-lightbox-thumbnails::after {
+  content: "";
   flex: none;
-  overflow: hidden;
-  cursor: pointer;
+  height: calc(
+    50% -
+    var(--re-lightbox-thumbnail-size, 44px) /
+    2 -
+    var(--re-lightbox-thumbnail-gap, 8px)
+  );
 }
-.re-lightbox-thumbnails img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
+.re-lightbox[data-thumbnails="side"] {
+  --re-lightbox-column: calc(
+    var(--re-lightbox-thumbnail-size, 44px) +
+    2 *
+    var(--re-lightbox-thumbnails-padding, 4px) +
+    var(--re-lightbox-inset, 16px)
+  );
+}
+.re-lightbox[data-thumbnails="side"] .re-lightbox-thumbnails {
+  position: absolute;
+  z-index: 2;
+  top: calc(
+    max(var(--re-lightbox-inset, 16px), env(safe-area-inset-top)) +
+    var(--re-lightbox-button-size, 44px) +
+    var(--re-lightbox-gap, 10px)
+  );
+  bottom: max(var(--re-lightbox-inset, 16px), env(safe-area-inset-bottom));
+  inset-inline-end: max(
+    var(--re-lightbox-inset, 16px),
+    env(safe-area-inset-right)
+  );
+  flex-direction: column;
+  max-width: none;
+  overflow-x: hidden;
+  overflow-y: auto;
+}
+.re-lightbox[data-thumbnails="side"][data-aside] .re-lightbox-thumbnails {
+  inset-inline-end: calc(
+    var(--re-lightbox-aside-width, 320px) +
+    var(--re-lightbox-inset, 16px)
+  );
 }
 .re-lightbox-aside {
   position: absolute;
@@ -220,26 +273,56 @@
   max-width: 100%;
   overflow: auto;
 }
-.re-lightbox:has(> .re-lightbox-aside) .re-lightbox-viewport {
+.re-lightbox[data-aside] .re-lightbox-viewport {
   width: calc(100% - var(--re-lightbox-aside-width, 320px));
 }
-.re-lightbox:has(> .re-lightbox-aside) .re-lightbox-next:dir(ltr) {
+.re-lightbox[data-aside] .re-lightbox-next:dir(ltr) {
   right: calc(
     var(--re-lightbox-aside-width, 320px) +
     var(--re-lightbox-arrow-inset, 16px)
   );
 }
-.re-lightbox:has(> .re-lightbox-aside) .re-lightbox-prev:dir(rtl) {
+.re-lightbox[data-aside] .re-lightbox-prev:dir(rtl) {
   left: calc(
     var(--re-lightbox-aside-width, 320px) +
     var(--re-lightbox-arrow-inset, 16px)
   );
 }
-.re-lightbox:has(> .re-lightbox-aside) .re-lightbox-footer {
+.re-lightbox[data-aside] .re-lightbox-footer {
   inset-inline-end: calc(
     var(--re-lightbox-aside-width, 320px) +
     var(--re-lightbox-footer-inset, 72px)
   );
+}
+.re-lightbox[data-thumbnails="side"] .re-lightbox-next:dir(ltr) {
+  right: calc(var(--re-lightbox-column) + var(--re-lightbox-arrow-inset, 16px));
+}
+.re-lightbox[data-thumbnails="side"] .re-lightbox-prev:dir(rtl) {
+  left: calc(var(--re-lightbox-column) + var(--re-lightbox-arrow-inset, 16px));
+}
+.re-lightbox[data-thumbnails="side"][data-aside] .re-lightbox-next:dir(ltr) {
+  right: calc(
+    var(--re-lightbox-aside-width, 320px) +
+    var(--re-lightbox-column) +
+    var(--re-lightbox-arrow-inset, 16px)
+  );
+}
+.re-lightbox[data-thumbnails="side"][data-aside] .re-lightbox-prev:dir(rtl) {
+  left: calc(
+    var(--re-lightbox-aside-width, 320px) +
+    var(--re-lightbox-column) +
+    var(--re-lightbox-arrow-inset, 16px)
+  );
+}
+.re-lightbox-thumbnails button {
+  flex: none;
+  overflow: hidden;
+  cursor: pointer;
+}
+.re-lightbox-thumbnails img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
 .re-lightbox-error {
   position: absolute;
@@ -279,7 +362,8 @@
     .re-lightbox-prev,
     .re-lightbox-next,
     .re-lightbox-footer,
-    .re-lightbox-aside
+    .re-lightbox-aside,
+    .re-lightbox-stage > .re-lightbox-thumbnails
   ) {
   opacity: var(--re-lightbox-chrome-opacity, 1);
   transition: opacity 300ms ease;
@@ -290,7 +374,8 @@
     .re-lightbox-prev,
     .re-lightbox-next,
     .re-lightbox-footer,
-    .re-lightbox-aside
+    .re-lightbox-aside,
+    .re-lightbox-stage > .re-lightbox-thumbnails
   ) {
   transition-delay: 160ms;
 }
@@ -300,7 +385,8 @@
     .re-lightbox-prev,
     .re-lightbox-next,
     .re-lightbox-footer,
-    .re-lightbox-aside
+    .re-lightbox-aside,
+    .re-lightbox-stage > .re-lightbox-thumbnails
   ) {
   transition: none;
 }
@@ -310,7 +396,8 @@
     .re-lightbox-prev,
     .re-lightbox-next,
     .re-lightbox-footer,
-    .re-lightbox-aside
+    .re-lightbox-aside,
+    .re-lightbox-stage > .re-lightbox-thumbnails
   ) {
   transition: opacity var(--re-lightbox-open-duration, 400ms)
     var(--re-lightbox-ease, cubic-bezier(0.32, 0.72, 0, 1));
@@ -321,7 +408,8 @@
     .re-lightbox-prev,
     .re-lightbox-next,
     .re-lightbox-footer,
-    .re-lightbox-aside
+    .re-lightbox-aside,
+    .re-lightbox-stage > .re-lightbox-thumbnails
   ) {
   transition-duration: 150ms;
 }
@@ -335,7 +423,8 @@
     .re-lightbox-prev,
     .re-lightbox-next,
     .re-lightbox-footer,
-    .re-lightbox-aside
+    .re-lightbox-aside,
+    .re-lightbox-stage > .re-lightbox-thumbnails
   ) {
   --re-lightbox-chrome-opacity: 0;
 }
@@ -345,10 +434,16 @@
     .re-lightbox-prev,
     .re-lightbox-next,
     .re-lightbox-footer,
-    .re-lightbox-aside
+    .re-lightbox-aside,
+    .re-lightbox-stage > .re-lightbox-thumbnails
   ),
 .re-lightbox[data-chrome="hidden"]
-  :is(.re-lightbox-toolbar, .re-lightbox-footer, .re-lightbox-aside)
+  :is(
+    .re-lightbox-toolbar,
+    .re-lightbox-footer,
+    .re-lightbox-aside,
+    .re-lightbox-thumbnails
+  )
   * {
   pointer-events: none;
 }
@@ -360,25 +455,36 @@
     width: auto;
     height: var(--re-lightbox-aside-height, 40%);
   }
-  .re-lightbox:has(> .re-lightbox-aside) .re-lightbox-viewport {
+  .re-lightbox[data-aside] .re-lightbox-viewport {
     width: 100%;
     height: calc(100% - var(--re-lightbox-aside-height, 40%));
   }
-  .re-lightbox:has(> .re-lightbox-aside) .re-lightbox-next:dir(ltr) {
+  .re-lightbox[data-aside] .re-lightbox-next:dir(ltr) {
     right: max(
       var(--re-lightbox-arrow-inset, 16px),
       env(safe-area-inset-right)
     );
   }
-  .re-lightbox:has(> .re-lightbox-aside) .re-lightbox-prev:dir(rtl) {
+  .re-lightbox[data-aside] .re-lightbox-prev:dir(rtl) {
     left: max(var(--re-lightbox-arrow-inset, 16px), env(safe-area-inset-left));
   }
-  .re-lightbox:has(> .re-lightbox-aside) .re-lightbox-footer {
+  .re-lightbox[data-aside] .re-lightbox-footer {
     inset-inline-end: var(--re-lightbox-footer-inset, 72px);
     bottom: calc(
       var(--re-lightbox-aside-height, 40%) +
       var(--re-lightbox-inset, 16px)
     );
+  }
+}
+@media (max-width: 479.98px) {
+  .re-lightbox-prev,
+  .re-lightbox-next {
+    display: none;
+  }
+}
+@media (max-height: 479.98px) {
+  .re-lightbox-thumbnails {
+    display: none;
   }
 }
 @media (prefers-reduced-motion: reduce) {

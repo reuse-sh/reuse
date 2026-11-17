@@ -14,7 +14,7 @@ export function PhotoStrip() {
   const { ref, carousel, state } = useCarousel({ align: "start" });
   const lightbox = useLightbox({
     icons: lightboxIcons,
-    thumbnails: true,
+    thumbnails: "bottom",
     onChange: (next) => {
       if (next.isOpen && next.index !== state.index) carousel?.goTo(next.index);
     },

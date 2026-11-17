@@ -25,6 +25,7 @@ These are the rules the code keeps. An adaptation on any framework keeps them to
 - **Show every shape readably.** A long screenshot opens at the screen's width and scrolls, a panorama zooms to the screen's height, a transparent photo sits on its own backing, and an SVG takes the size its file declares.
 - **Hand the photo to the system.** The photo is a real image: the browser's menu saves and copies it, it drags out as a file, and Cmd or Ctrl and C copies it. protect turns these off.
 - **Stay light in large galleries.** A thousand photos open as fast as ten. Slides outside the preload window are empty shells, the strip's positions are arithmetic, and the next photo in the direction of travel loads first.
+- **Let a slideshow yield.** A slideshow waits while the photo is zoomed, the mouse is over the controls, the tab is hidden or a slot's menu is open, and goes on with the time it had left.
 - **Survive every interruption.** Opening, closing, swiping, zooming, resizing, appending or destroying at any moment leaves no dialog, timer, hidden tile, scroll lock or extra history entry behind.
 
 <!-- principles:end -->

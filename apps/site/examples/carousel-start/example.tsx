@@ -56,7 +56,7 @@ const photos = [
 ];
 export function Example() {
   const { ref, carousel, state } = useCarousel({ loop: true, align: "start" });
-  const viewer = useLightbox({ thumbnails: true });
+  const viewer = useLightbox({ thumbnails: "bottom" });
   return (
     <section className="w-full min-w-0">
       <div>

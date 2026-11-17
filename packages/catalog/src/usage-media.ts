@@ -183,7 +183,7 @@ const gallery = bindLightboxGallery(document.querySelector("#gallery"), {});`,
 import { useLightbox } from "@reuse-sh/lightbox/react";
 
 export function ProductGallery() {
-  const lightbox = useLightbox({ thumbnails: true });
+  const lightbox = useLightbox({ thumbnails: "bottom" });
   const items = [
     { src: "/images/print-large.jpg", thumbnailSrc: "/images/print.jpg", alt: "Whole print" },
     { src: "/images/detail-large.jpg", thumbnailSrc: "/images/detail.jpg", alt: "Paper detail" },
@@ -265,7 +265,7 @@ export function ProductGallery() {
             language: "javascript",
             code: `import { bindLightboxGallery } from "@reuse-sh/lightbox";
 
-const gallery = bindLightboxGallery(document.querySelector("#gallery"), { thumbnails: true });`,
+const gallery = bindLightboxGallery(document.querySelector("#gallery"), { thumbnails: "bottom" });`,
             role: "setup",
           },
         ],
@@ -678,7 +678,7 @@ export function ImageLink() {
         blocks: [
           {
             kind: "prose",
-            text: "Enable `thumbnails: true` to show the strip. Each item uses `thumbnailSrc`, then `previewSrc`. Without either, its button shows the image number instead of downloading the full-size asset as a thumbnail.",
+            text: 'Set `thumbnails: "bottom"` to show the strip, or `"side"` for a column at the end edge. Each item uses `thumbnailSrc`, then `previewSrc`. Without either, its button shows the image number instead of downloading the full-size asset as a thumbnail.',
           },
         ],
       },
@@ -792,7 +792,7 @@ const gallery = bindLightboxGallery(document.querySelector("#gallery"), {
         blocks: [
           {
             kind: "prose",
-            text: "Enable `thumbnails: true` to show the strip. Each item uses `thumbnailSrc`, then `previewSrc`. Without either, its button shows the image number instead of downloading the full-size asset as a thumbnail.",
+            text: 'Set `thumbnails: "bottom"` to show the strip, or `"side"` for a column at the end edge. Each item uses `thumbnailSrc`, then `previewSrc`. Without either, its button shows the image number instead of downloading the full-size asset as a thumbnail.',
           },
         ],
       },

@@ -1010,7 +1010,7 @@ describe("lightbox public API", () => {
         if (value.endsWith("missing.jpg")) loaders.push(this);
       },
     );
-    const controller = create({ strings: german, thumbnails: true });
+    const controller = create({ strings: german, thumbnails: "bottom" });
     controller.open(
       [
         { src: "https://example.test/missing.jpg", width: 1600, height: 1200 },

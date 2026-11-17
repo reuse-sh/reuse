@@ -169,11 +169,11 @@ const rules: readonly (readonly [(o: LightboxStyle) => boolean, string])[] = [
   ],
   [
     (o) => o.arrows === "Toolbar",
-    `.re-lightbox-style > :is(.re-lightbox-prev, .re-lightbox-next) { display: none; }`,
+    `.re-lightbox-style .re-lightbox-stage > :is(.re-lightbox-prev, .re-lightbox-next) { display: none; }`,
   ],
   [
     (o) => o.counter === "Toolbar",
-    ".re-lightbox-style .re-lightbox-footer > .re-lightbox-counter { display: none; }",
+    ".re-lightbox-style .re-lightbox-toolbar-start > .re-lightbox-counter { display: none; }",
   ],
   [
     (o) => hasBar(o) && o.zoomButton,
@@ -482,7 +482,7 @@ export function lightboxCode(options: LightboxStyle) {
     Boolean,
   );
   const lines = (items: string) => [
-    ...(options.thumbnails ? ["thumbnails: true,"] : []),
+    ...(options.thumbnails ? ['thumbnails: "bottom",'] : []),
     "autoHide: false,",
     `className: "${LIGHTBOX_STYLE_CLASS}",`,
     ...(slots ? [`slots: chromeSlots(${items}),`] : []),
