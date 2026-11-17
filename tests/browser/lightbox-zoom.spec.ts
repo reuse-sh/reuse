@@ -156,7 +156,10 @@ test.describe("lightbox zoom with a mouse, wheel and trackpad", {
     await expectUnder(page, at, held);
     await page.mouse.click(at.x, at.y);
     await still(page);
-    expect((await state(page)).zoom).toEqual({ scale: 1, x: 0, y: 0 });
+    expect(await state(page)).toMatchObject({
+      isOpen: true,
+      zoom: { scale: 1, x: 0, y: 0 },
+    });
   });
 
   test("a click zooms on a page that also loads the carousel's stylesheet", async ({
@@ -173,7 +176,16 @@ test.describe("lightbox zoom with a mouse, wheel and trackpad", {
       },
     );
     await page.keyboard.press("ArrowRight");
-    await expect.poll(async () => (await state(page)).index).toBe(1);
+    await expect
+      .poll(() =>
+        page.evaluate(() => {
+          const viewport = document.querySelector(
+            ".re-lightbox-viewport",
+          ) as HTMLElement;
+          return viewport.scrollLeft === viewport.clientWidth;
+        }),
+      )
+      .toBe(true);
     await still(page);
     const box = await photo(page);
     await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2);
