@@ -325,7 +325,7 @@ test.describe("lightbox dismiss and taps", { tag: "@touch" }, () => {
       .locator('.re-lightbox-slide[aria-hidden="false"] .re-lightbox-frame')
       .boundingBox();
     await swipe(page, center, { x: 195, y: 522 }, { speed: 0.2 });
-    await page.waitForTimeout(700);
+    await expect(page.locator("dialog")).toHaveAttribute("data-phase", "open");
     expect((await state(page)).isOpen).toBe(true);
     const after = await page
       .locator('.re-lightbox-slide[aria-hidden="false"] .re-lightbox-frame')

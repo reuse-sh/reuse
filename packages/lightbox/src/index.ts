@@ -842,7 +842,11 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
         animation.cancel();
         resolve();
       };
-      const timer = setTimeout(finish, duration + 80);
+      // A timeline that has not advanced by the deadline still lands the last keyframe.
+      const timer = setTimeout(() => {
+        animation.finish();
+        finish();
+      }, duration + 80);
       s.finishAnimations.add(finish);
       void animation.finished.then(finish, finish);
     });

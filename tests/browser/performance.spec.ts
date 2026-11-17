@@ -8,6 +8,7 @@ import {
   recordFrames,
   safariPinch,
   swipe,
+  traceMainThread,
 } from "./harness";
 
 const count = 11;
@@ -83,21 +84,17 @@ test.describe("lightbox performance", { tag: "@desktop" }, () => {
   }) => {
     test.skip(
       browserName !== "chromium",
-      "Frame budgets and long tasks are measured in Chromium.",
+      "Main-thread time is traced in Chromium.",
     );
-    let recording: Awaited<ReturnType<typeof recordFrames>> | undefined;
+    let tracing: Awaited<ReturnType<typeof traceMainThread>> | undefined;
     const { index, zoomed } = await browseTenPhotos(page, async () => {
-      recording = await recordFrames(page);
+      tracing = await traceMainThread(page);
     });
-    const { frames, longTasks } = (await recording?.stop()) ?? {
-      frames: [],
-      longTasks: [],
-    };
+    const tasks = (await tracing?.stop()) ?? [];
     expect(index).toBe(count - 1);
     expect(zoomed).toBeGreaterThan(1);
-    expect(frames.length).toBeGreaterThan(100);
-    expect(frames.filter((frame) => frame > 20)).toEqual([]);
-    expect(longTasks).toEqual([]);
+    expect(tasks.length).toBeGreaterThan(100);
+    expect(tasks.filter((time) => time > 20)).toEqual([]);
   });
 
   test("opens 1000 photos within 100ms, keeps at most 7 slide images and pages ten without a long frame or reading each slide", async ({
