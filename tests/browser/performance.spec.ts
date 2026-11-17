@@ -3,6 +3,7 @@ import {
   countGeometryReads,
   countLayoutReads,
   ctrlWheel,
+  framesUntilIdle,
   mount,
   photo,
   recordFrames,
@@ -46,7 +47,11 @@ async function browseTenPhotos(
       { x: above.x - 200, y: above.y },
       { speed: 2 },
     );
-    await page.waitForTimeout(400);
+    // A swipe that catches the strip still gliding from the last one pages from there.
+    await framesUntilIdle(
+      page,
+      "document.querySelector('.re-lightbox-viewport').scrollLeft",
+    );
   }
   const index = await page.evaluate(
     () =>
