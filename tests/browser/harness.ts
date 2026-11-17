@@ -491,6 +491,49 @@ export async function recordFrames(page: Page) {
   };
 }
 
+type TraceEvent = {
+  name: string;
+  ph: string;
+  pid: number;
+  tid: number;
+  tdur?: number;
+  args?: { name?: string };
+};
+
+// A busy runner stretches frames and tasks by wall time, so this reads the CPU time each
+// task took on the page's main thread from a Chromium trace.
+export async function traceMainThread(page: Page) {
+  const browser = page.context().browser();
+  if (!browser) throw new Error("Tracing needs a browser");
+  await browser.startTracing(page, {
+    categories: ["disabled-by-default-devtools.timeline"],
+  });
+  return {
+    stop: async () => {
+      const { traceEvents } = JSON.parse(
+        (await browser.stopTracing()).toString(),
+      ) as { traceEvents: TraceEvent[] };
+      const main = new Set(
+        traceEvents
+          .filter(
+            (event) =>
+              event.name === "thread_name" &&
+              event.args?.name === "CrRendererMain",
+          )
+          .map((event) => `${event.pid}:${event.tid}`),
+      );
+      return traceEvents.flatMap((event) =>
+        event.ph === "X" &&
+        event.name === "RunTask" &&
+        event.tdur !== undefined &&
+        main.has(`${event.pid}:${event.tid}`)
+          ? [event.tdur / 1000]
+          : [],
+      );
+    },
+  };
+}
+
 // Call before mount, so the page's first frame already runs on the fixed interval.
 export async function frameInterval(page: Page, interval: number) {
   await page.addInitScript((ms) => {
