@@ -76,3 +76,107 @@ export function isImageFile(url: string, base: string) {
     return false;
   }
 }
+
+/** What a file's format says about its pixels: an SVG and an alpha-capable raster can be see-through. */
+export type MediaFormat = "svg" | "transparent" | "opaque";
+
+const ALPHA = /^(?:png|apng|webp|avif|gif)$/;
+
+function formatOfType(type: string): MediaFormat {
+  const subtype = /^image\/([^;,\s]+)/i.exec(type)?.[1].toLowerCase();
+  if (subtype === "svg+xml") return "svg";
+  return subtype && ALPHA.test(subtype) ? "transparent" : "opaque";
+}
+
+const blobFormats = new Map<
+  string,
+  { format?: MediaFormat; lookup: Promise<MediaFormat> }
+>();
+
+/** The format by the URL alone; undefined for a blob: URL until lookupFormat has read its type. */
+export function formatOf(url: string, base: string): MediaFormat | undefined {
+  if (/^data:/i.test(url)) return formatOfType(url.slice(5));
+  if (/^blob:/i.test(url)) return blobFormats.get(url)?.format;
+  let extension: string | undefined;
+  try {
+    extension = /\.([^./]+)$/.exec(new URL(url, base).pathname)?.[1];
+  } catch {}
+  const name = extension?.toLowerCase();
+  if (name === "svg") return "svg";
+  return name && ALPHA.test(name) ? "transparent" : "opaque";
+}
+
+/** Reads a blob: URL's Blob type once per URL; other URLs resolve to formatOf. */
+export function lookupFormat(
+  url: string,
+  base: string,
+  fetcher: (url: string) => Promise<Response>,
+): Promise<MediaFormat> {
+  const known = formatOf(url, base);
+  if (known) return Promise.resolve(known);
+  const cached = blobFormats.get(url);
+  if (cached) return cached.lookup;
+  const entry: { format?: MediaFormat; lookup: Promise<MediaFormat> } = {
+    lookup: fetcher(url)
+      .then((response) => response.blob())
+      .then(
+        (blob) => formatOfType(blob.type),
+        () => "opaque" as const,
+      )
+      .then((format) => {
+        entry.format = format;
+        return format;
+      }),
+  };
+  blobFormats.set(url, entry);
+  return entry.lookup;
+}
+
+const PIXELS: Record<string, number> = {
+  "": 1,
+  px: 1,
+  in: 96,
+  cm: 96 / 2.54,
+  mm: 96 / 25.4,
+  pt: 96 / 72,
+  pc: 16,
+};
+
+function absoluteLength(value: string | null) {
+  const match =
+    /^\s*(\d*\.?\d+(?:e[+-]?\d+)?)\s*(px|in|cm|mm|pt|pc)?\s*$/i.exec(
+      value ?? "",
+    );
+  if (!match) return undefined;
+  const length = Number(match[1]) * PIXELS[(match[2] ?? "").toLowerCase()];
+  return length > 0 ? length : undefined;
+}
+
+/** The root's width and height in absolute units, else the viewBox's, which also completes one of them. */
+export function parseSvgSize(text: string, parser: DOMParser) {
+  const root = parser.parseFromString(text, "image/svg+xml").documentElement;
+  if (root.localName !== "svg") return undefined;
+  const width = absoluteLength(root.getAttribute("width"));
+  const height = absoluteLength(root.getAttribute("height"));
+  if (width && height) return { width, height };
+  const box = (root.getAttribute("viewBox") ?? "")
+    .trim()
+    .split(/[\s,]+/)
+    .map(Number);
+  if (box.length !== 4 || !(box[2] > 0) || !(box[3] > 0)) return undefined;
+  const ratio = box[3] / box[2];
+  if (width) return { width, height: width * ratio };
+  if (height) return { width: height / ratio, height };
+  return { width: box[2], height: box[3] };
+}
+
+/** Fetches the SVG text, which works for same-origin, CORS, data: and blob: URLs. */
+export async function svgSize(
+  url: string,
+  fetcher: (url: string) => Promise<Response>,
+  parser: DOMParser,
+) {
+  const response = await fetcher(url);
+  if (!response.ok) return undefined;
+  return parseSvgSize(await response.text(), parser);
+}

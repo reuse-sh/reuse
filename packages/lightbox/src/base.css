@@ -55,6 +55,9 @@
   flex: none;
   transform-origin: center;
 }
+.re-lightbox-frame[data-transparent]:not([data-loading], [data-error]) {
+  background: var(--re-lightbox-media-background);
+}
 .re-lightbox[data-zoomable="true"] .re-lightbox-frame {
   cursor: zoom-in;
 }

@@ -185,3 +185,141 @@ test.describe("lightbox tall photos with keys and the wheel", {
     await expect.poll(async () => (await state(page)).index).toBe(1);
   });
 });
+
+type Built = { src: string; width?: number; height?: number };
+
+async function openBuilt(page: Page, build: () => Promise<Built[]>) {
+  await mount(
+    page,
+    '<meta name="viewport" content="width=device-width, initial-scale=1">',
+    ["lightbox/base.css", "lightbox/theme.css"],
+  );
+  const items = await page.evaluate(build);
+  await page.evaluate(async (list) => {
+    const { createLightbox } = await import("/modules/lightbox/index.js");
+    const lightbox = createLightbox({ history: false });
+    Object.assign(window, { lightbox });
+    lightbox.open(list, 0);
+  }, items);
+  await expect(page.locator("dialog")).toHaveAttribute("data-phase", "open");
+  await expect(page.locator(".re-lightbox-frame[data-loading]")).toHaveCount(0);
+}
+
+const shownFrame = (page: Page) =>
+  page.locator('.re-lightbox-slide[aria-hidden="false"] .re-lightbox-frame');
+
+async function next(page: Page) {
+  const index = (await state(page)).index;
+  await page.evaluate(() =>
+    (window as Window & { lightbox: { next(): void } }).lightbox.next(),
+  );
+  await expect.poll(async () => (await state(page)).index).toBe(index + 1);
+  await still(page);
+  await expect(shownFrame(page)).not.toHaveAttribute("data-loading");
+}
+
+// The color on screen, read from a screenshot of a 2x2 clip around the point.
+async function pixel(page: Page, x: number, y: number) {
+  const shot = await page.screenshot({
+    clip: { x: Math.round(x) - 1, y: Math.round(y) - 1, width: 2, height: 2 },
+    scale: "css",
+  });
+  return page.evaluate(async (base64) => {
+    const bytes = Uint8Array.from(atob(base64), (c) => c.charCodeAt(0));
+    const bitmap = await createImageBitmap(
+      new Blob([bytes], { type: "image/png" }),
+    );
+    const canvas = document.createElement("canvas");
+    canvas.width = bitmap.width;
+    canvas.height = bitmap.height;
+    const context = canvas.getContext("2d") as CanvasRenderingContext2D;
+    context.drawImage(bitmap, 0, 0);
+    return Array.from(context.getImageData(0, 0, 1, 1).data.slice(0, 3));
+  }, shot.toString("base64"));
+}
+
+test.describe("lightbox transparent and vector files", {
+  tag: "@desktop",
+}, () => {
+  test("a PNG's transparent area shows --re-lightbox-media-background under the photo only, and a JPEG frame gets none", async ({
+    page,
+  }) => {
+    await openBuilt(page, async () => {
+      const canvas = document.createElement("canvas");
+      canvas.width = 800;
+      canvas.height = 600;
+      const context = canvas.getContext("2d") as CanvasRenderingContext2D;
+      context.fillStyle = "#345";
+      context.fillRect(0, 0, 400, 600);
+      const blob = (type: string) =>
+        new Promise<Blob>((resolve) =>
+          canvas.toBlob((file) => resolve(file as Blob), type),
+        );
+      return [
+        canvas.toDataURL("image/png"),
+        URL.createObjectURL(await blob("image/png")),
+        URL.createObjectURL(await blob("image/jpeg")),
+      ].map((src) => ({ src, width: 800, height: 600 }));
+    });
+    const backing = await page.evaluate(() => {
+      const probe = document.createElement("div");
+      probe.style.background = "var(--re-lightbox-media-background)";
+      document.querySelector(".re-lightbox")?.append(probe);
+      const [r, g, b] = (
+        getComputedStyle(probe).backgroundColor.match(/\d+/g) ?? []
+      ).map(Number);
+      probe.remove();
+      return [r, g, b];
+    });
+    await expect(shownFrame(page)).toHaveAttribute("data-transparent", "true");
+    const box = await photo(page);
+    const middle = box.y + box.height / 2;
+    expect(await pixel(page, box.x + box.width * 0.75, middle)).toEqual(
+      backing,
+    );
+    expect(await pixel(page, box.x + box.width * 0.25, middle)).toEqual([
+      0x33, 0x44, 0x55,
+    ]);
+    expect(await pixel(page, box.x - 8, middle)).not.toEqual(backing);
+    await next(page);
+    await expect(shownFrame(page)).toHaveAttribute("data-transparent", "true");
+    await next(page);
+    await expect(shownFrame(page)).not.toHaveAttribute("data-transparent");
+    expect(
+      await shownFrame(page).evaluate(
+        (frame) => getComputedStyle(frame).backgroundColor,
+      ),
+    ).toBe("rgba(0, 0, 0, 0)");
+  });
+
+  test("an SVG with only a viewBox takes its size from it, 800x400 and a blob: 400x800 (browsers decode 300x150 and 75x150), and the blob: one zooms by the vector rule", async ({
+    page,
+  }) => {
+    await openBuilt(page, async () => {
+      const svg = (width: number, height: number) =>
+        `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${width} ${height}"><rect width="${width}" height="${height}" fill="#c96"/></svg>`;
+      return [
+        { src: `data:image/svg+xml,${encodeURIComponent(svg(800, 400))}` },
+        {
+          src: URL.createObjectURL(
+            new Blob([svg(400, 800)], { type: "image/svg+xml" }),
+          ),
+        },
+      ];
+    });
+    let box = await photo(page);
+    expect([Math.round(box.width), Math.round(box.height)]).toEqual([800, 400]);
+    await expect(shownFrame(page)).toHaveAttribute("data-transparent", "true");
+    await next(page);
+    box = await photo(page);
+    expect([Math.round(box.width), Math.round(box.height)]).toEqual([400, 800]);
+    await expect(shownFrame(page)).toHaveAttribute("data-transparent", "true");
+    await page.evaluate(() =>
+      (
+        window as Window & { lightbox: { zoomTo(scale: number): void } }
+      ).lightbox.zoomTo(4),
+    );
+    await still(page);
+    expect((await state(page)).zoom.scale).toBe(4);
+  });
+});

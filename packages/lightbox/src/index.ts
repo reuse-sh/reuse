@@ -24,7 +24,15 @@ import {
   zoomAround,
   zoomLimits,
 } from "./geometry.js";
-import { fileWidth, isImageFile, largestWidth } from "./sources.js";
+import {
+  fileWidth,
+  formatOf,
+  isImageFile,
+  largestWidth,
+  lookupFormat,
+  type MediaFormat,
+  svgSize,
+} from "./sources.js";
 
 export type { Point, Rect, Size, Zoom } from "./geometry.js";
 
@@ -398,10 +406,6 @@ const SPINNER_SIZE = 32;
 
 type Pinned = { index: number; zoom: Zoom; left: boolean; right: boolean };
 
-function isSvg(src: string) {
-  return /^data:image\/svg\+xml[;,]|\.svg(?:$|[?#])/i.test(src);
-}
-
 function sameZoom(a: Zoom, b: Zoom) {
   return a.scale === b.scale && a.x === b.x && a.y === b.y;
 }
@@ -715,7 +719,9 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
       image: imageSize(index, s),
       viewport: view(s),
       padding,
-      svg: Boolean(item && isSvg(item.src)),
+      svg: Boolean(
+        item && formatOf(item.src, s.dialog.ownerDocument.baseURI) === "svg",
+      ),
       maxZoom: settings.maxZoom,
       tapZoom: settings.tapZoom ?? 2.5,
     });
@@ -1228,17 +1234,43 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
           status.remove();
         };
       };
-      const show = (source: HTMLImageElement, width: number) => {
+      const fetcher = (url: string) =>
+        (doc.defaultView ?? globalThis).fetch(url);
+      let shown = "";
+      const display = (url: string) => {
+        shown = url;
+        image.src = url;
+        const mark = (format: MediaFormat | undefined) => {
+          if (format && format !== "opaque") frame.dataset.transparent = "true";
+          else delete frame.dataset.transparent;
+        };
+        const format = formatOf(url, doc.baseURI);
+        mark(format);
+        if (!format)
+          void lookupFormat(url, doc.baseURI, fetcher).then((found) => {
+            if (alive && shown === url) mark(found);
+          });
+      };
+      const show = (source: HTMLImageElement, width: number, size?: Size) => {
         if (!alive || session !== s) return;
         if (entry.natural !== undefined && width <= entry.natural) return;
         entry.natural = width;
-        if (source.naturalWidth && source.naturalHeight) {
-          const ratio = source.naturalHeight / source.naturalWidth;
+        const shape =
+          size ??
+          (source.naturalWidth && source.naturalHeight
+            ? { width: source.naturalWidth, height: source.naturalHeight }
+            : undefined);
+        if (shape) {
+          const ratio = shape.height / shape.width;
           if (!item.width)
-            item.width = item.height ? Math.round(item.height / ratio) : width;
+            item.width = item.height
+              ? Math.round(item.height / ratio)
+              : size
+                ? Math.round(size.width)
+                : width;
           if (!item.height) item.height = Math.round(item.width * ratio);
         }
-        image.src = source.currentSrc || source.src;
+        display(source.currentSrc || source.src);
         frame.removeAttribute("data-loading");
         layout(s);
       };
@@ -1285,14 +1317,36 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
         loader.onload = () => {
           const source = loader.currentSrc || loader.src;
           const width = fileWidth(loader, item.srcset, doc.baseURI);
-          const decoded = () => {
-            if (!alive || session !== s || entry.loader !== loader) return;
-            if (entry.status === "failed") return;
-            if ((loader.currentSrc || loader.src) !== source) return;
+          const current = () =>
+            alive &&
+            session === s &&
+            entry.loader === loader &&
+            entry.status !== "failed" &&
+            (loader.currentSrc || loader.src) === source;
+          const ready = (size?: Size) => {
+            if (!current()) return;
             if (s.flying && image.hasAttribute("src"))
-              entry.commit = () => show(loader, width);
-            else show(loader, width);
+              entry.commit = () => show(loader, width, size);
+            else show(loader, width, size);
             settle("settled");
+          };
+          // An SVG shows once its own size is read, since browsers decode a viewBox-only file at most 300px wide.
+          const decoded = () => {
+            if (!current()) return;
+            const sized = Boolean(item.width && item.height);
+            const format = formatOf(source, doc.baseURI);
+            if (format && (format !== "svg" || sized)) return ready();
+            void lookupFormat(source, doc.baseURI, fetcher)
+              .then((found) =>
+                found === "svg" && !sized
+                  ? svgSize(
+                      source,
+                      fetcher,
+                      new (doc.defaultView ?? globalThis).DOMParser(),
+                    )
+                  : undefined,
+              )
+              .then(ready, () => ready());
           };
           if (typeof loader.decode !== "function") decoded();
           else
@@ -1314,7 +1368,7 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
         loader.src = item.src;
       };
       const preview = previewOf(index);
-      if (preview) image.src = preview;
+      if (preview) display(preview);
       frame.dataset.loading = "true";
       const entry: LoadedSlide = {
         frame,
