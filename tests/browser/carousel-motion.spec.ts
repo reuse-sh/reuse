@@ -140,8 +140,28 @@ test.describe("carousel spring", { tag: "@desktop" }, () => {
     await page.evaluate(() =>
       (window as unknown as { carousel: Strip }).carousel.goTo(4),
     );
-    await page.waitForTimeout(120);
-    await page.mouse.wheel(0, 40);
+    // The wheel lands on the frame the strip passes 300px, since a wheel sent from the test
+    // can arrive after the 500ms move on a busy runner.
+    await page.evaluate(
+      () =>
+        new Promise<void>((resolve) => {
+          const strip = document.getElementById("strip") as HTMLElement;
+          const watch = () => {
+            if (strip.scrollLeft <= 300) return requestAnimationFrame(watch);
+            strip.dispatchEvent(
+              new WheelEvent("wheel", {
+                bubbles: true,
+                cancelable: true,
+                deltaY: 40,
+                clientX: 300,
+                clientY: 100,
+              }),
+            );
+            resolve();
+          };
+          watch();
+        }),
+    );
     const values = await framesUntilIdle(page, scrollLeft);
     const stoppedAt = await page.evaluate(
       () => (window as unknown as { stoppedAt: number }).stoppedAt,
