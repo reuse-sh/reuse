@@ -23,9 +23,9 @@ const lightbox = createLightbox({
       const copy = document.createElement("button");
       copy.type = "button";
       copy.textContent = "Copy link";
-      const copyButton = createCopyButton(copy, { getText: () => link });
       menu.append(field, copy);
       root.append(button, menu);
+      const copyButton = createCopyButton(copy, { getText: () => link });
       const toggle = (open) => {
         menu.hidden = !open;
         button.setAttribute("aria-expanded", String(open));

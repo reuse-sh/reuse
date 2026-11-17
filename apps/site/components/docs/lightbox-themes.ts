@@ -213,6 +213,7 @@ const lightbox = createLightbox({
       info.addEventListener("click", () => {
         const shown = info.closest(".re-lightbox").toggleAttribute("data-info");
         info.setAttribute("aria-pressed", String(shown));
+        window.dispatchEvent(new Event("resize"));
       });
       return { node: info };
     },

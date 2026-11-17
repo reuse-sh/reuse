@@ -1,27 +1,25 @@
 .re-lightbox {
-  --re-lightbox-page: Canvas;
-  --re-lightbox-page-foreground: CanvasText;
-  --re-lightbox-background: var(--re-lightbox-page);
-  --re-lightbox-foreground: var(--re-lightbox-page-foreground);
+  --re-lightbox-background: var(--re-lightbox-page, Canvas);
+  --re-lightbox-foreground: var(--re-lightbox-page-foreground, CanvasText);
   --re-lightbox-control: color-mix(
     in srgb,
-    var(--re-lightbox-page-foreground) 8%,
-    var(--re-lightbox-page)
+    var(--re-lightbox-page-foreground, CanvasText) 8%,
+    var(--re-lightbox-page, Canvas)
   );
   --re-lightbox-control-hover: color-mix(
     in srgb,
-    var(--re-lightbox-page-foreground) 14%,
-    var(--re-lightbox-page)
+    var(--re-lightbox-page-foreground, CanvasText) 14%,
+    var(--re-lightbox-page, Canvas)
   );
-  --re-lightbox-panel: var(--re-lightbox-page);
+  --re-lightbox-panel: var(--re-lightbox-page, Canvas);
   --re-lightbox-placeholder: color-mix(
     in srgb,
-    var(--re-lightbox-page-foreground) 6%,
+    var(--re-lightbox-page-foreground, CanvasText) 6%,
     transparent
   );
   --re-lightbox-media-background: color-mix(
     in srgb,
-    var(--re-lightbox-page-foreground) 5%,
-    var(--re-lightbox-page)
+    var(--re-lightbox-page-foreground, CanvasText) 5%,
+    var(--re-lightbox-page, Canvas)
   );
 }

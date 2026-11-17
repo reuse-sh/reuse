@@ -10,4 +10,5 @@
 }
 .re-lightbox[data-chrome="hidden"] {
   --re-lightbox-background: #000;
+  --re-lightbox-foreground: #8e8e93;
 }

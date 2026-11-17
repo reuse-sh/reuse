@@ -304,7 +304,7 @@ export const libraries: Library[] = [
           {
             path: "examples/carousel",
             title: "Carousel with lightbox",
-            lead: "A strip of photos that opens in the viewer. Close on another photo and the strip has already moved to it, so the photo flies back into its own tile.",
+            lead: "A strip of photos that opens in the viewer. Once the viewer rests on another photo, the strip moves to it, so a close flies back into that photo's own tile.",
             build:
               "a photo carousel that opens in a lightbox and follows the photo shown",
           },
