@@ -2531,7 +2531,11 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
       drag: true,
       loop: looping(),
       onChange: (value) => {
-        if (!syncingCarousel && session?.viewport === viewport)
+        if (
+          !syncingCarousel &&
+          session?.viewport === viewport &&
+          session.resizeFrame === undefined
+        )
           activeChanged(session, value.index);
       },
     });

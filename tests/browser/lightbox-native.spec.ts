@@ -455,6 +455,31 @@ test.describe("lightbox rotation", { tag: "@touch" }, () => {
       ),
     ).toEqual([]);
   });
+
+  test("a rotation at fit keeps the current photo in place", async ({
+    page,
+  }) => {
+    await open(page, {}, 3, 6);
+    await page.evaluate(() => {
+      const changes: number[] = [];
+      Object.assign(window, { changes });
+      (window as Window).lightbox.on("change", () => changes.push(1));
+    });
+    await page.setViewportSize({ width: 844, height: 390 });
+    await page.waitForTimeout(800);
+    expect(
+      await page.evaluate(() => (window as Window).lightbox.getState().index),
+    ).toBe(3);
+    const slide = await page
+      .locator('.re-lightbox-slide[aria-hidden="false"]')
+      .boundingBox();
+    expect(Math.abs(slide?.x ?? Number.NaN)).toBeLessThan(1);
+    expect(
+      await page.evaluate(
+        () => (window as typeof globalThis & { changes: number[] }).changes,
+      ),
+    ).toEqual([]);
+  });
 });
 
 test.describe("lightbox documents", () => {
