@@ -230,6 +230,36 @@ describe("lightbox lifecycle", () => {
     });
   });
 
+  it("lands the last keyframe when the timeline has not advanced by the deadline", () => {
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+    Object.defineProperty(HTMLElement.prototype, "animate", {
+      configurable: true,
+      value(this: HTMLElement, values: Keyframe[]) {
+        let ended = false;
+        return {
+          finished: new Promise<void>(() => {}),
+          finish() {
+            ended = true;
+          },
+          commitStyles: () => {
+            const value = (ended ? values.at(-1) : values[0])?.transform;
+            if (typeof value === "string") this.style.transform = value;
+          },
+          cancel() {},
+        };
+      },
+    });
+    const controller = create({ duration: 280 });
+    controller.open(gallery);
+    controller.zoomTo(2);
+    vi.advanceTimersByTime(1000);
+    const frame = dialog().querySelector<HTMLElement>(".re-lightbox-frame");
+    expect(frame?.style.transform).toBe("translate(0px, 0px) scale(2)");
+    controller.destroy();
+    delete (HTMLElement.prototype as { animate?: unknown }).animate;
+    vi.useRealTimers();
+  });
+
   it("does not let a prior animated zoom overwrite newer wheel geometry", async () => {
     const finishes: Array<() => void> = [];
     Object.defineProperty(HTMLElement.prototype, "animate", {
