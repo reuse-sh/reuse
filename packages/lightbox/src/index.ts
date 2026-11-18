@@ -4648,7 +4648,8 @@ export function createLightbox<Item extends LightboxItem = LightboxItem>(
   }
 
   // The stage keeps its open size, so a page scrollbar that returns does not reflow the viewer,
-  // and the dialog clips it to the page's new client size, which WebKit's dialog box lags behind.
+  // and the dialog clips it to the page's new client width, which WebKit's dialog box lags behind.
+  // The height stays, since iOS can report a client height shorter than the fixed dialog.
   function pinToPage(s: Session, open: DOMRect) {
     const win = s.dialog.ownerDocument.defaultView;
     if (!win) return;
@@ -4665,7 +4666,7 @@ export function createLightbox<Item extends LightboxItem = LightboxItem>(
       top: `${open.top + win.scrollY}px`,
       left: `${open.left + win.scrollX}px`,
       width: `${Math.min(open.width, root.clientWidth)}px`,
-      height: `${Math.min(open.height, root.clientHeight)}px`,
+      height: `${open.height}px`,
     });
   }
 
