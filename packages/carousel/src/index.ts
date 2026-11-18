@@ -311,6 +311,7 @@ export function createCarousel(
   let runningSince: number | undefined;
   let clockFrame = 0;
   let unsettled = false;
+  let stopping = false;
   // Screen readers announce changes to a live region already in the page, not one inserted with its text.
   let silent = false;
   let catchesClicks = true;
@@ -812,6 +813,7 @@ export function createCarousel(
   }
 
   function settle() {
+    stopping = false;
     if (pointer || spring || taken || fingers || grabbedTouch !== undefined)
       return;
     if (
@@ -881,6 +883,7 @@ export function createCarousel(
 
   function stopMove() {
     interrupt(false);
+    stopping = true;
     clearTimeout(settleTimer);
     settleTimer = setTimeout(settle, 180);
   }
@@ -964,6 +967,7 @@ export function createCarousel(
     const moving = glide && releaseSpeed === undefined ? spring : null;
     if (!moving) stopSpring();
     unsettled = true;
+    stopping = false;
     setAnchor(index);
     let target = destination;
     pendingPosition = target;
@@ -1675,7 +1679,9 @@ export function createCarousel(
     clearTimeout(settleTimer);
     settleTimer = setTimeout(settle, 180);
   });
-  listen(viewport, "scrollend", settle);
+  listen(viewport, "scrollend", () => {
+    if (!stopping) settle();
+  });
   listen(
     viewport,
     "wheel",

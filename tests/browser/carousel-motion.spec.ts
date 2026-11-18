@@ -178,6 +178,70 @@ test.describe("carousel spring", { tag: "@desktop" }, () => {
     expect(Math.max(...steps)).toBeLessThan(Math.abs(rest - stoppedAt) / 2);
   });
 
+  for (const input of ["wheel", "press"] as const)
+    test(`after a ${input} stops a move, the strip waits 180ms before it glides to the nearest point`, async ({
+      page,
+    }) => {
+      await setup(page, undefined, input === "press" ? { drag: false } : {});
+      await page.mouse.move(300, 100);
+      await page.evaluate(() =>
+        (window as unknown as { carousel: Strip }).carousel.goTo(4),
+      );
+      const { waited, stoppedAt, rest } = await page.evaluate(
+        (kind) =>
+          new Promise<{ waited: number; stoppedAt: number; rest: number }>(
+            (resolve) => {
+              const strip = document.getElementById("strip") as HTMLElement;
+              let stoppedAt = 0;
+              let stopped = 0;
+              let waited = -1;
+              let changed = 0;
+              let last = 0;
+              const sample = () => {
+                const now = performance.now();
+                if (strip.scrollLeft !== last) changed = now;
+                last = strip.scrollLeft;
+                if (waited < 0 && Math.abs(last - stoppedAt) > 0.5)
+                  waited = now - stopped;
+                if (now - changed > 300)
+                  resolve({ waited, stoppedAt, rest: last });
+                else requestAnimationFrame(sample);
+              };
+              const watch = () => {
+                if (strip.scrollLeft <= 420)
+                  return requestAnimationFrame(watch);
+                strip.dispatchEvent(
+                  kind === "wheel"
+                    ? new WheelEvent("wheel", {
+                        bubbles: true,
+                        cancelable: true,
+                        deltaY: 40,
+                        clientX: 300,
+                        clientY: 100,
+                      })
+                    : new PointerEvent("pointerdown", {
+                        bubbles: true,
+                        pointerType: "mouse",
+                        button: 0,
+                        clientX: 300,
+                        clientY: 100,
+                      }),
+                );
+                stopped = performance.now();
+                stoppedAt = last = strip.scrollLeft;
+                changed = stopped;
+                requestAnimationFrame(sample);
+              };
+              watch();
+            },
+          ),
+        input,
+      );
+      expect(rest % 300).toBe(0);
+      expect(Math.abs(rest - stoppedAt)).toBeLessThanOrEqual(150.5);
+      expect(waited).toBeGreaterThanOrEqual(180);
+    });
+
   test('moveMotion "native" moves with the browser smooth scroll and the spring does not', async ({
     page,
   }) => {
