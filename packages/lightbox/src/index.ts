@@ -2433,7 +2433,7 @@ export function createLightbox<Item extends LightboxItem = LightboxItem>(
     const first = s.thumbs[0]?.getBoundingClientRect();
     const last = s.thumbs.at(-1)?.getBoundingClientRect();
     const strip = s.thumbStrip?.getBoundingClientRect();
-    if (!first || !last || !strip || !strip.width) return false;
+    if (!first || !last || !strip?.width) return false;
     return (
       x >= Math.max(strip.left, Math.min(first.left, last.left)) &&
       x <= Math.min(strip.right, Math.max(first.right, last.right)) &&
