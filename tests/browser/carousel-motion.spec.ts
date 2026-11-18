@@ -292,6 +292,31 @@ test.describe("carousel state", { tag: "@desktop" }, () => {
     ).toBeVisible();
   });
 
+  test("a static strip leaves the controls of a strip that overflows beside it", async ({
+    page,
+  }) => {
+    const next = `<button data-carousel-next>Next</button>`;
+    await setup(
+      page,
+      `<section id="shared"><div id="strip" style="width:600px">${slideRow(2, 200)}</div><div id="long" style="width:600px">${slideRow(4)}</div><div data-carousel-controls="long">${next}</div>${next}</section>
+      <section id="nested"><div id="small" style="width:600px">${slideRow(2, 200)}</div>${next}<div><div id="inner" style="width:600px">${slideRow(4)}</div>${next}</div></section>`,
+    );
+    await page.evaluate(async () => {
+      const { createCarousel } = await import("/modules/carousel/index.js");
+      for (const id of ["long", "small", "inner"])
+        createCarousel(document.getElementById(id) as HTMLElement);
+    });
+    await expect(page.locator("#small")).toHaveAttribute("data-re-static", "");
+    const shown = (selector: string) =>
+      page
+        .locator(selector)
+        .evaluateAll((buttons) =>
+          buttons.map((button) => getComputedStyle(button).display !== "none"),
+        );
+    expect(await shown("#shared [data-carousel-next]")).toEqual([true, true]);
+    expect(await shown("#nested [data-carousel-next]")).toEqual([false, true]);
+  });
+
   test("a drag inside a nested strip that scrolls leaves the outer strip still", async ({
     page,
   }) => {

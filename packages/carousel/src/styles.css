@@ -37,7 +37,13 @@
 }
 
 :where(:has(> .re-carousel[data-re-static]))
-  :is([data-carousel-prev], [data-carousel-next], [data-carousel-dots]) {
+  :is([data-carousel-prev], [data-carousel-next], [data-carousel-dots]):where(
+    :not(
+      :has(> .re-carousel:not([data-re-static])) *,
+      [data-carousel-controls],
+      [data-carousel-controls] *
+    )
+  ) {
   display: none;
 }
 
