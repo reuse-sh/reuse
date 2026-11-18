@@ -112,7 +112,7 @@ export const libraries: Library[] = [
     principles: [
       [
         "Page with native scroll snap",
-        "Pages are a scroll-snap strip from the carousel, so touch and trackpads keep the system's momentum.",
+        "Pages are a scroll-snap strip from the carousel, so touch and trackpads keep the system's momentum. A key, a thumbnail or goTo() during a held mouse drag ends the drag, so its release does not page back.",
       ],
       [
         "Open from the thumbnail and return to it",

@@ -8,7 +8,7 @@ An image viewer that opens from a thumbnail, including a cropped one, and return
 
 These are the rules the code keeps. An adaptation on any framework keeps them too.
 
-- **Page with native scroll snap.** Pages are a scroll-snap strip from the carousel, so touch and trackpads keep the system's momentum.
+- **Page with native scroll snap.** Pages are a scroll-snap strip from the carousel, so touch and trackpads keep the system's momentum. A key, a thumbnail or goTo() during a held mouse drag ends the drag, so its release does not page back.
 - **Open from the thumbnail and return to it.** The image grows out of its cropped preview with the tile's rounded corners and shrinks back into the current photo's tile on close.
 - **Load only what is near.** Only the current and neighboring images load, the current one first, the neighbors not at all under Save-Data, and a long jump skips the pages in between.
 - **Scrub through the strip.** A drag or a wheel on the thumbnail strip swaps the photo as each thumbnail reaches the ring, a scroll that ends in one frame too, with previews standing in until it stops, and reports and announces the photo it stops on once. Arrows, Home and End in the strip page the viewer, the arrows wrapping when loop is on, and focus and the tab stop follow the thumbnail under the ring. A thumbnail is at most three times as wide as it is tall.
