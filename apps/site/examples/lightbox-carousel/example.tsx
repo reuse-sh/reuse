@@ -24,16 +24,14 @@ export function Example() {
     ...item,
     origin: () => images.current[index] ?? null,
   }));
-  const lightbox = useRef(viewer);
-  lightbox.current = viewer;
   const { ref, carousel } = useCarousel({ loop: false });
   const state = useCarouselState(carousel, ({ canPrev, canNext }) => ({
     canPrev,
     canNext,
   }));
   useEffect(() => {
-    if (carousel) return connectCarousel(lightbox.current, carousel);
-  }, [carousel]);
+    if (carousel) return connectCarousel(viewer, carousel);
+  }, [viewer, carousel]);
   return (
     <section className="w-full min-w-0" aria-labelledby="marble-series">
       <div className="mb-3.5 flex items-center gap-2">

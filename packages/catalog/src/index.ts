@@ -260,6 +260,14 @@ export const libraries: Library[] = [
         "Changes any option but container for the next open, and loop and strings at once, and returns the element of a slide. createLightbox copies its options, so changing the object you passed does nothing.",
       ],
       ["destroy()", "Removes listeners and restores the page."],
+      [
+        "useLightbox(options?)",
+        "React: a lightbox that is the same object on every render and holds no React state, so its component does not re-render when the viewer changes. Changed options reach it after the render, and it is destroyed on unmount.",
+      ],
+      [
+        "useLightboxState(lightbox, selector)",
+        "React: re-renders only when the value selector picks changes by Object.is, on the server and during hydration from the initial state.",
+      ],
     ],
     notes: [
       'A click on the image zooms by default, and a click beside it closes. On a phone a tap on the photo shows or hides the controls once the 300ms double-tap window passes, a double tap zooms, and a tap beside it closes. For a publishing gallery, set imageClick: "close", which also turns off the double tap.',
@@ -386,7 +394,7 @@ export const libraries: Library[] = [
       {
         path: "api",
         title: "API",
-        lead: "The browser module exports createLightbox and bindLightboxGallery. The React hook returns the same viewer.",
+        lead: "The browser module exports createLightbox and bindLightboxGallery. @reuse-sh/lightbox/react adds useLightbox, which returns the same viewer, and useLightboxState, which reads part of its state.",
       },
     ],
   },

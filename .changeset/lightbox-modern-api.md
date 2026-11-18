@@ -25,3 +25,4 @@ Migration:
 - A lightbox for a gallery inside a frame, created in the parent page, needs `container: frame.contentDocument.body`.
 - `data-caption` is now `data-lightbox-caption`; a `figcaption` still wins.
 - New: `data-lightbox-options` on a gallery root holds JSON options that fill whatever the lightbox was not given in code. Invalid JSON, an unknown key or a function string throws a `TypeError` naming the element.
+- React: `useLightbox(options)` returns the lightbox itself, the same object on every render, with no `state`, so the component that holds it no longer re-renders while someone pages. Read state with `useLightboxState(lightbox, (state) => state.index)`, which re-renders only when the selected value changes and works on the server. The `Lightbox` render-prop component and the `LightboxHandle` type are gone. A ref that kept the latest handle for `connectCarousel` is no longer needed: pass the lightbox and list it in the effect's dependencies.

@@ -1,5 +1,7 @@
+import { writeFile } from "node:fs/promises";
 import { createRequire } from "node:module";
 import { resolve } from "node:path";
+import { pathToFileURL } from "node:url";
 import { expect, test } from "@playwright/test";
 import { getUsage } from "../../packages/catalog/dist/index.js";
 import { mount } from "./harness";
@@ -160,4 +162,179 @@ createRoot(document.getElementById("app")).render(<App />);`;
       () => (window as unknown as App).__app.lightbox.getState().index,
     ),
   ).toBe(0);
+});
+
+// One app for the client and the server: an owner that holds the lightbox, a trigger, a
+// counter on the index, one on the count and an object selector.
+const lightboxApp = `import { useLightbox, useLightboxState } from "@reuse-sh/lightbox/react";
+import { useLayoutEffect } from "react";
+export const items = [0, 1, 2, 3, 4, 5].map((index) => ({ src: "data:image/gif;base64,R0lGODlhAQABAAAAACw=", width: 1200, height: 800, alt: "Photo " + index }));
+const counts = { renders: {}, commits: {}, handles: {} };
+globalThis.__counts = counts;
+function useCount(name, handle) {
+  counts.renders[name] = (counts.renders[name] ?? 0) + 1;
+  (counts.handles[name] ??= new Set()).add(handle);
+  useLayoutEffect(() => { counts.commits[name] = (counts.commits[name] ?? 0) + 1; });
+}
+function Trigger({ lightbox }) {
+  useCount("trigger", lightbox);
+  return <button type="button" onClick={() => lightbox.open(items, 0)}>Open</button>;
+}
+function Index({ lightbox }) {
+  const index = useLightboxState(lightbox, (state) => state.index);
+  useCount("index", lightbox);
+  return <output data-index="">{index + 1}</output>;
+}
+function Count({ lightbox }) {
+  useLightboxState(lightbox, (state) => state.count);
+  useCount("count", lightbox);
+  return null;
+}
+function Summary({ lightbox }) {
+  const summary = useLightboxState(lightbox, (state) => ({ index: state.index, open: state.isOpen }));
+  return <output data-summary="">{summary.open ? "open" : "closed"} at {summary.index + 1}</output>;
+}
+export function App() {
+  const lightbox = useLightbox({ history: false });
+  useCount("owner", lightbox);
+  if (typeof window !== "undefined") window.__lightbox = lightbox;
+  return <><Trigger lightbox={lightbox} /><Index lightbox={lightbox} /><Count lightbox={lightbox} /><Summary lightbox={lightbox} /></>;
+}`;
+
+async function bundleApp(entry: string, platform: "browser" | "node") {
+  const input = resolve(`apps/site/lightbox-app-${platform}.tsx`);
+  const app = resolve("apps/site/lightbox-app.tsx");
+  const bundle = await rolldown({
+    input,
+    platform,
+    transform: {
+      jsx: { runtime: "automatic" },
+      define: { "process.env.NODE_ENV": '"development"' },
+    },
+    plugins: [
+      {
+        name: "lightbox-app",
+        resolveId(id: string) {
+          if (id === input) return input;
+          if (id === "./lightbox-app.tsx") return app;
+        },
+        load(id: string) {
+          if (id === input) return entry;
+          if (id === app) return lightboxApp;
+        },
+      },
+    ],
+  });
+  const result = await bundle.generate({ format: "esm" });
+  await bundle.close();
+  const chunk = result.output.find(
+    (output: { type: string }) => output.type === "chunk",
+  );
+  return chunk.code as string;
+}
+
+async function serverHtml() {
+  const code = await bundleApp(
+    `import { renderToString } from "react-dom/server";
+import { App } from "./lightbox-app.tsx";
+export const html = renderToString(<App />);`,
+    "node",
+  );
+  const file = test.info().outputPath("server.mjs");
+  await writeFile(file, code);
+  const { html } = await import(pathToFileURL(file).href);
+  return html as string;
+}
+
+test("useLightboxState renders on the server and hydrates without a mismatch", async ({
+  page,
+}) => {
+  const html = await serverHtml();
+  expect(html.replaceAll("<!-- -->", "")).toContain(
+    '<output data-summary="">closed at 1</output>',
+  );
+  const client = await bundleApp(
+    `import { StrictMode } from "react";
+import { hydrateRoot } from "react-dom/client";
+import { App } from "./lightbox-app.tsx";
+window.__errors = [];
+hydrateRoot(document.getElementById("app"), <StrictMode><App /></StrictMode>, {
+  onRecoverableError: (error) => window.__errors.push(String(error)),
+});`,
+    "browser",
+  );
+  await mount(page, `<div id="app">${html}</div>`, [
+    "lightbox/base.css",
+    "lightbox/theme.css",
+  ]);
+  const errors: string[] = [];
+  page.on("console", (message) => {
+    if (message.type() === "error") errors.push(message.text());
+  });
+  await page.addScriptTag({ type: "module", content: client });
+  await page.getByRole("button", { name: "Open" }).click();
+  await expect(page.locator("[data-summary]")).toHaveText("open at 1");
+  expect(
+    await page.evaluate(
+      () => (window as unknown as { __errors: string[] }).__errors,
+    ),
+  ).toEqual([]);
+  expect(errors).toEqual([]);
+});
+
+test("useLightbox holds no state: paging re-renders only the selectors that change, under StrictMode", async ({
+  page,
+}) => {
+  const client = await bundleApp(
+    `import { StrictMode } from "react";
+import { createRoot } from "react-dom/client";
+import { App } from "./lightbox-app.tsx";
+createRoot(document.getElementById("app")).render(<StrictMode><App /></StrictMode>);`,
+    "browser",
+  );
+  await mount(page, '<div id="app"></div>', [
+    "lightbox/base.css",
+    "lightbox/theme.css",
+  ]);
+  const errors: string[] = [];
+  page.on("console", (message) => {
+    if (message.type() === "error") errors.push(message.text());
+  });
+  await page.addScriptTag({ type: "module", content: client });
+  await expect(page.getByRole("button", { name: "Open" })).toBeVisible();
+  type Counts = {
+    renders: Record<string, number>;
+    commits: Record<string, number>;
+    handles: Record<string, Set<unknown>>;
+  };
+  type App = {
+    __counts: Counts;
+    __lightbox: { next(): void; getState(): { index: number } };
+  };
+  const read = () =>
+    page.evaluate(() => {
+      const { renders, commits, handles } = (window as unknown as App).__counts;
+      return {
+        renders: { ...renders },
+        commits: { ...commits },
+        handles: Object.fromEntries(
+          Object.entries(handles).map(([name, set]) => [name, set.size]),
+        ),
+      };
+    });
+  const before = await read();
+  await page.getByRole("button", { name: "Open" }).click();
+  await expect(page.locator("dialog")).toHaveAttribute("data-phase", "open");
+  for (let index = 1; index <= 5; index += 1) {
+    await page.evaluate(() => (window as unknown as App).__lightbox.next());
+    await expect(page.locator("[data-index]")).toHaveText(String(index + 1));
+  }
+  await expect(page.locator("[data-summary]")).toHaveText("open at 6");
+  const after = await read();
+  expect(after.renders.owner - before.renders.owner).toBe(0);
+  expect(after.renders.trigger - before.renders.trigger).toBe(0);
+  expect(after.commits.count - before.commits.count).toBe(1);
+  expect(after.commits.index - before.commits.index).toBe(5);
+  expect(after.handles).toEqual(before.handles);
+  expect(errors).toEqual([]);
 });

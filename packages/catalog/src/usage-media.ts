@@ -646,12 +646,10 @@ export function PhotoStrip() {
   const images = useRef<(HTMLImageElement | null)[]>([]);
   const lightbox = useLightbox();
   const items = photos.map((photo, index) => ({ ...photo, origin: () => images.current[index] ?? null }));
-  const viewer = useRef(lightbox);
-  viewer.current = lightbox;
   const { ref, carousel } = useCarousel();
   useEffect(() => {
-    if (carousel) return connectCarousel(viewer.current, carousel);
-  }, [carousel]);
+    if (carousel) return connectCarousel(lightbox, carousel);
+  }, [lightbox, carousel]);
   return <div ref={ref} className="re-carousel" aria-label="Photos">
     {photos.map((photo, index) => (
       <button key={photo.src} type="button" className="re-carousel__slide basis-1/2" onClick={() => lightbox.open(items, index)}>
