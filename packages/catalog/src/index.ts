@@ -596,6 +596,10 @@ export const libraries: Library[] = [
         "Edit from the keyboard",
         "Marks can be created, selected, moved and deleted with keys, and one drag is one undo step.",
       ],
+      [
+        "Edit the mark itself",
+        "A selected area or line gets handles on its own corners and ends, with no second frame around it, and a drag redraws the mark as it moves.",
+      ],
     ],
     api: [
       [
@@ -616,8 +620,8 @@ export const libraries: Library[] = [
         "Renders an image with its annotations and keeps them placed on resize. Returns update and destroy.",
       ],
       [
-        "createAnnotationEditor(root, options)",
-        "A controlled editor. It reports every change through onChange and leaves storage to you.",
+        "createAnnotationEditor(root, { annotations, onChange, tool?, onPreview?, onSelectionChange?, onToolChange? })",
+        "A controlled editor. It reports every change through onChange and leaves storage to you. onPreview reports the marks while a drag reshapes them and null when it ends, so the image can draw them as they move.",
       ],
       [
         "setAnnotations, setTool, updateSelection, removeSelection, undo, redo, destroy",

@@ -13,6 +13,8 @@ export interface AnnotationEditorOptions {
   tool?: AnnotationTool;
   onSelectionChange?: (index: number | null) => void;
   onToolChange?: (tool: AnnotationTool) => void;
+  /** The marks while a drag reshapes them, then null once it ends, so the image can draw the mark itself as it moves. */
+  onPreview?: (annotations: Annotation[] | null) => void;
 }
 
 type Point = [number, number];
@@ -150,6 +152,11 @@ export function createAnnotationEditor(
   let selected: number | null = null;
   let gesture: Gesture | null = null;
   let preview: Annotation[] | null = null;
+  const setPreview = (next: Annotation[] | null) => {
+    if (next === preview) return;
+    preview = next;
+    options.onPreview?.(next && copy(next));
+  };
   let destroyed = false;
   const undoStack: Annotation[][] = [];
   const redoStack: Annotation[][] = [];
@@ -283,7 +290,7 @@ export function createAnnotationEditor(
     if (destroyed) return;
     const clean = copy(next);
     if (same(annotations, clean)) {
-      preview = null;
+      setPreview(null);
       draw();
       return;
     }
@@ -292,14 +299,14 @@ export function createAnnotationEditor(
       redoStack.length = 0;
     }
     annotations = clean;
-    preview = null;
+    setPreview(null);
     if (selected !== null && !annotations[selected]) select(null);
     draw();
     options.onChange(copy(annotations));
   };
   const cancel = () => {
     gesture = null;
-    preview = null;
+    setPreview(null);
     draw();
   };
   const setTool = (next: AnnotationTool) => {
@@ -333,10 +340,10 @@ export function createAnnotationEditor(
         pointerId: event.pointerId,
       };
       select(index);
-      preview = [
+      setPreview([
         ...copy(annotations),
         created(tool, point, point, event.shiftKey, aspect()),
-      ];
+      ]);
     } else {
       if (!target) {
         select(null);
@@ -372,10 +379,10 @@ export function createAnnotationEditor(
     event.preventDefault();
     const { from, origin, index, mode } = gesture;
     if (mode === "create" && tool !== "select")
-      preview = [
+      setPreview([
         ...origin,
         created(tool, from, point, event.shiftKey, aspect()),
-      ];
+      ]);
     else {
       const annotation = origin[index];
       if (!annotation) return;
@@ -420,8 +427,8 @@ export function createAnnotationEditor(
         line[offset + 1] = end[1];
         next = { ...annotation, line };
       }
-      preview = origin.map((item, atIndex) =>
-        atIndex === index ? next : item,
+      setPreview(
+        origin.map((item, atIndex) => (atIndex === index ? next : item)),
       );
     }
     draw();
@@ -602,7 +609,7 @@ export function createAnnotationEditor(
       if (destroyed) return;
       destroyed = true;
       gesture = null;
-      preview = null;
+      setPreview(null);
       observer.disconnect();
       resizeObserver?.disconnect();
       root.removeEventListener("pointerdown", start);

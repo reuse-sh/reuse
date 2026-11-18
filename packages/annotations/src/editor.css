@@ -74,9 +74,11 @@
 .re-annotation-target[data-kind="line"] {
   height: 18px;
 }
-.re-annotation-target[data-selected="true"] {
-  outline: 2px solid var(--re-annotation-color, #6657c7);
-  outline-offset: 3px;
+.re-annotation-target[data-selected="true"]:is(
+  [data-kind="marker"],
+  [data-kind="pointer"]
+) {
+  box-shadow: 0 0 0 2px var(--re-annotation-color, #6657c7);
 }
 .re-annotation-target:focus-visible,
 .re-annotation-resize:focus-visible {
@@ -85,13 +87,18 @@
 }
 .re-annotation-resize {
   z-index: 1;
-  width: 12px;
-  height: 12px;
-  border: 2px solid var(--re-annotation-color, #6657c7);
-  border-radius: 3px;
+  width: 10px;
+  height: 10px;
+  border: 1.5px solid var(--re-annotation-color, #6657c7);
+  border-radius: 2px;
   background: var(--re-annotation-handle-background, #fff);
   transform: translate(-50%, -50%);
   cursor: crosshair;
+}
+.re-annotation-resize::before {
+  content: "";
+  position: absolute;
+  inset: -8px;
 }
 .re-annotation-fields {
   display: flex;
@@ -122,4 +129,13 @@
   opacity: 0.65;
   font-size: 0.875rem;
   line-height: 1.5;
+}
+.re-annotation-resize:is([data-corner="nw"], [data-corner="se"]) {
+  cursor: nwse-resize;
+}
+.re-annotation-resize:is([data-corner="ne"], [data-corner="sw"]) {
+  cursor: nesw-resize;
+}
+.re-annotation-resize[data-end] {
+  cursor: move;
 }

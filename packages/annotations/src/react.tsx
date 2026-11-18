@@ -106,6 +106,7 @@ export function AnnotationEditor({
   );
   const [localTool, setLocalTool] = useState<AnnotationTool>("select");
   const [selection, setSelection] = useState<number | null>(null);
+  const [preview, setPreview] = useState<Annotation[] | null>(null);
   const activeTool = tool ?? localTool;
   const latest = useRef({
     annotations,
@@ -128,6 +129,7 @@ export function AnnotationEditor({
       tool: latest.current.activeTool,
       onChange: (next) => latest.current.onChange(next),
       onSelectionChange: setSelection,
+      onPreview: setPreview,
       onToolChange: (next) => {
         if (!latest.current.isControlled) setLocalTool(next);
         latest.current.onToolChange?.(next);
@@ -196,7 +198,7 @@ export function AnnotationEditor({
           alt={alt}
           width={width}
           height={height}
-          annotations={annotations}
+          annotations={preview ?? annotations}
         />
       </section>
       {selected &&
