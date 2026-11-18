@@ -556,3 +556,23 @@ test("every library preview plays its real scene and keeps the menu open", async
   }
   expect(errors).toEqual([]);
 });
+
+test("a playing demo stage leaves the visitor's tooltip where the pointer is", async ({
+  page,
+}) => {
+  await page.goto("/demo-stage");
+  await page.locator(".re-stage").scrollIntoViewIfNeeded();
+  await expect(page.locator(".re-stage-cursor[data-visible]")).toHaveCount(1);
+  const github = page.locator('[data-re-tooltip="GitHub"]');
+  const box = await github.boundingBox();
+  if (!box) throw new Error("The GitHub link is not on screen.");
+  await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2, {
+    steps: 3,
+  });
+  const tip = page.getByRole("tooltip").filter({ hasText: "GitHub" });
+  await expect(tip).toBeVisible();
+  const first = await tip.boundingBox();
+  await page.waitForTimeout(2000);
+  await expect(tip).toBeVisible();
+  expect(await tip.boundingBox()).toEqual(first);
+});
