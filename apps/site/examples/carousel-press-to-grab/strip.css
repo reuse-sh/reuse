@@ -1,0 +1,14 @@
+@reference "../../app/globals.css";
+@layer components {
+  .re-pg-strip {
+    --re-carousel-press-scale: 0.96;
+  }
+  .re-pg-strip > .re-carousel__slide {
+    flex-basis: calc((100% - var(--spacing) * 3.5) / 2);
+  }
+  @media (min-width: 48rem) {
+    .re-pg-strip > .re-carousel__slide {
+      flex-basis: calc((100% - var(--spacing) * 7) / 3);
+    }
+  }
+}

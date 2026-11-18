@@ -499,6 +499,39 @@ test("gallery examples give the photo paged to its own tile", async ({
   }
 });
 
+test("only the press to grab example shrinks its slides during a mouse drag", async ({
+  page,
+}) => {
+  const press = async (path: string, scale: string) => {
+    await page.goto(path);
+    const strip = page.locator(`${preview} .re-carousel`);
+    const slide = strip.locator(".re-carousel__slide").first();
+    const box = await strip.boundingBox();
+    if (!box) throw new Error(`No strip on ${path}`);
+    const y = box.y + box.height / 2;
+    // Until hydration creates the carousel, a drag does not mark the strip.
+    await expect(async () => {
+      await page.mouse.move(box.x + box.width / 2, y);
+      await page.mouse.down();
+      await page.mouse.move(box.x + box.width / 2 - 120, y, { steps: 10 });
+      try {
+        await expect(strip).toHaveAttribute("data-re-dragging", "", {
+          timeout: 500,
+        });
+        await expect
+          .poll(() => slide.evaluate((node) => getComputedStyle(node).scale), {
+            message: path,
+          })
+          .toBe(scale);
+      } finally {
+        await page.mouse.up();
+      }
+    }).toPass();
+  };
+  await press("/carousel/examples/press-to-grab", "0.96");
+  await press("/carousel/examples/product-strip", "none");
+});
+
 test("the panel style shows the photo's position once", async ({ page }) => {
   for (const width of [390, 1280]) {
     await page.setViewportSize({ width, height: 844 });

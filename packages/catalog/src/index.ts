@@ -602,6 +602,13 @@ export const libraries: Library[] = [
             lead: "A series of prints at a readable size, one after another. On an article page the strip starts at the text column and runs off the edge.",
             build: "an editorial gallery that starts at the text column",
           },
+          {
+            path: "examples/press-to-grab",
+            title: "Press to grab",
+            lead: "A strip of prints that shrinks a little while a mouse drags it, so the press reads as picking the strip up. Touch and trackpads scroll as usual.",
+            build:
+              "a carousel whose slides shrink slightly while a mouse drags it",
+          },
         ],
       },
       {
