@@ -55,6 +55,14 @@ The server can print the options with the markup. `data-carousel-options` holds 
 
 `setOptions` changes any option except `slides` in place. A key set to `undefined` returns to its value at creation, from code or markup, else the default, and `strings` merge over the creation strings. `useCarousel` compares strings field by field and function strings such as `goTo` by identity, so memoize them or define them outside the component; a new function on every render calls `setOptions` on every render.
 
+A strip whose slides fit carries `data-re-static`. The package CSS hides the prev, next and dots controls that `bindCarouselControls` binds to it and no others. A page that renders its own controls hides them with its own rule:
+
+```css
+.gallery:has(> [data-re-static]) .arrows {
+  display: none;
+}
+```
+
 <!-- examples:start -->
 
 ## Usage
