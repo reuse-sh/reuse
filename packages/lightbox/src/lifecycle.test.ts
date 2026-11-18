@@ -7,6 +7,7 @@ import {
   type Lightbox,
   lightboxItemFromImage,
 } from "./index.js";
+import { video } from "./video.js";
 
 const gallery = Array.from({ length: 6 }, (_, i) => ({
   src: `https://example.test/full-${i}.jpg`,
@@ -1381,6 +1382,27 @@ describe("lightbox public API", () => {
         isClosing: false,
       });
     }
+  });
+
+  it("plays a video item from src with previewSrc as its poster", async () => {
+    const controller = create({
+      history: false,
+      content: [video()],
+      autoplayMedia: false,
+    });
+    controller.open([
+      {
+        type: "video",
+        src: "https://example.test/clip.webm",
+        previewSrc: "https://example.test/poster.jpg",
+      },
+    ]);
+    await new Promise((resolve) => setTimeout(resolve));
+    const player = document.querySelector("video");
+    expect([player?.getAttribute("src"), player?.poster]).toEqual([
+      "https://example.test/clip.webm",
+      "https://example.test/poster.jpg",
+    ]);
   });
 
   it("reads an item from the link, data attributes, the tile and its figure", () => {

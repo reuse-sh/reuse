@@ -136,7 +136,7 @@ export function embed(options: FrameOptions = {}): LightboxContent {
   return {
     type: "embed",
     mount(container, { item, signal, autoplay }): LightboxMounted {
-      const source = item.embed ?? item.src ?? "";
+      const source = item.src ?? "";
       let provider: EmbedProvider | undefined;
       let match: RegExpExecArray | null = null;
       for (const candidate of providers) {

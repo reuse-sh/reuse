@@ -49,7 +49,7 @@ export function iframe(options: FrameOptions = {}): LightboxContent {
     mount(container, { item, signal }): LightboxMounted {
       const frame = frameOf(
         container,
-        item.embed ?? item.src ?? "",
+        item.src ?? "",
         item.alt ?? "",
         options.sandbox,
       );

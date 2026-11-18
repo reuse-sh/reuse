@@ -48,9 +48,8 @@ export function video(): LightboxContent {
       element.controls = true;
       element.playsInline = true;
       element.preload = "metadata";
-      const poster = item.video?.poster || item.previewSrc;
-      if (poster) element.poster = poster;
-      element.src = item.video?.src ?? item.src ?? "";
+      if (item.previewSrc) element.poster = item.previewSrc;
+      element.src = item.src ?? "";
       if (item.alt) element.setAttribute("aria-label", item.alt);
       container.append(element);
       return playerOf(element, autoplay, signal);

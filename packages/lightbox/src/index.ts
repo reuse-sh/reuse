@@ -150,25 +150,36 @@ export interface LightboxEvent {
   preventDefault(): void;
 }
 
-export interface LightboxItem {
-  /** The image file; an item with a type uses it as its media source where its module says so. */
-  src?: string;
-  /** Picks the content module whose type matches; without one the item is an image. */
-  type?: string;
-  video?: { src: string; poster?: string };
-  embed?: string;
-  /** Builds an HTML slide's content; HTML strings are never parsed. */
-  html?: () => Node;
-  srcset?: string;
-  sizes?: string;
-  previewSrc?: string;
-  width?: number;
-  height?: number;
+interface LightboxItemBase {
   alt?: string;
   caption?: string;
+  /** The file's own size; without it the viewer fits the preview's proportions until the file decodes. */
+  width?: number;
+  height?: number;
+  /** Shown while the file loads when the origin has no loaded image, and as a player's poster. */
+  previewSrc?: string;
   thumbnailSrc?: string;
+  /** The tile the photo opens from and closes to, read again whenever the photo changes. */
   origin?: HTMLElement | null | (() => HTMLElement | null);
 }
+
+export interface LightboxImageItem extends LightboxItemBase {
+  type?: undefined;
+  src: string;
+  srcset?: string;
+  sizes?: string;
+}
+
+export interface LightboxMediaItem extends LightboxItemBase {
+  /** Picks the content module whose type matches, such as "video" for video(). */
+  type: string;
+  /** The media file, page or player link its module plays. */
+  src?: string;
+  /** Builds an HTML slide's content; HTML strings are never parsed. */
+  html?: () => Node;
+}
+
+export type LightboxItem = LightboxImageItem | LightboxMediaItem;
 
 export interface LightboxState {
   isOpen: boolean;
@@ -181,14 +192,14 @@ export interface LightboxState {
 }
 
 export interface LightboxContentContext {
-  item: LightboxItem;
+  item: LightboxImageItem;
   index: number;
   container: HTMLElement;
   image: HTMLImageElement;
 }
 
 export interface LightboxMountContext {
-  item: LightboxItem;
+  item: LightboxMediaItem;
   index: number;
   /** Aborts when the slide unmounts. */
   signal: AbortSignal;
@@ -1152,7 +1163,7 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
   function limits(s: Session, index = state.index) {
     const item = items[index];
     const entry = s.loaded.get(index);
-    if (entry?.status === "failed" || item?.type)
+    if (entry?.status === "failed" || item?.type !== undefined)
       return { min: 1, max: 1, tap: 1 };
     return zoomLimits({
       fileWidth: largestWidth(item?.srcset) ?? entry?.natural ?? item?.width,
@@ -1587,7 +1598,13 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
   function requestSizes(s: Session) {
     for (const [index, entry] of s.loaded) {
       const item = items[index];
-      if (!item.srcset || !entry.loader || entry.status === "failed") continue;
+      if (
+        item.type !== undefined ||
+        !item.srcset ||
+        !entry.loader ||
+        entry.status === "failed"
+      )
+        continue;
       const width = fit(index, s).width;
       const scale =
         index === state.index ? Math.min(s.sharpScale, state.zoom.scale) : 1;
@@ -1766,14 +1783,16 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
   // A player mounts in its own layer above the poster, which stays under it.
   function mountMedia(s: Session, index: number, entry: LoadedSlide) {
     const media = entry.media;
-    if (!media || media.mounted || session !== s) return;
+    const item = items[index];
+    if (!media || media.mounted || session !== s || item.type === undefined)
+      return;
     const doc = s.dialog.ownerDocument;
     const holder = doc.createElement("div");
     holder.className = "re-lightbox-media";
     entry.frame.append(holder);
     const abort = new AbortController();
     const mounted = media.content.mount(holder, {
-      item: items[index],
+      item,
       index,
       signal: abort.signal,
       autoplay: s.autoplay,
@@ -1859,13 +1878,13 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
       image.alt = item.alt || "";
       image.draggable = false;
       image.decoding = "async";
-      const content =
-        item.type === undefined
-          ? undefined
-          : settings.content?.find((module) => module.type === item.type);
-      if (content) {
+      if (item.type !== undefined) {
+        const content = settings.content?.find(
+          (module) => module.type === item.type,
+        );
+        if (!content) continue;
         frame.dataset.media = content.type;
-        const poster = item.video?.poster || previewOf(index);
+        const poster = previewOf(index);
         if (poster) image.src = poster;
         frame.append(image);
         s.slides[index].append(frame);
@@ -2043,7 +2062,7 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
           loader.srcset = item.srcset;
           requestSizes(s);
         }
-        loader.src = item.src ?? "";
+        loader.src = item.src;
       };
       const preview = previewOf(index);
       if (preview) display(preview);
@@ -2202,15 +2221,17 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
       s.next.disabled = !looping() && state.index === items.length - 1;
     if (single) toggleSlideshow(s, false);
     if (s.download) {
-      const href = largestSource(item.srcset, item.src ?? "");
+      const href =
+        item.type === undefined ? largestSource(item.srcset, item.src) : "";
       let file = false;
-      try {
-        const url = new URL(href, s.dialog.ownerDocument.baseURI);
-        file =
-          /^(https?|blob):$/.test(url.protocol) ||
-          /^data:image\/(png|jpeg|gif|webp|avif)[;,]/i.test(url.href);
-      } catch {}
-      s.download.hidden = Boolean(item.type) || !file;
+      if (href)
+        try {
+          const url = new URL(href, s.dialog.ownerDocument.baseURI);
+          file =
+            /^(https?|blob):$/.test(url.protocol) ||
+            /^data:image\/(png|jpeg|gif|webp|avif)[;,]/i.test(url.href);
+        } catch {}
+      s.download.hidden = !file;
       if (file) s.download.setAttribute("href", href);
       else s.download.removeAttribute("href");
     }
@@ -4659,8 +4680,6 @@ export function lightboxItemFromImage(
     return {
       type,
       src: media,
-      embed: media,
-      video: { src: media, poster: tile },
       previewSrc: tile,
       width,
       height,

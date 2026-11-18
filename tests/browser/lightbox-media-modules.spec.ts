@@ -89,29 +89,29 @@ async function setup(
         }),
         video: async () => ({
           type: "video",
-          video: { src: await recorded() },
+          src: await recorded(),
         }),
-        still: async () => ({ type: "video", video: { src: "/missing.webm" } }),
-        slow: async () => ({ type: "video", video: { src: "/slow.webm" } }),
+        still: async () => ({ type: "video", src: "/missing.webm" }),
+        slow: async () => ({ type: "video", src: "/slow.webm" }),
         youtube: async () => ({
           type: "embed",
-          embed: "https://www.youtube.com/watch?v=abc123&t=1m30s",
+          src: "https://www.youtube.com/watch?v=abc123&t=1m30s",
         }),
-        script: async () => ({ type: "embed", embed: "java\tscript:alert(1)" }),
-        empty: async () => ({ type: "embed", embed: "" }),
+        script: async () => ({ type: "embed", src: "java\tscript:alert(1)" }),
+        empty: async () => ({ type: "embed", src: "" }),
         shorts: async () => ({
           type: "embed",
-          embed: "https://www.youtube.com/shorts/abc123",
+          src: "https://www.youtube.com/shorts/abc123",
         }),
         unknown: async () => ({
           type: "embed",
-          embed: "https://evil.test/page",
+          src: "https://evil.test/page",
         }),
         page: async () => ({ type: "iframe", src: "https://evil.test/page" }),
         local: async () => ({ type: "iframe", src: "/quick-view" }),
         registered: async () => ({
           type: "embed",
-          embed: "https://videos.test/abc123",
+          src: "https://videos.test/abc123",
         }),
         frameScript: async () => ({
           type: "iframe",
