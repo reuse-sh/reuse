@@ -498,7 +498,9 @@ test("the side column keeps the ring at its middle, a wheel over it opens the ph
   if (!strip) throw new Error("No strip");
   await page.mouse.move(strip.x + strip.width / 2, strip.y + strip.height / 2);
   await page.mouse.wheel(0, 52 * 4);
-  await expect.poll(async () => (await lightbox(page)).index).toBeGreaterThan(0);
+  await expect
+    .poll(async () => (await lightbox(page)).index)
+    .toBeGreaterThan(0);
   await expect.poll(centered).toBeLessThanOrEqual(1);
   expect((await ringBox(page))?.top).toBeCloseTo(before.top, 0);
   await page.evaluate(() => (window as Window).lightbox.goTo(12));
