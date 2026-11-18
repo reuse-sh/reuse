@@ -286,3 +286,35 @@ test.describe("touch @touch", () => {
     ).toBe("shown");
   });
 });
+
+test("a carousel inside an HTML slide keeps the carousel's own gap and slide width", async ({
+  page,
+}) => {
+  await mount(page, "", [
+    "lightbox/base.css",
+    "lightbox/theme.css",
+    "carousel/styles.css",
+  ]);
+  const layout = await page.evaluate(async () => {
+    const { createLightbox } = await import("/modules/lightbox/index.js");
+    const { html } = await import("/modules/lightbox/html.js");
+    const { createCarousel } = await import("/modules/carousel/index.js");
+    const strip = document.createElement("div");
+    strip.style.width = "400px";
+    for (let i = 0; i < 3; i++)
+      strip.append(
+        Object.assign(document.createElement("div"), {
+          textContent: String(i),
+        }),
+      );
+    const lightbox = createLightbox({ history: false, content: [html()] });
+    lightbox.open([{ type: "html", html: () => strip }]);
+    createCarousel(strip);
+    const [first, second] = [...strip.children] as HTMLElement[];
+    return {
+      width: first.offsetWidth,
+      gap: second.offsetLeft - first.offsetLeft - first.offsetWidth,
+    };
+  });
+  expect(layout).toEqual({ width: 400, gap: 16 });
+});

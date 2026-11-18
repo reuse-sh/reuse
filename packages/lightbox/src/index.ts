@@ -327,6 +327,7 @@ type Session = {
   animations: Set<Animation>;
   finishAnimations: Set<(landed?: boolean) => void>;
   previousFocus: HTMLElement | null;
+  releasedFocus?: Element | null;
   input?: "keyboard" | "pointer";
   restoreScroll: () => void;
   hiddenOrigin?: { element: HTMLElement; visibility: string };
@@ -380,6 +381,11 @@ type Session = {
     jumped: boolean;
     jump: () => void;
   };
+  stands?: {
+    moved: Map<HTMLElement, string>;
+    hidden: Map<HTMLElement, string>;
+  };
+  leaving?: number;
 };
 
 const locks = new WeakMap<
@@ -393,6 +399,39 @@ const locks = new WeakMap<
     y: number;
   }
 >();
+
+// A tile often rounds a wrapper that clips the image to its own box rather than the image itself.
+function corners(origin: HTMLElement, rect: DOMRect, win: Window) {
+  const sides = [
+    "borderTopLeftRadius",
+    "borderTopRightRadius",
+    "borderBottomRightRadius",
+    "borderBottomLeftRadius",
+  ] as const;
+  for (
+    let element: HTMLElement | null = origin;
+    element;
+    element = element.parentElement
+  ) {
+    const box = element.getBoundingClientRect();
+    if (
+      Math.abs(box.left - rect.left) > 1 ||
+      Math.abs(box.top - rect.top) > 1 ||
+      Math.abs(box.right - rect.right) > 1 ||
+      Math.abs(box.bottom - rect.bottom) > 1
+    )
+      break;
+    const style = win.getComputedStyle(element);
+    if (element !== origin && style.overflow === "visible") continue;
+    const radii = sides.map((side) => {
+      const value = style[side].split(" ")[0] ?? "";
+      const size = Number.parseFloat(value) || 0;
+      return value.endsWith("%") ? (size * rect.width) / 100 : size;
+    });
+    if (radii.some(Boolean)) return radii;
+  }
+  return [0, 0, 0, 0];
+}
 
 function lockScroll(doc: Document) {
   const win = doc.defaultView;
@@ -452,8 +491,51 @@ function landed(win: Window, event: Event) {
   landings.add(event);
   win.removeEventListener("popstate", back.drain);
   historyBacks.delete(win);
+  releaseScroll(win);
   back.land();
   return true;
+}
+
+// Going back would restore the scroll the page had when the viewer opened and undo a scroll made
+// during the close flight. Chrome and Firefox read the mode of the entry they return to, Safari
+// reads the current mode in a task after popstate, so the page's entry is manual while the viewer
+// has its own entry, the viewer's entry keeps the page's mode for a reload, and the back sets
+// manual again until one task after it lands.
+const heldScrolls = new WeakMap<
+  Window,
+  { mode: ScrollRestoration; release?: object }
+>();
+
+function holdScroll(win: Window) {
+  const held = heldScrolls.get(win);
+  if (held) {
+    held.release = undefined;
+    return held.mode;
+  }
+  const mode = win.history.scrollRestoration;
+  heldScrolls.set(win, { mode });
+  win.history.scrollRestoration = "manual";
+  return mode;
+}
+
+function releaseScroll(win: Window) {
+  const held = heldScrolls.get(win);
+  if (!held || held.release) return;
+  const release = {};
+  held.release = release;
+  const restore = () => {
+    if (held.release !== release) return;
+    heldScrolls.delete(win);
+    win.history.scrollRestoration = held.mode;
+  };
+  const Channel = (win as Window & typeof globalThis).MessageChannel;
+  if (!Channel) return restore();
+  const channel = new Channel();
+  channel.port1.onmessage = () => {
+    channel.port1.close();
+    restore();
+  };
+  channel.port2.postMessage(null);
 }
 
 function goBack(win: Window) {
@@ -468,6 +550,7 @@ function goBack(win: Window) {
   };
   historyBacks.set(win, { drain, land, landing });
   win.addEventListener("popstate", drain);
+  if (heldScrolls.has(win)) win.history.scrollRestoration = "manual";
   win.history.back();
   return landing;
 }
@@ -516,6 +599,7 @@ const KEY_PAN = 0.1;
 const LOADING_DELAY = 300;
 const ZOOM_IDLE = 150;
 const SPINNER_SIZE = 32;
+const LANDING_HANDOFF = 0.7;
 
 type Pinned = { index: number; zoom: Zoom; left: boolean; right: boolean };
 
@@ -760,6 +844,7 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
     else {
       // The last photo springs back to the first, as the carousel's autoplay does.
       finishFade(s, true);
+      clearStands(s);
       syncingCarousel = true;
       activeChanged(s, 0);
       s.carousel.goTo(0, "smooth");
@@ -988,6 +1073,7 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
     const range = limits(s);
     if (s.phase !== "dragging") {
       if (frame) frame.style.transform = zoomTransform(state.zoom);
+      const syncing = syncingCarousel;
       syncingCarousel = true;
       s.carousel.setEnabled(
         state.zoom.scale <= 1 &&
@@ -996,7 +1082,7 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
           s.pointers.size < 2 &&
           items.length > 1,
       );
-      syncingCarousel = false;
+      syncingCarousel = syncing;
     }
     const zoomable = range.max > 1 || range.min < 1;
     const clickable = String(
@@ -1334,10 +1420,12 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
     const scale = crop.width / size.width;
     const x = rect.left + left + crop.width / 2 - viewport.width / 2;
     const y = rect.top + top + crop.height / 2 - viewport.height / 2;
-    const radius = (Number.parseFloat(style.borderRadius) || 0) / scale;
+    const radius = corners(origin, rect, win)
+      .map((corner) => `${corner / scale}px`)
+      .join(" ");
     const clipped = {
       transform: `translate(${x}px, ${y}px) scale(${scale})`,
-      clipPath: `inset(${Math.max(0, -top / scale)}px ${Math.max(0, (crop.width + left - rect.width) / scale)}px ${Math.max(0, (crop.height + top - rect.height) / scale)}px ${Math.max(0, -left / scale)}px round ${radius}px)`,
+      clipPath: `inset(${Math.max(0, -top / scale)}px ${Math.max(0, (crop.width + left - rect.width) / scale)}px ${Math.max(0, (crop.height + top - rect.height) / scale)}px ${Math.max(0, -left / scale)}px round ${radius})`,
       opacity: 1,
     };
     const expanded = {
@@ -1357,9 +1445,23 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
       animate(
         s,
         entry.frame,
-        [live, { ...clipped, opacity: 0 }],
+        [
+          { transform: live.transform, clipPath: live.clipPath },
+          { transform: clipped.transform, clipPath: clipped.clipPath },
+        ],
         duration,
         ease,
+      ),
+      animate(
+        s,
+        entry.frame,
+        [
+          { opacity: live.opacity },
+          { opacity: live.opacity, offset: LANDING_HANDOFF },
+          { opacity: 0 },
+        ],
+        duration,
+        "linear",
       ),
       animate(s, copy, [{ ...live, opacity: 1 }, clipped], duration, ease),
     ]);
@@ -1420,6 +1522,7 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
     s.resizeFrame = undefined;
     if (session !== s) return;
     cancelAnimations(s, true);
+    clearStands(s);
     const before = state.zoom;
     const from = fit(state.index, s);
     const resting = s.rest !== undefined && sameZoom(before, s.rest);
@@ -1484,7 +1587,13 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
     if (session !== s) return;
     const visible = visibleRange(s);
     for (const [index, entry] of s.loaded) {
-      if (distanceTo(index) <= preload || visible.includes(index)) continue;
+      if (
+        distanceTo(index) <= preload ||
+        visible.includes(index) ||
+        index === s.leaving ||
+        s.stands?.moved.has(s.slides[index])
+      )
+        continue;
       entry.cancel();
       entry.frame.remove();
       s.loaded.delete(index);
@@ -1605,7 +1714,7 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
       const image = doc.createElement("img");
       image.className = "re-lightbox-image";
       image.alt = item.alt || "";
-      if (settings.protect) image.draggable = false;
+      image.draggable = false;
       image.decoding = "async";
       const content =
         item.type === undefined
@@ -2000,6 +2109,7 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
     if (s.resizeFrame !== undefined) win?.cancelAnimationFrame(s.resizeFrame);
     s.resizeFrame = undefined;
     finishFade(s, false);
+    clearStands(s);
     cancelAnimations(s);
     toggleSlideshow(s, false);
     leaveFullscreen(s);
@@ -2013,7 +2123,13 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
     if (s.dialog.open) s.dialog.close();
     s.dialog.remove();
     s.restoreScroll();
-    returnFocus(s);
+    const active = s.dialog.ownerDocument.activeElement;
+    if (
+      s.releasedFocus === undefined ||
+      active === s.releasedFocus ||
+      active === s.dialog.ownerDocument.body
+    )
+      returnFocus(s);
   }
 
   function leaveFullscreen(s: Session) {
@@ -2117,6 +2233,105 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
     publish({});
   }
 
+  function keepLaps(s: Session, slides: readonly HTMLElement[]) {
+    (
+      s.carousel as unknown as Record<
+        symbol,
+        { keepLaps(slides: readonly HTMLElement[]): void } | undefined
+      >
+    )[carouselInternals]?.keepLaps(slides);
+  }
+
+  function clearStands(s: Session) {
+    const stands = s.stands;
+    if (!stands) return;
+    s.stands = undefined;
+    keepLaps(s, []);
+    for (const [slide, transform] of stands.moved)
+      slide.style.transform = transform;
+    for (const [slide, visibility] of stands.hidden)
+      slide.style.visibility = visibility;
+  }
+
+  // A distant photo pages in like the next one: the slides on screen keep their place while the
+  // strip jumps to the slot beside the photo, then the strip moves one slide with the usual
+  // spring. Without that slot it fades.
+  function slideTo(s: Session, from: number, target: number, forward: boolean) {
+    const side = forward ? -1 : 1;
+    const beside =
+      looping() && s.carousel.getState().isLooping
+        ? wrap(target + side)
+        : target + side;
+    if (
+      prefersReducedMotion(s) ||
+      beside < 0 ||
+      beside >= items.length ||
+      !s.box.width
+    ) {
+      fadeTo(s, target);
+      return;
+    }
+    const port = s.viewport.getBoundingClientRect();
+    const shown = new Map<HTMLElement, number>();
+    const candidates = new Set([
+      ...(s.stands?.moved.keys() ?? []),
+      ...visibleRange(s).map((index) => s.slides[index]),
+    ]);
+    for (const slide of candidates) {
+      if (s.stands?.hidden.has(slide)) continue;
+      const rect = slide.getBoundingClientRect();
+      if (rect.right > port.left + 1 && rect.left < port.right - 1)
+        shown.set(slide, rect.left);
+    }
+    const anchor = s.slides[from];
+    const anchorLeft = shown.get(anchor) ?? port.left;
+    const moved = new Map(s.stands?.moved);
+    const hidden = new Map(s.stands?.hidden);
+    clearStands(s);
+    s.carousel.goTo(beside, "instant");
+    if (Math.abs(anchorLeft - port.left) > 0.5)
+      s.viewport.scrollLeft -= anchorLeft - port.left;
+    const arriving = s.slides[target].getBoundingClientRect();
+    const stands: NonNullable<Session["stands"]> = {
+      moved: new Map(),
+      hidden: new Map(),
+    };
+    const covered: DOMRect[] = [];
+    for (const [slide, left] of shown) {
+      if (slide === s.slides[target]) continue;
+      if (
+        Math.abs(left - arriving.left) < arriving.width - 1 &&
+        slide !== anchor
+      )
+        continue;
+      const transform = moved.get(slide) ?? slide.style.transform;
+      const natural = slide.getBoundingClientRect().left;
+      if (Math.abs(left - natural) > 0.5) {
+        stands.moved.set(slide, transform);
+        slide.style.transform = `translateX(${left - natural}px) ${transform}`;
+      }
+      covered.push(slide.getBoundingClientRect());
+    }
+    for (const index of visibleRange(s)) {
+      const slide = s.slides[index];
+      if (index === target || shown.has(slide)) continue;
+      const rect = slide.getBoundingClientRect();
+      if (
+        !covered.some(
+          (cover) => rect.right > cover.left + 1 && rect.left < cover.right - 1,
+        )
+      )
+        continue;
+      stands.hidden.set(slide, hidden.get(slide) ?? slide.style.visibility);
+      slide.style.visibility = "hidden";
+    }
+    if (stands.moved.size || stands.hidden.size) {
+      s.stands = stands;
+      keepLaps(s, [...stands.moved.keys()]);
+    }
+    s.carousel[forward ? "next" : "prev"]();
+  }
+
   function finishFade(s: Session, jump: boolean) {
     const fade = s.fade;
     if (!fade) return;
@@ -2186,10 +2401,16 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
       (looping() && s.carousel.getState().isLooping
         ? Math.min(gap, items.length - gap)
         : gap) > 1;
+    const from = state.index;
+    const paged = far || (s.stands !== undefined && target !== from);
     syncingCarousel = true;
+    if (paged) s.leaving = from;
     activeChanged(s, target);
-    if (far) fadeTo(s, target);
-    else if (direction && looping() && s.carousel.getState().isLooping)
+    if (paged) {
+      slideTo(s, from, target, direction ? direction > 0 : target > from);
+      s.leaving = undefined;
+      trimSlides(s);
+    } else if (direction && looping() && s.carousel.getState().isLooping)
       s.carousel[direction > 0 ? "next" : "prev"]();
     else s.carousel.goTo(target, "smooth");
     syncingCarousel = false;
@@ -2492,24 +2713,6 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
         samples: [],
       };
     };
-    s.dialog.addEventListener(
-      "pointerdown",
-      (event) => {
-        if (
-          !isElement(event.target) ||
-          !event.target.matches(".re-lightbox-image")
-        )
-          return;
-        if (
-          event.pointerType === "mouse" &&
-          !settings.protect &&
-          state.zoom.scale <= 1
-        )
-          event.target.setAttribute("data-carousel-no-drag", "");
-        else event.target.removeAttribute("data-carousel-no-drag");
-      },
-      { signal, capture: true },
-    );
     s.viewport.addEventListener(
       "pointerdown",
       (event) => {
@@ -2766,21 +2969,10 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
       "dragstart",
       (event) => {
         if (
-          !isElement(event.target) ||
-          !event.target.matches(".re-lightbox-image")
+          isElement(event.target) &&
+          event.target.matches(".re-lightbox-image")
         )
-          return;
-        if (
-          settings.protect ||
-          state.zoom.scale > 1 ||
-          s.gesture?.axis === "pan" ||
-          s.dialog.dataset.panning
-        ) {
           event.preventDefault();
-          return;
-        }
-        s.pointers.clear();
-        resetGesture();
       },
       { signal },
     );
@@ -2808,7 +3000,16 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
           )
         )
           return;
-        if (!target.closest(".re-lightbox-frame")) {
+        // A pan captures the pointer, which retargets its click to the viewport.
+        const box = s.loaded.get(state.index)?.frame.getBoundingClientRect();
+        const onPhoto =
+          target.closest(".re-lightbox-frame") !== null ||
+          (box !== undefined &&
+            event.clientX >= box.left &&
+            event.clientX <= box.right &&
+            event.clientY >= box.top &&
+            event.clientY <= box.bottom);
+        if (!onPhoto) {
           void close();
           return;
         }
@@ -2971,6 +3172,7 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
 
   function pushHistory(win: Window) {
     const current: unknown = win.history.state;
+    const mode = holdScroll(win);
     win.history.pushState(
       {
         ...(typeof current === "object" && current !== null ? current : {}),
@@ -2979,6 +3181,7 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
       "",
       win.location.href,
     );
+    win.history.scrollRestoration = mode;
   }
 
   // A frame shares the page's session history but sees none of the page's entries, so it opts in.
@@ -2998,6 +3201,7 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
   function leaveHistory() {
     const win = historyWindow;
     if (!win) return Promise.resolve();
+    if (!ownsHistory(win) && !historyBacks.has(win)) releaseScroll(win);
     const landing = ownsHistory(win)
       ? goBack(win)
       : (historyBacks.get(win)?.landing ?? Promise.resolve());
@@ -3018,8 +3222,9 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
       if (session && !state.isClosing && !ownsHistory(win)) pushHistory(win);
       return;
     }
-    if (session && !state.isClosing && !ownsHistory(win))
-      void closeSession(true);
+    if (ownsHistory(win)) return;
+    releaseScroll(win);
+    if (session && !state.isClosing) void closeSession(true);
   }
 
   // The caption panel shows when some photo has a caption, so the photo keeps one width while paging.
@@ -3069,12 +3274,14 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
       s.footer.append(strip);
       strip.tabIndex = -1;
       s.thumbCarousel = createCarousel(strip, { drag: true, align: "center" });
-      (
+      const internals = (
         s.thumbCarousel as unknown as Record<
           symbol,
-          { silence(): void } | undefined
+          { silence(): void; passClicks(): void } | undefined
         >
-      )[carouselInternals]?.silence();
+      )[carouselInternals];
+      internals?.silence();
+      internals?.passClicks();
     }
     s.centeredThumb = -1;
     centerThumb(s);
@@ -3381,9 +3588,16 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
             image.loading = "lazy";
             thumb.append(image);
           } else thumb.textContent = String(i + 1);
-          thumb.addEventListener("click", () => goTo(i), {
-            signal: abort.signal,
-          });
+          thumb.addEventListener(
+            "click",
+            () => {
+              if (i === state.index) session?.thumbCarousel?.goTo(i, "smooth");
+              goTo(i);
+            },
+            {
+              signal: abort.signal,
+            },
+          );
           thumbs.push(thumb);
           return thumb;
         }),
@@ -3487,7 +3701,7 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
     dialog.addEventListener(
       "close",
       () => {
-        if (session !== s) return;
+        if (session !== s || s.phase === "closing") return;
         teardown(s);
         publish({
           isOpen: false,
@@ -3568,6 +3782,17 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
       },
       { signal: abort.signal },
     );
+    viewport.addEventListener(
+      "pointerdown",
+      () => {
+        if (!s.stands) return;
+        clearStands(s);
+        syncingCarousel = true;
+        s.carousel.goTo(state.index, "instant");
+        syncingCarousel = false;
+      },
+      { signal: abort.signal, capture: true },
+    );
     viewport.addEventListener("scrollend", () => trimSlides(s), {
       signal: abort.signal,
     });
@@ -3580,6 +3805,7 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
       motion.left = left;
       if ((motion.still >= 3 && isSettled(s)) || motion.still >= 30) {
         s.motion = undefined;
+        clearStands(s);
         trimSlides(s);
         syncAnimating(s);
         emit("settle", s);
@@ -3645,7 +3871,19 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
       },
       { signal: abort.signal },
     );
-    (closeButton ?? viewport).focus({ preventScroll: true });
+    const opening = closeButton ?? viewport;
+    // window.event is the click or tap that called open(); a key's click has detail 0.
+    const opener = win?.event;
+    const pointerOpen =
+      opener !== undefined &&
+      (/^(pointer|touch|mouse)/.test(opener.type) ||
+        (opener.type === "click" && (opener as MouseEvent).detail > 0));
+    opening.focus(
+      pointerOpen
+        ? { preventScroll: true, focusVisible: false }
+        : { preventScroll: true },
+    );
+    if (pointerOpen && matches(opening, ":focus-visible")) quietFocus(opening);
     watchControls(s);
     readTiming(s);
     void win?.getComputedStyle(toolbar).opacity;
@@ -3689,6 +3927,19 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
     });
   }
 
+  // A modal dialog keeps the page inert, so the close flight moves to a manual popover: still
+  // above the page, but wheel, touch and clicks pass through to it.
+  function releasePage(s: Session) {
+    const dialog = s.dialog;
+    if (typeof dialog.showPopover !== "function") return;
+    dialog.inert = true;
+    dialog.close();
+    dialog.style.display = "block";
+    dialog.popover = "manual";
+    dialog.showPopover();
+    s.releasedFocus = dialog.ownerDocument.activeElement;
+  }
+
   // closed waits for the history back, unless open() or destroy() comes first.
   function reportClosed(landing: Promise<void>) {
     let reported = false;
@@ -3722,6 +3973,7 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
     const landing = s.phase !== "entering" && s.phase !== "opening";
     if (fromHistory) s.input = "pointer";
     cancelAnimations(s);
+    clearStands(s);
     clearTimeout(s.tapTimer);
     s.tapTimer = undefined;
     chromeInput(s, { type: "close" });
@@ -3732,6 +3984,7 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
     setPhase(s, "closing");
     s.restoreScroll();
     pinToPage(s);
+    releasePage(s);
     let closing: Promise<void> | undefined;
     closing = (async () => {
       await flight(s, true, landing);
@@ -3763,6 +4016,7 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
       return;
     }
     finishFade(s, true);
+    clearStands(s);
     const taken = new Set<number>();
     const from = input.map((item) => {
       const old = sources.indexOf(item);
@@ -3900,6 +4154,7 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
       if (s) emit("closed", null);
       const win = historyWindow;
       if (win && ownsHistory(win)) goBack(win);
+      else if (win && !historyBacks.has(win)) releaseScroll(win);
       win?.removeEventListener("popstate", onPopState);
       historyWindow = undefined;
       listeners.clear();
@@ -4003,10 +4258,14 @@ export function bindLightboxGallery(
     )
       return;
     const target = event.target;
-    if (!isElement(target)) return;
+    if (!isElement(target) || target.closest(".re-lightbox")) return;
     const images = [
       ...root.querySelectorAll<HTMLImageElement>(options.selector || "img"),
-    ];
+    ].filter(
+      (image) =>
+        !image.classList.contains("re-lightbox-landing") &&
+        !image.closest(".re-lightbox"),
+    );
     const image = images.find(
       (candidate) =>
         candidate === target ||

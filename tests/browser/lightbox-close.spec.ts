@@ -13,7 +13,8 @@ type Lightbox = {
   close(): Promise<void>;
   next(): void;
   goTo(index: number): void;
-  getState(): { index: number; isOpen: boolean };
+  getState(): { index: number; isOpen: boolean; count: number };
+  destroy(): void;
   on(type: string, listener: () => void): () => void;
 };
 type Carousel = {
@@ -320,7 +321,6 @@ test("closing while a mouse drag holds the strip between two photos fades in pla
 }) => {
   await stripPage(page);
   await openAt(page, 1);
-  // A mouse drag that starts on the photo drags the file out, so this one starts above it.
   await page.mouse.move(500, 20);
   await page.mouse.down();
   for (let x = 480; x >= 300; x -= 20) await page.mouse.move(x, 20);
@@ -393,6 +393,40 @@ test("a photo behind the +3 tile of a seven-photo album lands in that tile with 
   expect(
     await page.evaluate(() => (window as Window).tiles[0].style.visibility),
   ).toBe("");
+});
+
+test("a photo in a tile that rounds its clipping wrapper flies with the wrapper's corners", async ({
+  page,
+}) => {
+  await mount(
+    page,
+    `<a id="tile" href="${photo(0)}" style="display:block;width:300px;height:200px;margin:100px;overflow:hidden;border-radius:16px 16px 0 0"><img src="${photo(0)}" alt="Photo 1" style="display:block;width:300px;height:200px"></a>`,
+    styles,
+  );
+  await page.evaluate(async () => {
+    const { createLightbox } = await import("/modules/lightbox/index.js");
+    const image = document.querySelector("#tile img") as HTMLImageElement;
+    const lightbox = createLightbox({ history: false, autoHide: false });
+    Object.assign(window, { lightbox, tiles: [image] });
+    Object.assign(window, {
+      items: [{ src: image.src, width: 1200, height: 800, origin: image }],
+    });
+  });
+  const start = await page.evaluate(async () => {
+    const win = window as Window & { items: unknown[] };
+    win.lightbox.open(win.items, 0);
+    for (;;) {
+      const frame = document.querySelector<HTMLElement>(".re-lightbox-frame");
+      const [animation] = frame?.getAnimations() ?? [];
+      if (frame && animation) {
+        animation.pause();
+        animation.currentTime = 0;
+        return getComputedStyle(frame).clipPath;
+      }
+      await new Promise(requestAnimationFrame);
+    }
+  });
+  expect(start).toMatch(/round ([1-9][\d.]*)px \1px 0px( 0px)?\)$/);
 });
 
 // The page behind a modal dialog is inert and cannot be hit-tested, so read the screen.
@@ -479,6 +513,83 @@ test("a page that scrolls during the close flight keeps the photo on its tile", 
   expect(
     await page.evaluate(() => document.querySelectorAll("dialog").length),
   ).toBe(0);
+});
+
+test("a wheel during the close flight scrolls the page", async ({ page }) => {
+  await stickyPage(page);
+  await openAt(page, 0);
+  await page.evaluate(() => {
+    const win = window as Window;
+    win.closing = win.lightbox.close();
+  });
+  await page.mouse.move(500, 350);
+  await page.mouse.wheel(0, 100);
+  await expect.poll(() => page.evaluate(() => window.scrollY)).toBe(332);
+  expect(
+    await page.evaluate(() => document.querySelectorAll("dialog").length),
+  ).toBe(1);
+  await finishClose(page);
+});
+
+test("a wheel during an Escape close keeps the page where it scrolled after the history back", {
+  tag: "@desktop",
+}, async ({ page }) => {
+  await mount(
+    page,
+    `<div style="height:300px"></div>${tiles(1)}<div style="height:3000px"></div>`,
+    styles,
+  );
+  await page.addStyleTag({
+    content: ".re-lightbox{--re-lightbox-close-duration:600ms}",
+  });
+  await page.evaluate(async () => {
+    const { bindLightboxGallery } = await import("/modules/lightbox/index.js");
+    bindLightboxGallery(document.body, { autoHide: false });
+    scrollTo(0, 200);
+  });
+  await page.locator(".tile img").click();
+  await page.waitForTimeout(700);
+  expect(await page.evaluate(() => history.scrollRestoration)).toBe("auto");
+  await page.keyboard.press("Escape");
+  await page.mouse.move(640, 400);
+  for (let tick = 0; tick < 4; tick++) {
+    await page.mouse.wheel(0, 100);
+    await page.waitForTimeout(30);
+  }
+  await expect.poll(() => page.locator("dialog").count()).toBe(0);
+  const scrolled = await page.evaluate(() => scrollY);
+  expect(scrolled).toBeGreaterThan(400);
+  await page.waitForTimeout(300);
+  expect(await page.evaluate(() => scrollY)).toBe(scrolled);
+  expect(await page.evaluate(() => history.scrollRestoration)).toBe("auto");
+});
+
+test("the photo flies whole out of a strip that clips its tile", async ({
+  page,
+}) => {
+  await stripPage(page);
+  await openAt(page, 0);
+  const corner = await page.evaluate(() => {
+    const win = window as Window;
+    win.closing = win.lightbox.close();
+    for (const animation of document.getAnimations()) {
+      animation.pause();
+      animation.currentTime =
+        Number(animation.effect?.getComputedTiming().endTime ?? 0) * 0.4;
+    }
+    const { right, bottom } = (
+      document.querySelector(
+        '.re-lightbox-slide[aria-hidden="false"] .re-lightbox-frame',
+      ) as HTMLElement
+    ).getBoundingClientRect();
+    return { x: Math.round(right - 20), y: Math.round(bottom - 20) };
+  });
+  const strip = await page.locator("#strip").boundingBox();
+  expect(corner.x).toBeGreaterThan((strip?.x ?? 0) + (strip?.width ?? 0));
+  const seen = await pixel(page, corner.x, corner.y);
+  for (const [channel, value] of [209, 71, 71].entries())
+    expect(Math.abs(seen[channel] - value)).toBeLessThanOrEqual(3);
+  await finishClose(page);
 });
 
 test("the page carousel's autoplay waits while the lightbox is open and a visitor's pause stays", async ({
@@ -602,6 +713,114 @@ test.describe("focus after close", { tag: "@desktop" }, () => {
     await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2);
     await expect(page.locator("dialog")).toHaveCount(0);
   }
+
+  test("a mouse open focuses the close button without a ring", async ({
+    page,
+  }) => {
+    await galleryPage(page);
+    await page.getByAltText("Photo 2").click();
+    await expect(page.locator("dialog")).toHaveAttribute("data-phase", "open");
+    expect(await focused(page)).toEqual({ id: "BUTTON", ring: false });
+  });
+
+  const slowClose = (page: Page, rule = "") =>
+    page.evaluate((extra) => {
+      const style = document.createElement("style");
+      style.textContent = `.re-lightbox{--re-lightbox-close-duration:2s}${extra}`;
+      document.head.append(style);
+    }, rule);
+
+  test("a click on another photo during the close flight opens the gallery without the landing copy", async ({
+    page,
+  }) => {
+    await galleryPage(page);
+    await slowClose(page);
+    await page.getByAltText("Photo 2").click();
+    await expect(page.locator("dialog")).toHaveAttribute("data-phase", "open");
+    await page.keyboard.press("Escape");
+    await expect(page.locator(".re-lightbox-landing")).toHaveCount(1);
+    await page.locator("#gallery").getByAltText("Photo 3").click();
+    await expect(page.locator("dialog")).toHaveAttribute("data-phase", "open");
+    expect(
+      await page.evaluate(() => {
+        const { index, count } = (window as Window).lightbox.getState();
+        return { index, count };
+      }),
+    ).toEqual({ index: 2, count: 3 });
+  });
+
+  test("a gallery bound to the body ignores the viewer's own images", async ({
+    page,
+  }) => {
+    await galleryPage(page);
+    await page.evaluate(async () => {
+      (window as Window).lightbox.destroy();
+      const { bindLightboxGallery } = await import(
+        "/modules/lightbox/index.js"
+      );
+      Object.assign(window, {
+        lightbox: bindLightboxGallery(document.body, {
+          history: false,
+          autoHide: false,
+        }),
+      });
+    });
+    await slowClose(page);
+    await page.locator("#gallery").getByAltText("Photo 2").click();
+    await expect(page.locator("dialog")).toHaveAttribute("data-phase", "open");
+    const state = () =>
+      page.evaluate(() => {
+        const { index, count } = (window as Window).lightbox.getState();
+        return { index, count };
+      });
+    await page.locator("dialog .re-lightbox-close").focus();
+    await page.keyboard.press("Escape");
+    await page.locator("#gallery").getByAltText("Photo 3").click();
+    await expect(page.locator("dialog")).toHaveAttribute("data-phase", "open");
+    expect(await state()).toEqual({ index: 2, count: 3 });
+  });
+
+  test("a page that hides closed dialogs still shows the close flight", async ({
+    page,
+  }) => {
+    await galleryPage(page);
+    await slowClose(page, "dialog:not([open]){display:none}");
+    await page.getByAltText("Photo 2").click();
+    await expect(page.locator("dialog")).toHaveAttribute("data-phase", "open");
+    await page.keyboard.press("Escape");
+    await expect(page.locator("dialog")).toHaveAttribute(
+      "data-phase",
+      "closing",
+    );
+    expect(
+      await page.evaluate(() => {
+        const dialog = document.querySelector("dialog") as HTMLElement;
+        const frame = dialog.querySelector(
+          '.re-lightbox-slide[aria-hidden="false"] .re-lightbox-frame',
+        ) as HTMLElement;
+        return [
+          getComputedStyle(dialog).display,
+          frame.getBoundingClientRect().width > 0,
+        ];
+      }),
+    ).toEqual(["block", true]);
+  });
+
+  test("focus moved to a field during the close flight stays there", async ({
+    page,
+  }) => {
+    await galleryPage(page);
+    await slowClose(page);
+    await page.evaluate(() =>
+      document.body.insertAdjacentHTML("afterbegin", '<input id="search">'),
+    );
+    await page.getByAltText("Photo 2").click();
+    await expect(page.locator("dialog")).toHaveAttribute("data-phase", "open");
+    await page.keyboard.press("Escape");
+    await page.locator("#search").click();
+    await expect(page.locator("dialog")).toHaveCount(0);
+    expect((await focused(page)).id).toBe("search");
+  });
 
   test("a mouse close focuses the tile without a ring", async ({ page }) => {
     await galleryPage(page);

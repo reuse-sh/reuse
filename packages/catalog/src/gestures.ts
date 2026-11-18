@@ -1,6 +1,6 @@
 /**
  * One input and what each photo viewer does with it. "None" means the viewer has no such input
- * or ignores it. decision is the number of the owner's decision (epic VPF-246, 2026-11-15)
+ * or ignores it. decision is the number of the owner's decision (epic VPF-246, 2026-11-15; 10 on 2026-11-17)
  * behind the reuse column; a row whose reuse column matches none of the native ones needs one.
  */
 export interface GestureRow {
@@ -136,10 +136,11 @@ export const lightboxGestures: readonly GestureRow[] = [
     reuse: "Copies the photo",
   },
   {
-    input: "Drag the photo out",
+    input: "Mouse drag on the photo",
     ios: "None",
     macos: "Drops the file where it lands",
     google: "Drops the file where it lands",
-    reuse: "Drops the file where it lands",
+    reuse: "Next or previous photo",
+    decision: 10,
   },
 ];
