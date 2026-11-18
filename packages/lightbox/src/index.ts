@@ -3815,6 +3815,7 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
     if (control("counter")) {
       counter = doc.createElement("span");
       counter.className = "re-lightbox-counter";
+      counter.dir = "auto";
       counter.setAttribute("aria-hidden", "true");
       toolbarStart.append(counter);
     }

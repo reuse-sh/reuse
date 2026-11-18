@@ -446,6 +446,46 @@ test("in RTL previous sits on the right and next on the left, each icon mirrored
   ]);
 });
 
+test("in RTL the counter reads 2 / 3 for the second of three photos, and an Arabic counter reads right to left", async ({
+  page,
+}) => {
+  await mount(page, "", ["lightbox/base.css", "lightbox/theme.css"]);
+  const order = (strings: Record<string, unknown>) =>
+    page.evaluate(async (arabic) => {
+      document.documentElement.dir = "rtl";
+      const { createLightbox } = await import("/modules/lightbox/index.js");
+      const lightbox = createLightbox({
+        history: false,
+        strings: arabic
+          ? {
+              counter: (index: number, count: number) =>
+                `${(index + 1).toLocaleString("ar-EG")} من ${count.toLocaleString("ar-EG")}`,
+            }
+          : {},
+      });
+      lightbox.open(
+        Array.from({ length: 3 }, () => ({
+          src: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='1200' height='800'/%3E",
+          width: 1200,
+          height: 800,
+        })),
+        1,
+      );
+      const numbers = [
+        ...document.querySelectorAll(".re-lightbox-counter-number"),
+      ].map((number) => ({
+        text: number.textContent,
+        left: Math.round(number.getBoundingClientRect().left),
+      }));
+      lightbox.destroy();
+      return numbers
+        .sort((a, b) => a.left - b.left)
+        .map((number) => number.text);
+    }, Boolean(strings.arabic));
+  expect(await order({})).toEqual(["2", "3"]);
+  expect(await order({ arabic: true })).toEqual(["٣", "٢"]);
+});
+
 test("a narrow right-to-left viewer with a side caption keeps next at its edge", async ({
   page,
 }) => {
