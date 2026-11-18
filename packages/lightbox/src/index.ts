@@ -2252,10 +2252,20 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
     publish({});
   }
 
+  function keepLaps(s: Session, slides: readonly HTMLElement[]) {
+    (
+      s.carousel as unknown as Record<
+        symbol,
+        { keepLaps(slides: readonly HTMLElement[]): void } | undefined
+      >
+    )[carouselInternals]?.keepLaps(slides);
+  }
+
   function clearStands(s: Session) {
     const stands = s.stands;
     if (!stands) return;
     s.stands = undefined;
+    keepLaps(s, []);
     for (const [slide, transform] of stands.moved)
       slide.style.transform = transform;
     for (const [slide, visibility] of stands.hidden)
@@ -2264,13 +2274,15 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
 
   // A distant photo pages in like the next one: the slides on screen keep their place while the
   // strip jumps to the slot beside the photo, then the strip moves one slide with the usual
-  // spring. Without that slot it fades, and so does a looping strip, whose carousel places the
-  // arriving slide in another lap until the move ends.
+  // spring. Without that slot it fades.
   function slideTo(s: Session, from: number, target: number, forward: boolean) {
-    const beside = target + (forward ? -1 : 1);
+    const side = forward ? -1 : 1;
+    const beside =
+      looping() && s.carousel.getState().isLooping
+        ? wrap(target + side)
+        : target + side;
     if (
       prefersReducedMotion(s) ||
-      s.carousel.getState().isLooping ||
       beside < 0 ||
       beside >= items.length ||
       !s.box.width
@@ -2332,7 +2344,10 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
       stands.hidden.set(slide, hidden.get(slide) ?? slide.style.visibility);
       slide.style.visibility = "hidden";
     }
-    if (stands.moved.size || stands.hidden.size) s.stands = stands;
+    if (stands.moved.size || stands.hidden.size) {
+      s.stands = stands;
+      keepLaps(s, [...stands.moved.keys()]);
+    }
     s.carousel[forward ? "next" : "prev"]();
   }
 

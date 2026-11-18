@@ -59,6 +59,9 @@
   scroll-snap-stop: always;
   overflow: hidden;
 }
+.re-lightbox-slide[data-re-cycle]:not([data-re-cycle="0"]) {
+  translate: var(--re-carousel-shift);
+}
 .re-lightbox-frame {
   position: relative;
   flex: none;
