@@ -282,6 +282,11 @@
 :is(.re-lightbox-prev, .re-lightbox-next):dir(rtl) > * {
   scale: -1 1;
 }
+.re-lightbox-arrow-icon:dir(rtl):not(
+  :is(.re-lightbox-prev, .re-lightbox-next) *
+) {
+  scale: -1 1;
+}
 .re-lightbox[data-thumbnails="bottom"] .re-lightbox-thumbnails {
   width: calc(100% + 2 * var(--re-lightbox-footer-inset, 72px));
   max-width: none;

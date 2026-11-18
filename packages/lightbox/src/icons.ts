@@ -35,6 +35,8 @@ export function showIcon(button: Element, name: BuiltInIcon) {
   };
   for (const [key, value] of Object.entries(attributes))
     svg.setAttribute(key, value);
+  if (name === "previous" || name === "next")
+    svg.setAttribute("class", "re-lightbox-arrow-icon");
   const path = doc.createElementNS(svgNamespace, "path");
   path.setAttribute("d", d);
   svg.append(path);

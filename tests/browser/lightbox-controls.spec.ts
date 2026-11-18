@@ -520,6 +520,50 @@ test("without the Fullscreen API there is no fullscreen button", async ({
   await expect(page.locator(".re-lightbox-fullscreen")).toHaveCount(0);
 });
 
+test("in RTL a slot's built-in arrows are mirrored once, and the built-in buttons' too", async ({
+  page,
+}) => {
+  await mount(page, "", ["lightbox/base.css", "lightbox/theme.css"]);
+  const scales = await page.evaluate(async () => {
+    const { createLightbox } = await import("/modules/lightbox/index.js");
+    const read = () =>
+      [
+        ".re-lightbox-footer .slot-arrow svg",
+        ".re-lightbox-footer .slot-arrow",
+        ".re-lightbox-prev svg",
+        ".re-lightbox-prev",
+      ].map(
+        (selector) =>
+          getComputedStyle(document.querySelector(selector) as Element).scale,
+      );
+    createLightbox({
+      history: false,
+      slots: {
+        footer: ({ document, icon }) => {
+          const node = document.createElement("span");
+          node.className = "slot-arrow";
+          node.append(icon("previous"));
+          return { node };
+        },
+      },
+    }).open(
+      Array.from({ length: 3 }, () => ({
+        src: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='1200' height='800'/%3E",
+        width: 1200,
+        height: 800,
+      })),
+      1,
+    );
+    const ltr = read();
+    document.documentElement.dir = "rtl";
+    return { ltr, rtl: read() };
+  });
+  expect(scales).toEqual({
+    ltr: ["none", "none", "none", "none"],
+    rtl: ["-1 1", "none", "-1 1", "none"],
+  });
+});
+
 test("in RTL previous sits on the right and next on the left, each icon mirrored", async ({
   page,
 }) => {
