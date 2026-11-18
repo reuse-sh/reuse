@@ -27,6 +27,7 @@ These are the rules the code keeps. An adaptation on any framework keeps them to
 - **Stay light in large galleries.** A thousand photos open as fast as ten. Slides outside the preload window are empty shells, the strip's positions are arithmetic, and the next photo in the direction of travel loads first.
 - **Let a slideshow yield.** A slideshow waits while the photo is zoomed, the mouse is over the controls, the tab is hidden or a slot's menu is open, and goes on with the time it had left.
 - **Play only the current slide.** Video, audio and embeds are optional modules. Leaving a slide pauses its player, close pauses them all at once, and over a player the pointer belongs to the player.
+- **Trust no page by default.** Items read from markup are untrusted. An embed plays only a known provider and an iframe sandboxes a page from another origin, so a framed page cannot take over the tab.
 - **Survive every interruption.** Opening, closing, swiping, zooming, resizing, appending or destroying at any moment leaves no dialog, timer, hidden tile, scroll lock or extra history entry behind.
 
 <!-- principles:end -->
@@ -50,6 +51,10 @@ For a page without a bundler or an import map, such as a theme or a plugin, copy
   const gallery = bindLightboxGallery(document.querySelector("#gallery"), {});
 </script>
 ```
+
+## Trust
+
+Items read from markup are untrusted: `data-lightbox-type`, a link's `href` and `data-lightbox-src` come from whoever wrote the page. `embed()` plays only YouTube, Vimeo and providers added with `registerEmbed()`, and any other URL stays blank. `iframe()` loads a page from your own origin as it is and sandboxes a page from another origin with `allow-scripts allow-same-origin allow-forms allow-presentation`, so it cannot navigate your tab or open popups. Pass `sandbox` to either module to set the attribute yourself.
 
 <!-- examples:start -->
 

@@ -146,15 +146,16 @@ export function embed(options: FrameOptions = {}): LightboxContent {
           break;
         }
       }
+      // An unknown URL stays blank: markup can name any page as an embed.
       const url =
         provider && match
           ? withParameters(provider.url(match, item), source)
-          : source;
+          : "";
       const frame = frameOf(
         container,
         url,
         item.alt ?? provider?.name ?? "",
-        options,
+        options.sandbox,
       );
       const ready = loaded(frame, signal);
       const base = {

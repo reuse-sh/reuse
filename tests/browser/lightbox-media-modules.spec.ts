@@ -32,6 +32,7 @@ async function setup(
   items: string,
   options: Record<string, unknown> = {},
   start = 0,
+  frame: { sandbox?: string } = {},
 ) {
   await page.route("https://www.youtube-nocookie.com/**", (route) =>
     route.fulfill({ contentType: "text/html", body: youtubeStub }),
@@ -42,10 +43,11 @@ async function setup(
     ["lightbox/base.css", "lightbox/theme.css"],
   );
   await page.evaluate(
-    async ([list, extra, index, image]) => {
+    async ([list, extra, index, image, frameOptions]) => {
       const { createLightbox } = await import("/modules/lightbox/index.js");
       const { video } = await import("/modules/lightbox/video.js");
       const { embed } = await import("/modules/lightbox/embed.js");
+      const { iframe } = await import("/modules/lightbox/iframe.js");
       // A short WebM recorded from a canvas, so the page needs no media file.
       const recorded = async () => {
         const canvas = document.createElement("canvas");
@@ -89,13 +91,19 @@ async function setup(
           type: "embed",
           embed: "https://www.youtube.com/shorts/abc123",
         }),
+        unknown: async () => ({
+          type: "embed",
+          embed: "https://evil.test/page",
+        }),
+        page: async () => ({ type: "iframe", src: "https://evil.test/page" }),
+        local: async () => ({ type: "iframe", src: "/quick-view" }),
       };
       const items = await Promise.all(
         list.split(",").map((kind) => kinds[kind]()),
       );
       const lightbox = createLightbox({
         history: false,
-        content: [video(), embed()],
+        content: [video(), embed(), iframe(frameOptions)],
         ...extra,
       });
       Object.assign(window, { lightbox });
@@ -103,7 +111,7 @@ async function setup(
         .getElementById("open")
         ?.addEventListener("click", () => lightbox.open(items, index));
     },
-    [items, options, start, photo(1)] as const,
+    [items, options, start, photo(1), frame] as const,
   );
   await page.click("#open");
   await page.waitForTimeout(600);
@@ -180,6 +188,63 @@ test("a frame loads only web pages: a script URL or an empty one stays blank", a
         frames.map((frame) => frame.getAttribute("src")),
       ),
   ).toEqual(["about:blank", "about:blank"]);
+});
+
+// A page that tries to take over the tab that frames it.
+const takeover = `<!doctype html><button id="go" style="width:100%;height:100%">Continue</button><script>
+document.getElementById("go").onclick = () => { top.location.href = "https://evil.test/phish"; };
+</script>`;
+
+const frameOf = (page: Page) =>
+  page.locator(".re-lightbox-media iframe").evaluate((frame) => ({
+    src: frame.getAttribute("src"),
+    sandbox: frame.getAttribute("sandbox"),
+  }));
+
+test("embed plays only known providers: an unknown page stays blank", async ({
+  page,
+}) => {
+  await page.route("https://evil.test/**", (route) =>
+    route.fulfill({ contentType: "text/html", body: takeover }),
+  );
+  await setup(page, "unknown");
+  expect(await frameOf(page)).toEqual({ src: "about:blank", sandbox: null });
+});
+
+test("an iframe sandboxes a page from another origin, so a click inside cannot navigate the tab", async ({
+  page,
+}) => {
+  await page.route("https://evil.test/**", (route) =>
+    route.fulfill({ contentType: "text/html", body: takeover }),
+  );
+  await setup(page, "page");
+  expect(await frameOf(page)).toEqual({
+    src: "https://evil.test/page",
+    sandbox: "allow-scripts allow-same-origin allow-forms allow-presentation",
+  });
+  await page.frameLocator(".re-lightbox-media iframe").locator("#go").click();
+  await page.waitForTimeout(500);
+  expect(page.url()).toBe("http://reuse.test/");
+});
+
+test("an iframe leaves a same-origin page unsandboxed, and the sandbox option wins", async ({
+  page,
+}) => {
+  await setup(page, "local");
+  expect(await frameOf(page)).toEqual({
+    src: "http://reuse.test/quick-view",
+    sandbox: null,
+  });
+  await setup(page, "local,page", { preload: 1 }, 0, {
+    sandbox: "allow-scripts",
+  });
+  expect(
+    await page
+      .locator(".re-lightbox-media iframe")
+      .evaluateAll((frames) =>
+        frames.map((frame) => frame.getAttribute("sandbox")),
+      ),
+  ).toEqual(["allow-scripts", "allow-scripts"]);
 });
 
 test("a Shorts link opens at 9:16", async ({ page }) => {
