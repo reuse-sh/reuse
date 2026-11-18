@@ -1110,7 +1110,10 @@ export function createCarousel(
     releaseSpeed?: number,
     reference = pendingPosition ?? position(),
   ) {
-    if (pointer?.moved && !destroyed && enabled) endDrag(false);
+    if (pointer?.moved && !destroyed && enabled) {
+      endDrag(false);
+      suppressClick = true;
+    }
     if (
       destroyed ||
       !enabled ||
@@ -1857,7 +1860,8 @@ export function createCarousel(
       viewport,
       "click",
       (event) => {
-        if (!suppressClick) return;
+        // A drag ended by a move can leave its suppression unused, so a click from a key (detail 0) passes.
+        if (!suppressClick || (event as MouseEvent).detail === 0) return;
         suppressClick = false;
         event.preventDefault();
         event.stopPropagation();

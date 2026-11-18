@@ -484,3 +484,42 @@ test("an arrow key during a held mouse drag pages on and the release keeps the p
     ),
   ).toBe(1);
 });
+
+for (const release of ["over the strip", "outside the strip"])
+  test(`an arrow key that ends a held mouse drag keeps the release ${release} from clicking, and the next click goes through`, {
+    tag: "@desktop",
+  }, async ({ page }) => {
+    await mount(
+      page,
+      `<div id="strip" style="width:600px;--re-carousel-gap:0px">${Array.from(
+        { length: 6 },
+        (_, index) =>
+          `<div data-carousel-slide style="flex:0 0 300px;height:200px"><button type="button" style="width:100%;height:100%">${index}</button></div>`,
+      ).join("")}</div>`,
+      ["carousel/styles.css"],
+    );
+    await page.evaluate(async () => {
+      const { createCarousel } = await import("/modules/carousel/index.js");
+      const strip = document.getElementById("strip") as HTMLElement;
+      const clicks: string[] = [];
+      window.addEventListener("click", (event) => {
+        const target = event.target as HTMLElement;
+        if (strip.contains(target)) clicks.push(target.textContent ?? "");
+      });
+      Object.assign(window, { carousel: createCarousel(strip), clicks });
+    });
+    const clicks = () =>
+      page.evaluate(() => (window as unknown as { clicks: string[] }).clicks);
+    await page.focus("#strip");
+    await page.mouse.move(400, 100);
+    await page.mouse.down();
+    await page.mouse.move(340, 100, { steps: 8 });
+    await page.keyboard.press("ArrowRight");
+    await framesUntilIdle(page, scrollLeft);
+    if (release === "outside the strip") await page.mouse.move(400, 400);
+    await page.mouse.up();
+    expect(await clicks()).toEqual([]);
+    await page.focus("#strip button >> nth=1");
+    await page.keyboard.press("Enter");
+    expect(await clicks()).toEqual(["1"]);
+  });

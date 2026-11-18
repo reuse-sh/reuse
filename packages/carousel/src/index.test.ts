@@ -277,6 +277,7 @@ describe("native carousel", () => {
     const draggedClick = new MouseEvent("click", {
       bubbles: true,
       cancelable: true,
+      detail: 1,
     });
     viewport.dispatchEvent(draggedClick);
     expect(draggedClick.defaultPrevented).toBe(true);
@@ -716,12 +717,14 @@ describe("native carousel", () => {
     expect(carousel.getState().isDragging).toBe(true);
     pointer(window, "pointerup", 20);
     button.dispatchEvent(
-      new MouseEvent("click", { bubbles: true, cancelable: true }),
+      new MouseEvent("click", { bubbles: true, cancelable: true, detail: 1 }),
     );
     expect(clicks).toBe(0);
     pointer(image, "pointerdown", 20);
     pointer(window, "pointerup", 20);
-    button.click();
+    button.dispatchEvent(
+      new MouseEvent("click", { bubbles: true, cancelable: true, detail: 1 }),
+    );
     expect(clicks).toBe(0);
     vi.advanceTimersByTime(1000);
     pointer(image, "pointerdown", 20);
