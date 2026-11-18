@@ -1615,7 +1615,6 @@ export function createLightbox<Item extends LightboxItem = LightboxItem>(
       if (slide && Math.abs(slide.left - box.left) <= 1)
         live.transform = `translate(${shift}px, 0px) ${live.transform}`;
     }
-    const viewport = view(s);
     const size = fit(state.index, s);
     const duration = flightDuration(s, closing);
     const ease = s.timing.ease;
@@ -1680,14 +1679,14 @@ export function createLightbox<Item extends LightboxItem = LightboxItem>(
         ? crop.top
         : (rect.height - crop.height) / 2;
     const scale = crop.width / size.width;
-    const x =
-      rect.left +
-      left +
-      crop.width / 2 -
-      box.left -
-      s.inset.left -
-      viewport.width / 2;
-    const y = rect.top + top + crop.height / 2 - box.top - viewport.height / 2;
+    const room = {
+      left: box.left + s.inset.left,
+      top: box.top,
+      width: box.width - s.inset.left - s.inset.right,
+      height: box.height - s.inset.bottom,
+    };
+    const x = rect.left + left + crop.width / 2 - room.left - room.width / 2;
+    const y = rect.top + top + crop.height / 2 - room.top - room.height / 2;
     const radius = corners(origin, rect, win)
       .map((corner) => `${corner / scale}px`)
       .join(" ");
@@ -1705,12 +1704,7 @@ export function createLightbox<Item extends LightboxItem = LightboxItem>(
       return animate(s, entry.frame, [clipped, expanded], duration, ease);
     const made =
       landing && duration > 0
-        ? landingCopy(s, entry.image, origin, rect, size, {
-            left: box.left + s.inset.left,
-            top: box.top,
-            width: box.width - s.inset.left - s.inset.right,
-            height: box.height - s.inset.bottom,
-          })
+        ? landingCopy(s, entry.image, origin, rect, size, room)
         : undefined;
     if (!made) return animate(s, entry.frame, [live, clipped], duration, ease);
     const { holder, copy } = made;
@@ -4639,17 +4633,25 @@ export function createLightbox<Item extends LightboxItem = LightboxItem>(
     return closeSession(false);
   }
 
-  function pinToPage(s: Session) {
+  // The stage keeps its open size, so a page scrollbar that returns does not reflow the viewer,
+  // and the dialog clips it to the page's new client size, which WebKit's dialog box lags behind.
+  function pinToPage(s: Session, open: DOMRect) {
     const win = s.dialog.ownerDocument.defaultView;
     if (!win) return;
-    const box = s.dialog.getBoundingClientRect();
+    const root = s.dialog.ownerDocument.documentElement;
+    Object.assign(s.stage.style, {
+      right: "auto",
+      bottom: "auto",
+      width: `${open.width}px`,
+      height: `${open.height}px`,
+    });
     Object.assign(s.dialog.style, {
       position: "absolute",
       inset: "auto",
-      top: `${box.top + win.scrollY}px`,
-      left: `${box.left + win.scrollX}px`,
-      width: `${box.width}px`,
-      height: `${box.height}px`,
+      top: `${open.top + win.scrollY}px`,
+      left: `${open.left + win.scrollX}px`,
+      width: `${Math.min(open.width, root.clientWidth)}px`,
+      height: `${Math.min(open.height, root.clientHeight)}px`,
     });
   }
 
@@ -4718,8 +4720,9 @@ export function createLightbox<Item extends LightboxItem = LightboxItem>(
     for (const entry of s.loaded.values()) entry.media?.mounted?.pause?.();
     s.dialog.style.removeProperty("--re-lightbox-chrome-opacity");
     setPhase(s, "closing");
+    const open = s.dialog.getBoundingClientRect();
     s.restoreScroll();
-    pinToPage(s);
+    pinToPage(s, open);
     releasePage(s);
     let closing: Promise<void> | undefined;
     closing = (async () => {
