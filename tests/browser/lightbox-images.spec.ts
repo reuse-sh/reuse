@@ -516,6 +516,26 @@ test("an SVG at a URL without an extension takes its viewBox size and zooms like
     .toBe(4);
 });
 
+test("a photo at a URL without an extension costs no HEAD request", async ({
+  page,
+}) => {
+  await mount(page, "", ["lightbox/base.css", "lightbox/theme.css"]);
+  const methods: string[] = [];
+  await page.route("http://reuse.test/cdn/photo?w=1200", (route) => {
+    methods.push(route.request().method());
+    return route.fulfill({
+      contentType: "image/svg+xml",
+      body: '<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="800"><rect width="1200" height="800" fill="#5a8"/></svg>',
+    });
+  });
+  await create(page);
+  await open(page, [{ src: "/cdn/photo?w=1200", previewSrc: "/cdn/photo?w=1200" }]);
+  const frame = page.locator(".re-lightbox-frame");
+  await expect(frame).not.toHaveAttribute("data-loading");
+  await expect(page.locator("dialog")).toHaveAttribute("data-phase", "open");
+  expect(methods.filter((method) => method === "HEAD")).toEqual([]);
+});
+
 const photos = Array.from({ length: 8 }, (_, index) => ({
   src: `/img/photo-${index + 1}-1200x800.jpg`,
   width: 1200,

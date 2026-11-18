@@ -1919,7 +1919,7 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
         };
         const format = formatOf(url, doc.baseURI);
         mark(format);
-        if (!format)
+        if (!format && /^blob:/i.test(url))
           void lookupFormat(url, doc.baseURI, fetcher).then((found) => {
             if (alive && shown === url) mark(found);
           });
@@ -2012,6 +2012,14 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
             const sized = Boolean(item.width && item.height);
             const format = formatOf(source, doc.baseURI);
             if (format && (format !== "svg" || sized)) return ready();
+            // Only an SVG without its own size decodes at 300x150, so a CDN URL without an
+            // extension asks for no type.
+            if (
+              !format &&
+              !/^blob:/i.test(source) &&
+              (loader.naturalWidth !== 300 || loader.naturalHeight !== 150)
+            )
+              return ready();
             void lookupFormat(source, doc.baseURI, fetcher)
               .then((found) =>
                 found === "svg" && !sized
