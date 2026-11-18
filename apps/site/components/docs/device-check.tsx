@@ -34,7 +34,7 @@ const phone: readonly Check[] = [
 const mac: readonly Check[] = [
   [
     "Trackpad pinch",
-    "Pinch on the trackpad. The photo zooms around the pointer, and pinching in past its fitted size closes it.",
+    "Pinch on the trackpad. The photo zooms around the pointer and stops at its fitted size. Esc or the close button closes it.",
   ],
   [
     "Trackpad swipe",
