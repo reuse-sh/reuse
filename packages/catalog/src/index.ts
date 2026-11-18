@@ -159,7 +159,7 @@ export const libraries: Library[] = [
       ],
       [
         "Return to what is on screen",
-        "Close goes back to the current photo's tile, after bringing it into view in its own carousel, and fades in place when the tile cannot be seen, in the window and in every container that clips it, or the strip is still moving. The page scrolls and takes clicks during the flight and stays where it was scrolled once the viewer is gone, focus moved there stays, and the tile's container does not cut the photo before it nears the tile.",
+        "Close goes back to the current photo's tile, after bringing it into view in its own carousel, and fades in place when the tile cannot be seen, in the window and in every container that clips it, or the strip is still moving. The page scrolls and takes clicks during the flight and stays where it was scrolled once the viewer is gone, focus moved there stays, the tile's container does not cut the photo before it nears the tile, and the landing photo never changes the size of a scroll area.",
         "tests/browser/lightbox-close.spec.ts",
       ],
       [
@@ -211,6 +211,16 @@ export const libraries: Library[] = [
         "Trust no page by default",
         "Items read from markup are untrusted. An embed plays only a known provider, every frame from another origin is sandboxed, and Download offers only web, blob and raster data files and never navigates the tab away.",
         "tests/browser/lightbox-media-modules.spec.ts",
+      ],
+      [
+        "Publish one state",
+        "getState() returns the snapshot subscribers last received, so a gesture shows up once it settles, and a React component re-renders only for the part of it that it selects.",
+        "packages/lightbox/src/lifecycle.test.ts",
+      ],
+      [
+        "Take settings from markup or code",
+        "A gallery reads JSON options from its markup under the options given in code, and JSON it cannot read throws an error that names the element. A trigger with no image file and no media type keeps its own click.",
+        "packages/lightbox/src/lifecycle.test.ts",
       ],
       [
         "Survive every interruption",
