@@ -12,6 +12,10 @@
   --re-lightbox-button-padding: 10px;
   --re-lightbox-button-radius: 50%;
   --re-lightbox-icon-size: 24px;
+  --re-lightbox-glyph-size: 26px;
+  --re-lightbox-font-size: 14px;
+  --re-lightbox-counter-font-size: 13px;
+  --re-lightbox-blur: 16px;
   --re-lightbox-inset: 16px;
   --re-lightbox-gap: 10px;
   --re-lightbox-arrow-inset: 16px;
@@ -34,6 +38,8 @@
   --re-lightbox-open-duration: 400ms;
   --re-lightbox-close-duration: 300ms;
   --re-lightbox-ease: cubic-bezier(0.32, 0.72, 0, 1);
+  --re-lightbox-control-duration: 300ms;
+  --re-lightbox-ring-duration: 150ms;
   color: var(--re-lightbox-foreground);
   font-family: inherit;
 }
@@ -50,9 +56,9 @@
   background: var(--re-lightbox-control);
   color: inherit;
   font: inherit;
-  font-size: 26px;
+  font-size: var(--re-lightbox-glyph-size);
   line-height: 1;
-  backdrop-filter: blur(16px);
+  backdrop-filter: blur(var(--re-lightbox-blur));
 }
 .re-lightbox-button svg {
   width: var(--re-lightbox-icon-size);
@@ -68,7 +74,7 @@
   opacity: calc(0.3 * var(--re-lightbox-chrome-opacity, 1));
 }
 .re-lightbox-close {
-  transition: rotate 300ms ease;
+  transition: rotate var(--re-lightbox-control-duration) ease;
 }
 .re-lightbox-download {
   text-decoration: none;
@@ -109,15 +115,15 @@
   padding: var(--re-lightbox-counter-padding);
   border-radius: var(--re-lightbox-counter-radius);
   background: var(--re-lightbox-control);
-  font-size: 13px;
+  font-size: var(--re-lightbox-counter-font-size);
   font-variant-numeric: tabular-nums;
-  backdrop-filter: blur(16px);
+  backdrop-filter: blur(var(--re-lightbox-blur));
 }
 .re-lightbox-caption {
   padding: var(--re-lightbox-caption-padding);
   border-radius: var(--re-lightbox-caption-radius);
   background: var(--re-lightbox-background);
-  font-size: 14px;
+  font-size: var(--re-lightbox-font-size);
   line-height: 1.5;
   text-align: center;
 }
@@ -138,7 +144,7 @@
   border-radius: var(--re-lightbox-thumbnail-radius);
   background: none;
   opacity: 0.45;
-  transition: opacity 300ms ease;
+  transition: opacity var(--re-lightbox-control-duration) ease;
 }
 .re-lightbox[data-thumbnails="bottom"] .re-lightbox-thumbnails button {
   width: auto;
@@ -158,8 +164,8 @@
   outline: 2px solid var(--re-lightbox-foreground);
   outline-offset: 2px;
   transition:
-    width 150ms ease,
-    height 150ms ease;
+    width var(--re-lightbox-ring-duration) ease,
+    height var(--re-lightbox-ring-duration) ease;
 }
 @media (prefers-reduced-motion: reduce) {
   .re-lightbox-thumbnail-ring {
@@ -185,7 +191,7 @@
 }
 .re-lightbox-error {
   padding: var(--re-lightbox-error-padding);
-  font-size: 14px;
+  font-size: var(--re-lightbox-font-size);
   line-height: 1.5;
 }
 .re-lightbox-retry {

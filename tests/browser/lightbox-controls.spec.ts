@@ -446,6 +446,73 @@ test("in RTL previous sits on the right and next on the left, each icon mirrored
   ]);
 });
 
+test("in RTL the counter reads 2 / 3 for the second of three photos, and an Arabic counter reads right to left", async ({
+  page,
+}) => {
+  await mount(page, "", ["lightbox/base.css", "lightbox/theme.css"]);
+  const order = (strings: Record<string, unknown>) =>
+    page.evaluate(async (arabic) => {
+      document.documentElement.dir = "rtl";
+      const { createLightbox } = await import("/modules/lightbox/index.js");
+      const lightbox = createLightbox({
+        history: false,
+        strings: arabic
+          ? {
+              counter: (index: number, count: number) =>
+                `${(index + 1).toLocaleString("ar-EG")} من ${count.toLocaleString("ar-EG")}`,
+            }
+          : {},
+      });
+      lightbox.open(
+        Array.from({ length: 3 }, () => ({
+          src: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='1200' height='800'/%3E",
+          width: 1200,
+          height: 800,
+        })),
+        1,
+      );
+      const numbers = [
+        ...document.querySelectorAll(".re-lightbox-counter-number"),
+      ].map((number) => ({
+        text: number.textContent,
+        left: Math.round(number.getBoundingClientRect().left),
+      }));
+      lightbox.destroy();
+      return numbers
+        .sort((a, b) => a.left - b.left)
+        .map((number) => number.text);
+    }, Boolean(strings.arabic));
+  expect(await order({})).toEqual(["2", "3"]);
+  expect(await order({ arabic: true })).toEqual(["٣", "٢"]);
+});
+
+test("a narrow right-to-left viewer with a side caption keeps next at its edge", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 600, height: 700 });
+  await mount(page, "", ["lightbox/base.css", "lightbox/theme.css"]);
+  await page.evaluate(async () => {
+    document.documentElement.dir = "rtl";
+    const { createLightbox } = await import("/modules/lightbox/index.js");
+    const photo = (i: number) =>
+      `data:image/svg+xml,${encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="800"><rect width="1200" height="800" fill="hsl(${i * 47} 60% 55%)"/></svg>`)}`;
+    createLightbox({ history: false, caption: "side" }).open(
+      [0, 1, 2].map((i) => ({
+        src: photo(i),
+        width: 1200,
+        height: 800,
+        caption: `Caption ${i + 1}`,
+      })),
+      1,
+    );
+  });
+  await page.waitForTimeout(500);
+  const next = await page.locator(".re-lightbox-next").boundingBox();
+  const prev = await page.locator(".re-lightbox-prev").boundingBox();
+  expect(Math.round(next?.x ?? 0)).toBe(16);
+  expect(Math.round(600 - (prev?.x ?? 0) - (prev?.width ?? 0))).toBe(16);
+});
+
 test("a side column sits at the end edge, left in RTL, and turns into the bottom strip at 700px", async ({
   page,
 }) => {
@@ -588,7 +655,7 @@ test("a second click on a thumbnail while the strip centers it still ends with i
   await expect.poll(() => offCenter(page)).toBeLessThanOrEqual(2);
 });
 
-test("bottom thumbnails take each photo's proportions, square without a size and 24px at the narrowest, and the ring takes the active one's size", async ({
+test("bottom thumbnails take each photo's proportions up to 3:1, square without a size and 24px at the narrowest, and the ring takes the active one's size", async ({
   page,
 }) => {
   await page.emulateMedia({ reducedMotion: "reduce" });
@@ -622,7 +689,7 @@ test("bottom thumbnails take each photo's proportions, square without a size and
       (thumb) => thumb.getBoundingClientRect().width,
     );
   });
-  expect(widths).toEqual([66, 44, 24, 176]);
+  expect(widths).toEqual([66, 44, 24, 132]);
   for (const index of [1, 2, 3]) {
     await page.evaluate((i) => (window as Window).lightbox.goTo(i), index);
     await expect.poll(ringOff).toBeLessThanOrEqual(1);
@@ -783,23 +850,100 @@ test("a button's hover follows a theme's own control color, and the default stay
   for (const channel of await hovered()) expect(channel).toBeLessThan(0.3);
 });
 
-test("the strip is one tab stop: Tab reaches the active thumbnail, arrows move focus, Enter opens", async ({
+const ringOnCurrent = (page: Page) =>
+  page.evaluate(() => {
+    const ring = document.querySelector(".re-lightbox-thumbnail-ring");
+    const thumb = document.querySelector(
+      '.re-lightbox-thumbnails [aria-current="true"]',
+    );
+    if (!ring || !thumb) return Number.NaN;
+    const a = ring.getBoundingClientRect();
+    const b = thumb.getBoundingClientRect();
+    return Math.abs(a.left + a.width / 2 - (b.left + b.width / 2));
+  });
+
+test("the strip is one tab stop: Tab reaches the active thumbnail, and arrows, Home and End page the viewer with focus on the thumbnail under the ring", async ({
   page,
 }) => {
-  await open(page, { thumbnails: "bottom" }, { count: 8, index: 2 });
+  await open(page, { thumbnails: "bottom" }, { count: 40, index: 2 });
   const focused = () =>
     page.evaluate(() => document.activeElement?.getAttribute("aria-label"));
   for (let i = 0; i < 8 && (await focused()) !== "Show image 3"; i++)
     await page.keyboard.press("Tab");
   expect(await focused()).toBe("Show image 3");
-  await page.keyboard.press("ArrowRight");
-  expect(await focused()).toBe("Show image 4");
-  expect((await lightbox(page)).index).toBe(2);
+  for (const [key, index] of [
+    ["ArrowRight", 3],
+    ["End", 39],
+    ["ArrowLeft", 38],
+    ["Home", 0],
+  ] as const) {
+    await page.keyboard.press(key);
+    await expect.poll(async () => (await lightbox(page)).index).toBe(index);
+    expect(await focused()).toBe(`Show image ${index + 1}`);
+    await expect.poll(() => ringOnCurrent(page)).toBeLessThanOrEqual(1);
+  }
   await page.keyboard.press("Enter");
-  await expect.poll(async () => (await lightbox(page)).index).toBe(3);
+  expect((await lightbox(page)).index).toBe(0);
   await page.keyboard.press("Tab");
   await page.keyboard.press("Shift+Tab");
-  expect(await focused()).toBe("Show image 4");
+  expect(await focused()).toBe("Show image 1");
+});
+
+test("a mouse drag on the strip reports and announces the photo once, when the strip settles, and leaves the tab stop on it", {
+  tag: "@desktop",
+}, async ({ page, browserName }) => {
+  await open(page, { thumbnails: "bottom" }, { count: 20 });
+  await page.evaluate(() => {
+    const status = document.querySelector(".re-lightbox-status") as Element;
+    const announced: string[] = [];
+    new MutationObserver(() =>
+      announced.push(status.textContent ?? ""),
+    ).observe(status, { childList: true, characterData: true, subtree: true });
+    Object.assign(window, { announced });
+    (window as Window).changes.length = 0;
+  });
+  const first = await page
+    .getByRole("button", { name: "Show image 1", exact: true })
+    .boundingBox();
+  if (!first) throw new Error("Thumbnail 1 has no box.");
+  const pitch = first.width + 8;
+  const y = first.y + first.height / 2;
+  await page.mouse.move(first.x + first.width / 2, y);
+  await page.mouse.down();
+  for (let step = 1; step <= 30; step++)
+    await page.mouse.move(
+      first.x + first.width / 2 - (step * pitch * 4) / 30,
+      y,
+    );
+  await page.mouse.up();
+  await expect
+    .poll(() => page.evaluate(() => (window as Window).changes.length))
+    .toBeGreaterThan(0);
+  await expect.poll(() => offCenter(page)).toBeLessThanOrEqual(2);
+  await page.evaluate(async () => {
+    for (let frame = 0; frame < 20; frame++)
+      await new Promise(requestAnimationFrame);
+  });
+  const out = await page.evaluate(() => {
+    const thumbs = [
+      ...document.querySelectorAll<HTMLElement>(
+        ".re-lightbox-thumbnails button",
+      ),
+    ];
+    return {
+      index: (window as Window).lightbox.getState().index,
+      changes: (window as Window).changes.length,
+      announced: (window as Window & { announced: string[] }).announced,
+      focused: thumbs.indexOf(document.activeElement as HTMLElement),
+      tabStop: thumbs.findIndex((thumb) => thumb.tabIndex === 0),
+    };
+  });
+  expect(out.index).toBeGreaterThanOrEqual(3);
+  expect(out.changes).toBe(1);
+  expect(out.announced).toEqual([`Image ${out.index + 1} of 20`]);
+  expect(out.tabStop).toBe(out.index);
+  if (browserName === "chromium") expect(out.focused).toBe(out.index);
+  else expect([-1, out.index]).toContain(out.focused);
 });
 
 test("a side caption panel at 1280px never covers the photo", async ({
@@ -888,6 +1032,84 @@ test("the last photo without loop goes back to the first, at once under reduced 
         ?.style.getPropertyValue("--re-lightbox-slideshow-progress"),
     ),
   ).toBe("0");
+});
+
+test("the last of 40 photos without loop goes back to the first without showing an empty slide", async ({
+  page,
+}) => {
+  await open(
+    page,
+    { controls: { slideshow: true }, slideshow: { interval: 300 } },
+    { count: 40, index: 39 },
+  );
+  const blank = await page.evaluate(async () => {
+    const viewport = document.querySelector(
+      ".re-lightbox-viewport",
+    ) as HTMLElement;
+    const button = document.querySelector(
+      ".re-lightbox-slideshow",
+    ) as HTMLElement;
+    button.click();
+    let blank = 0;
+    await new Promise<void>((done) => {
+      const tick = () => {
+        const port = viewport.getBoundingClientRect();
+        const slides = [
+          ...viewport.querySelectorAll<HTMLElement>(".re-lightbox-slide"),
+        ];
+        for (const slide of slides) {
+          const box = slide.getBoundingClientRect();
+          if (
+            box.right > port.left + 1 &&
+            box.left < port.right - 1 &&
+            !slide.querySelector(".re-lightbox-frame")
+          )
+            blank++;
+        }
+        const first = slides[0].getBoundingClientRect();
+        const back = (window as Window).lightbox.getState().index === 0;
+        if (back && button.getAttribute("aria-label") === "Stop slideshow")
+          button.click();
+        if (back && Math.abs(first.left - port.left) < 1) done();
+        else requestAnimationFrame(tick);
+      };
+      tick();
+    });
+    return blank;
+  });
+  expect(blank).toBe(0);
+});
+
+test("theme.css takes its font sizes, blur and control timings from --re-lightbox-* properties", async ({
+  page,
+}) => {
+  await open(page, { thumbnails: "bottom" }, { captions: true });
+  await page.addStyleTag({
+    content:
+      ".re-lightbox{--re-lightbox-glyph-size:30px;--re-lightbox-font-size:15px;--re-lightbox-counter-font-size:11px;--re-lightbox-blur:4px;--re-lightbox-control-duration:120ms;--re-lightbox-ring-duration:60ms}",
+  });
+  const styles = await page.evaluate(() => {
+    const css = (selector: string) =>
+      getComputedStyle(document.querySelector(selector) as Element);
+    return {
+      glyph: css(".re-lightbox-close").fontSize,
+      blur: css(".re-lightbox-counter").backdropFilter,
+      rotate: css(".re-lightbox-close").transitionDuration,
+      counter: css(".re-lightbox-counter").fontSize,
+      caption: css(".re-lightbox-caption").fontSize,
+      thumbnail: css(".re-lightbox-thumbnails button").transitionDuration,
+      ring: css(".re-lightbox-thumbnail-ring").transitionDuration,
+    };
+  });
+  expect(styles).toEqual({
+    glyph: "30px",
+    blur: "blur(4px)",
+    rotate: "0.12s",
+    counter: "11px",
+    caption: "15px",
+    thumbnail: "0.12s",
+    ring: "0.06s, 0.06s",
+  });
 });
 
 test("the photos theme is white with the controls and fades to black over 300ms without them", async ({

@@ -275,6 +275,7 @@ type MediaSlide = {
   content: LightboxContent;
   mounted?: LightboxMounted;
   abort?: AbortController;
+  holder?: HTMLElement;
 };
 
 type LoadedSlide = {
@@ -286,7 +287,7 @@ type LoadedSlide = {
   natural?: number;
   status: "idle" | "loading" | "settled" | "failed";
   load: (priority: "high" | "low") => void;
-  /** The full file's swap, held until the open flight with the preview has landed. */
+  /** The full file's swap, held until the open flight has landed or the gesture on it ends. */
   commit?: () => void;
   cancel: () => void;
 };
@@ -309,12 +310,13 @@ type Session = {
   slides: HTMLDivElement[];
   loaded: Map<number, LoadedSlide>;
   carousel: Carousel;
-  carouselLoops: boolean;
   heading: 1 | -1;
   marked?: number;
   strings: LightboxStrings;
   slots: ReturnType<LightboxSlot>[];
-  motion?: { frame: number; left: number; still: number };
+  motion?: { frame: number; left: number; still: number; moved: boolean };
+  /** The photo changed since the last settle. */
+  paged: boolean;
   phase: "entering" | "opening" | "open" | "dragging" | "returning" | "closing";
   timing: { open: number; close: number; ease: string };
   chrome: ChromeModel;
@@ -333,7 +335,12 @@ type Session = {
   stripInput: boolean;
   /** The strip has changed the photo since that input; full files wait for it to settle. */
   scrubbing: boolean;
+  /** The index the last change event reported, so a scrub reports once when it ends. */
+  reported: number;
   scrubTimer?: ReturnType<typeof setTimeout>;
+  scrubFrame?: number;
+  /** Each thumbnail's center along the strip in scroll coordinates, read once per layout. */
+  thumbCenters?: number[];
   aside?: HTMLDivElement;
   slideshow?: Slideshow;
   /** Reasons the slideshow waits, kept while it is off so a start honors them. */
@@ -448,6 +455,37 @@ function corners(origin: HTMLElement, rect: DOMRect, win: Window) {
   return [0, 0, 0, 0];
 }
 
+// A tile shows when part of it lies inside the window and inside every ancestor that clips it.
+function onScreen(origin: HTMLElement, rect: DOMRect, win: Window) {
+  let left = Math.max(rect.left, 0);
+  let top = Math.max(rect.top, 0);
+  let right = Math.min(rect.right, win.innerWidth);
+  let bottom = Math.min(rect.bottom, win.innerHeight);
+  for (
+    let element = origin.parentElement;
+    // The body's overflow belongs to the window, which the start already clips to.
+    element &&
+    element !== origin.ownerDocument.body &&
+    right > left &&
+    bottom > top;
+    element = element.parentElement
+  ) {
+    const style = win.getComputedStyle(element);
+    if (style.overflowX === "visible" && style.overflowY === "visible")
+      continue;
+    const clip = element.getBoundingClientRect();
+    if (style.overflowX !== "visible") {
+      left = Math.max(left, clip.left);
+      right = Math.min(right, clip.right);
+    }
+    if (style.overflowY !== "visible") {
+      top = Math.max(top, clip.top);
+      bottom = Math.min(bottom, clip.bottom);
+    }
+  }
+  return right > left && bottom > top;
+}
+
 function lockScroll(doc: Document) {
   const win = doc.defaultView;
   if (!win) return () => {};
@@ -499,11 +537,42 @@ const historyBacks = new WeakMap<
 >();
 const landings = new WeakSet<Event>();
 
+// A viewer that leaves while another viewer's entry sits above its own cannot go back to it, so
+// its entry is drained once it becomes the current one.
+const HISTORY_KEY = "reuseLightbox";
+const orphans = new WeakMap<Window, Set<string>>();
+
+function entryOf(win: Window) {
+  const current: unknown = win.history.state;
+  const id =
+    typeof current === "object" && current !== null
+      ? (current as Record<string, unknown>)[HISTORY_KEY]
+      : undefined;
+  return typeof id === "string" ? id : undefined;
+}
+
+function orphan(win: Window, id: string) {
+  const current = entryOf(win);
+  if (current === undefined || current === id) return;
+  const set = orphans.get(win) ?? new Set();
+  orphans.set(win, set);
+  set.add(id);
+}
+
+function takeOrphan(win: Window) {
+  const id = entryOf(win);
+  return id !== undefined && Boolean(orphans.get(win)?.delete(id));
+}
+
 function landed(win: Window, event: Event) {
   if (landings.has(event)) return true;
   const back = historyBacks.get(win);
   if (!back) return false;
   landings.add(event);
+  if (takeOrphan(win)) {
+    win.history.back();
+    return true;
+  }
   win.removeEventListener("popstate", back.drain);
   historyBacks.delete(win);
   releaseScroll(win);
@@ -615,6 +684,7 @@ const LOADING_DELAY = 300;
 const ZOOM_IDLE = 150;
 const SPINNER_SIZE = 32;
 const LANDING_HANDOFF = 0.7;
+const MAX_THUMB_RATIO = 3;
 
 type Pinned = { index: number; zoom: Zoom; left: boolean; right: boolean };
 
@@ -631,6 +701,10 @@ function isHTMLElement(value: unknown): value is HTMLElement {
   return (
     isElement(value) && value.namespaceURI === "http://www.w3.org/1999/xhtml"
   );
+}
+
+function resolveOrigin(origin: LightboxItem["origin"]) {
+  return (typeof origin === "function" ? origin() : origin) ?? null;
 }
 
 function sameZoom(a: Zoom, b: Zoom) {
@@ -690,6 +764,9 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
   let syncingCarousel = false;
   let closePromise: Promise<void> | undefined;
   let pendingClosed: (() => void) | undefined;
+  let listAfterClose:
+    | { items: LightboxItem[]; sources: readonly LightboxItem[] }
+    | undefined;
   let state: LightboxState = {
     isOpen: false,
     isClosing: false,
@@ -704,7 +781,6 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
     LightboxEventName,
     Set<(event: LightboxEvent) => void>
   >();
-  const historyKey = "reuseLightbox";
   const historyId = Math.random().toString(36).slice(2);
   let historyWindow: Window | undefined;
   let vetting = false;
@@ -856,15 +932,7 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
       return;
     }
     if (looping() || state.index < items.length - 1) step(1);
-    else {
-      // The last photo springs back to the first, as the carousel's autoplay does.
-      finishFade(s, true);
-      clearStands(s);
-      syncingCarousel = true;
-      activeChanged(s, 0);
-      s.carousel.goTo(0, "smooth");
-      syncingCarousel = false;
-    }
+    else goTo(0);
     restartSlideshow(s);
   }
 
@@ -901,11 +969,13 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
     if (!settings.icons?.slideshow) button.textContent = on ? "❚❚" : "▶";
   }
 
-  function easing(value: string) {
+  // A CSS easing list passes CSS.supports but makes animate() throw, so the check asks the same parser animate() uses.
+  function easing(value: string, win: Window | null) {
+    const Effect = (win as (Window & typeof globalThis) | null)?.KeyframeEffect;
+    if (!value || !Effect) return FLIGHT_EASE;
     try {
-      return value && CSS.supports("transition-timing-function", value)
-        ? value
-        : FLIGHT_EASE;
+      new Effect(null, null, { easing: value });
+      return value;
     } catch {
       return FLIGHT_EASE;
     }
@@ -927,7 +997,10 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
       close:
         fixed ??
         milliseconds(read("--re-lightbox-close-duration"), CLOSE_DURATION),
-      ease: easing(read("--re-lightbox-ease").trim()),
+      ease: easing(
+        read("--re-lightbox-ease").trim(),
+        s.dialog.ownerDocument.defaultView,
+      ),
     };
   }
 
@@ -977,13 +1050,27 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
     return loop && items.length > 1;
   }
 
+  // The carousel's change events come from the viewer's own moves here, so they are ignored.
+  function quietly(move: () => void) {
+    const syncing = syncingCarousel;
+    syncingCarousel = true;
+    try {
+      move();
+    } finally {
+      syncingCarousel = syncing;
+    }
+  }
+
+  function lastIndex() {
+    return clamp(state.index, 0, Math.max(0, items.length - 1));
+  }
+
   function wrap(index: number) {
     return ((index % items.length) + items.length) % items.length;
   }
 
   function originOf(index: number) {
-    const origin = settings.getOrigin?.(index) ?? items[index]?.origin;
-    return (typeof origin === "function" ? origin() : origin) ?? null;
+    return resolveOrigin(settings.getOrigin?.(index) ?? items[index]?.origin);
   }
 
   function rendered(element: HTMLElement) {
@@ -1022,23 +1109,25 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
       : items[index].previewSrc;
   }
 
-  // Before the file arrives, the shown preview or the tile gives the proportions.
+  function filling(aspect: number, s: Session): Size {
+    const { width, height } = view(s);
+    return {
+      width: Math.max(width, height * aspect),
+      height: Math.max(height, width / aspect),
+    };
+  }
+
+  // Before the file arrives, the shown preview or the tile gives only the proportions, since its
+  // pixels are the tile's and not the file's; a player has no pixels to stop at. Both fill the screen.
   function imageSize(index: number, s: Session): Size {
     const item = items[index];
     if (item.width && item.height)
       return { width: item.width, height: item.height };
-    // A player has no pixels to stop at, so it fills the screen at its aspect.
-    if (item.type) {
-      const aspect = s.loaded.get(index)?.media?.mounted?.aspect || 16 / 9;
-      const { width, height } = view(s);
-      return {
-        width: Math.max(width, height * aspect),
-        height: Math.max(height, width / aspect),
-      };
-    }
+    if (item.type)
+      return filling(s.loaded.get(index)?.media?.mounted?.aspect || 16 / 9, s);
     for (const image of [s.loaded.get(index)?.image, tileImage(index)])
       if (image?.naturalWidth && image.naturalHeight)
-        return { width: image.naturalWidth, height: image.naturalHeight };
+        return filling(image.naturalWidth / image.naturalHeight, s);
     return view(s);
   }
 
@@ -1088,16 +1177,15 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
     const range = limits(s);
     if (s.phase !== "dragging") {
       if (frame) frame.style.transform = zoomTransform(state.zoom);
-      const syncing = syncingCarousel;
-      syncingCarousel = true;
-      s.carousel.setEnabled(
-        state.zoom.scale <= 1 &&
-          state.zoom.scale >= range.min - 1e-3 &&
-          s.gesture?.axis !== "pan" &&
-          s.pointers.size < 2 &&
-          items.length > 1,
+      quietly(() =>
+        s.carousel.setEnabled(
+          state.zoom.scale <= 1 &&
+            state.zoom.scale >= range.min - 1e-3 &&
+            s.gesture?.axis !== "pan" &&
+            s.pointers.size < 2 &&
+            items.length > 1,
+        ),
       );
-      syncingCarousel = syncing;
     }
     const zoomable = range.max > 1 || range.min < 1;
     const clickable = String(
@@ -1158,12 +1246,11 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
   ) {
     if (duration <= 0 || typeof node.animate !== "function")
       return Promise.resolve();
-    let animation: Animation;
-    try {
-      animation = node.animate(frames, { duration, easing, fill: "both" });
-    } catch {
-      return Promise.resolve();
-    }
+    const animation = node.animate(frames, {
+      duration,
+      easing,
+      fill: "both",
+    });
     return new Promise<void>((resolve) => {
       s.animations.add(animation);
       syncAnimating(s);
@@ -1186,7 +1273,22 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
       };
       // A timeline that has not advanced by the deadline still lands the last keyframe. It is
       // written directly, since WebKit commits the first keyframe of an animation that never got a frame.
-      const timer = setTimeout(() => finish(true), duration + 80);
+      // The deadline counts from the animation's start, so a busy main thread does not cut it short.
+      let elapsed = -1;
+      const deadline = () => {
+        const time = Number(animation.currentTime);
+        if (
+          animation.startTime === null ||
+          !(time > elapsed) ||
+          time >= duration
+        )
+          finish(true);
+        else {
+          elapsed = time;
+          timer = setTimeout(deadline, duration - time + 80);
+        }
+      };
+      let timer = setTimeout(deadline, duration + 80);
       s.finishAnimations.add(finish);
       void animation.finished.then(
         () => finish(),
@@ -1242,15 +1344,10 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
       typeof frame.animate !== "function"
     )
       return;
-    let animation: Animation;
-    try {
-      animation = frame.animate(
-        [{ transform: zoomTransform(from) }, { transform: zoomTransform(to) }],
-        { duration, easing: ease },
-      );
-    } catch {
-      return;
-    }
+    const animation = frame.animate(
+      [{ transform: zoomTransform(from) }, { transform: zoomTransform(to) }],
+      { duration, easing: ease },
+    );
     const motion = { from, to, animation };
     s.zoomMotion = motion;
     s.animations.add(animation);
@@ -1323,7 +1420,9 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
     copy.draggable = false;
     copy.src = src;
     copy.style.cssText = `position:absolute;left:0;top:0;right:auto;bottom:auto;display:block;box-sizing:content-box;width:${size.width}px;height:${size.height}px;min-width:0;min-height:0;max-width:none;max-height:none;margin:0;padding:0;border:0;border-radius:0;box-shadow:none;outline:0;object-fit:fill;opacity:1;visibility:visible;filter:none;transition:none;animation:none;translate:none;rotate:none;scale:none;transform-origin:center;pointer-events:none`;
-    origin.after(copy);
+    // A carousel of bare children would count a copy beside its slide as one more slide.
+    const parent = origin.parentElement;
+    (parent?.classList.contains("re-carousel") ? parent : origin).after(copy);
     const at = copy.getBoundingClientRect();
     copy.style.left = `${box.left + (box.width - size.width) / 2 - at.left}px`;
     copy.style.top = `${box.top + (box.height - size.height) / 2 - at.top}px`;
@@ -1359,9 +1458,7 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
       !s.pointers.size &&
       !s.carousel.getState().isDragging
     ) {
-      syncingCarousel = true;
-      s.carousel.goTo(state.index, "instant");
-      syncingCarousel = false;
+      quietly(() => s.carousel.goTo(state.index, "instant"));
       slide = s.slides[state.index]?.getBoundingClientRect();
       if (slide && Math.abs(slide.left - box.left) <= 1)
         live.transform = `translate(${shift}px, 0px) ${live.transform}`;
@@ -1381,14 +1478,12 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
         "ease",
       );
     const visible =
+      origin &&
       rect &&
       slide &&
       Math.abs(slide.left - box.left) <= 1 &&
       Math.abs(slide.right - box.right) <= 1 &&
-      rect.bottom > 0 &&
-      rect.right > 0 &&
-      rect.top < viewport.height &&
-      rect.left < viewport.width;
+      onScreen(origin, rect, win);
     if (
       !visible ||
       !origin ||
@@ -1433,8 +1528,8 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
         ? crop.top
         : (rect.height - crop.height) / 2;
     const scale = crop.width / size.width;
-    const x = rect.left + left + crop.width / 2 - viewport.width / 2;
-    const y = rect.top + top + crop.height / 2 - viewport.height / 2;
+    const x = rect.left + left + crop.width / 2 - box.left - viewport.width / 2;
+    const y = rect.top + top + crop.height / 2 - box.top - viewport.height / 2;
     const radius = corners(origin, rect, win)
       .map((corner) => `${corner / scale}px`)
       .join(" ");
@@ -1543,6 +1638,7 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
     const resting = s.rest !== undefined && sameZoom(before, s.rest);
     s.box = measure(s.viewport);
     s.pinned = undefined;
+    s.thumbCenters = undefined;
     if (resting) updateState({ zoom: restZoom(s, state.index) });
     else {
       const to = fit(state.index, s);
@@ -1562,11 +1658,11 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
       });
     }
     layout(s);
-    syncingCarousel = true;
-    s.carousel.setEnabled(true);
-    s.carousel.refresh();
-    s.carousel.goTo(state.index, "instant");
-    syncingCarousel = false;
+    quietly(() => {
+      s.carousel.setEnabled(true);
+      s.carousel.refresh();
+      s.carousel.goTo(state.index, "instant");
+    });
     applyZoom(s, false);
     ringThumb(s, false);
     if (!sameZoom(before, state.zoom)) publish({});
@@ -1578,7 +1674,7 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
     if (!size) return [];
     const width = s.viewport.clientWidth;
     const start = Math.abs(s.viewport.scrollLeft);
-    const looped = s.carouselLoops && s.carousel.getState().isLooping;
+    const looped = s.carousel.getState().isLooping;
     const visible = new Set<number>();
     for (
       let k = Math.floor((start + 1) / size) - 1;
@@ -1678,6 +1774,7 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
     });
     media.abort = abort;
     media.mounted = mounted;
+    media.holder = holder;
     if (mounted.interactive) {
       holder.dataset.lightboxInteractive = "";
       holder.dataset.carouselNoDrag = "";
@@ -1699,13 +1796,36 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
     layout(s);
     if (index === state.index && !s.flying && !state.isClosing)
       mounted.resume?.();
+    if (index === state.index) holdForMedia(s);
+  }
+
+  function holdForMedia(s: Session) {
+    const media = s.loaded.get(state.index)?.media;
+    const player =
+      media?.holder?.querySelector<HTMLMediaElement>("video, audio");
+    holdSlideshow(
+      s,
+      "media",
+      Boolean(media?.mounted) &&
+        (player
+          ? !player.paused && !player.ended
+          : media?.content.type === "embed"),
+    );
+  }
+
+  function swapHeld(s: Session) {
+    for (const entry of s.loaded.values()) {
+      const commit = entry.commit;
+      entry.commit = undefined;
+      commit?.();
+    }
   }
 
   function unmountMedia(entry: LoadedSlide) {
     const media = entry.media;
     if (!media?.mounted) return;
     const { mounted, abort } = media;
-    media.mounted = media.abort = undefined;
+    media.mounted = media.abort = media.holder = undefined;
     abort?.abort();
     mounted.unmount();
     entry.frame.querySelector(":scope > .re-lightbox-media")?.remove();
@@ -1775,8 +1895,8 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
       const showSpinner = () => {
         if (alive && session === s) spinner = spin(s, frame);
       };
-      const fetcher = (url: string) =>
-        (doc.defaultView ?? globalThis).fetch(url);
+      const fetcher = (url: string, init?: RequestInit) =>
+        (doc.defaultView ?? globalThis).fetch(url, init);
       let shown = "";
       const display = (url: string) => {
         shown = url;
@@ -1808,7 +1928,7 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
               ? Math.round(item.height / ratio)
               : size
                 ? Math.round(size.width)
-                : width;
+                : (largestWidth(item.srcset) ?? width);
           if (!item.height) item.height = Math.round(item.width * ratio);
         }
         display(source.currentSrc || source.src);
@@ -1866,7 +1986,10 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
             (loader.currentSrc || loader.src) === source;
           const ready = (size?: Size) => {
             if (!current()) return;
-            if (s.flying && image.hasAttribute("src"))
+            const held =
+              s.flying ||
+              (s.pointers.size > 0 && s.loaded.get(state.index) === entry);
+            if (held && image.hasAttribute("src"))
               entry.commit = () => show(loader, width, size);
             else show(loader, width, size);
             settle("settled");
@@ -1942,7 +2065,7 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
     startLoads(s);
   }
 
-  function activeChanged(s: Session, index: number) {
+  function activeChanged(s: Session, index: number, report = true) {
     if (session !== s || state.index === index || state.isClosing) return;
     cancelAnimations(s);
     const old = s.loaded.get(state.index);
@@ -1957,13 +2080,24 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
       looping() && Math.abs(gap) > items.length / 2 ? gap < 0 : gap > 0;
     s.pinned = undefined;
     s.heading = forward ? 1 : -1;
+    s.paged = true;
     publish({ index, zoom: restZoom(s, index) });
     update(s, forward ? 1 : -1);
+    arrived(s, index, report);
+  }
+
+  function arrived(s: Session, index: number, report = true) {
     const entry = s.loaded.get(index);
     if (entry?.media?.mounted) entry.media.mounted.resume?.();
     else if (entry) mountMedia(s, index, entry);
-    s.status.textContent = s.strings.slide(index, items.length);
+    holdForMedia(s);
     restartSlideshow(s);
+    if (report) announce(s, index);
+  }
+
+  function announce(s: Session, index: number) {
+    s.reported = index;
+    s.status.textContent = s.strings.slide(index, items.length);
     emit("change", s);
   }
 
@@ -2156,34 +2290,66 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
     finishFade(s, true);
     clearStands(s);
     s.centeredThumb = index;
-    syncingCarousel = true;
-    activeChanged(s, index);
-    s.carousel.goTo(index, "instant");
-    syncingCarousel = false;
+    quietly(() => {
+      activeChanged(s, index, false);
+      s.carousel.goTo(index, "instant");
+    });
     trimSlides(s);
   }
 
-  function endScrub(s: Session) {
-    clearTimeout(s.scrubTimer);
-    if (!s.scrubbing) return;
-    s.scrubbing = false;
-    if (session === s) startLoads(s);
+  function scrubNow(s: Session) {
+    const strip = s.thumbStrip;
+    if (s.scrubFrame !== undefined)
+      s.dialog.ownerDocument.defaultView?.cancelAnimationFrame(s.scrubFrame);
+    s.scrubFrame = undefined;
+    if (strip && s.stripInput) scrubTo(s, thumbUnderRing(s, strip));
   }
 
-  // Walks from the current thumbnail toward the ring, so a frame reads only the thumbnails the
-  // ring passes.
+  // The photo the strip landed on is reported once, and focus and the tab stop follow it.
+  function endScrub(s: Session) {
+    clearTimeout(s.scrubTimer);
+    if (s.scrubFrame !== undefined) scrubNow(s);
+    if (!s.scrubbing) return;
+    s.scrubbing = false;
+    if (session !== s) return;
+    if (!state.isClosing && s.reported !== state.index)
+      announce(s, state.index);
+    rove(s, state.index);
+    const thumb = s.thumbs[state.index];
+    const active = s.dialog.ownerDocument.activeElement;
+    if (thumb && active !== thumb && s.thumbStrip?.contains(active))
+      thumb.focus({ preventScroll: true, focusVisible: false });
+    startLoads(s);
+  }
+
+  function thumbCenters(s: Session, strip: HTMLElement, side: boolean) {
+    if (s.thumbCenters) return s.thumbCenters;
+    const box = strip.getBoundingClientRect();
+    const scrolled = side ? strip.scrollTop : strip.scrollLeft;
+    s.thumbCenters = s.thumbs.map((thumb) => {
+      const rect = thumb.getBoundingClientRect();
+      return (
+        scrolled +
+        (side
+          ? rect.top + rect.height / 2 - box.top
+          : rect.left + rect.width / 2 - box.left)
+      );
+    });
+    return s.thumbCenters;
+  }
+
+  // Walks from the current thumbnail toward the ring over positions read once per layout, so a
+  // frame of scrolling reads only the strip's scroll offset.
   function thumbUnderRing(s: Session, strip: HTMLElement) {
     const side = s.dialog.dataset.thumbnails === "side";
-    const box = strip.getBoundingClientRect();
-    const middle = side ? box.top + box.height / 2 : box.left + box.width / 2;
-    const away = (index: number) => {
-      const rect = s.thumbs[index]?.getBoundingClientRect();
-      if (!rect) return Number.POSITIVE_INFINITY;
-      return Math.abs(
-        (side ? rect.top + rect.height / 2 : rect.left + rect.width / 2) -
-          middle,
-      );
-    };
+    const centers = thumbCenters(s, strip, side);
+    const middle = side
+      ? strip.scrollTop + strip.clientHeight / 2
+      : strip.scrollLeft + strip.clientWidth / 2;
+    const away = (index: number) =>
+      index in centers
+        ? Math.abs(centers[index] - middle)
+        : Number.POSITIVE_INFINITY;
     let index = state.index;
     let distance = away(index);
     for (const step of [1, -1]) {
@@ -2204,6 +2370,7 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
     clearTimeout(s.tapTimer);
     clearTimeout(s.scrubTimer);
     const win = s.dialog.ownerDocument.defaultView;
+    if (s.scrubFrame !== undefined) win?.cancelAnimationFrame(s.scrubFrame);
     if (s.motion) win?.cancelAnimationFrame(s.motion.frame);
     s.motion = undefined;
     if (s.resizeFrame !== undefined) win?.cancelAnimationFrame(s.resizeFrame);
@@ -2230,6 +2397,11 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
       active === s.dialog.ownerDocument.body
     )
       returnFocus(s);
+    if (listAfterClose) {
+      ({ items, sources } = listAfterClose);
+      listAfterClose = undefined;
+      updateState({ count: items.length, index: lastIndex() });
+    }
   }
 
   function leaveFullscreen(s: Session) {
@@ -2286,11 +2458,8 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
     if (!s || state.isClosing || !Number.isFinite(scale)) return;
     const range = limits(s);
     const nextScale = clamp(scale, range.min, range.max);
-    if (nextScale > 1 && state.zoom.scale <= 1) {
-      syncingCarousel = true;
-      s.carousel.goTo(state.index, "instant");
-      syncingCarousel = false;
-    }
+    if (nextScale > 1 && state.zoom.scale <= 1)
+      quietly(() => s.carousel.goTo(state.index, "instant"));
     const animated = notify && Math.abs(nextScale - state.zoom.scale) > 0.001;
     if (animated && s.animations.size > 0 && !s.zoomMotion)
       interruptImageMotion(s);
@@ -2445,9 +2614,7 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
       jump: () => {
         fade.jumped = true;
         if (session !== s) return;
-        syncingCarousel = true;
-        s.carousel.goTo(target, "instant");
-        syncingCarousel = false;
+        quietly(() => s.carousel.goTo(target, "instant"));
         trimSlides(s);
       },
     };
@@ -2498,17 +2665,22 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
         : gap) > 1;
     const from = state.index;
     const paged = far || (s.stands !== undefined && target !== from);
-    syncingCarousel = true;
-    if (paged) s.leaving = from;
-    activeChanged(s, target);
-    if (paged) {
-      slideTo(s, from, target, direction ? direction > 0 : target > from);
-      s.leaving = undefined;
-      trimSlides(s);
-    } else if (direction && looping() && s.carousel.getState().isLooping)
-      s.carousel[direction > 0 ? "next" : "prev"]();
-    else s.carousel.goTo(target, "smooth");
-    syncingCarousel = false;
+    quietly(() => {
+      if (paged) s.leaving = from;
+      activeChanged(s, target);
+      // A change listener that paged on owns the strip now.
+      if (session !== s || state.index !== target) {
+        s.leaving = undefined;
+        return;
+      }
+      if (paged) {
+        slideTo(s, from, target, direction ? direction > 0 : target > from);
+        s.leaving = undefined;
+        trimSlides(s);
+      } else if (direction && looping() && s.carousel.getState().isLooping)
+        s.carousel[direction > 0 ? "next" : "prev"]();
+      else s.carousel.goTo(target, "smooth");
+    });
   }
 
   function step(direction: 1 | -1) {
@@ -2814,6 +2986,8 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
         if (
           event.button !== 0 ||
           state.isClosing ||
+          // A dismiss swipe stays with its finger.
+          s.gesture?.axis === "y" ||
           (isElement(event.target) &&
             event.target.closest(
               "button, a, input, textarea, select, [data-lightbox-interactive]",
@@ -2951,6 +3125,11 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
       { signal, passive: false },
     );
     const release = (event: PointerEvent) => {
+      lift(event);
+      if (session === s && !s.flying && !state.isClosing && !s.pointers.size)
+        swapHeld(s);
+    };
+    const lift = (event: PointerEvent) => {
       if (!s.pointers.has(event.pointerId)) return;
       const gesture = s.gesture;
       const hadPinch = s.pointers.size > 1;
@@ -3244,24 +3423,8 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
     return carousel;
   }
 
-  // The carousel reads loop only when created until its setOptions (VPF-255) lands.
-  function reconnect(s: Session, index: number) {
-    const syncing = syncingCarousel;
-    syncingCarousel = true;
-    s.carousel.destroy();
-    s.carousel = connect(s.viewport, s.strings);
-    s.carouselLoops = looping();
-    s.carousel.goTo(index, "instant");
-    syncingCarousel = syncing;
-  }
-
   function ownsHistory(win: Window) {
-    const current: unknown = win.history.state;
-    return (
-      typeof current === "object" &&
-      current !== null &&
-      (current as Record<string, unknown>)[historyKey] === historyId
-    );
+    return entryOf(win) === historyId;
   }
 
   function pushHistory(win: Window) {
@@ -3270,7 +3433,7 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
     win.history.pushState(
       {
         ...(typeof current === "object" && current !== null ? current : {}),
-        [historyKey]: historyId,
+        [HISTORY_KEY]: historyId,
       },
       "",
       win.location.href,
@@ -3295,6 +3458,7 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
   function leaveHistory() {
     const win = historyWindow;
     if (!win) return Promise.resolve();
+    if (!ownsHistory(win)) orphan(win, historyId);
     if (!ownsHistory(win) && !historyBacks.has(win)) releaseScroll(win);
     const landing = ownsHistory(win)
       ? goBack(win)
@@ -3313,11 +3477,18 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
     const win = historyWindow;
     if (!win) return;
     if (landed(win, event)) {
-      if (session && !state.isClosing && !ownsHistory(win)) pushHistory(win);
+      if (
+        session &&
+        !state.isClosing &&
+        !ownsHistory(win) &&
+        !historyBacks.has(win)
+      )
+        pushHistory(win);
       return;
     }
     if (ownsHistory(win)) return;
-    releaseScroll(win);
+    if (takeOrphan(win)) void goBack(win);
+    else releaseScroll(win);
     if (session && !state.isClosing) void closeSession(true);
   }
 
@@ -3374,6 +3545,7 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
       internals?.passClicks();
     }
     if (s.thumbRing) strip.after(s.thumbRing);
+    s.thumbCenters = undefined;
     s.centeredThumb = -1;
     centerThumb(s);
     ringThumb(s, false);
@@ -3399,6 +3571,11 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
     doc.addEventListener("visibilitychange", () => scheduleSlideshow(s), {
       signal,
     });
+    for (const type of ["play", "pause", "ended"])
+      s.viewport.addEventListener(type, () => holdForMedia(s), {
+        signal,
+        capture: true,
+      });
     const hover = (event: PointerEvent, target: EventTarget | null) => {
       if (event.pointerType !== "mouse") return;
       holdSlideshow(
@@ -3466,7 +3643,8 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
         s.stripInput = false;
         const index = clamp(to, 0, s.thumbs.length - 1);
         rove(s, index);
-        s.thumbs[index].focus();
+        goTo(index);
+        s.thumbs[index].focus({ preventScroll: true });
       },
       // Ahead of the strip carousel's own keys, which would scroll it instead.
       { signal, capture: true },
@@ -3499,7 +3677,10 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
       "scroll",
       () => {
         if (!s.stripInput) return;
-        scrubTo(s, thumbUnderRing(s, strip));
+        s.scrubFrame ??= win?.requestAnimationFrame(() => {
+          s.scrubFrame = undefined;
+          scrubNow(s);
+        });
         clearTimeout(s.scrubTimer);
         s.scrubTimer = setTimeout(() => endScrub(s), 180);
       },
@@ -3527,6 +3708,29 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
   }
 
   function open(input: readonly LightboxItem[], index = 0) {
+    const before = session;
+    try {
+      openSession(input, index);
+    } catch (error) {
+      const s = session;
+      if (s && s !== before) {
+        // The same callback may throw again while focus returns; the first error is the one to report.
+        try {
+          teardown(s);
+        } catch {}
+        publish({
+          isOpen: false,
+          isClosing: false,
+          isAnimating: false,
+          zoom: { ...identity },
+        });
+        void leaveHistory();
+      }
+      throw error;
+    }
+  }
+
+  function openSession(input: readonly LightboxItem[], index: number) {
     if (destroyed) throw new Error("This lightbox has been destroyed.");
     const nextItems = validateItems(input, options.content);
     if (!Number.isFinite(index))
@@ -3611,6 +3815,7 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
     if (control("counter")) {
       counter = doc.createElement("span");
       counter.className = "re-lightbox-counter";
+      counter.dir = "auto";
       counter.setAttribute("aria-hidden", "true");
       toolbarStart.append(counter);
     }
@@ -3773,7 +3978,10 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
           thumb.type = "button";
           thumb.tabIndex = -1;
           if (item.width && item.height)
-            thumb.style.aspectRatio = `${item.width} / ${item.height}`;
+            thumb.style.aspectRatio =
+              item.width > MAX_THUMB_RATIO * item.height
+                ? String(MAX_THUMB_RATIO)
+                : `${item.width} / ${item.height}`;
           thumb.setAttribute("aria-label", strings.thumbnail(i, items.length));
           const thumbnailSrc = item.thumbnailSrc || item.previewSrc;
           if (thumbnailSrc) {
@@ -3820,7 +4028,6 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
       slides,
       loaded: new Map(),
       carousel: connect(viewport, strings),
-      carouselLoops: looping(),
       heading: 1,
       strings,
       slots: [],
@@ -3831,6 +4038,7 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
       centeredThumb: -1,
       stripInput: false,
       scrubbing: false,
+      reported: -1,
       pauses: new Set(["phase"]),
       abort,
       animations: new Set(),
@@ -3859,6 +4067,7 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
       pointers: new Map(),
       box: measure(viewport),
       suppressClickUntil: 0,
+      paged: false,
       flying: true,
       watchedScale: 1,
       sharpScale: 1,
@@ -3986,9 +4195,7 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
       () => {
         if (!s.stands) return;
         clearStands(s);
-        syncingCarousel = true;
-        s.carousel.goTo(state.index, "instant");
-        syncingCarousel = false;
+        quietly(() => s.carousel.goTo(state.index, "instant"));
       },
       { signal: abort.signal, capture: true },
     );
@@ -4001,13 +4208,17 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
       if (!motion || session !== s || !win) return;
       const left = viewport.scrollLeft;
       motion.still = left === motion.left ? motion.still + 1 : 0;
+      if (!Number.isNaN(motion.left) && left !== motion.left)
+        motion.moved = true;
       motion.left = left;
       if ((motion.still >= 3 && isSettled(s)) || motion.still >= 30) {
         s.motion = undefined;
         clearStands(s);
         trimSlides(s);
         syncAnimating(s);
-        emit("settle", s);
+        const moved = motion.moved || s.paged;
+        s.paged = false;
+        if (moved) emit("settle", s);
         return;
       }
       motion.frame = win.requestAnimationFrame(watch);
@@ -4020,6 +4231,7 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
           frame: win.requestAnimationFrame(watch),
           left: Number.NaN,
           still: 0,
+          moved: false,
         };
         syncAnimating(s);
       },
@@ -4091,15 +4303,12 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
       s,
       initialChrome(Boolean(win?.matchMedia?.("(hover: hover)").matches)),
     );
+    s.reported = state.index;
     emit("open", s);
     void flight(s, false).then(() => {
       if (session !== s || state.isClosing) return;
       s.flying = false;
-      for (const entry of s.loaded.values()) {
-        const commit = entry.commit;
-        entry.commit = undefined;
-        commit?.();
-      }
+      swapHeld(s);
       const current = s.loaded.get(state.index);
       if (current?.media?.mounted) current.media.mounted.resume?.();
       else if (current) mountMedia(s, state.index, current);
@@ -4175,6 +4384,11 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
     clearStands(s);
     clearTimeout(s.tapTimer);
     s.tapTimer = undefined;
+    s.pointers.clear();
+    s.gesture = undefined;
+    delete s.dialog.dataset.panning;
+    // beforeclose may have rendered the tile again.
+    hideOrigin(s);
     chromeInput(s, { type: "close" });
     publish({ isClosing: true });
     leaveFullscreen(s);
@@ -4205,13 +4419,20 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
 
   function setItems(input: readonly LightboxItem[], index?: number) {
     if (destroyed) throw new Error("This lightbox has been destroyed.");
-    const nextItems = validateItems(input, options.content);
+    const nextItems = input.length ? validateItems(input, options.content) : [];
     if (index !== undefined && !Number.isFinite(index))
       throw new TypeError("Image index must be finite.");
     const s = session;
-    if (!s || state.isClosing) {
+    if (!s) {
       items = nextItems;
       sources = [...input];
+      publish({ count: items.length, index: lastIndex() });
+      return;
+    }
+    if (state.isClosing || !nextItems.length) {
+      listAfterClose = { items: nextItems, sources: [...input] };
+      if (!state.isClosing) void close();
+      if (!state.isClosing && session === s) listAfterClose = undefined;
       return;
     }
     finishFade(s, true);
@@ -4279,25 +4500,28 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
     s.loaded = loaded;
     s.marked = undefined;
     s.makeThumbs();
+    s.thumbCenters = undefined;
     s.roving = -1;
     s.thumbCarousel?.refresh();
     s.centeredThumb = Number.NaN;
     placeAside(s, true);
     const changed = target !== state.index;
-    if ((changed || !kept || s.carouselLoops) && state.zoom.scale > 1) {
+    const looped = s.carousel.getState().isLooping;
+    if ((changed || !kept || looped) && state.zoom.scale > 1) {
       updateState({ zoom: restZoom(s, target) });
       applyZoom(s);
     } else if (changed || !kept) updateState({ zoom: restZoom(s, target) });
-    syncingCarousel = true;
-    if (s.carouselLoops !== looping()) reconnect(s, target);
-    else {
+    quietly(() => {
       s.carousel.refresh();
-      if (!kept) s.carousel.goTo(target, "instant");
-    }
-    syncingCarousel = false;
+      s.carousel.setOptions({ loop: looping() });
+      if (!kept || looped !== s.carousel.getState().isLooping)
+        s.carousel.goTo(target, "instant");
+    });
     publish({ index: target, count: items.length });
     update(s);
-    if (changed) emit("change", s);
+    s.reported = target;
+    if (!kept) arrived(s, target);
+    else if (changed) emit("change", s);
   }
 
   const controller: Lightbox = {
@@ -4330,10 +4554,12 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
       loop = Boolean(next.loop);
       const s = session;
       if (!s || state.isClosing) return;
-      if (s.carouselLoops !== looping()) {
-        reconnect(s, state.index);
-        applyZoom(s);
-      }
+      const looped = s.carousel.getState().isLooping;
+      quietly(() => {
+        s.carousel.setOptions({ loop: looping() });
+        s.carousel.goTo(state.index, "instant");
+      });
+      if (looped !== s.carousel.getState().isLooping) applyZoom(s);
       update(s);
     },
     getSlide: (index) => session?.slides[index] ?? null,
@@ -4353,7 +4579,10 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
       if (s) emit("closed", null);
       const win = historyWindow;
       if (win && ownsHistory(win)) goBack(win);
-      else if (win && !historyBacks.has(win)) releaseScroll(win);
+      else if (win) {
+        orphan(win, historyId);
+        if (!historyBacks.has(win)) releaseScroll(win);
+      }
       win?.removeEventListener("popstate", onPopState);
       historyWindow = undefined;
       listeners.clear();
@@ -4391,6 +4620,10 @@ export function lightboxItemFromImage(
   const sameFile = resolve(src) === resolve(tile);
   const width = dimension(image.dataset.lightboxWidth);
   const height = dimension(image.dataset.lightboxHeight);
+  const file =
+    sameFile && image.naturalWidth && image.naturalHeight
+      ? fileWidth(image, image.srcset || undefined, base)
+      : undefined;
   const caption =
     image
       .closest("figure")
@@ -4420,8 +4653,10 @@ export function lightboxItemFromImage(
     srcset: image.dataset.lightboxSrcset || undefined,
     sizes: image.dataset.lightboxSizes || undefined,
     previewSrc: tile,
-    width: width ?? ((sameFile && image.naturalWidth) || undefined),
-    height: height ?? ((sameFile && image.naturalHeight) || undefined),
+    width: width ?? file,
+    height:
+      height ??
+      (file && Math.round((file * image.naturalHeight) / image.naturalWidth)),
     alt: image.alt,
     caption: caption || undefined,
     origin: image,
@@ -4475,11 +4710,7 @@ export function bindLightboxGallery(
     let index: number;
     if (options.items) {
       list = options.items(root);
-      index = list.findIndex(
-        (item) =>
-          (typeof item.origin === "function" ? item.origin() : item.origin) ===
-          image,
-      );
+      index = list.findIndex((item) => resolveOrigin(item.origin) === image);
       if (index < 0) index = images.indexOf(image);
     } else {
       const group =

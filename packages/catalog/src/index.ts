@@ -120,12 +120,17 @@ export const libraries: Library[] = [
       ],
       [
         "Load only what is near",
-        "Only the current and neighboring images load, the current one first, the neighbors not at all under Save-Data, and a long jump skips the pages in between. While the thumbnail strip is dragged, previews stand in until it stops.",
+        "Only the current and neighboring images load, the current one first, the neighbors not at all under Save-Data, and a long jump skips the pages in between.",
         "tests/browser/lightbox-images.spec.ts",
       ],
       [
+        "Scrub through the strip",
+        "A drag on the thumbnail strip swaps the photo as each thumbnail reaches the ring, with previews standing in until it stops, and reports and announces the photo it stops on once. Arrows, Home and End in the strip page the viewer, and focus and the tab stop follow the thumbnail under the ring. A thumbnail is at most three times as wide as it is tall.",
+        "tests/browser/lightbox-controls.spec.ts",
+      ],
+      [
         "Zoom around the point you touch",
-        "Pinch, wheel and double-tap zoom in around the pointer or fingers, and a tap, click or the zoom button zooms back out to the whole photo.",
+        "Pinch, wheel, a double tap and a click zoom in around the pointer or fingers, and a double tap, a click or the zoom button zooms back out to the whole photo. A single finger tap shows or hides the controls.",
         "tests/browser/lightbox-zoom.spec.ts",
       ],
       [
@@ -134,7 +139,7 @@ export const libraries: Library[] = [
       ],
       [
         "Leave the page as it was",
-        "Destroy restores the page scroll, the hidden thumbnail, and every style and listener the viewer touched. Back closes the viewer, and its one history entry leaves without a navigation.",
+        "Destroy restores the page scroll, the hidden thumbnail, and every style and listener the viewer touched. Back closes the viewer, and its one history entry leaves without a navigation, also when another viewer opened above it.",
         "tests/browser/lightbox-api.spec.ts",
       ],
       [
@@ -144,22 +149,22 @@ export const libraries: Library[] = [
       ],
       [
         "Dismiss like a photos app",
-        "A vertical swipe carries the photo, fades the backdrop and the controls with it, and closes past a distance or a speed. A cancelled pointer never closes.",
+        "A vertical swipe carries the photo, fades the backdrop and the controls with it, and closes past a distance or a speed. A cancelled pointer never closes, a second finger leaves the swipe with the first, and a close ends the gesture.",
         "tests/browser/lightbox-gestures.spec.ts",
       ],
       [
         "Let the photo lead",
-        "Controls fade in after the photo starts moving and leave before it. They hide while zoomed and after a still pointer, never while hovered or focused.",
+        "Controls fade in after the photo starts moving and leave before it. They hide while zoomed and after a still pointer, never while hovered or keyboard-focused.",
         "tests/browser/lightbox-gestures.spec.ts",
       ],
       [
         "Return to what is on screen",
-        "Close goes back to the current photo's tile, after bringing it into view in its own carousel, and fades in place when the tile cannot be seen or the strip is still moving. The page scrolls and takes clicks during the flight and stays where it was scrolled once the viewer is gone, focus moved there stays, and the tile's container does not cut the photo before it nears the tile.",
+        "Close goes back to the current photo's tile, after bringing it into view in its own carousel, and fades in place when the tile cannot be seen, in the window and in every container that clips it, or the strip is still moving. The page scrolls and takes clicks during the flight and stays where it was scrolled once the viewer is gone, focus moved there stays, and the tile's container does not cut the photo before it nears the tile.",
         "tests/browser/lightbox-close.spec.ts",
       ],
       [
         "Fetch the pixels the screen shows",
-        "Each image loads the source that fits the rendered size, a zoom asks for more, and the preview stays until the sharper file has decoded.",
+        "Each image loads the source that fits the rendered size, a zoom asks for more, and the preview stays until the sharper file has decoded and no finger holds the photo. A photo without a size fits the screen at its tile's proportions from the start.",
         "tests/browser/lightbox-images.spec.ts",
       ],
       [
@@ -184,7 +189,7 @@ export const libraries: Library[] = [
       ],
       [
         "Hand the photo to the system",
-        "The photo is a real image: the browser's menu saves and copies it, and Cmd or Ctrl and C copies it. protect turns these off. A mouse drag on it pages like a finger.",
+        "The photo is a real image: the browser's menu saves and copies it, and Cmd or Ctrl and C copies it. protect turns these off. A mouse drag on it pages like a finger, so saving stays on Download and the context menu.",
         "tests/browser/lightbox-native.spec.ts",
       ],
       [
@@ -194,7 +199,7 @@ export const libraries: Library[] = [
       ],
       [
         "Let a slideshow yield",
-        "A slideshow waits while the photo is zoomed, the mouse is over the controls, the tab is hidden or a slot's menu is open, and goes on with the time it had left.",
+        "A slideshow waits while the photo is zoomed, a video or audio slide plays, an embed is on screen, the mouse is over the controls, the tab is hidden or a slot's menu is open, and goes on with the time it had left. From the last photo it returns to the first without showing the photos between.",
         "tests/browser/lightbox-controls.spec.ts",
       ],
       [
@@ -209,7 +214,7 @@ export const libraries: Library[] = [
       ],
       [
         "Survive every interruption",
-        "Opening, closing, swiping, zooming, resizing, appending or destroying at any moment leaves no dialog, timer, hidden tile, scroll lock or extra history entry behind.",
+        "Opening, closing, swiping, zooming, resizing, appending or destroying at any moment, or a callback that throws during open, leaves no dialog, timer, hidden tile, scroll lock or extra history entry behind.",
         "packages/lightbox/src/session.model.test.ts",
       ],
     ],
@@ -244,7 +249,7 @@ export const libraries: Library[] = [
       ],
       [
         "append(items), setItems(items, index?)",
-        "Adds images at the end or replaces the list while the viewer is open, without moving the current image.",
+        "Adds images at the end or replaces the list while the viewer is open, without moving the current image. An empty list closes the viewer.",
       ],
       [
         "setOptions({ loop }), getSlide(index)",
@@ -258,7 +263,7 @@ export const libraries: Library[] = [
       "Zoom follows the file's pixels: a double tap, a click or the zoom button goes to 1:1, or to tapZoom (2.5) when that is larger, and maxZoom (1) is a multiple of 1:1. A photo the screen already shows at full resolution has no zoom, and an SVG zooms up to maxZoom times its fitted size, 4 by default. A pinch below 0.75 closes, Ctrl or Cmd with the wheel and a trackpad pinch zoom, and a plain wheel does nothing until you zoom in, then pans. While zoomed the arrow keys pan and a pan glides on release; the next photo is a second swipe once the photo rests against its edge.",
       "A photo more than twice as tall as it is wide that would run past two screens at the screen's width opens at that width, top first, and scrolls; a swipe down closes it only from its top edge, and a double tap shows its whole height. A photo more than three times as wide as it is tall opens whole and zooms to the screen's height on a double tap. PNG, WebP, AVIF, GIF and SVG photos sit on --re-lightbox-media-background, #f2f2f2 in the default theme; JPEG gets none. An SVG takes its size from its own width and height, else its viewBox.",
       "The photo is a real img: right click and a long press open the browser's image menu, a mouse drag on it pages like a swipe, and Cmd or Ctrl and C copies it as PNG where the browser supports image copy. protect: true turns off the menu and the copy. A swipe that passes the closing distance taps the vibration motor once where the device has one.",
-      'Built-in controls: the counter sits top left before the toolbarStart slot, and zoom, slideshow, fullscreen, download, the toolbarEnd slot and close sit top right; the arrows sit at the sides, previous on the right and next on the left with mirrored icons on a right-to-left page, and hide below 480px. controls turns each one on or off, and fullscreen, download and slideshow start off. Fullscreen covers the viewer\'s stage, since browsers refuse a dialog, and is missing where document.fullscreenEnabled is false. Download links the widest srcset candidate, else src, only when it is an http, https or blob URL or a PNG, JPEG, GIF, WebP or AVIF data URL; a file from another origin is fetched when the button is pressed or focused and saved under its decoded name, or opens in a new tab when its server refuses scripts. thumbnails: "bottom" is a carousel strip that keeps the current thumbnail centered and takes one Tab stop with arrow keys inside; "side" is a column at the end edge that becomes the strip below 720px, and both hide below 480px of height. caption: "side" moves captions into the aside panel. The slideshow advances every slideshow.interval ms, 4000 by default, springs back to the first photo at the end without loop, and publishes --re-lightbox-slideshow-progress from 0 to 1.',
+      'Built-in controls: the counter sits top left before the toolbarStart slot, and zoom, slideshow, fullscreen, download, the toolbarEnd slot and close sit top right; the arrows sit at the sides, previous on the right and next on the left with mirrored icons on a right-to-left page, and hide below 480px. controls turns each one on or off, and fullscreen, download and slideshow start off. Fullscreen covers the viewer\'s stage, since browsers refuse a dialog, and is missing where document.fullscreenEnabled is false. Download links the widest srcset candidate, else src, only when it is an http, https or blob URL or a PNG, JPEG, GIF, WebP or AVIF data URL; a file from another origin is fetched when the button is pressed or focused and saved under its decoded name, or opens in a new tab when its server refuses scripts. thumbnails: "bottom" is a carousel strip that keeps the current thumbnail centered, crops thumbnails wider than 3:1, and takes one Tab stop whose arrow, Home and End keys page the viewer; "side" is a column at the end edge that becomes the strip below 720px, and both hide below 480px of height. caption: "side" moves captions into the aside panel. The slideshow advances every slideshow.interval ms, 4000 by default, waits while a video or audio slide plays and on an embed until the visitor pages, returns to the first photo at the end without loop the way a jump does, and publishes --re-lightbox-slideshow-progress from 0 to 1.',
       "Paging runs on the carousel package. Only the current and neighboring images stay loaded. Next and previous scroll smoothly, and a jump to a distant thumbnail pages in like the next photo, so the photos between never flash past.",
       "Give an item a srcset and the viewer picks the file: it sets sizes to the photo's shown width, or uses yours, and 150ms after a zoom comes to rest asks for the zoomed width, swapping the file in only once it has decoded and never for a smaller one. While the photo flies open it shows the tile's loaded pixels or previewSrc. The current photo loads at high fetch priority and its neighbors at low priority once it has decoded, and Save-Data skips the neighbors. A photo still loading after 300ms shows a spinner from @reuse-sh/loaders over the --re-lightbox-placeholder background, and a failed one shows strings.error with a strings.retry button.",
       'Images are the core. Video, audio, iframe and HTML slides are separate modules: @reuse-sh/lightbox/video, /audio, /iframe, /html and /embed export video(), audio(), iframe(), html() and embed(), which you pass in the content option. An item picks its module by type; without one it is an image. The embed module turns YouTube (youtube-nocookie.com, Shorts at 9:16) and Vimeo links into players and registerEmbed adds more; any other URL stays blank. Items read from markup are untrusted, so every iframe() and embed() frame from another origin, registered providers included, gets sandbox "allow-scripts allow-same-origin allow-forms allow-presentation allow-popups allow-popups-to-escape-sandbox", and a same-origin page loads as it is; the sandbox option replaces the default. A same-origin URL is trusted, so an open redirect on your own site defeats the sandbox. Only the current slide plays: leaving it pauses the player, close pauses every one, and a player starts by itself only the first time it shows, when autoplay is on and a click opened the viewer, muted if the browser refuses sound. Over a player the pointer belongs to the player, and paging works from the 24px beside it and the arrows. HTML slides take a function that returns a Node, never an HTML string. Live Photos and HDR are not supported.',

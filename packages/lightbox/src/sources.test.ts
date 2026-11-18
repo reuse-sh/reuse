@@ -76,7 +76,7 @@ describe("media formats", () => {
     expect(formatOf("anim.gif", base)).toBe("transparent");
     expect(formatOf("pic.apng", base)).toBe("transparent");
     expect(formatOf("/photo.jpg", base)).toBe("opaque");
-    expect(formatOf("/photos/42", base)).toBe("opaque");
+    expect(formatOf("/photos/42", base)).toBeUndefined();
     expect(formatOf("/page.html?file=a.png", base)).toBe("opaque");
     expect(formatOf("data:image/svg+xml,%3Csvg%3E", base)).toBe("svg");
     expect(formatOf("data:image/webp;base64,AAAA", base)).toBe("transparent");
@@ -104,6 +104,25 @@ describe("media formats", () => {
     expect(
       await lookupFormat("blob:https://example.test/gone", base, () =>
         Promise.reject(new TypeError("revoked")),
+      ),
+    ).toBe("opaque");
+  });
+
+  it("reads a path without an extension once from a HEAD request's Content-Type", async () => {
+    const asked: string[] = [];
+    const fetcher = async (url: string, init?: RequestInit) => {
+      asked.push(`${init?.method ?? "GET"} ${url}`);
+      return new Response(null, {
+        headers: { "content-type": "image/svg+xml; charset=utf-8" },
+      });
+    };
+    expect(await lookupFormat("/files/7", base, fetcher)).toBe("svg");
+    expect(formatOf(new URL("/files/7", base).href, base)).toBe("svg");
+    expect(await lookupFormat("/files/7", base, fetcher)).toBe("svg");
+    expect(asked).toEqual(["HEAD /files/7"]);
+    expect(
+      await lookupFormat("https://cdn.example.test/8", base, () =>
+        Promise.reject(new TypeError("CORS")),
       ),
     ).toBe("opaque");
   });

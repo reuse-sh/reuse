@@ -799,8 +799,10 @@ describe("lightbox lifecycle", () => {
     controller.zoomTo(1);
     pointer("pointerdown", 1, 512, 384);
     pointer("pointermove", 1, 512, 550);
+    const closed = new Promise((resolve) => controller.on("closed", resolve));
     pointer("pointerup", 1, 512, 550);
-    await controller.close();
+    expect(controller.getState().isClosing).toBe(true);
+    await closed;
     expect(controller.getState().isOpen).toBe(false);
   });
 
@@ -1296,6 +1298,92 @@ describe("lightbox public API", () => {
     controller.setItems(gallery.slice(0, 2), 0);
     expect(controller.getState()).toMatchObject({ index: 0, count: 2 });
     expect(dialog().querySelectorAll(".re-lightbox-slide")).toHaveLength(2);
+  });
+
+  it("reports, announces and plays the item that replaces the current one at its index", async () => {
+    const resume = vi.fn();
+    const clip = {
+      type: "clip",
+      mount: () => ({ resume, pause() {}, unmount() {} }),
+    };
+    const controller = create({ history: false, content: [clip] });
+    const changes: number[] = [];
+    controller.on("change", (event) => changes.push(event.index));
+    const items = [...gallery.slice(0, 3), { type: "clip" }, gallery[4]];
+    controller.open(items, 2);
+    await Promise.resolve();
+    await Promise.resolve();
+    expect(resume).not.toHaveBeenCalled();
+    controller.setItems(items.filter((_, index) => index !== 2));
+    expect(controller.getState()).toMatchObject({ index: 2, count: 4 });
+    expect(changes).toEqual([2]);
+    expect(dialog().querySelector(".re-lightbox-status")?.textContent).toBe(
+      "Image 3 of 4",
+    );
+    expect(resume).toHaveBeenCalledTimes(1);
+  });
+
+  it("keeps the closing photo's list for the close flight and counts the new one after it", async () => {
+    const tiles = gallery.slice(0, 3).map(() => {
+      const tile = document.createElement("button");
+      document.body.append(tile);
+      return tile;
+    });
+    const controller = create({ history: false });
+    const items = gallery
+      .slice(0, 3)
+      .map((item, index) => ({ ...item, origin: tiles[index] }));
+    controller.subscribe((state) => {
+      if (state.isClosing && controller.getState().count === 3)
+        controller.setItems([items[0]]);
+    });
+    controller.open(items, 2);
+    await Promise.resolve();
+    await Promise.resolve();
+    const closing = controller.close();
+    expect(controller.getState()).toMatchObject({ index: 2, count: 3 });
+    await closing;
+    expect(document.activeElement).toBe(tiles[2]);
+    expect(controller.getState()).toMatchObject({
+      isOpen: false,
+      index: 0,
+      count: 1,
+    });
+  });
+
+  it("closes with the usual close when setItems empties the list", async () => {
+    const controller = create({ history: false });
+    const events: string[] = [];
+    for (const type of ["beforeclose", "closed"] as const)
+      controller.on(type, (event) => events.push(event.type));
+    controller.open(gallery, 1);
+    controller.setItems([]);
+    expect(controller.getState().isClosing).toBe(true);
+    await controller.close();
+    expect(document.querySelector("dialog")).toBeNull();
+    expect(events).toEqual(["beforeclose", "closed"]);
+    expect(controller.getState()).toMatchObject({ isOpen: false, count: 0 });
+    expect(() => controller.open([])).toThrow(TypeError);
+  });
+
+  it("leaves no dialog, scroll lock or open state when a slot, renderContent or getOrigin throws in open()", () => {
+    const fail = (): never => {
+      throw new Error("Broken");
+    };
+    for (const options of [
+      { slots: { toolbarEnd: fail } },
+      { renderContent: fail },
+      { getOrigin: fail },
+    ]) {
+      const controller = create({ history: false, ...options });
+      expect(() => controller.open(gallery, 1)).toThrow("Broken");
+      expect(document.querySelector("dialog")).toBeNull();
+      expect(document.body.style.overflow).toBe("");
+      expect(controller.getState()).toMatchObject({
+        isOpen: false,
+        isClosing: false,
+      });
+    }
   });
 
   it("reads an item from the link, data attributes, the tile and its figure", () => {

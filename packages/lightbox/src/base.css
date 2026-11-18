@@ -544,7 +544,7 @@
       env(safe-area-inset-right)
     );
   }
-  .re-lightbox[data-aside] .re-lightbox-prev:dir(rtl) {
+  .re-lightbox[data-aside] .re-lightbox-next:dir(rtl) {
     left: max(var(--re-lightbox-arrow-inset, 16px), env(safe-area-inset-left));
   }
   .re-lightbox[data-aside] .re-lightbox-footer {

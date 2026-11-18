@@ -261,6 +261,210 @@ test("a slow beforeclose does not eat into the close flight", {
   expect(flight.elapsed - flight.late, JSON.stringify(flight)).toBeLessThan(60);
 });
 
+const tile = (index: number, style = "") =>
+  `<img class="tile" src="${photo(index)}" alt="Photo ${index + 1}" style="display:block;width:300px;height:200px;${style}">`;
+
+// A viewer over the plain .tile images of the page, each item's origin read when the flight starts.
+async function tilePage(
+  page: Page,
+  body: string,
+  options: Record<string, unknown> = {},
+  dir = "ltr",
+) {
+  await mount(page, body, styles);
+  await page.evaluate(
+    async ([extra, direction]) => {
+      document.documentElement.dir = direction as string;
+      const { createLightbox } = await import("/modules/lightbox/index.js");
+      const lightbox = createLightbox({
+        history: false,
+        autoHide: false,
+        ...(extra as object),
+      });
+      const images = [...document.querySelectorAll<HTMLImageElement>(".tile")];
+      Object.assign(window, {
+        lightbox,
+        tiles: images,
+        items: images.map((image, index) => ({
+          src: image.src,
+          width: 1200,
+          height: 800,
+          alt: image.alt,
+          caption: `Caption ${index + 1}`,
+          origin: () => document.querySelectorAll(".tile")[index],
+        })),
+      });
+    },
+    [options, dir] as const,
+  );
+}
+
+test("with a side caption on a right-to-left page the close lands on the tile", async ({
+  page,
+}) => {
+  await tilePage(
+    page,
+    `<div style="padding:100px">${tile(0)}</div>`,
+    { caption: "side" },
+    "rtl",
+  );
+  await openAt(page, 0);
+  const landing = await closeAtLastFrame(page);
+  const target = await tileBox(page, 0);
+  expect(Math.abs(landing.frame.x - target.x)).toBeLessThanOrEqual(1);
+  expect(Math.abs(landing.frame.y - target.y)).toBeLessThanOrEqual(1);
+  await finishClose(page);
+});
+
+test("a tile on screen beside a side caption still gets the photo back", async ({
+  page,
+}) => {
+  await tilePage(
+    page,
+    `<div style="padding:100px 0 0 750px">${tile(0, "width:200px;height:133px")}</div>`,
+    { caption: "side" },
+  );
+  await openAt(page, 0);
+  const landing = await closeAtLastFrame(page);
+  const target = await tileBox(page, 0);
+  expect(Math.abs(landing.frame.x - target.x)).toBeLessThanOrEqual(1);
+  expect(landing.copy).not.toBeNull();
+  await finishClose(page);
+});
+
+test("a tile scrolled out of its own clipping container fades in place", async ({
+  page,
+}) => {
+  await tilePage(
+    page,
+    `<div style="display:flex;width:300px;overflow:hidden;margin:100px">${[0, 1, 2].map((i) => `<div style="flex:0 0 300px">${tile(i)}</div>`).join("")}</div>`,
+  );
+  await openAt(page, 2);
+  const landing = await closeAtLastFrame(page);
+  expect(landing.copy).toBeNull();
+  expect(landing.frame.width).toBeGreaterThan(600);
+  expect(landing.frameOpacity).toBe(0);
+  await finishClose(page);
+});
+
+test("a tile the page renders again in beforeclose stays hidden for the flight and shows after it", async ({
+  page,
+}) => {
+  await tilePage(page, `<div style="padding:100px">${tile(0)}</div>`);
+  await openAt(page, 0);
+  const during = await page.evaluate(() => {
+    const win = window as Window;
+    win.lightbox.on("beforeclose", () => {
+      const old = document.querySelector(".tile") as HTMLElement;
+      const fresh = old.cloneNode() as HTMLElement;
+      fresh.style.visibility = "";
+      old.replaceWith(fresh);
+    });
+    win.closing = win.lightbox.close();
+    return getComputedStyle(document.querySelector(".tile") as Element)
+      .visibility;
+  });
+  await page.evaluate(() => (window as Window).closing);
+  expect(during).toBe("hidden");
+  expect(
+    await page.evaluate(
+      () => (document.querySelector(".tile") as HTMLElement).style.visibility,
+    ),
+  ).toBe("");
+});
+
+test("the landing photo is not a slide of a carousel built on bare images", async ({
+  page,
+}) => {
+  await mount(
+    page,
+    `<div id="strip" style="width:300px;margin:100px 0 0 100px;--re-carousel-gap:0px">${Array.from(
+      { length: 6 },
+      (_, i) =>
+        `<img src="${photo(i)}" alt="Photo ${i + 1}" style="display:block;flex:0 0 300px;width:300px;height:200px">`,
+    ).join("")}</div>`,
+    styles,
+  );
+  await page.evaluate(async () => {
+    const { createCarousel } = await import("/modules/carousel/index.js");
+    const { createLightbox } = await import("/modules/lightbox/index.js");
+    const { connectCarousel } = await import("/modules/lightbox/carousel.js");
+    const strip = document.getElementById("strip") as HTMLElement;
+    const images = [...strip.querySelectorAll("img")];
+    const carousel = createCarousel(strip, {});
+    const lightbox = createLightbox({ history: false, autoHide: false });
+    connectCarousel(lightbox, carousel);
+    Object.assign(window, {
+      carousel,
+      lightbox,
+      items: images.map((image) => ({
+        src: image.src,
+        width: 1200,
+        height: 800,
+        alt: image.alt,
+        origin: () => image,
+      })),
+    });
+  });
+  await openAt(page, 2);
+  const counts = await page.evaluate(async () => {
+    const win = window as Window;
+    const counts = [win.carousel.getState().count];
+    win.closing = win.lightbox.close();
+    await new Promise(requestAnimationFrame);
+    await new Promise(requestAnimationFrame);
+    counts.push(
+      win.carousel.getState().count,
+      document.querySelectorAll(".re-lightbox-landing").length,
+    );
+    await win.closing;
+    return counts;
+  });
+  expect(counts).toEqual([6, 6, 1]);
+});
+
+test("a 200ms stall right after open() does not cut the open flight short", async ({
+  page,
+}) => {
+  await tilePage(page, `<div style="padding:100px">${tile(0)}</div>`);
+  const flight = await page.evaluate(
+    () =>
+      new Promise<number>((resolve) => {
+        const win = window as Window & { items: unknown[] };
+        win.lightbox.open(win.items, 0);
+        const until = performance.now() + 200;
+        while (performance.now() < until);
+        const stalled = performance.now();
+        const stop = win.lightbox.on("opened", () => {
+          stop();
+          resolve(performance.now() - stalled);
+        });
+      }),
+  );
+  expect(flight).toBeGreaterThan(380);
+});
+
+test("an easing list in --re-lightbox-ease falls back to the default curve and still flies", async ({
+  page,
+}) => {
+  await tilePage(page, `<div style="padding:100px">${tile(0)}</div>`);
+  await page.addStyleTag({
+    content: ".re-lightbox{--re-lightbox-ease: ease, linear}",
+  });
+  const easings = await page.evaluate(() => {
+    const win = window as Window & { items: unknown[] };
+    win.lightbox.open(win.items, 0);
+    return (
+      document.querySelector(
+        '.re-lightbox-slide[aria-hidden="false"] .re-lightbox-frame',
+      ) as HTMLElement
+    )
+      .getAnimations()
+      .map((animation) => animation.effect?.getTiming().easing);
+  });
+  expect(easings).toEqual(["cubic-bezier(0.32, 0.72, 0, 1)"]);
+});
+
 test("closing at 4x zoom panned to a corner unwinds into the tile", async ({
   page,
 }) => {

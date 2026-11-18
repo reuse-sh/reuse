@@ -6,8 +6,8 @@ type Lightbox = {
   close(): Promise<void>;
   next(): void;
   goTo(index: number): void;
-  zoomTo(scale: number): void;
-  getState(): { index: number };
+  zoomTo(scale: number, focus?: { x: number; y: number }): void;
+  getState(): { index: number; isAnimating: boolean; zoom: { scale: number } };
 };
 type Window = globalThis.Window &
   typeof globalThis & {
@@ -260,7 +260,7 @@ test("the open flight shows the tile's pixels on every frame when the item has n
   );
 });
 
-test("without a size the frame takes the tile's proportions, then the file's around the same center", async ({
+test("without a size the frame fits the screen at the tile's proportions, then takes the file's around the same center", async ({
   page,
 }) => {
   await mount(page, "", ["lightbox/base.css", "lightbox/theme.css"]);
@@ -298,6 +298,7 @@ test("without a size the frame takes the tile's proportions, then the file's aro
   await expect(frame).not.toHaveAttribute("data-loading");
   const after = await frame.boundingBox();
   if (!before || !after) throw new Error("Missing frame");
+  expect(Math.round(before.width)).toBe(936);
   expect(before.width / before.height).toBeCloseTo(1.5, 2);
   expect(after.width / after.height).toBeCloseTo(2, 2);
   expect(after.x + after.width / 2).toBeCloseTo(before.x + before.width / 2, 0);
@@ -335,6 +336,184 @@ test("bindLightboxGallery opens the file a link points to", async ({
   await page.getByRole("img", { name: "Small" }).click();
   await expect.poll(() => shown(page)).toBe("/img/large-1200x800.jpg");
   expect(requests).toContain("/img/large-1200x800.jpg");
+});
+
+test.describe("sizes from a srcset on a 1440px screen", () => {
+  test.use({ viewport: { width: 1440, height: 900 }, deviceScaleFactor: 1 });
+
+  const responsive = {
+    src: "/img/p-3600x2400.jpg",
+    srcset:
+      "/img/p-900x600.jpg 900w, /img/p-1800x1200.jpg 1800w, /img/p-3600x2400.jpg 3600w",
+  };
+
+  test("a srcset photo without a size opened from a small tile fits the screen and skips the tile-sized file", async ({
+    page,
+  }) => {
+    await mount(page, "", ["lightbox/base.css", "lightbox/theme.css"]);
+    const requests = await serveImages(page, () => ({}));
+    await page.evaluate(async () => {
+      const tile = document.createElement("img");
+      tile.className = "tile";
+      tile.src = "/img/tile-300x200.jpg";
+      tile.style.cssText = "display:block;width:150px;height:100px";
+      document.body.append(tile);
+      await tile.decode();
+    });
+    await create(page);
+    await page.evaluate(
+      (item) =>
+        (window as Window).lightbox.open([
+          { ...item, origin: document.querySelector(".tile") },
+        ]),
+      responsive,
+    );
+    const frame = page.locator(".re-lightbox-frame");
+    await expect(frame).not.toHaveAttribute("data-loading");
+    await expect(page.locator("dialog")).toHaveAttribute("data-phase", "open");
+    const box = await frame.boundingBox();
+    expect([Math.round(box?.width ?? 0), Math.round(box?.height ?? 0)]).toEqual(
+      [1254, 836],
+    );
+    expect(requests).not.toContain("/img/p-900x600.jpg");
+  });
+
+  test("a srcset photo whose sizes picks a small candidate still takes its size from the widest one", async ({
+    page,
+  }) => {
+    await mount(page, "", ["lightbox/base.css", "lightbox/theme.css"]);
+    await serveImages(page, () => ({}));
+    await create(page);
+    await open(page, [{ ...responsive, sizes: "300px" }]);
+    const frame = page.locator(".re-lightbox-frame");
+    await expect(frame).not.toHaveAttribute("data-loading");
+    await expect(page.locator("dialog")).toHaveAttribute("data-phase", "open");
+    await expect.poll(() => shown(page)).toBe("/img/p-900x600.jpg");
+    const box = await frame.boundingBox();
+    expect([Math.round(box?.width ?? 0), Math.round(box?.height ?? 0)]).toEqual(
+      [1254, 836],
+    );
+  });
+});
+
+test.describe("a responsive tile at 2x", () => {
+  test.use({ deviceScaleFactor: 2 });
+
+  test("lightboxItemFromImage reads the shown file's own width, not the tile's CSS size", async ({
+    page,
+  }) => {
+    await mount(page, "", ["lightbox/base.css", "lightbox/theme.css"]);
+    await serveImages(page, () => ({}));
+    const item = await page.evaluate(async () => {
+      const image = document.createElement("img");
+      image.srcset = "/img/a-300x200.jpg 300w, /img/a-1200x800.jpg 1200w";
+      image.sizes = "300px";
+      image.src = "/img/a-300x200.jpg";
+      image.style.width = "300px";
+      document.body.append(image);
+      await image.decode();
+      const { lightboxItemFromImage } = await import(
+        "/modules/lightbox/index.js"
+      );
+      const { src, width, height } = lightboxItemFromImage(image);
+      return { src: new URL(src ?? "").pathname, width, height };
+    });
+    expect(item).toEqual({
+      src: "/img/a-1200x800.jpg",
+      width: 1200,
+      height: 800,
+    });
+  });
+});
+
+test("a sharper file that decodes during a drag waits for the release before it moves the zoomed photo", async ({
+  page,
+}) => {
+  await mount(page, "", ["lightbox/base.css", "lightbox/theme.css"]);
+  let release = () => {};
+  const arrived = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  await serveImages(page, () => ({}));
+  await page.route("http://reuse.test/img/p-3600x2700.jpg", async (route) => {
+    await arrived;
+    await route.fallback();
+  });
+  await create(page);
+  await open(page, [
+    {
+      src: "/img/p-3600x2700.jpg",
+      srcset: "/img/p-1200x900.jpg 1200w, /img/p-3600x2700.jpg 3600w",
+      width: 3600,
+      height: 2700,
+    },
+  ]);
+  await expect.poll(() => shown(page)).toBe("/img/p-1200x900.jpg");
+  const asked = page.waitForRequest("http://reuse.test/img/p-3600x2700.jpg");
+  await page.evaluate(() =>
+    (window as Window).lightbox.zoomTo(2, { x: 5000, y: 0 }),
+  );
+  await expect
+    .poll(() =>
+      page.evaluate(() => (window as Window).lightbox.getState().isAnimating),
+    )
+    .toBe(false);
+  await asked;
+  const frame = page.locator(".re-lightbox-frame");
+  const right = async () => {
+    const box = await frame.boundingBox();
+    return Math.round((box?.x ?? 0) + (box?.width ?? 0));
+  };
+  const edge = await right();
+  await page.mouse.move(500, 350);
+  await page.mouse.down();
+  for (let step = 1; step <= 10; step++)
+    await page.mouse.move(500 - step * 20, 350);
+  const stretched = await right();
+  expect(stretched).toBeLessThan(edge);
+  const answered = page.waitForResponse(
+    "http://reuse.test/img/p-3600x2700.jpg",
+  );
+  release();
+  await answered;
+  await page.evaluate(async () => {
+    const image = new Image();
+    image.src = "/img/p-3600x2700.jpg";
+    await image.decode();
+    for (let frame = 0; frame < 3; frame++)
+      await new Promise(requestAnimationFrame);
+  });
+  expect(await right()).toBe(stretched);
+  await page.mouse.up();
+  await expect.poll(() => shown(page)).toBe("/img/p-3600x2700.jpg");
+  await expect.poll(right).toBe(edge);
+});
+
+test("an SVG at a URL without an extension takes its viewBox size and zooms like a vector", async ({
+  page,
+}) => {
+  await mount(page, "", ["lightbox/base.css", "lightbox/theme.css"]);
+  await page.route("http://reuse.test/vector", (route) =>
+    route.fulfill({
+      contentType: "image/svg+xml",
+      body: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 400"><rect width="800" height="400" fill="#5a8"/></svg>',
+    }),
+  );
+  await create(page);
+  await open(page, [{ src: "/vector" }]);
+  const frame = page.locator(".re-lightbox-frame");
+  await expect(frame).not.toHaveAttribute("data-loading");
+  await expect(page.locator("dialog")).toHaveAttribute("data-phase", "open");
+  const box = await frame.boundingBox();
+  expect([Math.round(box?.width ?? 0), Math.round(box?.height ?? 0)]).toEqual([
+    800, 400,
+  ]);
+  await page.evaluate(() => (window as Window).lightbox.zoomTo(4));
+  await expect
+    .poll(() =>
+      page.evaluate(() => (window as Window).lightbox.getState().zoom.scale),
+    )
+    .toBe(4);
 });
 
 const photos = Array.from({ length: 8 }, (_, index) => ({
