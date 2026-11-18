@@ -1242,6 +1242,15 @@ describe("one motion and strip state", () => {
     expect(roles()).toEqual(["Galerie", "Folie"]);
     carousel.setOptions({ strings: undefined });
     expect(roles()).toEqual(["carousel", "Folie"]);
+    carousel.setOptions({
+      strings: { carouselRole: "Galerie", slideRole: "Bild", slide: undefined },
+    });
+    expect(roles()).toEqual(["Galerie", "Bild"]);
+    expect(slides[1].getAttribute("aria-label")).toBe("2 of 6");
+    carousel.setOptions({
+      strings: { carouselRole: undefined, slideRole: undefined },
+    });
+    expect(roles()).toEqual(["carousel", "Folie"]);
     carousel.setOptions({ group: 1, align: "center" });
     expect(carousel.getState().pageCount).toBe(4);
     expect(slides[1].style.scrollSnapAlign).toBe("center");
@@ -1936,6 +1945,19 @@ describe("one state for every control", () => {
     });
     cleanups.push(carousel.destroy);
     expect(slides[0].getAttribute("aria-label")).toBe("Photo 1/3");
+  });
+
+  it("treats an undefined string passed to createCarousel as left out", () => {
+    const { viewport, slides } = fixture();
+    viewport.dataset.carouselOptions = JSON.stringify({
+      strings: { slideRole: "Folie" },
+    });
+    const carousel = createCarousel(viewport, {
+      strings: { slide: undefined, slideRole: undefined },
+    });
+    cleanups.push(carousel.destroy);
+    expect(slides[0].getAttribute("aria-label")).toBe("1 of 3");
+    expect(slides[0].getAttribute("aria-roledescription")).toBe("Folie");
   });
 });
 

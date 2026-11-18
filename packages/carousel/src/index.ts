@@ -197,6 +197,20 @@ const defaultStrings: CarouselStrings = {
   slideRole: "slide",
 };
 
+function mergeStrings(
+  base: Partial<CarouselStrings> = {},
+  fallback: Partial<CarouselStrings> = {},
+  next: Partial<CarouselStrings> = {},
+) {
+  const merged: Record<string, unknown> = { ...base };
+  for (const [key, value] of Object.entries(next)) {
+    const restored = value ?? fallback[key as keyof CarouselStrings];
+    if (restored === undefined) delete merged[key];
+    else merged[key] = restored;
+  }
+  return merged as Partial<CarouselStrings>;
+}
+
 function validate(options: CarouselOptions) {
   if (
     options.group !== undefined &&
@@ -317,7 +331,11 @@ export function createCarousel(
   const options = {
     ...markup,
     ...initialOptions,
-    strings: { ...markup.strings, ...initialOptions.strings },
+    strings: mergeStrings(
+      markup.strings,
+      markup.strings,
+      initialOptions.strings,
+    ),
   };
   validate(options);
   const created: CarouselOptions = { ...markup };
@@ -1612,7 +1630,7 @@ export function createCarousel(
               next[name] === undefined
                 ? created[name]
                 : name === "strings"
-                  ? { ...options.strings, ...next.strings }
+                  ? mergeStrings(options.strings, created.strings, next.strings)
                   : next[name],
           });
       const changed = liveOptions.filter(
