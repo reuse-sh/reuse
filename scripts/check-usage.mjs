@@ -23,6 +23,7 @@ try {
     "gradients",
     "shadows",
     "gallery",
+    "stage",
   ]) {
     const manifest = JSON.parse(
       await readFile(join(root, "packages", name, "package.json"), "utf8"),

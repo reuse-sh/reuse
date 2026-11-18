@@ -70,6 +70,8 @@ const avatarsDescription =
   "Photos and initials with badges and groups, cut out cleanly on any background.";
 const justifiedDescription =
   "Rows of pictures that keep their proportions and fill the width edge to edge.";
+const stageDescription =
+  "A scripted cursor that plays your real components in a live, looping product demo.";
 const masonryDescription =
   "Cards stacked into columns without gaps between rows, natively where the browser can.";
 
@@ -1208,6 +1210,117 @@ export const libraries: Library[] = [
         path: "api",
         title: "API",
         lead: "The module exports easingGradient and easingStops for gradients, and createFadeEdge for scrollers.",
+      },
+    ],
+  },
+  {
+    slug: "demo-stage",
+    name: "Demo stage",
+    description: stageDescription,
+    packageName: "@reuse-sh/stage",
+    principles: [
+      [
+        "Drive the real component",
+        "The cursor sends pointer events to the element under it, so hover, press, drag and release run the component's own code instead of a drawing of it.",
+      ],
+      [
+        "Mark its events",
+        "Scripted events bubble like real ones, so handlers delegated to a parent, such as React's, run too. isStageEvent tells them apart, so page code that closes on an outside press can ignore them.",
+      ],
+      [
+        "Leave focus where it is",
+        "Scene elements that are not native controls cannot take focus. When a component focuses a native control in the scene, focus goes back where it was, though the page has already seen a focusout.",
+      ],
+      [
+        "Move like a hand",
+        "The cursor travels on a shallow arc timed by distance, quick to leave and slow to land, and every press shows.",
+      ],
+      [
+        "Land on a moving target",
+        "A move measures its target on every frame, so it lands even when the layout shifts or the stage resizes mid-move.",
+      ],
+      [
+        "Start every pass from the first frame",
+        "reset runs before every pass. A pass cut short by leaving the screen resets at once, so the scene never resumes halfway.",
+      ],
+      [
+        "Play only when seen",
+        "It plays while at least 40% of the stage is on screen and the page is visible, and stops otherwise.",
+      ],
+      [
+        "Hold still for reduced motion",
+        "With reduced motion the script never runs, the cursor hides and the scene shows its still frame.",
+      ],
+      [
+        "Stay a picture to the keyboard",
+        "The scene is hidden from assistive technology and its controls leave the tab order. The stage carries one label that says what the scene shows.",
+      ],
+      [
+        "Hand over to the visitor",
+        "An interactive stage stops when a mouse enters it or a touch lands on it, and lets the visitor use the real component. It plays again from the first frame 1.2 s after the mouse leaves or 4 s after the last touch, and never while focus is inside the scene.",
+      ],
+      [
+        "Fail loud",
+        "A target the scene lacks throws, and the error stops the stage instead of looping on a broken scene.",
+      ],
+      [
+        "Restore the markup",
+        "Destroy ends the pass, removes the cursor and listeners, gives the controls back their tab order and unwraps the scene.",
+      ],
+    ],
+    api: [
+      [
+        "createStage(root, { width, height, label, script, reset?, still?, rest?, interactive?, delay? })",
+        "Turns root into a stage. Its content is the scene, designed at width by height and scaled to the root's width. script plays one pass and runs again after it ends.",
+      ],
+      [
+        "act.move(target), act.click(target?), act.press(target?), act.release()",
+        "Move the cursor and press with it. A target is a data-stage-target name, an element in the scene, or a point in scene units.",
+      ],
+      [
+        "act.type(field, text), act.scroll(box, { left?, top? })",
+        "Type into a text field one character at a time, or scroll a box with the same easing as the cursor.",
+      ],
+      [
+        "act.wait(ms), act.run(change), act.until(check), act.signal",
+        "Hold a beat, apply a change and wait until it is painted, wait for a condition, or stop your own work when the pass ends early.",
+      ],
+      [
+        "data-stage-hover, data-stage-active",
+        "Set on the control under the cursor and while it is pressed, so a scene can show hover and pressed looks that CSS :hover cannot see.",
+      ],
+      [
+        "isStageEvent(event)",
+        "True for an event the cursor sent. Page code that closes something on an outside press can skip these.",
+      ],
+      [
+        "status, restart(), destroy()",
+        "Read whether the stage is waiting, playing, handed to the visitor or still, play again from the first frame, or remove the stage.",
+      ],
+      [
+        "Stage",
+        "The React component around the same controller. It takes the same options as props and renders its children as the scene.",
+      ],
+    ],
+    notes: [
+      "Mark the controls a script aims at with data-stage-target, so the script reads as a list of beats.",
+      "End a pass where it began. The cursor returns to rest on its own, and the scene should look like reset() left it.",
+      "A scripted click runs the component's real handler. Stop it in the scene before it writes to the clipboard, navigates or opens a modal dialog.",
+      "Components that capture the pointer with setPointerCapture cannot be dragged by the cursor. Drive them through their own API.",
+      "A page handler that delegates from document.body, such as a site-wide tooltip, sees the scene's events too. Give scene controls attributes the page does not delegate on, or skip isStageEvent there.",
+      "A layout your scene resizes from script, such as a gallery, lays out in that frame only when you call its refresh() right after the change.",
+    ],
+    pages: [
+      { path: "", title: "Overview", lead: stageDescription },
+      {
+        path: "getting-started",
+        title: "Getting started",
+        lead: "Install the package, mark the controls the cursor aims at and write one pass of the scene.",
+      },
+      {
+        path: "api",
+        title: "API",
+        lead: "The browser module exports createStage. The React package adds Stage.",
       },
     ],
   },

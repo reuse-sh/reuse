@@ -72,6 +72,20 @@ const icons: Record<string, DocIconName[]> = {
     "code",
   ],
   masonry: ["feather", "layers", "resize", "keyboard", "minus", "code"],
+  "demo-stage": [
+    "cursor",
+    "share",
+    "keyboard",
+    "feather",
+    "chevrons",
+    "timer",
+    "resize",
+    "minus",
+    "keyboard",
+    "touch",
+    "doc",
+    "code",
+  ],
 };
 function Hint({ slug }: { slug: string }) {
   if (slug === "carousel")
@@ -107,6 +121,13 @@ function Hint({ slug }: { slug: string }) {
       <Keys>
         Resize the window. The columns go from three to one, and the cards keep
         their reading order.
+      </Keys>
+    );
+  if (slug === "demo-stage")
+    return (
+      <Keys>
+        Point at the demo to try it yourself. Move away and it plays again from
+        the start.
       </Keys>
     );
   return null;

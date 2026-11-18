@@ -41,10 +41,11 @@ import { Example as Example38 } from "../examples/masonry-start/example";
 import { Example as Example39 } from "../examples/shadows-cards/example";
 import { Example as Example40 } from "../examples/shadows-scale/example";
 import { Example as Example41 } from "../examples/shadows-start/example";
-import { Example as Example42 } from "../examples/tooltip-links/example";
-import { Example as Example43 } from "../examples/tooltip-people/example";
-import { Example as Example44 } from "../examples/tooltip-shortcuts/example";
-import { Example as Example45 } from "../examples/tooltip-start/example";
+import { Example as Example42 } from "../examples/stage-start/example";
+import { Example as Example43 } from "../examples/tooltip-links/example";
+import { Example as Example44 } from "../examples/tooltip-people/example";
+import { Example as Example45 } from "../examples/tooltip-shortcuts/example";
+import { Example as Example46 } from "../examples/tooltip-start/example";
 
 export const examples: Record<string, ComponentType> = {
   "annotations-data-format": Example0,
@@ -89,8 +90,9 @@ export const examples: Record<string, ComponentType> = {
   "shadows-cards": Example39,
   "shadows-scale": Example40,
   "shadows-start": Example41,
-  "tooltip-links": Example42,
-  "tooltip-people": Example43,
-  "tooltip-shortcuts": Example44,
-  "tooltip-start": Example45,
+  "stage-start": Example42,
+  "tooltip-links": Example43,
+  "tooltip-people": Example44,
+  "tooltip-shortcuts": Example45,
+  "tooltip-start": Example46,
 };

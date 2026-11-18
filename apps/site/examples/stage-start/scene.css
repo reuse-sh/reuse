@@ -1,0 +1,167 @@
+@layer components {
+  .re-stage-start {
+    --re-stage-cursor-size: 20px;
+    width: 100%;
+    max-width: 440px;
+    margin-inline: auto;
+    border-radius: var(--radius-frame);
+    background: var(--muted);
+    font-family: var(--font-sans);
+    font-size: 13px;
+    line-height: 18px;
+  }
+  .re-stage-start .sd-window {
+    position: absolute;
+    top: 26px;
+    left: 24px;
+    width: 392px;
+    height: 250px;
+    border-radius: 12px 12px 0 0;
+    background: var(--card);
+  }
+  .re-stage-start .sd-bar {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    height: 48px;
+    padding-inline: 16px 10px;
+    border-bottom: 1px solid var(--border);
+  }
+  .re-stage-start .sd-dots {
+    display: flex;
+    gap: 5px;
+  }
+  .re-stage-start .sd-dots i {
+    width: 9px;
+    height: 9px;
+    border-radius: 50%;
+    background: var(--selection);
+  }
+  .re-stage-start .sd-bar b {
+    flex: 1;
+    margin-left: 6px;
+    font-weight: 600;
+  }
+  .re-stage-start .sd-joined {
+    animation: sd-join 320ms var(--ease-ui);
+  }
+  @keyframes sd-join {
+    from {
+      opacity: 0;
+    }
+  }
+  .re-stage-start .sd-share {
+    height: 30px;
+    padding-inline: 12px;
+    border: 0;
+    border-radius: 8px;
+    background: var(--primary);
+    color: var(--primary-foreground);
+    font: inherit;
+    font-weight: 500;
+    transition: scale 150ms var(--ease-ui);
+  }
+  .re-stage-start :is(button, input)[data-stage-active] {
+    scale: 0.96;
+  }
+  .re-stage-start .sd-board {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 8px;
+    padding: 14px;
+  }
+  .re-stage-start .sd-board img {
+    width: 100%;
+    height: auto;
+    aspect-ratio: 3 / 4;
+    border-radius: 8px;
+    object-fit: cover;
+  }
+  .re-stage-start .sd-pop {
+    position: absolute;
+    top: 52px;
+    right: 10px;
+    display: grid;
+    gap: 10px;
+    width: 260px;
+    padding: 14px;
+    border-radius: 12px;
+    background: var(--popover);
+    opacity: 0;
+    scale: 0.97;
+    translate: 0 -4px;
+    transform-origin: top right;
+    visibility: hidden;
+    transition:
+      opacity 150ms ease,
+      scale 220ms var(--ease-ui),
+      translate 220ms var(--ease-ui),
+      visibility 0s 220ms;
+  }
+  .re-stage-start .sd-pop[data-open] {
+    opacity: 1;
+    scale: 1;
+    translate: 0 0;
+    visibility: visible;
+    transition-delay: 0s;
+  }
+  .re-stage-start .sd-pop b {
+    font-weight: 600;
+  }
+  .re-stage-start .sd-pop small {
+    color: var(--subtle-foreground);
+    font-size: 12px;
+  }
+  .re-stage-start .sd-member {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    animation: sd-join 320ms var(--ease-ui);
+  }
+  .re-stage-start .sd-member > span:not([data-re-avatar]) {
+    display: grid;
+    flex: 1;
+  }
+  .re-stage-start .sd-member button {
+    height: 26px;
+    padding-inline: 10px;
+    border: 0;
+    border-radius: 7px;
+    background: var(--muted);
+    color: var(--muted-foreground);
+    font: inherit;
+    font-size: 12px;
+    transition: scale 150ms var(--ease-ui);
+  }
+  .re-stage-start .sd-row {
+    display: flex;
+    gap: 6px;
+  }
+  .re-stage-start .sd-row input {
+    flex: 1;
+    min-width: 0;
+    height: 32px;
+    padding-inline: 10px;
+    border: 0;
+    border-radius: 8px;
+    outline: 0;
+    background: var(--muted);
+    color: var(--foreground);
+    font: inherit;
+    box-shadow: inset 0 0 0 1px var(--border);
+  }
+  .re-stage-start .sd-row input:focus-visible {
+    box-shadow: inset 0 0 0 2px var(--ring);
+  }
+  .re-stage-start .sd-row button {
+    height: 32px;
+    padding-inline: 12px;
+    border: 0;
+    border-radius: 8px;
+    background: var(--primary);
+    color: var(--primary-foreground);
+    font: inherit;
+    font-weight: 500;
+    transition: scale 150ms var(--ease-ui);
+  }
+}

@@ -25,6 +25,7 @@ for (const name of [
   "shadows",
   "gradients",
   "gallery",
+  "stage",
 ]) {
   const directory = resolve(modules, name);
   await mkdir(directory, { recursive: true });
