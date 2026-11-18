@@ -317,6 +317,77 @@ test.describe("carousel state", { tag: "@desktop" }, () => {
     expect(await shown("#nested [data-carousel-next]")).toEqual([false, true]);
   });
 
+  test("a static strip hides its controls under a parent of a strip that overflows", async ({
+    page,
+  }) => {
+    const prev = `<button data-carousel-prev>Previous</button>`;
+    await setup(
+      page,
+      `<main><div id="hero" style="width:600px">${slideRow(4)}</div><section><div id="fits" style="width:600px">${slideRow(2, 200)}</div>${prev}</section></main>
+      <div><div id="strip" style="width:600px"><div data-carousel-slide style="flex:0 0 600px"><div id="inner" style="width:300px">${slideRow(1, 100)}</div>${prev}</div>${slideRow(2)}</div></div>`,
+    );
+    await page.evaluate(async () => {
+      const { createCarousel } = await import("/modules/carousel/index.js");
+      for (const id of ["hero", "fits", "inner"])
+        createCarousel(document.getElementById(id) as HTMLElement);
+    });
+    await expect(page.locator("#inner")).toHaveAttribute("data-re-static", "");
+    await expect(page.locator("#fits")).toHaveAttribute("data-re-static", "");
+    expect(
+      await page
+        .locator("[data-carousel-prev]")
+        .evaluateAll((buttons) =>
+          buttons.map((button) => getComputedStyle(button).display),
+        ),
+    ).toEqual(["none", "none"]);
+  });
+
+  test("a static strip hides the controls bound to it in a group elsewhere", async ({
+    page,
+  }) => {
+    await setup(
+      page,
+      `<section><div id="strip" style="width:600px">${slideRow(2, 200)}</div></section><div id="long" style="width:600px">${slideRow(4)}</div><div data-carousel-controls="strip"><button data-carousel-prev>Previous</button><button data-carousel-next>Next</button><div data-carousel-dots></div></div>`,
+    );
+    await page.evaluate(async () => {
+      const { createCarousel } = await import("/modules/carousel/index.js");
+      const { bindCarouselControls } = await import(
+        "/modules/carousel/controls.js"
+      );
+      createCarousel(document.getElementById("long") as HTMLElement);
+      const { carousel } = window as unknown as { carousel: never };
+      Object.assign(window, {
+        unbind: bindCarouselControls(
+          document.getElementById("strip") as HTMLElement,
+          carousel,
+        ),
+      });
+    });
+    const shown = () =>
+      page
+        .locator("[data-carousel-controls] > *")
+        .evaluateAll((controls) =>
+          controls.map(
+            (control) => getComputedStyle(control).display !== "none",
+          ),
+        );
+    await expect(page.locator("#strip")).toHaveAttribute("data-re-static", "");
+    await expect.poll(shown).toEqual([false, false, false]);
+    await page.locator("#strip").evaluate((strip) => {
+      strip.style.width = "300px";
+    });
+    await expect(page.locator("#strip")).not.toHaveAttribute("data-re-static");
+    await expect.poll(shown).toEqual([true, true, true]);
+    await page.locator("#strip").evaluate((strip) => {
+      strip.style.width = "600px";
+    });
+    await expect.poll(shown).toEqual([false, false, false]);
+    await page.evaluate(() =>
+      (window as unknown as { unbind: () => void }).unbind(),
+    );
+    await expect(page.locator("[data-re-static]")).toHaveCount(1);
+  });
+
   test("a drag inside a nested strip that scrolls leaves the outer strip still", async ({
     page,
   }) => {

@@ -33,6 +33,7 @@ export function bindCarouselControls(
   const document = viewport.ownerDocument;
   const cleanup: (() => void)[] = [];
   const renders: ((state: CarouselState) => void)[] = [];
+  const hiding: HTMLElement[] = [];
 
   function listen(target: EventTarget, type: string, listener: EventListener) {
     target.addEventListener(type, listener);
@@ -109,7 +110,15 @@ export function bindCarouselControls(
     ["[data-carousel-next]", 1],
   ] as const) {
     for (const button of find(selector)) {
-      keep(button, "aria-controls", "aria-label", "disabled", "aria-disabled");
+      hiding.push(button);
+      keep(
+        button,
+        "aria-controls",
+        "aria-label",
+        "disabled",
+        "aria-disabled",
+        "data-re-static",
+      );
       button.setAttribute("aria-controls", id);
       if (!button.hasAttribute("aria-label") && !button.textContent?.trim())
         button.setAttribute(
@@ -126,6 +135,8 @@ export function bindCarouselControls(
   }
 
   for (const container of find("[data-carousel-dots]")) {
+    hiding.push(container);
+    keep(container, "data-re-static");
     const own = Array.from(container.querySelectorAll("button"));
     let dots: HTMLElement[] = own;
     let start = 0;
@@ -344,12 +355,21 @@ export function bindCarouselControls(
     });
   }
 
+  const markStatic = () => {
+    const fits = viewport.hasAttribute("data-re-static");
+    for (const element of hiding)
+      element.toggleAttribute("data-re-static", fits);
+  };
+  const statics = new MutationObserver(markStatic);
+  statics.observe(viewport, { attributeFilter: ["data-re-static"] });
+  markStatic();
   const render = (state: CarouselState) => {
     for (const update of renders) update(state);
   };
   const unsubscribe = carousel.subscribe(render);
   render(carousel.getState());
   return () => {
+    statics.disconnect();
     unsubscribe();
     for (const undo of cleanup.splice(0).reverse()) undo();
   };

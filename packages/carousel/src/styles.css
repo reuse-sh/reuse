@@ -36,14 +36,21 @@
   pointer-events: none;
 }
 
-:where(:has(> .re-carousel[data-re-static]))
-  :is([data-carousel-prev], [data-carousel-next], [data-carousel-dots]):where(
-    :not(
-      :has(> .re-carousel:not([data-re-static])) *,
-      [data-carousel-controls],
-      [data-carousel-controls] *
-    )
-  ) {
+@scope (
+  :has(> .re-carousel[data-re-static]):not(
+    :has(> .re-carousel:not([data-re-static]))
+  )
+) to (:has(> .re-carousel:not([data-re-static])), [data-carousel-controls]) {
+  :is([data-carousel-prev], [data-carousel-next], [data-carousel-dots]) {
+    display: none;
+  }
+}
+
+:is(
+  [data-carousel-prev],
+  [data-carousel-next],
+  [data-carousel-dots]
+)[data-re-static] {
   display: none;
 }
 
