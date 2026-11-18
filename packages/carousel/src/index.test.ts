@@ -1097,6 +1097,44 @@ describe("one motion and strip state", () => {
     expect(native.getState().index).toBe(0);
   });
 
+  it("applies motion, wheel and strings options without a rebuild", () => {
+    const { viewport, slides, scrollTo } = fixture();
+    const carousel = createCarousel(viewport);
+    cleanups.push(carousel.destroy);
+    carousel.setOptions({ moveMotion: "native" });
+    carousel.next();
+    expect(scrollTo).toHaveBeenLastCalledWith(
+      expect.objectContaining({ behavior: "smooth" }),
+    );
+    vi.advanceTimersByTime(1000);
+    carousel.setOptions({ wheel: "vertical" });
+    expect(wheel(viewport, { deltaY: 100 }).defaultPrevented).toBe(true);
+    expect(carousel.getState().index).toBe(2);
+    carousel.setOptions({ wheel: undefined });
+    carousel.goTo(0, "instant");
+    expect(wheel(viewport, { deltaY: 100 }).defaultPrevented).toBe(false);
+    expect(carousel.getState().index).toBe(0);
+    carousel.setOptions({
+      strings: {
+        carouselRole: "Karussell",
+        slide: (index, count) => `Foto ${index + 1}/${count}`,
+      },
+    });
+    expect(viewport.getAttribute("aria-roledescription")).toBe("Karussell");
+    expect(slides[1].getAttribute("aria-label")).toBe("Foto 2/3");
+    carousel.setOptions({ strings: undefined });
+    expect(viewport.getAttribute("aria-roledescription")).toBe("carousel");
+    expect(slides[1].getAttribute("aria-label")).toBe("2 of 3");
+    for (const invalid of [
+      { releaseMotion: "fast" },
+      { moveMotion: "fast" },
+      { releaseDuration: 0 },
+      { wheel: "horizontal" },
+    ])
+      expect(() => carousel.setOptions(invalid as never)).toThrow(RangeError);
+    expect(carousel.getState().index).toBe(0);
+  });
+
   it("marks static, edge and dragging state on the viewport and removes it on destroy", () => {
     const { viewport } = fixture();
     const carousel = createCarousel(viewport);

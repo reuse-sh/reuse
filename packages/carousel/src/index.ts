@@ -87,12 +87,7 @@ export interface Carousel {
   pause(): void;
   hold(reason: string, isHeld: boolean): void;
   take(owner: string, options?: { onInterrupt?: () => void }): CarouselHandle;
-  setOptions(
-    options: Pick<
-      CarouselOptions,
-      "autoplay" | "loop" | "group" | "align" | "drag"
-    >,
-  ): void;
+  setOptions(options: Partial<Omit<CarouselOptions, "slides">>): void;
   destroy(): void;
 }
 
@@ -209,9 +204,32 @@ function validate(options: CarouselOptions) {
   ) {
     throw new RangeError("Carousel autoplay must be a positive interval.");
   }
+  for (const name of ["releaseMotion", "moveMotion"] as const) {
+    const motion = options[name];
+    if (motion !== undefined && motion !== "spring" && motion !== "native")
+      throw new RangeError(`Carousel ${name} must be spring or native.`);
+  }
+  if (options.wheel !== undefined && options.wheel !== "vertical") {
+    throw new RangeError("Carousel wheel must be vertical.");
+  }
+  const duration = options.releaseDuration;
+  if (duration !== undefined && (!Number.isFinite(duration) || duration <= 0)) {
+    throw new RangeError("Carousel releaseDuration must be a positive time.");
+  }
 }
 
-const liveOptions = ["autoplay", "loop", "group", "align", "drag"] as const;
+const liveOptions = [
+  "autoplay",
+  "loop",
+  "group",
+  "align",
+  "drag",
+  "releaseMotion",
+  "releaseDuration",
+  "moveMotion",
+  "wheel",
+  "strings",
+] as const;
 
 export function createCarousel(
   viewport: HTMLElement,
@@ -224,27 +242,6 @@ export function createCarousel(
   const options = { ...initialOptions };
   validate(options);
   const strings = { ...defaultStrings, ...options.strings };
-  if (
-    options.releaseMotion !== undefined &&
-    options.releaseMotion !== "spring" &&
-    options.releaseMotion !== "native"
-  ) {
-    throw new RangeError("Carousel releaseMotion must be spring or native.");
-  }
-  if (
-    options.moveMotion !== undefined &&
-    options.moveMotion !== "spring" &&
-    options.moveMotion !== "native"
-  ) {
-    throw new RangeError("Carousel moveMotion must be spring or native.");
-  }
-  if (options.wheel !== undefined && options.wheel !== "vertical") {
-    throw new RangeError("Carousel wheel must be vertical.");
-  }
-  const releaseDuration = options.releaseDuration ?? 260;
-  if (!Number.isFinite(releaseDuration) || releaseDuration <= 0) {
-    throw new RangeError("Carousel releaseDuration must be a positive time.");
-  }
 
   const initialTabIndex = viewport.getAttribute("tabindex");
   const hadClass = viewport.classList.contains("re-carousel");
@@ -290,7 +287,7 @@ export function createCarousel(
   let destroyed = false;
   let enabled = true;
   let requestedPlaying = options.autoplay !== undefined;
-  const autoplayListeners = new Set<() => void>();
+  const optionListeners = new Set<() => void>();
   let timer: ReturnType<typeof setTimeout> | undefined;
   let settleTimer: ReturnType<typeof setTimeout> | undefined;
   let pendingIndex: number | undefined;
@@ -1041,14 +1038,15 @@ export function createCarousel(
       const value = moving?.value ?? position() + stretch;
       const frequency = settleFrequency(target - value, MOVE_DURATION);
       startSpring(target, moving?.velocity ?? 0, frequency, frequency, moving);
-    } else if (glide)
+    } else if (glide) {
+      const settleRate = 6 / (options.releaseDuration ?? 260);
       startSpring(
         target,
         releaseSpeed ?? 0,
-        flick ? 2 / GLIDE : 6 / releaseDuration,
-        6 / releaseDuration,
+        flick ? 2 / GLIDE : settleRate,
+        settleRate,
       );
-    else {
+    } else {
       setStretch(0);
       scrollTo(target, behavior);
     }
@@ -1123,6 +1121,21 @@ export function createCarousel(
         ? pages.find((start) => start > current)
         : [...pages].reverse().find((start) => start < current);
     return ahead ?? (direction === 1 ? pages[0] : (pages.at(-1) ?? 0));
+  }
+
+  function describeRole() {
+    if (ownsRole)
+      viewport.setAttribute("aria-roledescription", strings.carouselRole);
+  }
+
+  // A non-passive wheel listener makes the browser wait for script before scrolling, so it is added only for wheel: "vertical".
+  let wheelPassive: boolean | undefined;
+  function bindWheel() {
+    const passive = options.wheel !== "vertical";
+    if (passive === wheelPassive) return;
+    wheelPassive = passive;
+    viewport.removeEventListener("wheel", onWheel);
+    viewport.addEventListener("wheel", onWheel, { passive });
   }
 
   function say(text: string) {
@@ -1347,9 +1360,9 @@ export function createCarousel(
       if (!roled.has(slide)) {
         if (!generic(slide)) return;
         slide.setAttribute("role", "group");
-        slide.setAttribute("aria-roledescription", strings.slideRole);
         roled.set(slide, !slide.hasAttribute("aria-label"));
       }
+      slide.setAttribute("aria-roledescription", strings.slideRole);
       if (roled.get(slide))
         slide.setAttribute("aria-label", strings.slide(index, slides.length));
     });
@@ -1518,12 +1531,19 @@ export function createCarousel(
         runningSince = undefined;
       }
       if (options.drag === false) endDrag(false);
-      if (changed.some((name) => name !== "autoplay" && name !== "drag"))
+      Object.assign(strings, defaultStrings, options.strings);
+      describeRole();
+      label();
+      bindWheel();
+      if (
+        changed.some(
+          (name) => name === "loop" || name === "group" || name === "align",
+        )
+      )
         refresh();
       updateCursor();
       schedule();
-      if (changed.includes("autoplay"))
-        for (const listener of autoplayListeners) listener();
+      for (const listener of optionListeners) listener();
     },
     destroy() {
       if (destroyed) return;
@@ -1542,7 +1562,7 @@ export function createCarousel(
       intersection?.disconnect();
       for (const remove of cleanup) remove();
       listeners.clear();
-      autoplayListeners.clear();
+      optionListeners.clear();
       if (!hadClass) viewport.classList.remove("re-carousel");
       for (const name of stateAttributes) viewport.removeAttribute(name);
       viewport.style.removeProperty("--re-carousel-autoplay-progress");
@@ -1708,10 +1728,8 @@ export function createCarousel(
 
   viewport.classList.add("re-carousel");
   if (initialTabIndex === null) viewport.tabIndex = 0;
-  if (ownsRole) {
-    viewport.setAttribute("role", "region");
-    viewport.setAttribute("aria-roledescription", strings.carouselRole);
-  }
+  if (ownsRole) viewport.setAttribute("role", "region");
+  describeRole();
   viewport.after(live);
   listen(viewport, "scroll", () => {
     if (!enabled) {
@@ -1738,31 +1756,28 @@ export function createCarousel(
   listen(viewport, "scrollend", () => {
     if (!stopping) settle();
   });
-  listen(
-    viewport,
-    "wheel",
-    (event) => {
-      const wheel = event as WheelEvent;
-      lastInput = window.performance.now();
-      if (wheel.defaultPrevented) return;
-      if (
-        options.wheel === "vertical" &&
-        enabled &&
-        !wheel.ctrlKey &&
-        !wheel.shiftKey &&
-        Math.abs(wheel.deltaY) > Math.abs(wheel.deltaX) &&
-        (wheel.deltaMode !== 0 || Math.abs(wheel.deltaY) >= WHEEL_NOTCH)
-      ) {
-        const direction = wheel.deltaY > 0 ? 1 : -1;
-        if (direction === 1 ? !state.canNext : !state.canPrev) return;
-        wheel.preventDefault();
-        step(direction);
-        return;
-      }
-      if (pendingIndex !== undefined && !stretch) stopMove();
-    },
-    { passive: options.wheel !== "vertical" },
-  );
+  const onWheel = (event: Event) => {
+    const wheel = event as WheelEvent;
+    lastInput = window.performance.now();
+    if (wheel.defaultPrevented) return;
+    if (
+      options.wheel === "vertical" &&
+      enabled &&
+      !wheel.ctrlKey &&
+      !wheel.shiftKey &&
+      Math.abs(wheel.deltaY) > Math.abs(wheel.deltaX) &&
+      (wheel.deltaMode !== 0 || Math.abs(wheel.deltaY) >= WHEEL_NOTCH)
+    ) {
+      const direction = wheel.deltaY > 0 ? 1 : -1;
+      if (direction === 1 ? !state.canNext : !state.canPrev) return;
+      wheel.preventDefault();
+      step(direction);
+      return;
+    }
+    if (pendingIndex !== undefined && !stretch) stopMove();
+  };
+  bindWheel();
+  cleanup.push(() => viewport.removeEventListener("wheel", onWheel));
   listen(viewport, "keydown", (event) => {
     const key = event as KeyboardEvent;
     const target = key.target as HTMLElement;
@@ -1899,9 +1914,9 @@ export function createCarousel(
     goTo: (index, behavior, announce) =>
       announce ? announced(() => goTo(index, behavior)) : goTo(index, behavior),
     autoplays: () => options.autoplay !== undefined,
-    onAutoplay: (listener) => {
-      autoplayListeners.add(listener);
-      return () => autoplayListeners.delete(listener);
+    onOptions: (listener) => {
+      optionListeners.add(listener);
+      return () => optionListeners.delete(listener);
     },
     silence: () => {
       silent = true;

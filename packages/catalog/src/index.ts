@@ -450,7 +450,7 @@ export const libraries: Library[] = [
       ],
       [
         "setOptions(options)",
-        "Changes autoplay, loop, group, align and drag without rebuilding the strip. The active slide stays in place.",
+        "Changes any option except slides without rebuilding the strip, such as autoplay, loop, group, align, drag, motion, wheel or strings. The active slide stays in place.",
       ],
       [
         "moveMotion",

@@ -259,7 +259,7 @@ export function bindCarouselControls(
       if (playing(carousel.getState())) carousel.pause();
       else carousel.play();
     });
-    cleanup.push(strip.onAutoplay(() => render(carousel.getState())));
+    cleanup.push(strip.onOptions(() => render(carousel.getState())));
     renders.push(render);
   }
 

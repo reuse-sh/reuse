@@ -7,7 +7,7 @@ export interface CarouselInternals {
   slides(): readonly HTMLElement[];
   pagePositions(): readonly number[];
   autoplays(): boolean;
-  onAutoplay(listener: () => void): () => void;
+  onOptions(listener: () => void): () => void;
   align(): "start" | "center" | undefined;
   goTo(index: number, behavior?: ScrollBehavior, announce?: boolean): void;
   silence(): void;
