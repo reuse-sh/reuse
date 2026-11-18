@@ -23,3 +23,5 @@ Migration:
 - `bindLightboxGallery(root, lightbox, options?)` takes a lightbox you create and returns the function that unbinds; destroy the lightbox yourself. Its options are `selector`, `item(trigger)` and `group(trigger)`: lightbox options go to `createLightbox()`, `getItem` is now `item`, and `items(root)` is gone (open your own list with `lightbox.open()`). Triggers are links, buttons and images by default, so a quick-view link without an image opens too, and a trigger `item()` returns `null` for keeps its normal click.
 - `lightboxItemFromImage(image)` is now `lightboxItemFromElement(trigger)`, which reads the trigger and the image inside it and returns `null` for a link to a page. Its second `source` argument is gone.
 - A lightbox for a gallery inside a frame, created in the parent page, needs `container: frame.contentDocument.body`.
+- `data-caption` is now `data-lightbox-caption`; a `figcaption` still wins.
+- New: `data-lightbox-options` on a gallery root holds JSON options that fill whatever the lightbox was not given in code. Invalid JSON, an unknown key or a function string throws a `TypeError` naming the element.

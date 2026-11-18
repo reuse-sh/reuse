@@ -57,6 +57,8 @@ For a page without a bundler or an import map, such as a theme or a plugin, copy
 </script>
 ```
 
+A theme or a plugin that prints its settings into the page can put them on the gallery as JSON, such as `<div id="gallery" data-lightbox-options='{"thumbnails":"bottom","loop":true}'>`. They fill whatever the lightbox was not given in code, and JSON that does not parse throws a `TypeError` that names the element. Captions come from a `figcaption`, else `data-lightbox-caption`.
+
 ## Trust
 
 Items read from markup are untrusted: `data-lightbox-type`, a link's `href` and `data-lightbox-src` come from whoever wrote the page. `embed()` plays only YouTube, Vimeo and the providers you pass in `embed({ providers })`, and any other URL stays blank. Every frame `iframe()` or `embed()` loads from another origin, a provider's player included, gets `sandbox="allow-scripts allow-same-origin allow-forms allow-presentation allow-popups allow-popups-to-escape-sandbox"`, so it cannot navigate your tab, and its links open as ordinary tabs. A page from your own origin loads unsandboxed, so a quick view keeps its links. That makes a same-origin URL trusted: an open redirect on your site leads the frame to any page without a sandbox. Pass `sandbox` to either module to set the attribute yourself. The Download button appears only for an `http:`, `https:` or `blob:` file or a PNG, JPEG, GIF, WebP or AVIF `data:` image. A file from another origin is fetched when the button is pressed or focused and saved under its decoded name, or opened in a new tab when its server refuses the fetch, so the page itself never navigates.

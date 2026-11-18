@@ -44,8 +44,12 @@ function internalsOf(carousel: Carousel) {
   ];
 }
 
-// Whether a controller has a content module for a type, for bindLightboxGallery.
-const contentOf = new WeakMap<object, (type: string) => boolean>();
+// What bindLightboxGallery reads from a controller it did not create: whether a module plays a
+// type, and the options set so far, which markup options must not override.
+const internals = new WeakMap<
+  object,
+  { shows(type: string): boolean; options: LightboxOptions<never> }
+>();
 
 export type { Point, Rect, Size, Zoom } from "./geometry.js";
 
@@ -4736,9 +4740,11 @@ export function createLightbox<Item extends LightboxItem = LightboxItem>(
       handlers.clear();
     },
   };
-  contentOf.set(controller, (type) =>
-    Boolean(current.content?.some((module) => module.type === type)),
-  );
+  internals.set(controller, {
+    shows: (type) =>
+      Boolean(current.content?.some((module) => module.type === type)),
+    options: current as LightboxOptions<never>,
+  });
   return controller;
 }
 
@@ -4782,8 +4788,8 @@ export function lightboxItemFromElement(
       .closest("figure")
       ?.querySelector(":scope > figcaption")
       ?.textContent?.trim() ||
-    data("caption") ||
-    link?.dataset.caption;
+    data("lightboxCaption") ||
+    link?.dataset.lightboxCaption;
   const alt = image
     ? image.alt
     : trigger.getAttribute("aria-label") || trigger.textContent?.trim();
@@ -4836,6 +4842,64 @@ export function lightboxItemFromElement(
   };
 }
 
+// Options that JSON can carry; strings only the ones that are text, not functions.
+const MARKUP_OPTIONS = new Set([
+  "imageClick",
+  "doubleTapZoom",
+  "maxZoom",
+  "tapZoom",
+  "preload",
+  "controls",
+  "thumbnails",
+  "caption",
+  "slideshow",
+  "autoHide",
+  "className",
+  "autoplayMedia",
+  "loop",
+  "history",
+  "strings",
+  "protect",
+]);
+
+function markupOptions(root: HTMLElement) {
+  const text = root.dataset.lightboxOptions;
+  if (text === undefined) return undefined;
+  const name = [
+    root.localName,
+    root.id && `#${root.id}`,
+    ...[...root.classList].map((name) => `.${name}`),
+  ].join("");
+  const fail = (reason: string): never => {
+    throw new TypeError(`Invalid data-lightbox-options on ${name}: ${reason}`);
+  };
+  let value: unknown;
+  try {
+    value = JSON.parse(text);
+  } catch (error) {
+    fail((error as Error).message);
+  }
+  if (typeof value !== "object" || value === null || Array.isArray(value))
+    fail("expected a JSON object");
+  const options = value as Record<string, unknown>;
+  for (const key of Object.keys(options))
+    if (!MARKUP_OPTIONS.has(key)) fail(`${key} cannot be set in markup`);
+  const strings = options.strings;
+  if (
+    strings !== undefined &&
+    (typeof strings !== "object" || strings === null || Array.isArray(strings))
+  )
+    fail("strings must be an object");
+  if (strings)
+    for (const [key, text] of Object.entries(strings))
+      if (
+        typeof text !== "string" ||
+        typeof defaultStrings[key as keyof LightboxStrings] !== "string"
+      )
+        fail(`strings.${key} must be one of the text strings`);
+  return options as Partial<LightboxOptions>;
+}
+
 export interface LightboxGalleryOptions<
   Item extends LightboxItem = LightboxItem,
 > {
@@ -4853,6 +4917,16 @@ export function bindLightboxGallery<Item extends LightboxItem = LightboxItem>(
   lightbox: Lightbox<Item>,
   options: LightboxGalleryOptions<Item> = {},
 ): () => void {
+  const markup = markupOptions(root);
+  const set = internals.get(lightbox)?.options;
+  if (markup)
+    lightbox.setOptions(
+      Object.fromEntries(
+        Object.entries(markup).filter(
+          ([key]) => set?.[key as keyof typeof set] === undefined,
+        ),
+      ),
+    );
   const selector = options.selector ?? "a[href], button, img";
   const read =
     options.item ??
@@ -4889,7 +4963,7 @@ export function bindLightboxGallery<Item extends LightboxItem = LightboxItem>(
     if (!trigger) return;
     const name = group(trigger);
     // A clicked trigger whose media type has no module is followed; others leave such items out.
-    const shows = contentOf.get(lightbox);
+    const shows = internals.get(lightbox)?.shows;
     const opened = triggers
       .filter((candidate) => group(candidate) === name)
       .map((candidate) => [candidate, read(candidate)] as const)

@@ -1539,9 +1539,9 @@ describe("lightbox public API", () => {
   it("reads an item from the link, data attributes, the tile and its figure", () => {
     const root = document.createElement("div");
     root.innerHTML = `
-      <figure><a href="/large.JPG?w=2000" data-caption="Link caption"><img src="/small.jpg" alt="a"></a><figcaption> Figure caption </figcaption></figure>
-      <a href="/photos/2" data-caption="Link caption"><img src="/tile.jpg" data-lightbox-src="/full.jpg" data-lightbox-srcset="/900.jpg 900w, /1800.jpg 1800w" data-lightbox-sizes="50vw" data-lightbox-width="1800" data-lightbox-height="1200" alt="b"></a>
-      <img src="/same.jpg" data-caption="Image caption" alt="c">`;
+      <figure><a href="/large.JPG?w=2000" data-lightbox-caption="Link caption"><img src="/small.jpg" alt="a"></a><figcaption> Figure caption </figcaption></figure>
+      <a href="/photos/2" data-lightbox-caption="Link caption"><img src="/tile.jpg" data-lightbox-src="/full.jpg" data-lightbox-srcset="/900.jpg 900w, /1800.jpg 1800w" data-lightbox-sizes="50vw" data-lightbox-width="1800" data-lightbox-height="1200" alt="b"></a>
+      <img src="/same.jpg" data-lightbox-caption="Image caption" alt="c">`;
     document.body.append(root);
     const images = [...root.querySelectorAll("img")];
     for (const image of images) {
@@ -1656,6 +1656,31 @@ describe("lightbox public API", () => {
       null,
       expect.objectContaining({ src: "/full.jpg", alt: "Tile" }),
     ]);
+  });
+
+  it("fills options the lightbox lacks from data-lightbox-options and rejects bad JSON by name", () => {
+    const root = document.createElement("div");
+    root.id = "prints";
+    root.dataset.lightboxOptions = JSON.stringify({
+      thumbnails: "bottom",
+      loop: true,
+      strings: { close: "Fermer" },
+    });
+    root.innerHTML = `<a href="/0.jpg"><img src="/0.jpg"></a><a href="/1.jpg"><img src="/1.jpg"></a>`;
+    document.body.append(root);
+    const controller = create({ history: false, loop: false });
+    bindLightboxGallery(root, controller);
+    root.querySelector("img")?.click();
+    expect([
+      Boolean(dialog().querySelector(".re-lightbox-thumbnails")),
+      controller.getState().canPrev,
+      dialog().querySelector(".re-lightbox-close")?.getAttribute("aria-label"),
+    ]).toEqual([true, false, "Fermer"]);
+    for (const value of ["{thumbnails:", '"bottom"', '{"container":1}'])
+      expect(() => {
+        root.dataset.lightboxOptions = value;
+        bindLightboxGallery(root, create());
+      }).toThrow(/data-lightbox-options on div#prints/);
   });
 
   it("opens what item(trigger) returns and leaves a trigger it returns null for to the page", () => {

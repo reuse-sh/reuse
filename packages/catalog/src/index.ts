@@ -225,7 +225,7 @@ export const libraries: Library[] = [
       ],
       [
         "bindLightboxGallery(root, lightbox, options?)",
-        "Opens the links, buttons and images inside root in a lightbox you created, in page order, only those of the clicked trigger's data-lightbox-group or group(trigger), and returns the function that unbinds. lightboxItemFromElement reads each trigger: the file its link points to, else data-lightbox-src, with data-lightbox-srcset, -sizes, -width, -height and -type and its figure's caption, so a quick-view link without an image opens too. item(trigger) supplies the item instead, and null leaves the click to the page.",
+        'Opens the links, buttons and images inside root in a lightbox you created, in page order, only those of the clicked trigger\'s data-lightbox-group or group(trigger), and returns the function that unbinds. lightboxItemFromElement reads each trigger: the file its link points to, else data-lightbox-src, with data-lightbox-srcset, -sizes, -width, -height and -type and its figure\'s caption, so a quick-view link without an image opens too. item(trigger) supplies the item instead, and null leaves the click to the page. data-lightbox-options on root holds JSON options, such as {"thumbnails":"bottom"}, that fill what the lightbox was not given in code.',
       ],
       [
         "open(items, index?)",

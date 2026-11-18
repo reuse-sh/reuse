@@ -472,10 +472,10 @@ import "./lightbox-style.css";${names.length ? `\nimport { ${names.join(", ")} }
   return {
     html: `<div data-gallery>
   <a href="/photos/coast.jpg">
-    <img src="/photos/coast-small.jpg" data-lightbox-src="/photos/coast.jpg" alt="A rocky coast" data-caption="Coast" width="400" height="300">
+    <img src="/photos/coast-small.jpg" data-lightbox-src="/photos/coast.jpg" alt="A rocky coast" data-lightbox-caption="Coast" width="400" height="300">
   </a>
   <a href="/photos/forest.jpg">
-    <img src="/photos/forest-small.jpg" data-lightbox-src="/photos/forest.jpg" alt="A path through a forest" data-caption="Forest" width="400" height="300">
+    <img src="/photos/forest-small.jpg" data-lightbox-src="/photos/forest.jpg" alt="A path through a forest" data-lightbox-caption="Forest" width="400" height="300">
   </a>
 </div>`,
     js: `import { bindLightboxGallery, createLightbox, lightboxItemFromElement } from "@reuse-sh/lightbox";

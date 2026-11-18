@@ -508,7 +508,7 @@ export function Gallery() {
         blocks: [
           {
             kind: "prose",
-            text: "A cropped article thumbnail does not constrain the full-size viewer image. Use descriptive captions through the image data-caption attribute, and keep nearby article text outside the gallery root if it contains unrelated images. Links still open the image without JavaScript. The native dialog keeps focus inside, Escape closes it, and close returns focus to the current photo's tile. The React hook destroys its viewer on unmount.",
+            text: "A cropped article thumbnail does not constrain the full-size viewer image. Give captions with a figcaption or the image's data-lightbox-caption attribute, and keep nearby article text outside the gallery root if it contains unrelated images. Links still open the image without JavaScript. The native dialog keeps focus inside, Escape closes it, and close returns focus to the current photo's tile. The React hook destroys its viewer on unmount.",
           },
         ],
       },
@@ -575,7 +575,7 @@ const unbind = bindLightboxGallery(document.querySelector("#gallery"), lightbox)
         blocks: [
           {
             kind: "prose",
-            text: "A cropped article thumbnail does not constrain the full-size viewer image. Use descriptive captions through the image data-caption attribute, and keep nearby article text outside the gallery root if it contains unrelated images. Links still open the image without JavaScript. The native dialog keeps focus inside, Escape closes it, and close returns focus to the current photo's tile.",
+            text: "A cropped article thumbnail does not constrain the full-size viewer image. Give captions with a figcaption or the image's data-lightbox-caption attribute, and keep nearby article text outside the gallery root if it contains unrelated images. Links still open the image without JavaScript. The native dialog keeps focus inside, Escape closes it, and close returns focus to the current photo's tile.",
           },
         ],
       },
@@ -1113,7 +1113,7 @@ export function ImageLink() {
             code: `<div id="gallery">
   <a href="/images/print-large.jpg">
     <img src="/images/print.jpg" alt="Blue marble print" width="640" height="480"
-      data-caption="Archival pigment on paper" data-width="2400" data-height="1800" />
+      data-lightbox-caption="Archival pigment on paper" data-width="2400" data-height="1800" />
   </a>
 </div>`,
             role: "usage",
