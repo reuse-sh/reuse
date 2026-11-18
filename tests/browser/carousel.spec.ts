@@ -356,3 +356,27 @@ test("quick thumbnail clicks while the strip still moves each pick their slide",
     await page.evaluate(() => (window as { clicked?: boolean }).clicked),
   ).toBe(true);
 });
+
+test("a strip whose slides take their width from the package stylesheet overflows from the start", async ({
+  page,
+}) => {
+  await mount(
+    page,
+    `<div id="strip" style="width:600px;--re-carousel-slide-width:100%">${Array.from(
+      { length: 4 },
+      () =>
+        `<figure data-carousel-slide style="margin:0;height:100px"></figure>`,
+    ).join("")}</div><button data-carousel-next>Next</button>`,
+    ["carousel/styles.css"],
+  );
+  const state = await page.evaluate(async () => {
+    const { createCarousel } = await import("/modules/carousel/index.js");
+    const strip = document.getElementById("strip") as HTMLElement;
+    const carousel = createCarousel(strip);
+    return {
+      static: strip.hasAttribute("data-re-static"),
+      canNext: carousel.getState().canNext,
+    };
+  });
+  expect(state).toEqual({ static: false, canNext: true });
+});

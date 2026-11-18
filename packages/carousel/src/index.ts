@@ -1144,15 +1144,6 @@ export function createCarousel(
     stretch = 0;
     span = 0;
     slides = readSlides();
-    rtl = window.getComputedStyle(viewport).direction === "rtl";
-    max = Math.max(0, viewport.scrollWidth - viewportWidth);
-    const origin = offsetLeft(viewport) + viewport.clientLeft;
-    const styles = window.getComputedStyle(viewport);
-    const padding = scrollPadding(viewport, styles.scrollPaddingInlineStart);
-    snapport =
-      viewportWidth -
-      padding -
-      scrollPadding(viewport, styles.scrollPaddingInlineEnd);
     for (const slide of slides) {
       if (!slide.classList.contains("re-carousel__slide")) {
         slide.classList.add("re-carousel__slide");
@@ -1164,6 +1155,15 @@ export function createCarousel(
           snap: slide.style.scrollSnapAlign,
         });
     }
+    rtl = window.getComputedStyle(viewport).direction === "rtl";
+    max = Math.max(0, viewport.scrollWidth - viewportWidth);
+    const origin = offsetLeft(viewport) + viewport.clientLeft;
+    const styles = window.getComputedStyle(viewport);
+    const padding = scrollPadding(viewport, styles.scrollPaddingInlineStart);
+    snapport =
+      viewportWidth -
+      padding -
+      scrollPadding(viewport, styles.scrollPaddingInlineEnd);
     widths = slides.map((slide) => slide.offsetWidth);
     stops = slides.map(
       (slide) => window.getComputedStyle(slide).scrollSnapStop === "always",
