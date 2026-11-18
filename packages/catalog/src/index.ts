@@ -470,7 +470,7 @@ export const libraries: Library[] = [
       ],
       [
         "getState(), subscribe(listener)",
-        "Index, count, progress, pageCount, pageIndex, the visible slides, autoplayProgress, seamSlides, canPrev, canNext, and whether it is playing, dragging or looping.",
+        "Index, count, progress, pageCount, pageIndex, pages (the slide each page starts at), the visible slides, autoplayProgress, seamSlides, canPrev, canNext, whether it is playing, dragging or looping, and isPaused, the visitor's own pause of autoplay, false without autoplay, which holds and hover leave alone.",
       ],
       [
         "take(owner, { onInterrupt })",
@@ -521,7 +521,7 @@ export const libraries: Library[] = [
       "A mouse drag inside a nested strip that can scroll moves only that strip.",
       "Autoplay pauses for hover, keyboard focus (:focus-visible), dragging, hidden pages, strips less than half in view and reduced motion, and picks up the rest of its wait when it resumes. --re-carousel-autoplay-progress on the viewport fills from 0 to 1 over the wait, every frame.",
       'For a page without a bundler or an import map, such as a theme or a plugin, load @reuse-sh/carousel/browser/carousel.js with <script type="module">. It is one minified ES module with a source map and no imports. The controls entry is controls.js in the same folder, also with no imports.',
-      "bindCarouselControls(root, carousel, { strings, dotsWindow }) from @reuse-sh/carousel/controls wires your own markup: [data-carousel-prev], [data-carousel-next], [data-carousel-dots], [data-carousel-counter], [data-carousel-play] and [data-carousel-progress], also outside root with data-carousel-controls set to the viewport id. It reads pageCount, pageIndex and autoplayProgress from the one state, and the function it returns removes every listener and element it added.",
+      "bindCarouselControls(root, carousel, { strings, dotsWindow }) from @reuse-sh/carousel/controls wires your own markup: [data-carousel-prev], [data-carousel-next], [data-carousel-dots], [data-carousel-counter], [data-carousel-play] and [data-carousel-progress], also outside root with data-carousel-controls set to the viewport id. It reads pages, pageIndex, isPaused and autoplayProgress from the one state, and the function it returns removes every listener and element it added.",
       "The strings option supplies every label and announcement, such as goTo(index, count) and slide(index, count), with English defaults. The viewport dispatches re-carousel:change, re-carousel:settle, re-carousel:play and re-carousel:pause with the state in detail.",
       "A div or span viewport without a role becomes a region described by strings.carouselRole, and div or span slides without one become groups described by strings.slideRole and labeled from strings.slide, such as 3 of 8. next(), prev(), the arrows, dots and keys announce the slide they reach; autoplay and swipes stay quiet.",
       "A goTo while the strip cannot scroll yet, such as in a hidden tab or before its images load, waits for the first refresh that finds overflow and lands there at once.",

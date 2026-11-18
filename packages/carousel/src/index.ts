@@ -39,8 +39,10 @@ export interface CarouselState {
   readonly isPlaying: boolean;
   readonly isDragging: boolean;
   readonly isLooping: boolean;
+  readonly isPaused: boolean;
   readonly pageCount: number;
   readonly pageIndex: number;
+  readonly pages: readonly number[];
   readonly visible: readonly number[];
   readonly autoplayProgress: number;
   readonly seamSlides: readonly number[];
@@ -251,7 +253,6 @@ export function createCarousel(
   } | null = null;
   let stops: boolean[] = [];
   const listeners = new Set<(state: CarouselState) => void>();
-  const requestListeners = new Set<() => void>();
   const holds = new Set<string>();
   const internalHolds = new Set<string>();
   const cleanup: (() => void)[] = [];
@@ -264,6 +265,7 @@ export function createCarousel(
   let destroyed = false;
   let enabled = true;
   let requestedPlaying = options.autoplay !== undefined;
+  const autoplayListeners = new Set<() => void>();
   let timer: ReturnType<typeof setTimeout> | undefined;
   let settleTimer: ReturnType<typeof setTimeout> | undefined;
   let pendingIndex: number | undefined;
@@ -306,7 +308,7 @@ export function createCarousel(
   let suppressClick = false;
   let widths: number[] = [];
   let width = 0;
-  let pages: number[] = [];
+  let pages: readonly number[] = Object.freeze([]);
   let waited = 0;
   let runningSince: number | undefined;
   let clockFrame = 0;
@@ -331,8 +333,10 @@ export function createCarousel(
     isPlaying: false,
     isDragging: false,
     isLooping: false,
+    isPaused: false,
     pageCount: 0,
     pageIndex: 0,
+    pages,
     visible: Object.freeze([]),
     autoplayProgress: 0,
     seamSlides: seam,
@@ -561,8 +565,10 @@ export function createCarousel(
       isPlaying: isPlaying(),
       isDragging: pointer?.moved ?? false,
       isLooping: span > 0,
+      isPaused: options.autoplay !== undefined && !requestedPlaying,
       pageCount: pages.length,
       pageIndex: pageOf(index),
+      pages,
       visible:
         visible.length === state.visible.length &&
         visible.every((slide, at) => slide === state.visible[at])
@@ -1214,7 +1220,9 @@ export function createCarousel(
     slides.forEach((slide, index) => {
       measured.set(slide, widths[index]);
     });
-    pages = measurePages();
+    const measuredPages = measurePages();
+    if (measuredPages.join() !== pages.join())
+      pages = Object.freeze(measuredPages);
     const seen = span
       ? slides
           .map((_slide, index) => index)
@@ -1301,12 +1309,6 @@ export function createCarousel(
     slide.removeAttribute("role");
     slide.removeAttribute("aria-roledescription");
     if (ownsLabel) slide.removeAttribute("aria-label");
-  }
-
-  function request(playing: boolean) {
-    requestedPlaying = playing;
-    schedule();
-    for (const listener of requestListeners) listener();
   }
 
   function hold(reason: string, isHeld: boolean) {
@@ -1404,11 +1406,13 @@ export function createCarousel(
     },
     play() {
       if (destroyed) return;
-      request(true);
+      requestedPlaying = true;
+      schedule();
     },
     pause() {
       if (destroyed) return;
-      request(false);
+      requestedPlaying = false;
+      schedule();
     },
     hold,
     take(owner, { onInterrupt } = {}) {
@@ -1470,8 +1474,9 @@ export function createCarousel(
       if (changed.some((name) => name !== "autoplay" && name !== "drag"))
         refresh();
       updateCursor();
-      if (changed.includes("autoplay")) request(requestedPlaying);
-      else schedule();
+      schedule();
+      if (changed.includes("autoplay"))
+        for (const listener of autoplayListeners) listener();
     },
     destroy() {
       if (destroyed) return;
@@ -1490,7 +1495,7 @@ export function createCarousel(
       intersection?.disconnect();
       for (const remove of cleanup) remove();
       listeners.clear();
-      requestListeners.clear();
+      autoplayListeners.clear();
       if (!hadClass) viewport.classList.remove("re-carousel");
       for (const name of stateAttributes) viewport.removeAttribute(name);
       viewport.style.removeProperty("--re-carousel-autoplay-progress");
@@ -1835,23 +1840,22 @@ export function createCarousel(
     viewport,
     strings,
     slides: () => slides,
-    pages: () =>
-      pages.map((index) => ({
-        index,
-        at: span
+    pagePositions: () =>
+      pages.map((index) =>
+        span
           ? ((targets[index] ?? 0) - (targets[0] ?? 0)) / span
           : max > 0
             ? (targets[index] ?? 0) / max
             : 0,
-      })),
-    requested: () => requestedPlaying && options.autoplay !== undefined,
-    onRequest: (listener) => {
-      requestListeners.add(listener);
-      return () => requestListeners.delete(listener);
-    },
+      ),
     align: () => options.align,
     goTo: (index, behavior, announce) =>
       announce ? announced(() => goTo(index, behavior)) : goTo(index, behavior),
+    autoplays: () => options.autoplay !== undefined,
+    onAutoplay: (listener) => {
+      autoplayListeners.add(listener);
+      return () => autoplayListeners.delete(listener);
+    },
     silence: () => {
       silent = true;
       live.remove();

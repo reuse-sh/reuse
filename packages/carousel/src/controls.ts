@@ -100,9 +100,9 @@ export function bindCarouselControls(
   }
 
   const goToPage = (page: number) => {
-    const pages = strip.pages();
+    const { pages } = carousel.getState();
     const target = pages[Math.max(0, Math.min(page, pages.length - 1))];
-    if (target) strip.goTo(target.index, "smooth", true);
+    if (target !== undefined) strip.goTo(target, "smooth", true);
   };
 
   for (const [selector, direction] of [
@@ -244,20 +244,22 @@ export function bindCarouselControls(
 
   for (const button of find("[data-carousel-play]")) {
     keep(button, "aria-label", "aria-pressed");
-    const render = () => {
-      const playing = strip.requested();
-      setAttribute(button, "aria-pressed", String(playing));
+    const playing = (state: CarouselState) =>
+      strip.autoplays() && !state.isPaused;
+    const render = (state: CarouselState) => {
+      const pressed = playing(state);
+      setAttribute(button, "aria-pressed", String(pressed));
       setAttribute(
         button,
         "aria-label",
-        playing ? strings.pause : strings.play,
+        pressed ? strings.pause : strings.play,
       );
     };
     listen(button, "click", () => {
-      if (strip.requested()) carousel.pause();
+      if (playing(carousel.getState())) carousel.pause();
       else carousel.play();
     });
-    cleanup.push(strip.onRequest(render));
+    cleanup.push(strip.onAutoplay(() => render(carousel.getState())));
     renders.push(render);
   }
 
@@ -293,12 +295,12 @@ export function bindCarouselControls(
         : 0;
       if (rtl()) fraction = 1 - fraction;
       show(fraction);
-      const pages = strip.pages();
+      const positions = strip.pagePositions();
       let page = 0;
-      pages.forEach((candidate, at) => {
+      positions.forEach((position, at) => {
         if (
-          Math.abs(candidate.at - fraction) <
-          Math.abs(pages[page].at - fraction) - 0.001
+          Math.abs(position - fraction) <
+          Math.abs(positions[page] - fraction) - 0.001
         )
           page = at;
       });
