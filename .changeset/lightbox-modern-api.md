@@ -17,3 +17,5 @@ Migration:
 - `getState()` returns the last snapshot `subscribe()` delivered, the same object. A drag, a pinch or a wheel shows up once it settles; read the photo's position from the page if you need it mid-gesture.
 - The `onChange` option is gone. Call `lightbox.subscribe(listener, { signal })`, which returns its own unsubscribe.
 - `on(type, listener, { signal })` is typed by `LightboxEventMap`. Only `beforeclose` is a `LightboxCancelableEvent` with `preventDefault()` and `defaultPrevented`; the other events no longer carry them.
+- `LightboxState` gains `item` (the object you passed, not a copy), `canPrev`, `canNext` and `isPlaying`, and every field is `readonly`. The controller gains `play()` and `pause()` for the slideshow.
+- `createLightbox<Item>()` takes your item type, so `open()`, `setItems()`, `state.item`, `renderContent` and slots use it. `LightboxState`, `LightboxOptions`, `LightboxSlot` and `Lightbox` take the same parameter, `LightboxItem` by default.

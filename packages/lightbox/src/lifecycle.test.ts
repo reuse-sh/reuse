@@ -468,6 +468,33 @@ describe("lightbox lifecycle", () => {
     expect(document.activeElement).toBe(trigger);
   });
 
+  it("reports the current item, where it can page and the slideshow that play() and pause() run", () => {
+    const controller = create({ history: false });
+    const items = gallery.slice(0, 3);
+    const flags = () => {
+      const { canPrev, canNext, isPlaying } = controller.getState();
+      return { canPrev, canNext, isPlaying };
+    };
+    controller.open(items, 0);
+    expect(controller.getState().item).toBe(items[0]);
+    expect(flags()).toEqual({
+      canPrev: false,
+      canNext: true,
+      isPlaying: false,
+    });
+    controller.play();
+    expect(flags().isPlaying).toBe(true);
+    expect(dialog().dataset.slideshow).toBe("playing");
+    controller.goTo(2);
+    expect(controller.getState().item).toBe(items[2]);
+    expect(flags()).toEqual({ canPrev: true, canNext: false, isPlaying: true });
+    controller.pause();
+    expect(flags().isPlaying).toBe(false);
+    expect(dialog().dataset.slideshow).toBeUndefined();
+    controller.setOptions({ loop: true });
+    expect(flags().canNext).toBe(true);
+  });
+
   it("stops a subscription and a listener when their signal aborts, and only beforeclose can cancel", () => {
     const stop = new AbortController();
     const states: number[] = [];

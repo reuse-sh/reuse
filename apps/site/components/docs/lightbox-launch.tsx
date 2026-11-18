@@ -17,7 +17,7 @@ export type LaunchItem = LightboxItem & {
 };
 
 type Make = (
-  create: typeof createLightbox,
+  create: (options?: LightboxOptions) => Lightbox,
   icons: Record<string, () => Element | null>,
   items: () => LaunchItem[],
 ) => Lightbox;

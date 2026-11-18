@@ -96,12 +96,12 @@ export type LightboxSlotName =
   | "footer"
   | "aside";
 
-export type LightboxSlot = (context: {
-  lightbox: Lightbox;
+export type LightboxSlot<Item extends LightboxItem = LightboxItem> = (context: {
+  lightbox: Lightbox<Item>;
   document: Document;
 }) => {
   node: Node;
-  update?: (state: LightboxState) => void;
+  update?: (state: LightboxState<Item>) => void;
   destroy?: () => void;
 };
 
@@ -192,18 +192,26 @@ export interface LightboxMediaItem extends LightboxItemBase {
 
 export type LightboxItem = LightboxImageItem | LightboxMediaItem;
 
-export interface LightboxState {
-  isOpen: boolean;
-  isClosing: boolean;
-  isAnimating: boolean;
-  index: number;
-  count: number;
-  zoom: Zoom;
-  chrome: "shown" | "hidden";
+export interface LightboxState<Item extends LightboxItem = LightboxItem> {
+  readonly isOpen: boolean;
+  readonly isClosing: boolean;
+  readonly isAnimating: boolean;
+  readonly index: number;
+  readonly count: number;
+  /** The item at index, the object passed to open() or setItems(). */
+  readonly item: Item | undefined;
+  readonly canPrev: boolean;
+  readonly canNext: boolean;
+  /** The slideshow runs, also while it waits on a zoom, a player or a hover. */
+  readonly isPlaying: boolean;
+  readonly zoom: Readonly<Zoom>;
+  readonly chrome: "shown" | "hidden";
 }
 
-export interface LightboxContentContext {
-  item: LightboxImageItem;
+export interface LightboxContentContext<
+  Item extends LightboxItem = LightboxItem,
+> {
+  item: Extract<Item, LightboxImageItem>;
   index: number;
   container: HTMLElement;
   image: HTMLImageElement;
@@ -237,7 +245,7 @@ export interface LightboxContent {
   mount(container: HTMLElement, context: LightboxMountContext): LightboxMounted;
 }
 
-export interface LightboxOptions {
+export interface LightboxOptions<Item extends LightboxItem = LightboxItem> {
   container?: HTMLElement;
   imageClick?: "zoom" | "close" | "none";
   doubleTapZoom?: boolean;
@@ -251,7 +259,9 @@ export interface LightboxOptions {
   autoHide?: number | false;
   className?: string;
   icons?: Partial<Record<LightboxIcon, () => Node>>;
-  renderContent?: (context: LightboxContentContext) => undefined | (() => void);
+  renderContent?: (
+    context: LightboxContentContext<Item>,
+  ) => undefined | (() => void);
   /** Content modules for items with a type, such as video() from @reuse-sh/lightbox/video. */
   content?: readonly LightboxContent[];
   /** Starts the current player once it shows, when the viewer opened from a user action; default true. */
@@ -259,23 +269,26 @@ export interface LightboxOptions {
   loop?: boolean;
   history?: boolean;
   strings?: Partial<LightboxStrings>;
-  slots?: Partial<Record<LightboxSlotName, LightboxSlot>>;
+  slots?: Partial<Record<LightboxSlotName, LightboxSlot<Item>>>;
   protect?: boolean;
 }
 
-export interface Lightbox {
-  open(items: readonly LightboxItem[], index?: number): void;
+export interface Lightbox<Item extends LightboxItem = LightboxItem> {
+  open(items: readonly Item[], index?: number): void;
   close(): Promise<void>;
   next(): void;
   prev(): void;
   goTo(index: number): void;
   zoomTo(scale: number, focus?: Point): void;
   toggleZoom(focus?: Point): void;
+  /** Starts the slideshow on the open viewer. */
+  play(): void;
+  pause(): void;
   /** The last state subscribers received; a gesture or a wheel shows up once it settles. */
-  getState(): LightboxState;
+  getState(): LightboxState<Item>;
   /** Reports discrete actions, completed pointer gestures, and wheel input after 150ms idle. */
   subscribe(
-    listener: (state: LightboxState) => void,
+    listener: (state: LightboxState<Item>) => void,
     options?: LightboxListenOptions,
   ): () => void;
   on<K extends LightboxEventName>(
@@ -283,9 +296,9 @@ export interface Lightbox {
     listener: (event: LightboxEventMap[K]) => void,
     options?: LightboxListenOptions,
   ): () => void;
-  append(items: readonly LightboxItem[]): void;
+  append(items: readonly Item[]): void;
   /** Keeps the current image when the new list still has it, otherwise shows index or the nearest image left. */
-  setItems(items: readonly LightboxItem[], index?: number): void;
+  setItems(items: readonly Item[], index?: number): void;
   setOptions(options: Pick<LightboxOptions, "loop">): void;
   getSlide(index: number): HTMLElement | null;
   destroy(): void;
@@ -774,32 +787,38 @@ function midpoint(points: Point[]): Point {
   };
 }
 
-export function createLightbox(options: LightboxOptions = {}): Lightbox {
-  let settings: LightboxOptions = { ...options };
+export function createLightbox<Item extends LightboxItem = LightboxItem>(
+  options: LightboxOptions<Item> = {},
+): Lightbox<Item> {
+  let settings: LightboxOptions<Item> = { ...options };
   let preload = 1;
   let padding = PADDING;
   let autoHide: number | false = 2500;
   let loop = Boolean(options.loop);
   let items: LightboxItem[] = [];
-  let sources: readonly LightboxItem[] = [];
+  let sources: readonly Item[] = [];
   let session: Session | undefined;
   let destroyed = false;
   let syncingCarousel = false;
   let closePromise: Promise<void> | undefined;
   let pendingClosed: (() => void) | undefined;
   let listAfterClose:
-    | { items: LightboxItem[]; sources: readonly LightboxItem[] }
+    | { items: LightboxItem[]; sources: readonly Item[] }
     | undefined;
-  let state: LightboxState = {
+  let state: LightboxState<Item> = {
     isOpen: false,
     isClosing: false,
     isAnimating: false,
     index: 0,
     count: 0,
+    item: undefined,
+    canPrev: false,
+    canNext: false,
+    isPlaying: false,
     zoom: { ...identity },
     chrome: "shown",
   };
-  const listeners = new Set<(state: LightboxState) => void>();
+  const listeners = new Set<(state: LightboxState<Item>) => void>();
   const handlers = new Map<
     LightboxEventName,
     Set<(event: LightboxCancelableEvent) => void>
@@ -822,11 +841,19 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
   }
   configure();
 
-  function updateState(update: Partial<LightboxState>) {
-    state = { ...state, ...update };
+  // item, canPrev and canNext follow index, count, the list and loop.
+  function updateState(update: Partial<LightboxState<Item>>) {
+    const next = { ...state, ...update };
+    const many = next.count > 1;
+    state = {
+      ...next,
+      item: sources[next.index],
+      canPrev: many && (loop || next.index > 0),
+      canNext: many && (loop || next.index < next.count - 1),
+    };
   }
 
-  function publish(update: Partial<LightboxState>) {
+  function publish(update: Partial<LightboxState<Item>>) {
     updateState(update);
     if (
       state.isOpen === notifiedState.isOpen &&
@@ -834,6 +861,10 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
       state.isAnimating === notifiedState.isAnimating &&
       state.index === notifiedState.index &&
       state.count === notifiedState.count &&
+      state.item === notifiedState.item &&
+      state.canPrev === notifiedState.canPrev &&
+      state.canNext === notifiedState.canNext &&
+      state.isPlaying === notifiedState.isPlaying &&
       state.chrome === notifiedState.chrome &&
       state.zoom.scale === notifiedState.zoom.scale &&
       state.zoom.x === notifiedState.zoom.x &&
@@ -986,6 +1017,8 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
     }
     if (on) s.dialog.dataset.slideshow = "playing";
     else delete s.dialog.dataset.slideshow;
+    if (session === s) publish({ isPlaying: on });
+    else updateState({ isPlaying: on });
     if (!button) return;
     button.setAttribute(
       "aria-label",
@@ -2104,7 +2137,7 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
       };
       s.loaded.set(index, entry);
       cleanup = settings.renderContent?.({
-        item,
+        item: item as Extract<Item, LightboxImageItem>,
         index,
         container: frame,
         image,
@@ -3753,12 +3786,12 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
       if (!slot) continue;
       const instance = slot({ lightbox: controller, document: doc });
       places[name](instance.node);
-      s.slots.push(instance);
+      s.slots.push(instance as ReturnType<LightboxSlot>);
       instance.update?.(state);
     }
   }
 
-  function open(input: readonly LightboxItem[], index = 0) {
+  function open(input: readonly Item[], index = 0) {
     const before = session;
     try {
       openSession(input, index);
@@ -3781,7 +3814,7 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
     }
   }
 
-  function openSession(input: readonly LightboxItem[], index: number) {
+  function openSession(input: readonly Item[], index: number) {
     if (destroyed) throw new Error("This lightbox has been destroyed.");
     const nextItems = validateItems(input, options.content);
     if (!Number.isFinite(index))
@@ -4475,7 +4508,7 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
     return closing;
   }
 
-  function setItems(input: readonly LightboxItem[], index?: number) {
+  function setItems(input: readonly Item[], index?: number) {
     if (destroyed) throw new Error("This lightbox has been destroyed.");
     const nextItems = input.length ? validateItems(input, options.content) : [];
     if (index !== undefined && !Number.isFinite(index))
@@ -4582,7 +4615,7 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
     else if (changed) emit("change", s);
   }
 
-  const controller: Lightbox = {
+  const controller: Lightbox<Item> = {
     open,
     close,
     next: () => step(1),
@@ -4590,6 +4623,13 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
     goTo,
     zoomTo,
     toggleZoom,
+    play: () => {
+      if (session && !state.isClosing && items.length > 1)
+        toggleSlideshow(session, true);
+    },
+    pause: () => {
+      if (session) toggleSlideshow(session, false);
+    },
     getState: () => notifiedState,
     subscribe: (listener, { signal } = {}) =>
       listen(listeners, listener, signal),
@@ -4607,6 +4647,7 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
     setOptions: (next) => {
       if (!("loop" in next)) return;
       loop = Boolean(next.loop);
+      publish({});
       const s = session;
       if (!s || state.isClosing) return;
       const looped = s.carousel.getState().isLooping;

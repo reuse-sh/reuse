@@ -236,12 +236,16 @@ export const libraries: Library[] = [
         "Moves through the set from code. Close returns to the current photo's tile.",
       ],
       [
+        "play(), pause()",
+        "Starts and stops the slideshow of the open viewer, as its button does.",
+      ],
+      [
         "zoomTo(scale, focus?), toggleZoom(focus?)",
         "Zooms to a scale around a point, up to the photo's maximum, or between fit and the tap zoom.",
       ],
       [
         "getState(), subscribe(listener, { signal }?)",
-        "Reads and listens to the index, zoom, open, animation and controls state. getState() returns the snapshot subscribers last received, so a gesture shows up once it settles.",
+        "Reads and listens to the index, the current item, canPrev, canNext, isPlaying, zoom, open, animation and controls state. getState() returns the snapshot subscribers last received, so a gesture shows up once it settles.",
       ],
       [
         "on(type, listener, { signal }?)",

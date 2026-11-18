@@ -415,3 +415,27 @@ test("--re-lightbox-padding sets the space around the fitted photo, 32px without
     )
     .toBe(((1000 - 2 * 32) * 800) / 1200);
 });
+
+test("an item type of your own comes back as state.item, the object passed in", async ({
+  page,
+}) => {
+  await mount(page, "", ["lightbox/base.css", "lightbox/theme.css"]);
+  const result = await page.evaluate(async (src) => {
+    const { createLightbox } = await import("/modules/lightbox/index.js");
+    type Photo = { id: string; src: string; width: number; height: number };
+    const photos: Photo[] = [
+      { id: "first", src, width: 1200, height: 800 },
+      { id: "second", src, width: 1200, height: 800 },
+    ];
+    const lightbox = createLightbox<Photo>({ history: false });
+    lightbox.open(photos, 1);
+    const { item, canPrev, canNext } = lightbox.getState();
+    return { id: item?.id, same: item === photos[1], canPrev, canNext };
+  }, photo(1));
+  expect(result).toEqual({
+    id: "second",
+    same: true,
+    canPrev: true,
+    canNext: false,
+  });
+});
