@@ -130,6 +130,44 @@ test("a click during a smooth scroll travels on to a snap point instead of stopp
   ).toBe("");
 });
 
+test("creating a strip measures it once, and a resize or a new padding measures it again", async ({
+  page,
+}) => {
+  await mount(
+    page,
+    `<div id="strip" style="width:600px;--re-carousel-gap:0px">${slides}</div>`,
+    ["carousel/styles.css"],
+  );
+  const refreshes = await page.evaluate(async () => {
+    const strip = document.getElementById("strip") as HTMLElement;
+    let reads = 0;
+    const read = window.getComputedStyle;
+    window.getComputedStyle = (element, pseudo) => {
+      if (element instanceof HTMLElement && element.parentElement === strip)
+        reads++;
+      return read(element, pseudo);
+    };
+    const frames = (count: number) =>
+      new Promise<void>((resolve) => {
+        const tick = () => (--count ? requestAnimationFrame(tick) : resolve());
+        requestAnimationFrame(tick);
+      });
+    const { createCarousel } = await import("/modules/carousel/index.js");
+    createCarousel(strip);
+    await frames(5);
+    const created = reads / 6;
+    strip.style.width = "500px";
+    await frames(5);
+    const resized = reads / 6 - created;
+    strip.style.boxSizing = "border-box";
+    await frames(5);
+    strip.style.paddingInline = "60px";
+    await frames(5);
+    return { created, resized, padded: reads / 6 - created - resized };
+  });
+  expect(refreshes).toEqual({ created: 1, resized: 1, padded: 1 });
+});
+
 test("a percentage scroll padding places the slide at the padded edge", async ({
   page,
 }) => {
@@ -317,4 +355,28 @@ test("quick thumbnail clicks while the strip still moves each pick their slide",
   expect(
     await page.evaluate(() => (window as { clicked?: boolean }).clicked),
   ).toBe(true);
+});
+
+test("a strip whose slides take their width from the package stylesheet overflows from the start", async ({
+  page,
+}) => {
+  await mount(
+    page,
+    `<div id="strip" style="width:600px;--re-carousel-slide-width:100%">${Array.from(
+      { length: 4 },
+      () =>
+        `<figure data-carousel-slide style="margin:0;height:100px"></figure>`,
+    ).join("")}</div><button data-carousel-next>Next</button>`,
+    ["carousel/styles.css"],
+  );
+  const state = await page.evaluate(async () => {
+    const { createCarousel } = await import("/modules/carousel/index.js");
+    const strip = document.getElementById("strip") as HTMLElement;
+    const carousel = createCarousel(strip);
+    return {
+      static: strip.hasAttribute("data-re-static"),
+      canNext: carousel.getState().canNext,
+    };
+  });
+  expect(state).toEqual({ static: false, canNext: true });
 });

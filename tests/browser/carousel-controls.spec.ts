@@ -181,6 +181,90 @@ test.describe("carousel controls", { tag: "@desktop" }, () => {
     ).toBe("0");
   });
 
+  test("autoplay pauses for keyboard focus, not for the focus a mouse click gives", async ({
+    page,
+  }) => {
+    await setup(page, { autoplay: 600 });
+    const state = () =>
+      page.evaluate(() => {
+        const { carousel } = window as unknown as {
+          carousel: { getState(): { index: number; isPlaying: boolean } };
+        };
+        return {
+          ...carousel.getState(),
+          focused: document.activeElement?.id,
+        };
+      });
+    await page.mouse.click(300, 75);
+    await page.mouse.move(700, 500);
+    expect(await state()).toMatchObject({ focused: "strip", isPlaying: true });
+    await expect
+      .poll(async () => (await state()).index, { timeout: 3000 })
+      .toBeGreaterThan(0);
+    await page.keyboard.press("ArrowRight");
+    const shown = await page
+      .locator("#strip")
+      .evaluate((strip) => strip.matches(":focus-visible"));
+    expect((await state()).isPlaying).toBe(!shown);
+    await page.mouse.click(700, 500);
+    await page.keyboard.press("Tab");
+    const held = await state();
+    expect(held).toMatchObject({ focused: "strip", isPlaying: false });
+    await page.waitForTimeout(1300);
+    expect((await state()).index).toBe(held.index);
+  });
+
+  test("autoplay pauses for keyboard focus inside a shadow root", async ({
+    page,
+  }) => {
+    await mount(
+      page,
+      `<button id="before">Before</button><div id="host"></div><button id="between">Between</button><div id="strip" style="width:600px;--re-carousel-gap:0px">${slides}</div>`,
+      ["carousel/styles.css"],
+    );
+    await page.evaluate(async () => {
+      const { createCarousel } = await import("/modules/carousel/index.js");
+      const root = (
+        document.getElementById("host") as HTMLElement
+      ).attachShadow({ mode: "open" });
+      root.innerHTML = `<div style="width:600px;display:flex;overflow-x:auto">${Array.from({ length: 6 }, (_, index) => `<div style="flex:0 0 300px;height:100px">${index}</div>`).join("")}</div>`;
+      const strip = document.getElementById("strip") as HTMLElement;
+      const slot = strip.firstElementChild as HTMLElement;
+      slot.appendChild(document.createElement("span")).attachShadow({
+        mode: "open",
+      }).innerHTML = `<button id="inner">Inner</button>`;
+      Object.assign(window, {
+        shadowed: createCarousel(root.firstElementChild as HTMLElement, {
+          autoplay: 100000,
+        }),
+        nested: createCarousel(strip, { autoplay: 100000 }),
+      });
+    });
+    const playing = () =>
+      page.evaluate(() => {
+        const { shadowed, nested } = window as unknown as Record<
+          string,
+          { getState(): { isPlaying: boolean } }
+        >;
+        return [shadowed.getState().isPlaying, nested.getState().isPlaying];
+      });
+    expect(await playing()).toEqual([true, true]);
+    await page.focus("#before");
+    await page.keyboard.press("Tab");
+    expect(await playing()).toEqual([false, true]);
+    await page.focus("#between");
+    await page.keyboard.press("Tab");
+    await page.keyboard.press("Tab");
+    expect(
+      await page.evaluate(
+        () =>
+          document.getElementById("strip")?.querySelector("span")?.shadowRoot
+            ?.activeElement?.id,
+      ),
+    ).toBe("inner");
+    expect(await playing()).toEqual([true, false]);
+  });
+
   test("a goTo on a hidden strip lands once the strip shows", async ({
     page,
   }) => {

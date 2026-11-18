@@ -124,30 +124,35 @@ test.describe("carousel spring", { tag: "@desktop" }, () => {
     expect(rest).toBeGreaterThanOrEqual(600);
   });
 
-  test("a wheel during a move stops the spring and the strip snaps to the point nearest where it stopped", async ({
+  test("a wheel during a move stops the spring and the strip glides to the point nearest where it stopped", async ({
     page,
   }) => {
     await setup(page);
     await page.mouse.move(300, 100);
-    await page.evaluate(() => {
-      const strip = document.getElementById("strip") as HTMLElement;
-      strip.addEventListener(
-        "wheel",
-        () => Object.assign(window, { stoppedAt: strip.scrollLeft }),
-        { once: true },
-      );
-    });
     await page.evaluate(() =>
       (window as unknown as { carousel: Strip }).carousel.goTo(4),
     );
-    // The wheel lands on the frame the strip passes 300px, since a wheel sent from the test
-    // can arrive after the 500ms move on a busy runner.
-    await page.evaluate(
+    // The wheel lands on the frame the strip passes 420px, 116 to 150px from the nearest point,
+    // since a wheel sent from the test can arrive after the 500ms move on a busy runner. Every
+    // frame after it is sampled in the page, so a one-frame jump shows as one step.
+    const { stoppedAt, values } = await page.evaluate(
       () =>
-        new Promise<void>((resolve) => {
+        new Promise<{ stoppedAt: number; values: number[] }>((resolve) => {
           const strip = document.getElementById("strip") as HTMLElement;
+          const values: number[] = [];
+          let stoppedAt = 0;
+          let changed = 0;
+          const sample = () => {
+            const now = performance.now();
+            if (strip.scrollLeft !== values.at(-1)) changed = now;
+            values.push(strip.scrollLeft);
+            if (now - changed > 300) resolve({ stoppedAt, values });
+            else requestAnimationFrame(sample);
+          };
           const watch = () => {
-            if (strip.scrollLeft <= 300) return requestAnimationFrame(watch);
+            if (strip.scrollLeft <= 420) return requestAnimationFrame(watch);
+            stoppedAt = strip.scrollLeft;
+            changed = performance.now();
             strip.dispatchEvent(
               new WheelEvent("wheel", {
                 bubbles: true,
@@ -157,26 +162,92 @@ test.describe("carousel spring", { tag: "@desktop" }, () => {
                 clientY: 100,
               }),
             );
-            resolve();
+            requestAnimationFrame(sample);
           };
           watch();
         }),
     );
-    const values = await framesUntilIdle(page, scrollLeft);
-    const stoppedAt = await page.evaluate(
-      () => (window as unknown as { stoppedAt: number }).stoppedAt,
-    );
-    expect(stoppedAt).toBeGreaterThan(0);
+    expect(stoppedAt).toBeGreaterThan(420);
     expect(stoppedAt).toBeLessThan(1000);
-    expect(values.at(-1)).toBe(Math.round(stoppedAt / 300) * 300);
+    const rest = values.at(-1) ?? 0;
+    expect(rest % 300).toBe(0);
+    expect(Math.abs(rest - stoppedAt)).toBeLessThanOrEqual(150.5);
+    const steps = values.map((value, at) =>
+      Math.abs(value - (at ? values[at - 1] : stoppedAt)),
+    );
+    expect(Math.max(...steps)).toBeLessThan(Math.abs(rest - stoppedAt) / 2);
   });
+
+  for (const input of ["wheel", "press"] as const)
+    test(`after a ${input} stops a move, the strip waits 180ms before it glides to the nearest point`, async ({
+      page,
+    }) => {
+      await setup(page, undefined, input === "press" ? { drag: false } : {});
+      await page.mouse.move(300, 100);
+      await page.evaluate(() =>
+        (window as unknown as { carousel: Strip }).carousel.goTo(4),
+      );
+      const { waited, stoppedAt, rest } = await page.evaluate(
+        (kind) =>
+          new Promise<{ waited: number; stoppedAt: number; rest: number }>(
+            (resolve) => {
+              const strip = document.getElementById("strip") as HTMLElement;
+              let stoppedAt = 0;
+              let stopped = 0;
+              let waited = -1;
+              let changed = 0;
+              let last = 0;
+              const sample = () => {
+                const now = performance.now();
+                if (strip.scrollLeft !== last) changed = now;
+                last = strip.scrollLeft;
+                if (waited < 0 && Math.abs(last - stoppedAt) > 0.5)
+                  waited = now - stopped;
+                if (now - changed > 300)
+                  resolve({ waited, stoppedAt, rest: last });
+                else requestAnimationFrame(sample);
+              };
+              const watch = () => {
+                if (strip.scrollLeft <= 420)
+                  return requestAnimationFrame(watch);
+                strip.dispatchEvent(
+                  kind === "wheel"
+                    ? new WheelEvent("wheel", {
+                        bubbles: true,
+                        cancelable: true,
+                        deltaY: 40,
+                        clientX: 300,
+                        clientY: 100,
+                      })
+                    : new PointerEvent("pointerdown", {
+                        bubbles: true,
+                        pointerType: "mouse",
+                        button: 0,
+                        clientX: 300,
+                        clientY: 100,
+                      }),
+                );
+                stopped = performance.now();
+                stoppedAt = last = strip.scrollLeft;
+                changed = stopped;
+                requestAnimationFrame(sample);
+              };
+              watch();
+            },
+          ),
+        input,
+      );
+      expect(rest % 300).toBe(0);
+      expect(Math.abs(rest - stoppedAt)).toBeLessThanOrEqual(150.5);
+      expect(waited).toBeGreaterThanOrEqual(180);
+    });
 
   test('moveMotion "native" moves with the browser smooth scroll and the spring does not', async ({
     page,
   }) => {
     const behaviors = async (options: Record<string, unknown>) => {
       await setup(page, undefined, options);
-      return page.evaluate(() => {
+      await page.evaluate(() => {
         const strip = document.getElementById("strip") as HTMLElement;
         const calls: (string | undefined)[] = [];
         const scrollTo = strip.scrollTo.bind(strip);
@@ -184,12 +255,23 @@ test.describe("carousel spring", { tag: "@desktop" }, () => {
           calls.push(options.behavior);
           scrollTo(options);
         }) as typeof strip.scrollTo;
+        Object.assign(window, { calls });
         (window as unknown as { carousel: Strip }).carousel.next();
-        return calls;
       });
+      await framesUntilIdle(page, scrollLeft);
+      return page.evaluate(() => ({
+        calls: [
+          ...new Set(
+            (window as unknown as { calls: (string | undefined)[] }).calls,
+          ),
+        ],
+        left: document.getElementById("strip")?.scrollLeft,
+      }));
     };
-    expect(await behaviors({ moveMotion: "native" })).toContain("smooth");
-    expect(await behaviors({})).not.toContain("smooth");
+    const native = await behaviors({ moveMotion: "native" });
+    expect(native.calls).toContain("smooth");
+    expect(native.left).toBe(300);
+    expect(await behaviors({})).toEqual({ calls: ["instant"], left: 300 });
   });
 });
 
@@ -272,6 +354,102 @@ test.describe("carousel state", { tag: "@desktop" }, () => {
     await expect(
       page.locator("section:last-child [data-carousel-next]"),
     ).toBeVisible();
+  });
+
+  test("a static strip leaves the controls of a strip that overflows beside it", async ({
+    page,
+  }) => {
+    const next = `<button data-carousel-next>Next</button>`;
+    await setup(
+      page,
+      `<section id="shared"><div id="strip" style="width:600px">${slideRow(2, 200)}</div><div id="long" style="width:600px">${slideRow(4)}</div><div data-carousel-controls="long">${next}</div>${next}</section>
+      <section id="nested"><div id="small" style="width:600px">${slideRow(2, 200)}</div>${next}<div><div id="inner" style="width:600px">${slideRow(4)}</div>${next}</div></section>`,
+    );
+    await page.evaluate(async () => {
+      const { createCarousel } = await import("/modules/carousel/index.js");
+      for (const id of ["long", "small", "inner"])
+        createCarousel(document.getElementById(id) as HTMLElement);
+    });
+    await expect(page.locator("#small")).toHaveAttribute("data-re-static", "");
+    const shown = (selector: string) =>
+      page
+        .locator(selector)
+        .evaluateAll((buttons) =>
+          buttons.map((button) => getComputedStyle(button).display !== "none"),
+        );
+    expect(await shown("#shared [data-carousel-next]")).toEqual([true, true]);
+    expect(await shown("#nested [data-carousel-next]")).toEqual([false, true]);
+  });
+
+  test("a static strip hides its controls under a parent of a strip that overflows", async ({
+    page,
+  }) => {
+    const prev = `<button data-carousel-prev>Previous</button>`;
+    await setup(
+      page,
+      `<main><div id="hero" style="width:600px">${slideRow(4)}</div><section><div id="fits" style="width:600px">${slideRow(2, 200)}</div>${prev}</section></main>
+      <div><div id="strip" style="width:600px"><div data-carousel-slide style="flex:0 0 600px"><div id="inner" style="width:300px">${slideRow(1, 100)}</div>${prev}</div>${slideRow(2)}</div></div>`,
+    );
+    await page.evaluate(async () => {
+      const { createCarousel } = await import("/modules/carousel/index.js");
+      for (const id of ["hero", "fits", "inner"])
+        createCarousel(document.getElementById(id) as HTMLElement);
+    });
+    await expect(page.locator("#inner")).toHaveAttribute("data-re-static", "");
+    await expect(page.locator("#fits")).toHaveAttribute("data-re-static", "");
+    expect(
+      await page
+        .locator("[data-carousel-prev]")
+        .evaluateAll((buttons) =>
+          buttons.map((button) => getComputedStyle(button).display),
+        ),
+    ).toEqual(["none", "none"]);
+  });
+
+  test("a static strip hides the controls bound to it in a group elsewhere", async ({
+    page,
+  }) => {
+    await setup(
+      page,
+      `<section><div id="strip" style="width:600px">${slideRow(2, 200)}</div></section><div id="long" style="width:600px">${slideRow(4)}</div><div data-carousel-controls="strip"><button data-carousel-prev>Previous</button><button data-carousel-next>Next</button><div data-carousel-dots></div></div>`,
+    );
+    await page.evaluate(async () => {
+      const { createCarousel } = await import("/modules/carousel/index.js");
+      const { bindCarouselControls } = await import(
+        "/modules/carousel/controls.js"
+      );
+      createCarousel(document.getElementById("long") as HTMLElement);
+      const { carousel } = window as unknown as { carousel: never };
+      Object.assign(window, {
+        unbind: bindCarouselControls(
+          document.getElementById("strip") as HTMLElement,
+          carousel,
+        ),
+      });
+    });
+    const shown = () =>
+      page
+        .locator("[data-carousel-controls] > *")
+        .evaluateAll((controls) =>
+          controls.map(
+            (control) => getComputedStyle(control).display !== "none",
+          ),
+        );
+    await expect(page.locator("#strip")).toHaveAttribute("data-re-static", "");
+    await expect.poll(shown).toEqual([false, false, false]);
+    await page.locator("#strip").evaluate((strip) => {
+      strip.style.width = "300px";
+    });
+    await expect(page.locator("#strip")).not.toHaveAttribute("data-re-static");
+    await expect.poll(shown).toEqual([true, true, true]);
+    await page.locator("#strip").evaluate((strip) => {
+      strip.style.width = "600px";
+    });
+    await expect.poll(shown).toEqual([false, false, false]);
+    await page.evaluate(() =>
+      (window as unknown as { unbind: () => void }).unbind(),
+    );
+    await expect(page.locator("[data-re-static]")).toHaveCount(1);
   });
 
   test("a drag inside a nested strip that scrolls leaves the outer strip still", async ({

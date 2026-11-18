@@ -1025,6 +1025,7 @@ describe("lightbox public API", () => {
     loading: "Wird geladen",
     error: "Das Bild konnte nicht geladen werden.",
     retry: "Erneut versuchen",
+    carouselRole: "Karussell",
   };
 
   it("names and labels everything from strings, the failed image included", () => {
@@ -1066,6 +1067,11 @@ describe("lightbox public API", () => {
         ),
       ),
     ).toEqual([]);
+    expect(
+      [...dialog().querySelectorAll("[aria-roledescription]")].map((element) =>
+        element.getAttribute("aria-roledescription"),
+      ),
+    ).toEqual(["Karussell"]);
     expect(dialog().getAttribute("aria-label")).toBe("Bildergalerie");
     expect(dialog().querySelector(".re-lightbox-counter")?.textContent).toBe(
       "2 von 3",

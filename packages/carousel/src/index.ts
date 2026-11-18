@@ -1,5 +1,7 @@
 import type { CarouselInternals } from "./internal.js";
 
+export type { CarouselInternals } from "./internal.js";
+
 export interface CarouselStrings {
   previous: string;
   next: string;
@@ -9,6 +11,8 @@ export interface CarouselStrings {
   play: string;
   pause: string;
   progress: string;
+  carouselRole: string;
+  slideRole: string;
 }
 
 export interface CarouselOptions {
@@ -163,6 +167,8 @@ const defaultStrings: CarouselStrings = {
   play: "Play slideshow",
   pause: "Pause slideshow",
   progress: "Slide position",
+  carouselRole: "carousel",
+  slideRole: "slide",
 };
 
 function validate(options: CarouselOptions) {
@@ -231,6 +237,7 @@ export function createCarousel(
   const laps = new Map<HTMLElement, number>();
   const spacers: HTMLElement[] = [];
   const observedSlides = new Set<HTMLElement>();
+  const measured = new Map<Element, string | number>();
   let span = 0;
   let starts: number[] = [];
   let aligned: number[] = [];
@@ -244,6 +251,7 @@ export function createCarousel(
   } | null = null;
   let stops: boolean[] = [];
   const listeners = new Set<(state: CarouselState) => void>();
+  const requestListeners = new Set<() => void>();
   const holds = new Set<string>();
   const internalHolds = new Set<string>();
   const cleanup: (() => void)[] = [];
@@ -303,6 +311,7 @@ export function createCarousel(
   let runningSince: number | undefined;
   let clockFrame = 0;
   let unsettled = false;
+  let stopping = false;
   // Screen readers announce changes to a live region already in the page, not one inserted with its text.
   let silent = false;
   let catchesClicks = true;
@@ -803,7 +812,12 @@ export function createCarousel(
     publish(nearestIndex());
   }
 
+  function viewportBox(styles: CSSStyleDeclaration) {
+    return `${viewport.clientWidth} ${styles.paddingLeft} ${styles.paddingRight}`;
+  }
+
   function settle() {
+    stopping = false;
     if (pointer || spring || taken || fingers || grabbedTouch !== undefined)
       return;
     if (
@@ -869,6 +883,13 @@ export function createCarousel(
     if (restoreSnap && !taken) viewport.style.scrollSnapType = previousSnap;
     if (stretch) settleTimer = setTimeout(settle, 180);
     publish(nearestIndex());
+  }
+
+  function stopMove() {
+    interrupt(false);
+    stopping = true;
+    clearTimeout(settleTimer);
+    settleTimer = setTimeout(settle, 180);
   }
 
   function scrollTo(target: number, behavior: ScrollBehavior) {
@@ -950,6 +971,7 @@ export function createCarousel(
     const moving = glide && releaseSpeed === undefined ? spring : null;
     if (!moving) stopSpring();
     unsettled = true;
+    stopping = false;
     setAnchor(index);
     let target = destination;
     pendingPosition = target;
@@ -1030,7 +1052,21 @@ export function createCarousel(
 
   function step(direction: 1 | -1) {
     if (!enabled || destroyed || !slides.length || max === 0) return;
-    goTo(stepIndex(state.index, direction), "smooth", direction);
+    goTo(
+      span && (options.group ?? 1) !== 1
+        ? pageAhead(state.index, direction)
+        : stepIndex(state.index, direction),
+      "smooth",
+      direction,
+    );
+  }
+
+  function pageAhead(current: number, direction: 1 | -1) {
+    const ahead =
+      direction === 1
+        ? pages.find((start) => start > current)
+        : [...pages].reverse().find((start) => start < current);
+    return ahead ?? (direction === 1 ? pages[0] : (pages.at(-1) ?? 0));
   }
 
   function say(text: string) {
@@ -1108,15 +1144,6 @@ export function createCarousel(
     stretch = 0;
     span = 0;
     slides = readSlides();
-    rtl = window.getComputedStyle(viewport).direction === "rtl";
-    max = Math.max(0, viewport.scrollWidth - viewportWidth);
-    const origin = offsetLeft(viewport) + viewport.clientLeft;
-    const styles = window.getComputedStyle(viewport);
-    const padding = scrollPadding(viewport, styles.scrollPaddingInlineStart);
-    snapport =
-      viewportWidth -
-      padding -
-      scrollPadding(viewport, styles.scrollPaddingInlineEnd);
     for (const slide of slides) {
       if (!slide.classList.contains("re-carousel__slide")) {
         slide.classList.add("re-carousel__slide");
@@ -1128,6 +1155,15 @@ export function createCarousel(
           snap: slide.style.scrollSnapAlign,
         });
     }
+    rtl = window.getComputedStyle(viewport).direction === "rtl";
+    max = Math.max(0, viewport.scrollWidth - viewportWidth);
+    const origin = offsetLeft(viewport) + viewport.clientLeft;
+    const styles = window.getComputedStyle(viewport);
+    const padding = scrollPadding(viewport, styles.scrollPaddingInlineStart);
+    snapport =
+      viewportWidth -
+      padding -
+      scrollPadding(viewport, styles.scrollPaddingInlineEnd);
     widths = slides.map((slide) => slide.offsetWidth);
     stops = slides.map(
       (slide) => window.getComputedStyle(slide).scrollSnapStop === "always",
@@ -1173,6 +1209,11 @@ export function createCarousel(
       );
     }
     width = viewportWidth;
+    measured.clear();
+    measured.set(viewport, viewportBox(styles));
+    slides.forEach((slide, index) => {
+      measured.set(slide, widths[index]);
+    });
     pages = measurePages();
     const seen = span
       ? slides
@@ -1248,7 +1289,7 @@ export function createCarousel(
       if (!roled.has(slide)) {
         if (!generic(slide)) return;
         slide.setAttribute("role", "group");
-        slide.setAttribute("aria-roledescription", "slide");
+        slide.setAttribute("aria-roledescription", strings.slideRole);
         roled.set(slide, !slide.hasAttribute("aria-label"));
       }
       if (roled.get(slide))
@@ -1260,6 +1301,12 @@ export function createCarousel(
     slide.removeAttribute("role");
     slide.removeAttribute("aria-roledescription");
     if (ownsLabel) slide.removeAttribute("aria-label");
+  }
+
+  function request(playing: boolean) {
+    requestedPlaying = playing;
+    schedule();
+    for (const listener of requestListeners) listener();
   }
 
   function hold(reason: string, isHeld: boolean) {
@@ -1357,13 +1404,11 @@ export function createCarousel(
     },
     play() {
       if (destroyed) return;
-      requestedPlaying = true;
-      schedule();
+      request(true);
     },
     pause() {
       if (destroyed) return;
-      requestedPlaying = false;
-      schedule();
+      request(false);
     },
     hold,
     take(owner, { onInterrupt } = {}) {
@@ -1425,7 +1470,8 @@ export function createCarousel(
       if (changed.some((name) => name !== "autoplay" && name !== "drag"))
         refresh();
       updateCursor();
-      schedule();
+      if (changed.includes("autoplay")) request(requestedPlaying);
+      else schedule();
     },
     destroy() {
       if (destroyed) return;
@@ -1444,6 +1490,7 @@ export function createCarousel(
       intersection?.disconnect();
       for (const remove of cleanup) remove();
       listeners.clear();
+      requestListeners.clear();
       if (!hadClass) viewport.classList.remove("re-carousel");
       for (const name of stateAttributes) viewport.removeAttribute(name);
       viewport.style.removeProperty("--re-carousel-autoplay-progress");
@@ -1483,7 +1530,18 @@ export function createCarousel(
   };
 
   const observer = window.ResizeObserver
-    ? new window.ResizeObserver(requestRefresh)
+    ? new window.ResizeObserver((entries) => {
+        if (
+          entries.some(
+            ({ target }) =>
+              measured.get(target) !==
+              (target === viewport
+                ? viewportBox(window.getComputedStyle(viewport))
+                : (target as HTMLElement).offsetWidth),
+          )
+        )
+          requestRefresh();
+      })
     : undefined;
   const mutation = window.MutationObserver
     ? new window.MutationObserver(() => {
@@ -1600,7 +1658,7 @@ export function createCarousel(
   if (initialTabIndex === null) viewport.tabIndex = 0;
   if (ownsRole) {
     viewport.setAttribute("role", "region");
-    viewport.setAttribute("aria-roledescription", "carousel");
+    viewport.setAttribute("aria-roledescription", strings.carouselRole);
   }
   viewport.after(live);
   listen(viewport, "scroll", () => {
@@ -1625,7 +1683,9 @@ export function createCarousel(
     clearTimeout(settleTimer);
     settleTimer = setTimeout(settle, 180);
   });
-  listen(viewport, "scrollend", settle);
+  listen(viewport, "scrollend", () => {
+    if (!stopping) settle();
+  });
   listen(
     viewport,
     "wheel",
@@ -1647,7 +1707,7 @@ export function createCarousel(
         step(direction);
         return;
       }
-      if (pendingIndex !== undefined && !stretch) interrupt();
+      if (pendingIndex !== undefined && !stretch) stopMove();
     },
     { passive: options.wheel !== "vertical" },
   );
@@ -1677,7 +1737,12 @@ export function createCarousel(
   });
   listen(viewport, "pointerenter", () => internalHold("hover", true));
   listen(viewport, "pointerleave", () => internalHold("hover", false));
-  listen(viewport, "focusin", () => internalHold("focus", true));
+  const holdFocus = (event: Event) => {
+    const focused = event.composedPath()[0] as Element;
+    internalHold("focus", focused.matches(":focus-visible"));
+  };
+  listen(viewport, "focusin", holdFocus);
+  listen(viewport, "keyup", holdFocus);
   listen(viewport, "focusout", (event) => {
     const next = (event as FocusEvent).relatedTarget as Node | null;
     if (!next || !viewport.contains(next)) internalHold("focus", false);
@@ -1703,16 +1768,7 @@ export function createCarousel(
       interruptTake();
       return;
     }
-    if (
-      !enabled ||
-      options.drag === false ||
-      input.button !== 0 ||
-      target.closest(
-        "input, select, textarea, [contenteditable], [role=slider], [data-carousel-no-drag]",
-      )
-    ) {
-      return;
-    }
+    if (!enabled || input.button !== 0) return;
     if (input.pointerType !== "mouse") {
       // A touch on a moving strip stops it; release continues to a snap point.
       if (pendingIndex === undefined) return;
@@ -1723,8 +1779,16 @@ export function createCarousel(
     const inner = target.closest(".re-carousel");
     if (inner && inner !== viewport && inner.scrollWidth > inner.clientWidth)
       return;
-    readyDrag();
-    if (!dragReady) return;
+    const draggable =
+      options.drag !== false &&
+      !target.closest(
+        "input, select, textarea, [contenteditable], [role=slider], [data-carousel-no-drag]",
+      );
+    if (draggable) readyDrag();
+    if (!draggable || !dragReady) {
+      if (pendingIndex !== undefined) stopMove();
+      return;
+    }
     const caught =
       catchesClicks &&
       (spring !== null || window.performance.now() - lastScroll < 100);
@@ -1781,6 +1845,10 @@ export function createCarousel(
             : 0,
       })),
     requested: () => requestedPlaying && options.autoplay !== undefined,
+    onRequest: (listener) => {
+      requestListeners.add(listener);
+      return () => requestListeners.delete(listener);
+    },
     align: () => options.align,
     goTo: (index, behavior, announce) =>
       announce ? announced(() => goTo(index, behavior)) : goTo(index, behavior),

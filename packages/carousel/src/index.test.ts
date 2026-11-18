@@ -531,6 +531,51 @@ describe("native carousel", () => {
     expect(off.viewport.style.cursor).toBe("");
   });
 
+  it("stops a moving strip on a press that cannot drag it", () => {
+    for (const press of [
+      "drag off",
+      "no-drag slide",
+      "coarse pointer",
+      "touch, drag off",
+    ]) {
+      if (press === "coarse pointer")
+        vi.stubGlobal("matchMedia", (query: string) =>
+          Object.assign(new EventTarget(), {
+            matches:
+              !query.includes("reduced-motion") && !query.includes("fine"),
+          }),
+        );
+      const { viewport, slides } = fixture([100, 100, 100, 100]);
+      slides[1].toggleAttribute(
+        "data-carousel-no-drag",
+        press === "no-drag slide",
+      );
+      const carousel = createCarousel(viewport, {
+        drag: !press.includes("drag off"),
+      });
+      cleanups.push(carousel.destroy);
+      pointer(viewport, "pointermove", 50);
+      carousel.goTo(3);
+      vi.advanceTimersByTime(100);
+      const pressedAt = viewport.scrollLeft;
+      expect(pressedAt).toBeGreaterThan(0);
+      expect(pressedAt).toBeLessThan(300);
+      pointer(slides[1], "pointerdown", 50, {
+        pointerType: press.startsWith("touch") ? "touch" : "mouse",
+      });
+      vi.advanceTimersByTime(100);
+      expect([press, viewport.scrollLeft]).toEqual([press, pressedAt]);
+      pointer(slides[1], "pointerup", 50, {
+        pointerType: press.startsWith("touch") ? "touch" : "mouse",
+      });
+      vi.advanceTimersByTime(2000);
+      expect([press, viewport.scrollLeft]).toEqual([
+        press,
+        Math.round(pressedAt / 100) * 100,
+      ]);
+    }
+  });
+
   it("cancels a release glide for a new drag or a wheel and redirects it for a programmatic move", () => {
     const { viewport } = fixture([100, 100, 100, 100]);
     const carousel = createCarousel(viewport);
@@ -561,8 +606,10 @@ describe("native carousel", () => {
     viewport.dispatchEvent(new Event("wheel"));
     const wheeled = viewport.scrollLeft;
     expect(wheeled).toBeGreaterThan(150);
-    vi.advanceTimersByTime(1000);
+    vi.advanceTimersByTime(170);
     expect(viewport.scrollLeft).toBe(wheeled);
+    vi.advanceTimersByTime(1000);
+    expect(viewport.scrollLeft).toBe(200);
     const before = release();
     carousel.goTo(0);
     vi.advanceTimersByTime(16);
@@ -901,15 +948,46 @@ describe("native carousel", () => {
     viewport.tabIndex = 4;
     viewport.style.overflowX = "scroll";
     slides[0].style.scrollSnapAlign = "end";
-    const carousel = createCarousel(viewport, { autoplay: 1000 });
-    carousel.setEnabled(false);
-    carousel.destroy();
-    carousel.destroy();
-    viewport.dispatchEvent(
-      new KeyboardEvent("keydown", { key: "End", bubbles: true }),
-    );
+    const globals = new Map<EventTarget, number>([
+      [window, 0],
+      [document, 0],
+    ]);
+    const { addEventListener, removeEventListener } = EventTarget.prototype;
+    const count = (target: EventTarget, step: number) => {
+      const value = globals.get(target);
+      if (value !== undefined) globals.set(target, value + step);
+    };
+    EventTarget.prototype.addEventListener = function (...args) {
+      count(this, 1);
+      return addEventListener.apply(this, args);
+    };
+    EventTarget.prototype.removeEventListener = function (...args) {
+      count(this, -1);
+      return removeEventListener.apply(this, args);
+    };
+    try {
+      const carousel = createCarousel(viewport, { autoplay: 1000 });
+      pointer(viewport, "pointermove", 10);
+      carousel.goTo(2);
+      expect(carousel.getState().isPlaying).toBe(true);
+      carousel.destroy();
+      carousel.destroy();
+    } finally {
+      EventTarget.prototype.addEventListener = addEventListener;
+      EventTarget.prototype.removeEventListener = removeEventListener;
+    }
+    expect([...globals.values()]).toEqual([0, 0]);
+    expect(vi.getTimerCount()).toBe(0);
+    const left = viewport.scrollLeft;
+    viewport.scrollLeft = left + 30;
+    viewport.dispatchEvent(new Event("scroll"));
+    expect(
+      slides.map((slide) =>
+        slide.style.getPropertyValue("--re-carousel-offset"),
+      ),
+    ).toEqual(["", "", ""]);
     vi.advanceTimersByTime(10000);
-    expect(viewport.scrollLeft).toBe(0);
+    expect(viewport.scrollLeft).toBe(left + 30);
     expect(viewport.tabIndex).toBe(4);
     expect(viewport.style.overflowX).toBe("scroll");
     expect(slides[0].style.scrollSnapAlign).toBe("end");
@@ -1230,12 +1308,13 @@ describe("one state for every control", () => {
     expect(carousel.getState().visible).toEqual([2, 3, 4]);
     viewport.scrollLeft = 260;
     viewport.dispatchEvent(new Event("scroll"));
-    expect(carousel.getState().visible).toEqual([3, 4, 5]);
+    const shown = carousel.getState().visible;
+    expect(shown).toEqual([3, 4, 5]);
+    const published = lists.length;
     viewport.scrollLeft = 265;
     viewport.dispatchEvent(new Event("scroll"));
-    expect(new Set(lists).size).toBe(
-      lists.filter((list, at) => list !== lists[at - 1]).length,
-    );
+    expect(carousel.getState().visible).toBe(shown);
+    expect(lists.slice(published).filter((list) => list !== shown)).toEqual([]);
   });
 
   it("keeps the rest of the autoplay wait over a hover and starts it again on a new slide", () => {
@@ -1474,6 +1553,17 @@ describe("one state for every control", () => {
     expect(slides[2].getAttribute("aria-label")).toBe("3 of 8");
     expect(slides[2].getAttribute("aria-roledescription")).toBe("slide");
     expect(slides[7].hasAttribute("aria-label")).toBe(false);
+    const german = fixture([100, 100], 100);
+    const localized = createCarousel(german.viewport, {
+      strings: { carouselRole: "Karussell", slideRole: "Folie" },
+    });
+    expect(
+      [german.viewport, ...german.slides].map((element) =>
+        element.getAttribute("aria-roledescription"),
+      ),
+    ).toEqual(["Karussell", "Folie", "Folie"]);
+    localized.destroy();
+    german.viewport.remove();
     vi.advanceTimersByTime(1100);
     expect(carousel.getState().index).toBe(1);
     const live = viewport.nextElementSibling as HTMLElement;
@@ -1618,6 +1708,23 @@ describe("effects, groups and drivers", () => {
     expect(aligns()[2]).toBe("none");
     carousel.destroy();
     expect(aligns()).toEqual(["", "end", "", "", "", "", "", ""]);
+  });
+
+  it("steps a looping group onto the group starts it snaps to when the count does not divide", () => {
+    const { viewport } = fixture(Array(8).fill(100), 200);
+    const carousel = createCarousel(viewport, { loop: true, group: 3 });
+    cleanups.push(carousel.destroy);
+    expect(carousel.getState()).toMatchObject({
+      isLooping: true,
+      pageCount: 3,
+    });
+    const seen: number[] = [];
+    for (const step of ["next", "next", "next", "prev", "prev"] as const) {
+      carousel[step]();
+      vi.advanceTimersByTime(1000);
+      seen.push(carousel.getState().index);
+    }
+    expect(seen).toEqual([3, 6, 0, 6, 3]);
   });
 
   it("snaps the first slide of each page with group page", () => {
@@ -1956,6 +2063,15 @@ describe("controls binder", () => {
     expect(carousel.getState().isPlaying).toBe(false);
     click(play);
     expect(carousel.getState().isPlaying).toBe(true);
+    carousel.hold("x", true);
+    carousel.pause();
+    expect(play?.getAttribute("aria-pressed")).toBe("false");
+    expect(play?.getAttribute("aria-label")).toBe("Play slideshow");
+    carousel.play();
+    expect(play?.getAttribute("aria-pressed")).toBe("true");
+    expect(play?.getAttribute("aria-label")).toBe("Pause slideshow");
+    carousel.setOptions({ autoplay: undefined });
+    expect(play?.getAttribute("aria-pressed")).toBe("false");
     unbind();
     expect(play?.hasAttribute("aria-pressed")).toBe(false);
   });

@@ -1,4 +1,8 @@
-import { type Carousel, createCarousel } from "@reuse-sh/carousel";
+import {
+  type Carousel,
+  type CarouselInternals,
+  createCarousel,
+} from "@reuse-sh/carousel";
 import { createThinkingDots } from "@reuse-sh/loaders";
 import {
   type ChromeInput,
@@ -37,6 +41,12 @@ import {
 
 const carouselInternals = Symbol.for("@reuse-sh/carousel internals");
 
+function internalsOf(carousel: Carousel) {
+  return (carousel as unknown as Record<symbol, CarouselInternals | undefined>)[
+    carouselInternals
+  ];
+}
+
 export type { Point, Rect, Size, Zoom } from "./geometry.js";
 
 export interface LightboxStrings {
@@ -58,6 +68,7 @@ export interface LightboxStrings {
   loading: string;
   error: string;
   retry: string;
+  carouselRole: string;
 }
 
 const defaultStrings: LightboxStrings = {
@@ -79,6 +90,7 @@ const defaultStrings: LightboxStrings = {
   loading: "Loading",
   error: "Image could not be loaded.",
   retry: "Try again",
+  carouselRole: "carousel",
 };
 
 export type LightboxSlotName =
@@ -2322,12 +2334,7 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
   }
 
   function keepLaps(s: Session, slides: readonly HTMLElement[]) {
-    (
-      s.carousel as unknown as Record<
-        symbol,
-        { keepLaps(slides: readonly HTMLElement[]): void } | undefined
-      >
-    )[carouselInternals]?.keepLaps(slides);
+    internalsOf(s.carousel)?.keepLaps(slides);
   }
 
   function clearStands(s: Session) {
@@ -3219,10 +3226,11 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
     );
   }
 
-  function connect(viewport: HTMLDivElement) {
+  function connect(viewport: HTMLDivElement, strings: LightboxStrings) {
     const carousel = createCarousel(viewport, {
       drag: true,
       loop: looping(),
+      strings: { carouselRole: strings.carouselRole },
       onChange: (value) => {
         if (
           !syncingCarousel &&
@@ -3232,9 +3240,7 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
           activeChanged(session, value.index);
       },
     });
-    (carousel as unknown as Record<symbol, { silence(): void } | undefined>)[
-      carouselInternals
-    ]?.silence();
+    internalsOf(carousel)?.silence();
     return carousel;
   }
 
@@ -3243,7 +3249,7 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
     const syncing = syncingCarousel;
     syncingCarousel = true;
     s.carousel.destroy();
-    s.carousel = connect(s.viewport);
+    s.carousel = connect(s.viewport, s.strings);
     s.carouselLoops = looping();
     s.carousel.goTo(index, "instant");
     syncingCarousel = syncing;
@@ -3363,12 +3369,7 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
       s.footer.append(strip);
       strip.tabIndex = -1;
       s.thumbCarousel = createCarousel(strip, { drag: true, align: "center" });
-      const internals = (
-        s.thumbCarousel as unknown as Record<
-          symbol,
-          { silence(): void; passClicks(): void } | undefined
-        >
-      )[carouselInternals];
+      const internals = internalsOf(s.thumbCarousel);
       internals?.silence();
       internals?.passClicks();
     }
@@ -3746,7 +3747,7 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
       backdrop,
       slides,
       loaded: new Map(),
-      carousel: connect(viewport),
+      carousel: connect(viewport, strings),
       carouselLoops: looping(),
       heading: 1,
       strings,
