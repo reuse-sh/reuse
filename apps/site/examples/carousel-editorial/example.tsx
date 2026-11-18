@@ -1,5 +1,5 @@
 "use client";
-import { useCarousel } from "@reuse-sh/carousel/react";
+import { useCarousel, useCarouselState } from "@reuse-sh/carousel/react";
 import "./controls.css";
 import { useLightbox } from "@reuse-sh/lightbox/react";
 import type { CSSProperties } from "react";
@@ -55,7 +55,12 @@ const photos = [
   },
 ];
 export function Example() {
-  const { ref, carousel, state } = useCarousel({ loop: true, align: "start" });
+  const { ref, carousel } = useCarousel({ loop: true, align: "start" });
+  const state = useCarouselState(carousel, ({ index, canPrev, canNext }) => ({
+    index,
+    canPrev,
+    canNext,
+  }));
   const viewer = useLightbox({ thumbnails: "bottom" });
   return (
     <section className="w-full min-w-0 grid gap-6">

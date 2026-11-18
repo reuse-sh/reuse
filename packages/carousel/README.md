@@ -21,6 +21,7 @@ These are the rules the code keeps. An adaptation on any framework keeps them to
 - **Publish one state.** Index, pages, visible slides and autoplay progress come from one source that every control reads.
 - **Swipe by the group the buttons use.** With group set, only the first slide of each group and the slide a move was sent to snap, so a swipe and a released drag move a group like next() does.
 - **Give the strip back to the visitor.** A drag or a touch takes the position from a driver such as a marquee, and the strip snaps again once the driver lets go.
+- **Re-render only what reads the change.** A React component re-renders for the part of the state it selects, so autoplay progress and scrolling leave a counter that shows the index alone, and a changed option reaches the same carousel instead of a new one.
 
 <!-- principles:end -->
 

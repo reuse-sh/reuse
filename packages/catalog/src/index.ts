@@ -442,6 +442,11 @@ export const libraries: Library[] = [
         "A drag or a touch takes the position from a driver such as a marquee, and the strip snaps again once the driver lets go.",
         "tests/browser/carousel-effects.spec.ts",
       ],
+      [
+        "Re-render only what reads the change",
+        "A React component re-renders for the part of the state it selects, so autoplay progress and scrolling leave a counter that shows the index alone, and a changed option reaches the same carousel instead of a new one.",
+        "packages/carousel/src/react.test.tsx",
+      ],
     ],
     api: [
       [
@@ -497,6 +502,10 @@ export const libraries: Library[] = [
         "Measures again at once. Resizes and added or removed slides request it on their own, at most once a frame.",
       ],
       ["destroy()", "Removes listeners and restores the viewport."],
+      [
+        "useCarousel(options), useCarouselState(carousel, selector)",
+        "From @reuse-sh/carousel/react. useCarousel returns { ref, carousel } and applies changed options with setOptions; a change of slides creates the carousel again. useCarouselState re-renders only when what the selector returns changes, compared field by field for an object, and selects from the empty state on the server and before the carousel exists.",
+      ],
       [
         "syncCarousels(...carousels)",
         "Keeps several carousels on the same index. Returns a function that stops it.",
@@ -569,7 +578,7 @@ export const libraries: Library[] = [
       {
         path: "api",
         title: "API",
-        lead: "The browser module exports createCarousel. The React package adds useCarousel and a Carousel component.",
+        lead: "The browser module exports createCarousel. The React package adds useCarousel, useCarouselState and a Carousel component.",
       },
     ],
   },

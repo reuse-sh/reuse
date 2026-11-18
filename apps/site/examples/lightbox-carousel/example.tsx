@@ -1,5 +1,5 @@
 "use client";
-import { useCarousel } from "@reuse-sh/carousel/react";
+import { useCarousel, useCarouselState } from "@reuse-sh/carousel/react";
 import { connectCarousel } from "@reuse-sh/lightbox/carousel";
 import { useLightbox } from "@reuse-sh/lightbox/react";
 import { useEffect, useRef } from "react";
@@ -25,7 +25,11 @@ export function Example() {
   });
   const lightbox = useRef(viewer);
   lightbox.current = viewer;
-  const { ref, carousel, state } = useCarousel({ loop: false });
+  const { ref, carousel } = useCarousel({ loop: false });
+  const state = useCarouselState(carousel, ({ canPrev, canNext }) => ({
+    canPrev,
+    canNext,
+  }));
   useEffect(() => {
     if (carousel) return connectCarousel(lightbox.current, carousel);
   }, [carousel]);

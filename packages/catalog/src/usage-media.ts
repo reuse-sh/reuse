@@ -1354,16 +1354,18 @@ const carousel = createCarousel(document.querySelector("#prints"));`,
             language: "tsx",
             code: `"use client";
 
-import { useCarousel } from "@reuse-sh/carousel/react";
+import { useCarousel, useCarouselState } from "@reuse-sh/carousel/react";
 
 export function ProductStrip() {
-  const { ref, carousel, state } = useCarousel({ group: "page" });
+  const { ref, carousel } = useCarousel({ group: "page" });
+  const canPrev = useCarouselState(carousel, (state) => state.canPrev);
+  const canNext = useCarouselState(carousel, (state) => state.canNext);
   return <section aria-label="Related prints">
     <div className="flex justify-between gap-4">
       <h2>Related prints</h2>
       <div>
-        <button type="button" disabled={!state.canPrev} onClick={() => carousel?.prev()}>Previous</button>
-        <button type="button" disabled={!state.canNext} onClick={() => carousel?.next()}>Next</button>
+        <button type="button" disabled={!canPrev} onClick={() => carousel?.prev()}>Previous</button>
+        <button type="button" disabled={!canNext} onClick={() => carousel?.next()}>Next</button>
       </div>
     </div>
     <div ref={ref} className="re-carousel" tabIndex={0}>
@@ -1662,16 +1664,18 @@ const carousel = createCarousel(document.querySelector("#prints"), { align: "sta
             language: "tsx",
             code: `"use client";
 
-import { useCarousel } from "@reuse-sh/carousel/react";
+import { useCarousel, useCarouselState } from "@reuse-sh/carousel/react";
 
 export function ControlledStrip() {
-  const { ref, carousel, state } = useCarousel({ group: "page" });
+  const { ref, carousel } = useCarousel({ group: "page" });
+  const canPrev = useCarouselState(carousel, (state) => state.canPrev);
+  const canNext = useCarouselState(carousel, (state) => state.canNext);
   return <section aria-label="Related prints">
     <div className="flex justify-between gap-4">
       <h2>Related prints</h2>
       <div>
-        <button type="button" disabled={!state.canPrev} onClick={() => carousel?.prev()}>Previous</button>
-        <button type="button" disabled={!state.canNext} onClick={() => carousel?.next()}>Next</button>
+        <button type="button" disabled={!canPrev} onClick={() => carousel?.prev()}>Previous</button>
+        <button type="button" disabled={!canNext} onClick={() => carousel?.next()}>Next</button>
       </div>
     </div>
     <div ref={ref} className="re-carousel" tabIndex={0}>
@@ -1690,7 +1694,7 @@ export function ControlledStrip() {
         blocks: [
           {
             kind: "prose",
-            text: "For a counter, render state.index + 1 and state.count. For dots, call carousel.goTo(index), name each button with its destination, and expose the selected one with aria-current. useCarousel owns subscription, state updates and teardown; use the returned state directly.",
+            text: "For a counter, render state.index + 1 and state.count. For dots, call carousel.goTo(index), name each button with its destination, and expose the selected one with aria-current. useCarousel owns the carousel and its teardown and returns no state. useCarouselState(carousel, selector) subscribes a component to the part of the state it selects, such as state.index, so autoplay progress and scrolling re-render only what reads them.",
           },
         ],
       },

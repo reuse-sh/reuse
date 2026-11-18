@@ -1,6 +1,6 @@
 "use client";
 
-import { useCarousel } from "@reuse-sh/carousel/react";
+import { useCarousel, useCarouselState } from "@reuse-sh/carousel/react";
 import { connectCarousel } from "@reuse-sh/lightbox/carousel";
 import { useLightbox } from "@reuse-sh/lightbox/react";
 import Image from "next/image";
@@ -12,7 +12,16 @@ import { Icon, lightboxIcons } from "../icons";
 const strip = [0, 4, 6, 1, 5, 7, 2, 3].map((index) => photos[index]);
 
 export function PhotoStrip() {
-  const { ref, carousel, state } = useCarousel({ align: "start" });
+  const { ref, carousel } = useCarousel({ align: "start" });
+  const state = useCarouselState(
+    carousel,
+    ({ index, canPrev, canNext, isDragging }) => ({
+      index,
+      canPrev,
+      canNext,
+      isDragging,
+    }),
+  );
   const images = useRef<(HTMLImageElement | null)[]>([]);
   const viewer = useLightbox({
     icons: lightboxIcons,
