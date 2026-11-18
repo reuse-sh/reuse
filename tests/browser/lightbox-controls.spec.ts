@@ -615,7 +615,7 @@ test("a second click on a thumbnail while the strip centers it still ends with i
   await expect.poll(() => offCenter(page)).toBeLessThanOrEqual(2);
 });
 
-test("bottom thumbnails take each photo's proportions, square without a size and 24px at the narrowest, and the ring takes the active one's size", async ({
+test("bottom thumbnails take each photo's proportions up to 3:1, square without a size and 24px at the narrowest, and the ring takes the active one's size", async ({
   page,
 }) => {
   await page.emulateMedia({ reducedMotion: "reduce" });
@@ -649,7 +649,7 @@ test("bottom thumbnails take each photo's proportions, square without a size and
       (thumb) => thumb.getBoundingClientRect().width,
     );
   });
-  expect(widths).toEqual([66, 44, 24, 176]);
+  expect(widths).toEqual([66, 44, 24, 132]);
   for (const index of [1, 2, 3]) {
     await page.evaluate((i) => (window as Window).lightbox.goTo(i), index);
     await expect.poll(ringOff).toBeLessThanOrEqual(1);
@@ -810,23 +810,100 @@ test("a button's hover follows a theme's own control color, and the default stay
   for (const channel of await hovered()) expect(channel).toBeLessThan(0.3);
 });
 
-test("the strip is one tab stop: Tab reaches the active thumbnail, arrows move focus, Enter opens", async ({
+const ringOnCurrent = (page: Page) =>
+  page.evaluate(() => {
+    const ring = document.querySelector(".re-lightbox-thumbnail-ring");
+    const thumb = document.querySelector(
+      '.re-lightbox-thumbnails [aria-current="true"]',
+    );
+    if (!ring || !thumb) return Number.NaN;
+    const a = ring.getBoundingClientRect();
+    const b = thumb.getBoundingClientRect();
+    return Math.abs(a.left + a.width / 2 - (b.left + b.width / 2));
+  });
+
+test("the strip is one tab stop: Tab reaches the active thumbnail, and arrows, Home and End page the viewer with focus on the thumbnail under the ring", async ({
   page,
 }) => {
-  await open(page, { thumbnails: "bottom" }, { count: 8, index: 2 });
+  await open(page, { thumbnails: "bottom" }, { count: 40, index: 2 });
   const focused = () =>
     page.evaluate(() => document.activeElement?.getAttribute("aria-label"));
   for (let i = 0; i < 8 && (await focused()) !== "Show image 3"; i++)
     await page.keyboard.press("Tab");
   expect(await focused()).toBe("Show image 3");
-  await page.keyboard.press("ArrowRight");
-  expect(await focused()).toBe("Show image 4");
-  expect((await lightbox(page)).index).toBe(2);
+  for (const [key, index] of [
+    ["ArrowRight", 3],
+    ["End", 39],
+    ["ArrowLeft", 38],
+    ["Home", 0],
+  ] as const) {
+    await page.keyboard.press(key);
+    await expect.poll(async () => (await lightbox(page)).index).toBe(index);
+    expect(await focused()).toBe(`Show image ${index + 1}`);
+    await expect.poll(() => ringOnCurrent(page)).toBeLessThanOrEqual(1);
+  }
   await page.keyboard.press("Enter");
-  await expect.poll(async () => (await lightbox(page)).index).toBe(3);
+  expect((await lightbox(page)).index).toBe(0);
   await page.keyboard.press("Tab");
   await page.keyboard.press("Shift+Tab");
-  expect(await focused()).toBe("Show image 4");
+  expect(await focused()).toBe("Show image 1");
+});
+
+test("a mouse drag on the strip reports and announces the photo once, when the strip settles, and leaves the tab stop on it", {
+  tag: "@desktop",
+}, async ({ page, browserName }) => {
+  await open(page, { thumbnails: "bottom" }, { count: 20 });
+  await page.evaluate(() => {
+    const status = document.querySelector(".re-lightbox-status") as Element;
+    const announced: string[] = [];
+    new MutationObserver(() =>
+      announced.push(status.textContent ?? ""),
+    ).observe(status, { childList: true, characterData: true, subtree: true });
+    Object.assign(window, { announced });
+    (window as Window).changes.length = 0;
+  });
+  const first = await page
+    .getByRole("button", { name: "Show image 1", exact: true })
+    .boundingBox();
+  if (!first) throw new Error("Thumbnail 1 has no box.");
+  const pitch = first.width + 8;
+  const y = first.y + first.height / 2;
+  await page.mouse.move(first.x + first.width / 2, y);
+  await page.mouse.down();
+  for (let step = 1; step <= 30; step++)
+    await page.mouse.move(
+      first.x + first.width / 2 - (step * pitch * 4) / 30,
+      y,
+    );
+  await page.mouse.up();
+  await expect
+    .poll(() => page.evaluate(() => (window as Window).changes.length))
+    .toBeGreaterThan(0);
+  await expect.poll(() => offCenter(page)).toBeLessThanOrEqual(2);
+  await page.evaluate(async () => {
+    for (let frame = 0; frame < 20; frame++)
+      await new Promise(requestAnimationFrame);
+  });
+  const out = await page.evaluate(() => {
+    const thumbs = [
+      ...document.querySelectorAll<HTMLElement>(
+        ".re-lightbox-thumbnails button",
+      ),
+    ];
+    return {
+      index: (window as Window).lightbox.getState().index,
+      changes: (window as Window).changes.length,
+      announced: (window as Window & { announced: string[] }).announced,
+      focused: thumbs.indexOf(document.activeElement as HTMLElement),
+      tabStop: thumbs.findIndex((thumb) => thumb.tabIndex === 0),
+    };
+  });
+  expect(out.index).toBeGreaterThanOrEqual(3);
+  expect(out.changes).toBe(1);
+  expect(out.announced).toEqual([`Image ${out.index + 1} of 20`]);
+  expect(out.tabStop).toBe(out.index);
+  if (browserName === "chromium") expect(out.focused).toBe(out.index);
+  else expect([-1, out.index]).toContain(out.focused);
 });
 
 test("a side caption panel at 1280px never covers the photo", async ({

@@ -218,6 +218,63 @@ test.describe("lightbox performance", { tag: "@desktop" }, () => {
     expect(insideListener.scroll ?? 0).toBe(0);
   });
 
+  test("reads no layout inside a scroll listener while a mouse drag scrubs the thumbnail strip", async ({
+    page,
+  }) => {
+    const reads = await countLayoutReads(page);
+    await mount(page, "", ["lightbox/base.css", "lightbox/theme.css"]);
+    await page.evaluate(
+      async (sources) => {
+        const { createLightbox } = await import("/modules/lightbox/index.js");
+        const lightbox = createLightbox({
+          history: false,
+          thumbnails: "bottom",
+        });
+        Object.assign(window, { lightbox });
+        lightbox.open(
+          sources.map((src) => ({
+            src,
+            thumbnailSrc: src,
+            width: 1200,
+            height: 800,
+          })),
+        );
+      },
+      Array.from({ length: 20 }, (_, index) => photo(index)),
+    );
+    await expect(page.locator("dialog")).toHaveAttribute("data-phase", "open");
+    const first = await page
+      .getByRole("button", { name: "Show image 1", exact: true })
+      .boundingBox();
+    if (!first) throw new Error("Thumbnail 1 has no box.");
+    const before = await reads.read();
+    const y = first.y + first.height / 2;
+    await page.mouse.move(first.x + first.width / 2, y);
+    await page.mouse.down();
+    for (let step = 1; step <= 30; step++)
+      await page.mouse.move(first.x + first.width / 2 - step * 12, y);
+    await page.mouse.up();
+    await expect
+      .poll(() =>
+        page.evaluate(
+          () =>
+            (
+              window as unknown as {
+                lightbox: { getState(): { index: number } };
+              }
+            ).lightbox.getState().index,
+        ),
+      )
+      .toBeGreaterThanOrEqual(5);
+    const after = await reads.read();
+    expect(
+      (after.eventsHandled.scroll ?? 0) - (before.eventsHandled.scroll ?? 0),
+    ).toBeGreaterThan(0);
+    expect(
+      (after.insideListener.scroll ?? 0) - (before.insideListener.scroll ?? 0),
+    ).toBe(0);
+  });
+
   test("reads no layout inside a wheel, gesture or zoomed pan listener, and at most once in 100 wheel events", async ({
     page,
   }) => {

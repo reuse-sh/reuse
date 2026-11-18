@@ -10,7 +10,8 @@ These are the rules the code keeps. An adaptation on any framework keeps them to
 
 - **Page with native scroll snap.** Pages are a scroll-snap strip from the carousel, so touch and trackpads keep the system's momentum.
 - **Open from the thumbnail and return to it.** The image grows out of its cropped preview with the tile's rounded corners and shrinks back into the current photo's tile on close.
-- **Load only what is near.** Only the current and neighboring images load, the current one first, the neighbors not at all under Save-Data, and a long jump skips the pages in between. While the thumbnail strip is dragged, previews stand in until it stops.
+- **Load only what is near.** Only the current and neighboring images load, the current one first, the neighbors not at all under Save-Data, and a long jump skips the pages in between.
+- **Scrub through the strip.** A drag on the thumbnail strip swaps the photo as each thumbnail reaches the ring, with previews standing in until it stops, and reports and announces the photo it stops on once. Arrows, Home and End in the strip page the viewer, and focus and the tab stop follow the thumbnail under the ring. A thumbnail is at most three times as wide as it is tall.
 - **Zoom around the point you touch.** Pinch, wheel and double-tap zoom in around the pointer or fingers, and a tap, click or the zoom button zooms back out to the whole photo.
 - **Keep focus inside and give it back.** The viewer is a native modal dialog, and closing it returns focus to the current photo's tile, or else to the element that opened it.
 - **Leave the page as it was.** Destroy restores the page scroll, the hidden thumbnail, and every style and listener the viewer touched. Back closes the viewer, and its one history entry leaves without a navigation, also when another viewer opened above it.
