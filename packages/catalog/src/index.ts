@@ -240,12 +240,12 @@ export const libraries: Library[] = [
         "Zooms to a scale around a point, up to the photo's maximum, or between fit and the tap zoom.",
       ],
       [
-        "getState(), subscribe(listener)",
+        "getState(), subscribe(listener, { signal }?)",
         "Reads and listens to the index, zoom, open, animation and controls state. getState() returns the snapshot subscribers last received, so a gesture shows up once it settles.",
       ],
       [
-        "on(type, listener)",
-        "Listens to open, opened, change, settle, beforeclose and closed. preventDefault() in beforeclose keeps the viewer open.",
+        "on(type, listener, { signal }?)",
+        "Listens to open, opened, change, settle, beforeclose and closed, until the returned function runs or the signal aborts. Only beforeclose carries preventDefault(), which keeps the viewer open.",
       ],
       [
         "append(items), setItems(items, index?)",
@@ -271,7 +271,7 @@ export const libraries: Library[] = [
       "Styles come in two files: base.css holds the layout and states in @layer re.base and is required, and theme.css holds the default dark theme in @layer re.theme. themes/dark.css, light.css, page.css and photos.css load after theme.css and change only its custom properties: page follows --re-lightbox-page, and photos is white with a black room while the controls are hidden. Every theme value is a --re-lightbox-* custom property. dist/unlayered/ holds the same files without layers for sites whose own unlayered styles would win.",
       "Every visible and spoken text comes from the strings option, such as counter(index, count), close and carouselRole, the screen reader description of the photo strip, with English defaults, so a translation passes only the strings it changes.",
       "Slots add your own controls: toolbarStart, toolbarEnd, footer and aside each take a function that returns a node with optional update(state) and destroy(). Slot buttons take the theme's look with the re-lightbox-button class and hide with the other controls. Share is not built in; build it as a slot.",
-      "Events: on(type, listener) reports open, opened, change, settle, beforeclose and closed. beforeclose runs before the close flight is measured, and preventDefault() keeps the viewer open.",
+      "Events: on(type, listener, { signal }) reports open, opened, change, settle, beforeclose and closed. beforeclose runs before the close flight is measured, and its preventDefault() keeps the viewer open; the other events cannot be cancelled. subscribe(listener, { signal }) reports the state, and there is no onChange option.",
       "connectCarousel(lightbox, carousel, { slideOf }) from @reuse-sh/lightbox/carousel moves a carousel on the page to the current photo on every settle and before close, and holds its autoplay while the viewer is open, so close returns to a tile that is already in view.",
     ],
     pages: [

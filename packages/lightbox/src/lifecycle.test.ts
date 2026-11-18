@@ -468,6 +468,35 @@ describe("lightbox lifecycle", () => {
     expect(document.activeElement).toBe(trigger);
   });
 
+  it("stops a subscription and a listener when their signal aborts, and only beforeclose can cancel", () => {
+    const stop = new AbortController();
+    const states: number[] = [];
+    const changes: number[] = [];
+    const cancelable: Record<string, boolean> = {};
+    const controller = create({ history: false });
+    controller.subscribe((state) => states.push(state.index), {
+      signal: stop.signal,
+    });
+    controller.on("change", (event) => changes.push(event.index), {
+      signal: stop.signal,
+    });
+    for (const type of ["change", "beforeclose"] as const)
+      controller.on(type, (event) => {
+        cancelable[type] = "preventDefault" in event;
+      });
+    controller.on("open", () => {}, { signal: AbortSignal.abort() });
+    controller.open(gallery);
+    controller.next();
+    stop.abort();
+    controller.next();
+    void controller.close();
+    expect([states.at(-1), changes, cancelable]).toEqual([
+      1,
+      [1],
+      { change: false, beforeclose: true },
+    ]);
+  });
+
   it("handles native cancel and repeated destroy without stale DOM", async () => {
     const controller = create();
     controller.open(gallery);
@@ -918,13 +947,8 @@ describe("lightbox lifecycle", () => {
     expect(controller.getState().isOpen).toBe(false);
   });
   it("updates native pan geometry live and notifies observers only when the pointer finishes", () => {
-    const changed: Array<{ scale: number; x: number; y: number }> = [];
     const subscribed: Array<{ scale: number; x: number; y: number }> = [];
-    const controller = create({
-      onChange: (next) => {
-        changed.push({ ...next.zoom });
-      },
-    });
+    const controller = create();
     controller.subscribe((next) => {
       subscribed.push({ ...next.zoom });
     });
@@ -959,7 +983,6 @@ describe("lightbox lifecycle", () => {
       { scale: 1, x: 0, y: 0 },
       { scale: 2, x: 0, y: 0 },
     ];
-    expect(changed).toEqual(discrete);
     expect(subscribed).toEqual(discrete);
     pointer("pointerdown", 512, 384);
     for (const [x, y] of [
@@ -972,12 +995,10 @@ describe("lightbox lifecycle", () => {
       expect(frame.style.transform).toBe(
         `translate(${x - 512}px, ${y - 384}px) scale(2)`,
       );
-      expect(changed).toEqual(discrete);
       expect(subscribed).toEqual(discrete);
     }
     pointer("pointerup", 572, 414);
     const completed = [...discrete, { scale: 2, x: 60, y: 30 }];
-    expect(changed).toEqual(completed);
     expect(subscribed).toEqual(completed);
     expect(controller.getState().zoom).toEqual(completed[2]);
     expect(frame.style.transform).toBe("translate(60px, 30px) scale(2)");
@@ -986,10 +1007,9 @@ describe("lightbox lifecycle", () => {
   it("keeps wheel zoom and pan native until wheel input settles and cancels its deadline on destroy", () => {
     vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
     const observed: Array<{ scale: number; x: number; y: number }> = [];
-    const controller = create({
-      onChange: (next) => {
-        observed.push({ ...next.zoom });
-      },
+    const controller = create();
+    controller.subscribe((next) => {
+      observed.push({ ...next.zoom });
     });
     controller.open(gallery);
     controller.zoomTo(2);

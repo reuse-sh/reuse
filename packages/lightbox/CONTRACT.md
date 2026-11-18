@@ -26,7 +26,6 @@ LightboxOptions:
 - strings?: Partial<LightboxStrings>
 - slots?: Partial<Record<LightboxSlotName, LightboxSlot>>
 - protect?: boolean, default false; turns off the photo's context menu, its long-press callout and the copy key (see The photo as a file)
-- onChange?: (state: LightboxState) => void, discrete actions, completed pointer gestures, and wheel input after 150ms idle
 
 Every option except loop is read again at each open. loop is read when the controller is created and changed by setOptions, also while the viewer is open.
 
@@ -68,9 +67,9 @@ LightboxSlotName: "toolbarStart" | "toolbarEnd" | "footer" | "aside".
 
 LightboxSlot: (context: { lightbox: Lightbox; document: Document }) => { node: Node; update?: (state: LightboxState) => void; destroy?: () => void }. toolbarStart sits after the counter at the start of the top bar, toolbarEnd before the close button, footer between the caption and the bottom strip, aside in a side panel 320px wide that narrows the photo and moves under it below 720px; the dialog carries data-aside while the panel exists. Slot elements take the theme's button style through the re-lightbox-button class, follow the markup in the tab order and hide with the controls. update runs on every published state change and once after mounting; destroy runs once when the dialog closes.
 
-LightboxEventName: "open" | "opened" | "change" | "settle" | "beforeclose" | "closed".
+LightboxEventMap: { open, opened, change, settle, closed: LightboxEvent; beforeclose: LightboxCancelableEvent }. LightboxEventName is keyof LightboxEventMap.
 
-LightboxEvent: { type, index, slide: HTMLElement | null, defaultPrevented, preventDefault() }. open runs in open(), opened once the flight ends, change when the index changes or another item takes the current index, settle once after each move of the strip stops and not after the instant jump to the photo open() starts at, beforeclose synchronously before the close flight is measured, and closed once the dialog is removed, also when open() replaces an open viewer. close() and closed wait until the history entry is gone, so a navigation right after them stays. preventDefault in beforeclose keeps the dialog open; other events ignore it.
+LightboxEvent: { type, index, slide: HTMLElement | null }. LightboxCancelableEvent adds defaultPrevented and preventDefault(), and only beforeclose carries it. open runs in open(), opened once the flight ends, change when the index changes or another item takes the current index, settle once after each move of the strip stops and not after the instant jump to the photo open() starts at, beforeclose synchronously before the close flight is measured, and closed once the dialog is removed, also when open() replaces an open viewer. close() and closed wait until the history entry is gone, so a navigation right after them stays. preventDefault in beforeclose keeps the dialog open.
 
 Lightbox methods:
 - open(items: readonly LightboxItem[], index?: number): void; an error thrown by a slot, renderContent or an origin function during open() removes the dialog, the scroll lock and the history entry, and open() rethrows it
@@ -78,8 +77,9 @@ Lightbox methods:
 - next(), prev(), goTo(index: number). A goTo or a thumbnail click to a photo more than one away pages in like the next photo: the target arrives beside the photo on screen, from the side its thumbnail is on, with the usual paging motion, and the photos between never show. A second jump during the move keeps the arriving photo where it is and brings the new one beside it. A looping strip pages the same way. Reduced motion lands at once.
 - zoomTo(scale: number, focus?: Point), scale clamped between the current photo's minimum (1, or the whole-height scale of a tall photo) and its maximum; toggleZoom(focus?: Point), from scale 1 to the tap zoom around focus, and from any other scale back to 1 around focus
 - getState(): LightboxState, the last snapshot subscribers received, the same object; a drag, a pinch or a wheel shows up once it settles, and the photo's live position stays internal
-- subscribe(listener: (state: LightboxState) => void): () => void, the settled changes onChange reports
-- on(type: LightboxEventName, listener: (event: LightboxEvent) => void): () => void
+- subscribe(listener: (state: LightboxState) => void, options?: { signal?: AbortSignal }): () => void, the state after each discrete action, completed pointer gesture, and wheel input after 150ms idle
+- on<K extends LightboxEventName>(type: K, listener: (event: LightboxEventMap[K]) => void, options?: { signal?: AbortSignal }): () => void
+Both stop when the returned function runs or the signal aborts, and an already aborted signal adds nothing. The same listener added twice is one listener.
 - append(items: readonly LightboxItem[]): void, adds images at the end without moving the current one
 - setItems(items: readonly LightboxItem[], index?: number): void, replaces the list; the current image stays when the list still holds it, matched by object and then by src, otherwise index or the nearest image left is shown, with a change event and the slide's announcement. An empty list closes the viewer with the usual close, beforeclose included. A list passed during the close flight waits until the dialog is removed, so the flight and the focus go to the photo on screen, and then sets count and clamps index; while closed, setItems sets them at once
 - setOptions(options: Pick<LightboxOptions, "loop">): void

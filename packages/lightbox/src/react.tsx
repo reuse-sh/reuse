@@ -27,15 +27,14 @@ export function useLightbox(options: LightboxOptions = {}): LightboxHandle {
   });
   const handle = useMemo<LightboxController>(() => {
     const optionsAtOpen: LightboxOptions = {};
-    const onChange = (next: LightboxState) => {
-      setState(next);
-      optionsRef.current.onChange?.(next);
-    };
     const ensure = () => {
       for (const key of Object.keys(optionsAtOpen))
         delete optionsAtOpen[key as keyof LightboxOptions];
-      Object.assign(optionsAtOpen, optionsRef.current, { onChange });
-      controller.current ??= createLightbox(optionsAtOpen);
+      Object.assign(optionsAtOpen, optionsRef.current);
+      if (!controller.current) {
+        controller.current = createLightbox(optionsAtOpen);
+        controller.current.subscribe(setState);
+      }
       return controller.current;
     };
     return {
@@ -47,8 +46,8 @@ export function useLightbox(options: LightboxOptions = {}): LightboxHandle {
       zoomTo: (scale, focus) => controller.current?.zoomTo(scale, focus),
       toggleZoom: (focus) => controller.current?.toggleZoom(focus),
       getState: () => ensure().getState(),
-      subscribe: (listener) => ensure().subscribe(listener),
-      on: (type, listener) => ensure().on(type, listener),
+      subscribe: (listener, options) => ensure().subscribe(listener, options),
+      on: (type, listener, options) => ensure().on(type, listener, options),
       append: (items) => controller.current?.append(items),
       setItems: (items, index) => controller.current?.setItems(items, index),
       setOptions: (next) => ensure().setOptions(next),

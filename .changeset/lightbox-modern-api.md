@@ -15,3 +15,5 @@ Migration:
 - `LightboxItem` is now `LightboxImageItem | LightboxMediaItem`. An image has no `type` and needs `src`, with optional `srcset` and `sizes`. A media item has `type`, an optional `src` and `html`. `item.video` and `item.embed` are gone: put the file or link in `src` and the poster in `previewSrc`.
 - `registerEmbed()` is gone, so two pages, or two widgets on one page, no longer share a global provider list. Pass `embed({ providers: [provider] })`; those providers are tried before YouTube and Vimeo.
 - `getState()` returns the last snapshot `subscribe()` delivered, the same object. A drag, a pinch or a wheel shows up once it settles; read the photo's position from the page if you need it mid-gesture.
+- The `onChange` option is gone. Call `lightbox.subscribe(listener, { signal })`, which returns its own unsubscribe.
+- `on(type, listener, { signal })` is typed by `LightboxEventMap`. Only `beforeclose` is a `LightboxCancelableEvent` with `preventDefault()` and `defaultPrevented`; the other events no longer carry them.

@@ -133,21 +133,32 @@ export type LightboxIcon =
   | "download"
   | "slideshow";
 
-export type LightboxEventName =
-  | "open"
-  | "opened"
-  | "change"
-  | "settle"
-  | "beforeclose"
-  | "closed";
-
 export interface LightboxEvent {
   readonly type: LightboxEventName;
   readonly index: number;
   readonly slide: HTMLElement | null;
+}
+
+export interface LightboxCancelableEvent extends LightboxEvent {
   readonly defaultPrevented: boolean;
-  /** Keeps the viewer open when called during beforeclose; other events ignore it. */
+  /** Keeps the viewer open. */
   preventDefault(): void;
+}
+
+export interface LightboxEventMap {
+  open: LightboxEvent;
+  opened: LightboxEvent;
+  change: LightboxEvent;
+  settle: LightboxEvent;
+  beforeclose: LightboxCancelableEvent;
+  closed: LightboxEvent;
+}
+
+export type LightboxEventName = keyof LightboxEventMap;
+
+export interface LightboxListenOptions {
+  /** Removes the listener when it aborts. */
+  signal?: AbortSignal;
 }
 
 interface LightboxItemBase {
@@ -250,8 +261,6 @@ export interface LightboxOptions {
   strings?: Partial<LightboxStrings>;
   slots?: Partial<Record<LightboxSlotName, LightboxSlot>>;
   protect?: boolean;
-  /** Reports discrete actions, completed pointer gestures, and wheel input after 150ms idle. */
-  onChange?: (state: LightboxState) => void;
 }
 
 export interface Lightbox {
@@ -265,10 +274,14 @@ export interface Lightbox {
   /** The last state subscribers received; a gesture or a wheel shows up once it settles. */
   getState(): LightboxState;
   /** Reports discrete actions, completed pointer gestures, and wheel input after 150ms idle. */
-  subscribe(listener: (state: LightboxState) => void): () => void;
-  on(
-    type: LightboxEventName,
-    listener: (event: LightboxEvent) => void,
+  subscribe(
+    listener: (state: LightboxState) => void,
+    options?: LightboxListenOptions,
+  ): () => void;
+  on<K extends LightboxEventName>(
+    type: K,
+    listener: (event: LightboxEventMap[K]) => void,
+    options?: LightboxListenOptions,
   ): () => void;
   append(items: readonly LightboxItem[]): void;
   /** Keeps the current image when the new list still has it, otherwise shows index or the nearest image left. */
@@ -789,7 +802,7 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
   const listeners = new Set<(state: LightboxState) => void>();
   const handlers = new Map<
     LightboxEventName,
-    Set<(event: LightboxEvent) => void>
+    Set<(event: LightboxCancelableEvent) => void>
   >();
   const historyId = Math.random().toString(36).slice(2);
   let historyWindow: Window | undefined;
@@ -828,7 +841,6 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
     )
       return;
     notifiedState = state;
-    settings.onChange?.(state);
     for (const listener of listeners) listener(state);
     for (const slot of session?.slots ?? []) slot.update?.(state);
   }
@@ -839,14 +851,18 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
       type,
       index: state.index,
       slide: s?.slides[state.index] ?? null,
-      get defaultPrevented() {
-        return prevented;
-      },
-      preventDefault() {
-        if (type === "beforeclose") prevented = true;
-      },
     };
-    for (const listener of [...(handlers.get(type) ?? [])]) listener(event);
+    if (type === "beforeclose")
+      Object.defineProperties(event, {
+        defaultPrevented: { get: () => prevented, enumerable: true },
+        preventDefault: {
+          value: () => {
+            prevented = true;
+          },
+        },
+      });
+    for (const listener of [...(handlers.get(type) ?? [])])
+      listener(event as LightboxCancelableEvent);
     return prevented;
   }
 
@@ -4575,19 +4591,16 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
     zoomTo,
     toggleZoom,
     getState: () => notifiedState,
-    subscribe: (listener) => {
-      listeners.add(listener);
-      return () => {
-        listeners.delete(listener);
-      };
-    },
-    on: (type, listener) => {
+    subscribe: (listener, { signal } = {}) =>
+      listen(listeners, listener, signal),
+    on: (type, listener, { signal } = {}) => {
       const set = handlers.get(type) ?? new Set();
       handlers.set(type, set);
-      set.add(listener);
-      return () => {
-        set.delete(listener);
-      };
+      return listen(
+        set,
+        listener as (event: LightboxCancelableEvent) => void,
+        signal,
+      );
     },
     append: (input) => setItems([...sources, ...input]),
     setItems,
@@ -4632,6 +4645,17 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
     },
   };
   return controller;
+}
+
+function listen<T>(set: Set<T>, listener: T, signal?: AbortSignal) {
+  const stop = () => {
+    set.delete(listener);
+    signal?.removeEventListener("abort", stop);
+  };
+  if (signal?.aborted) return stop;
+  set.add(listener);
+  signal?.addEventListener("abort", stop, { once: true });
+  return stop;
 }
 
 function dimension(value: string | undefined) {
