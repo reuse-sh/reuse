@@ -522,6 +522,26 @@ describe("lightbox lifecycle", () => {
     expect(label(".re-lightbox-close")).toBe("Schließen");
   });
 
+  it("labels thumbnails rebuilt by append and setItems from the current strings", () => {
+    const controller = create({ history: false, thumbnails: "bottom" });
+    controller.open(gallery.slice(0, 2), 0);
+    controller.setOptions({
+      strings: { thumbnail: (index) => `Bild ${index + 1} zeigen` },
+    });
+    const thumbs = () =>
+      [...dialog().querySelectorAll(".re-lightbox-thumbnails button")].map(
+        (thumb) => thumb.getAttribute("aria-label"),
+      );
+    controller.append([gallery[2]]);
+    expect(thumbs()).toEqual([
+      "Bild 1 zeigen",
+      "Bild 2 zeigen",
+      "Bild 3 zeigen",
+    ]);
+    controller.setItems(gallery.slice(0, 2));
+    expect(thumbs()).toEqual(["Bild 1 zeigen", "Bild 2 zeigen"]);
+  });
+
   it("stops a subscription and a listener when their signal aborts, and only beforeclose can cancel", () => {
     const stop = new AbortController();
     const states: number[] = [];

@@ -27,7 +27,7 @@ LightboxOptions:
 - slots?: Partial<Record<LightboxSlotName, LightboxSlot>>
 - protect?: boolean, default false; turns off the photo's context menu, its long-press callout and the copy key (see The photo as a file)
 
-createLightbox copies the options object, so changing that object later changes nothing. setOptions merges new values into the copy, and every option takes effect at the next open, except loop and strings, which also change an open viewer at once: loop as below, strings by relabeling the dialog, the controls, the thumbnails, the slides, the counter and a failed slide's message. The live region keeps its last announcement until the photo changes.
+createLightbox copies the options object, so changing that object later changes nothing. setOptions merges new values into the copy, and every option takes effect at the next open, except loop and strings, which also change an open viewer at once: loop as below, strings by relabeling the dialog, the controls, the thumbnails, those append() and setItems() build later included, the slides, the counter and a failed slide's message. The live region keeps its last announcement until the photo changes.
 
 Large galleries. Every item has an empty slide in the strip for native scroll snap; an image and renderContent mount only within preload of the current photo and in slides on screen while the strip moves. The viewer reads the size of one slide and places slide k at k × that width, so a frame of paging costs the same with 1000 photos as with 10, and a change of photo rewrites the state of the two slides and thumbnails it concerns. Thumbnails load with loading="lazy", and only the active one is measured.
 

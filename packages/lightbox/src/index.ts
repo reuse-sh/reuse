@@ -432,7 +432,7 @@ type Session = {
   slideshowButton?: HTMLButtonElement;
   thumbs: HTMLButtonElement[];
   makeSlide: () => HTMLDivElement;
-  makeThumbs: () => void;
+  makeThumbs: (strings: LightboxStrings) => void;
   pointers: Map<number, Point>;
   box: Rect;
   gesture?: {
@@ -4210,7 +4210,7 @@ export function createLightbox<Item extends LightboxItem = LightboxItem>(
       thumbRing.setAttribute("aria-hidden", "true");
       thumbRing.hidden = true;
     }
-    const makeThumbs = () => {
+    const makeThumbs = (labels: LightboxStrings) => {
       if (!thumbStrip) return;
       thumbs.length = 0;
       thumbStrip.replaceChildren(
@@ -4223,7 +4223,7 @@ export function createLightbox<Item extends LightboxItem = LightboxItem>(
               item.width > MAX_THUMB_RATIO * item.height
                 ? String(MAX_THUMB_RATIO)
                 : `${item.width} / ${item.height}`;
-          thumb.setAttribute("aria-label", strings.thumbnail(i, items.length));
+          thumb.setAttribute("aria-label", labels.thumbnail(i, items.length));
           const thumbnailSrc = item.thumbnailSrc || item.previewSrc;
           if (thumbnailSrc) {
             const image = doc.createElement("img");
@@ -4248,7 +4248,7 @@ export function createLightbox<Item extends LightboxItem = LightboxItem>(
         }),
       );
     };
-    makeThumbs();
+    makeThumbs(strings);
     const previousFocus = isHTMLElement(doc.activeElement)
       ? doc.activeElement
       : null;
@@ -4755,7 +4755,7 @@ export function createLightbox<Item extends LightboxItem = LightboxItem>(
     s.slides = slides;
     s.loaded = loaded;
     s.marked = undefined;
-    s.makeThumbs();
+    s.makeThumbs(s.strings);
     s.thumbCenters = undefined;
     s.roving = -1;
     s.thumbCarousel?.refresh();
