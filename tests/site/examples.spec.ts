@@ -100,7 +100,7 @@ test("code blocks leave the standard content gap before a following paragraph", 
   const gap = await page.evaluate(() => {
     const code = document.querySelector('[data-slot="code-block"]');
     const paragraph = code?.nextElementSibling;
-    if (paragraph?.tagName !== "P")
+    if (!code || paragraph?.tagName !== "P")
       throw new Error("Missing adjacent installation guidance");
     return (
       paragraph.getBoundingClientRect().top -
@@ -588,4 +588,40 @@ test("a playing demo stage leaves the visitor's tooltip where the pointer is", a
   await page.waitForTimeout(2000);
   await expect(tip).toBeVisible();
   expect(await tip.boundingBox()).toEqual(first);
+});
+
+test("the home strip lightbox closes onto the tile it paged to", async ({
+  page,
+}) => {
+  await page.goto("/");
+  const strip = page.locator(".h-strip-vp");
+  const tiles = strip.locator("[data-carousel-slide] button");
+  await tiles.first().scrollIntoViewIfNeeded();
+  await tiles.first().click();
+  await page.waitForSelector('dialog.re-lightbox[data-phase="open"]');
+  for (let step = 0; step < 4; step++) {
+    await page.keyboard.press("ArrowRight");
+    if (step < 3)
+      await page.waitForFunction(
+        () => !document.querySelector(".h-strip-vp[data-re-scrolling]"),
+      );
+  }
+  await page.keyboard.press("Escape");
+  const tile = strip.locator("[data-carousel-slide] img").nth(4);
+  const atClose = await tile.evaluate(
+    (image) =>
+      new Promise<number>((resolve) =>
+        requestAnimationFrame(() =>
+          resolve(image.getBoundingClientRect().left),
+        ),
+      ),
+  );
+  await expect(page.locator("dialog.re-lightbox")).toHaveCount(0);
+  await page.waitForFunction(
+    () => !document.querySelector(".h-strip-vp[data-re-scrolling]"),
+  );
+  const settled = await tile.evaluate(
+    (image) => image.getBoundingClientRect().left,
+  );
+  expect(Math.abs(settled - atClose)).toBeLessThanOrEqual(1);
 });

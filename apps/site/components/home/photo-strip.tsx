@@ -1,9 +1,10 @@
 "use client";
 
 import { useCarousel } from "@reuse-sh/carousel/react";
+import { connectCarousel } from "@reuse-sh/lightbox/carousel";
 import { useLightbox } from "@reuse-sh/lightbox/react";
 import Image from "next/image";
-import type { CSSProperties } from "react";
+import { type CSSProperties, useEffect, useRef } from "react";
 import { Container } from "@/components/ui/container";
 import { photos } from "../../lib/photos";
 import { Icon, lightboxIcons } from "../icons";
@@ -12,30 +13,26 @@ const strip = [0, 4, 6, 1, 5, 7, 2, 3].map((index) => photos[index]);
 
 export function PhotoStrip() {
   const { ref, carousel, state } = useCarousel({ align: "start" });
-  const lightbox = useLightbox({
+  const images = useRef<(HTMLImageElement | null)[]>([]);
+  const viewer = useLightbox({
     icons: lightboxIcons,
     thumbnails: "bottom",
-    onChange: (next) => {
-      if (next.isOpen && next.index !== state.index) carousel?.goTo(next.index);
-    },
+    getOrigin: (index) => images.current[index] ?? null,
   });
-  const open = (index: number, trigger: HTMLElement) => {
-    const images = trigger
-      .closest(".re-carousel")
-      ?.querySelectorAll<HTMLImageElement>("[data-carousel-slide] img");
-    lightbox.open(
-      strip.map((photo, at) => {
-        const image = images?.[at];
-        return {
-          ...photo,
-          thumbnailSrc: photo.src,
-          previewSrc: image?.currentSrc || photo.src,
-          origin: image ?? null,
-        };
-      }),
+  const lightbox = useRef(viewer);
+  lightbox.current = viewer;
+  useEffect(() => {
+    if (carousel) return connectCarousel(lightbox.current, carousel);
+  }, [carousel]);
+  const open = (index: number) =>
+    viewer.open(
+      strip.map((photo, at) => ({
+        ...photo,
+        thumbnailSrc: photo.src,
+        previewSrc: images.current[at]?.currentSrc || photo.src,
+      })),
       index,
     );
-  };
   return (
     <div
       className="h-strip group mt-7"
@@ -52,9 +49,12 @@ export function PhotoStrip() {
               type="button"
               className="block aspect-portrait w-full cursor-zoom-in overflow-hidden rounded-xl bg-media p-0 focus-visible:-outline-offset-2 group-data-dragging:cursor-grabbing"
               aria-label={`Open ${photo.caption}`}
-              onClick={(event) => open(index, event.currentTarget)}
+              onClick={() => open(index)}
             >
               <Image
+                ref={(image) => {
+                  images.current[index] = image;
+                }}
                 src={photo.src}
                 alt={photo.alt}
                 width={photo.width}

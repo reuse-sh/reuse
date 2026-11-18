@@ -16,5 +16,5 @@
       ]
     }
   },
-  "include": ["browser/**/*.ts", "model/**/*.ts"]
+  "include": ["browser/**/*.ts", "model/**/*.ts", "site/**/*.ts"]
 }
