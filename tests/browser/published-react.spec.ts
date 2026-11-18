@@ -393,7 +393,58 @@ hydrateRoot(document.getElementById("app"), <App Late={Late} />, {
   ).toEqual([]);
 });
 
-test("useLightbox keeps one lightbox through StrictMode and destroys it on unmount", async ({
+// Counts the listeners on the window, the document and its root elements and the timers and
+// frames that are still pending, so a test can compare them before open and after unmount.
+const tracker = `(() => {
+  const live = new Set();
+  const timers = new Set();
+  const frames = new Set();
+  const watched = (target) => target === window || target === document || target === document.documentElement || target === document.body;
+  const capture = (options) => typeof options === "boolean" ? options : Boolean(options?.capture);
+  const add = EventTarget.prototype.addEventListener;
+  const remove = EventTarget.prototype.removeEventListener;
+  EventTarget.prototype.addEventListener = function (type, listener, options) {
+    if (watched(this) && listener) {
+      const entry = { target: this, type, listener, capture: capture(options), signal: options?.signal };
+      live.add(entry);
+      if (options?.once) {
+        const drop = () => live.delete(entry);
+        add.call(this, type, drop, { once: true, capture: entry.capture });
+      }
+    }
+    return add.call(this, type, listener, options);
+  };
+  EventTarget.prototype.removeEventListener = function (type, listener, options) {
+    for (const entry of live)
+      if (entry.target === this && entry.type === type && entry.listener === listener && entry.capture === capture(options)) live.delete(entry);
+    return remove.call(this, type, listener, options);
+  };
+  const setTimer = window.setTimeout;
+  const clearTimer = window.clearTimeout;
+  window.setTimeout = (callback, delay, ...rest) => {
+    const id = setTimer(() => { timers.delete(id); if (typeof callback === "function") callback(...rest); }, delay);
+    timers.add(id);
+    return id;
+  };
+  window.clearTimeout = (id) => { timers.delete(id); clearTimer(id); };
+  const request = window.requestAnimationFrame;
+  const cancel = window.cancelAnimationFrame;
+  window.requestAnimationFrame = (callback) => {
+    const id = request((time) => { frames.delete(id); callback(time); });
+    frames.add(id);
+    return id;
+  };
+  window.cancelAnimationFrame = (id) => { frames.delete(id); cancel(id); };
+  window.__leftovers = () => ({
+    dialogs: document.querySelectorAll("dialog").length,
+    overflow: document.body.style.overflow,
+    listeners: [...live].filter((entry) => !entry.signal?.aborted).map((entry) => entry.type).sort(),
+    timers: timers.size,
+    frames: frames.size,
+  });
+})();`;
+
+test("useLightbox keeps one lightbox through StrictMode and a real unmount leaves no dialog, scroll lock, listener or timer", async ({
   page,
 }) => {
   const client = await bundleApp(
@@ -409,22 +460,115 @@ window.__unmount = () => root.unmount();`,
     "lightbox/base.css",
     "lightbox/theme.css",
   ]);
+  await page.addScriptTag({ content: tracker });
   await page.addScriptTag({ type: "module", content: client });
-  await page.getByRole("button", { name: "Open" }).click();
-  await expect(page.locator("dialog")).toHaveAttribute("data-phase", "open");
+  type Leftovers = {
+    dialogs: number;
+    overflow: string;
+    listeners: string[];
+    timers: number;
+    frames: number;
+  };
   type App = {
     __counts: { handles: Record<string, Set<unknown>> };
     __lightbox: unknown;
     __unmount: () => void;
+    __leftovers: () => Leftovers;
   };
+  await expect(page.getByRole("button", { name: "Open" })).toBeVisible();
+  const before = await page.evaluate(() =>
+    (window as unknown as App).__leftovers(),
+  );
+  await page.getByRole("button", { name: "Open" }).click();
+  await expect(page.locator("dialog")).toHaveAttribute("data-phase", "open");
   expect(
     await page.evaluate(() => {
       const { __counts, __lightbox } = window as unknown as App;
       return [...__counts.handles.owner].map((handle) => handle === __lightbox);
     }),
   ).toEqual([true]);
-  await page.evaluate(() => (window as unknown as App).__unmount());
-  await expect(page.locator("dialog")).toHaveCount(0);
+  const after = await page.evaluate(() => {
+    const app = window as unknown as App;
+    app.__unmount();
+    return app.__leftovers();
+  });
+  expect(after).toEqual({ ...before, dialogs: 0 });
+});
+
+const activityApp = `import { Activity, useEffect, useState } from "react";
+import { useLightbox } from "@reuse-sh/lightbox/react";
+const items = [0, 1, 2].map((index) => ({ src: "data:image/gif;base64,R0lGODlhAQABAAAAACw=", width: 1200, height: 800, alt: "Photo " + index }));
+window.__handles = new Set();
+function Viewer() {
+  const lightbox = useLightbox({ history: false });
+  window.__handles.add(lightbox);
+  useEffect(() => lightbox.open(items, 1), [lightbox]);
+  return null;
+}
+export function App() {
+  const [mode, setMode] = useState("visible");
+  window.__setMode = setMode;
+  return <Activity mode={mode}><Viewer /></Activity>;
+}`;
+
+test("useLightbox frees its viewer while Activity hides it and opens the same lightbox again on reveal", async ({
+  page,
+}) => {
+  const client = await bundleApp(
+    `import { StrictMode } from "react";
+import { createRoot } from "react-dom/client";
+import { flushSync } from "react-dom";
+import { App } from "./lightbox-app.tsx";
+window.__errors = [];
+const report = (error) => window.__errors.push(String(error));
+createRoot(document.getElementById("app"), { onUncaughtError: report, onCaughtError: report }).render(<StrictMode><App /></StrictMode>);
+window.__show = (mode) => flushSync(() => window.__setMode(mode));`,
+    "browser",
+    activityApp,
+  );
+  await mount(page, '<div id="app"></div>', [
+    "lightbox/base.css",
+    "lightbox/theme.css",
+  ]);
+  const errors: string[] = [];
+  page.on("pageerror", (error) => errors.push(error.message));
+  await page.addScriptTag({ type: "module", content: client });
+  type App = {
+    __errors: string[];
+    __handles: Set<{ getState(): { isOpen: boolean; index: number } }>;
+    __show: (mode: string) => void;
+  };
+  await expect(page.locator("dialog")).toHaveAttribute("data-phase", "open");
+  expect(
+    await page.evaluate(() => {
+      (window as unknown as App).__show("hidden");
+      return document.querySelectorAll("dialog").length;
+    }),
+  ).toBe(0);
+  // Two tasks pass, longer than any cleanup deferred to the next task.
+  await page.evaluate(
+    () => new Promise((resolve) => setTimeout(() => setTimeout(resolve))),
+  );
+  await page.evaluate(() => (window as unknown as App).__show("visible"));
+  await expect(page.locator("dialog")).toHaveAttribute("data-phase", "open");
+  expect(
+    await page.evaluate(() => {
+      const app = window as unknown as App;
+      return {
+        errors: app.__errors,
+        handles: app.__handles.size,
+        state: [...app.__handles].map((lightbox) => {
+          const { isOpen, index } = lightbox.getState();
+          return { isOpen, index };
+        }),
+      };
+    }),
+  ).toEqual({
+    errors: [],
+    handles: 1,
+    state: [{ isOpen: true, index: 1 }],
+  });
+  expect(errors).toEqual([]);
 });
 
 test("useLightbox passes an equal inline strings object on without relabelling", async ({

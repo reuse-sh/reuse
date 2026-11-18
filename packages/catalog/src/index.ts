@@ -272,7 +272,7 @@ export const libraries: Library[] = [
       ["destroy()", "Removes listeners and restores the page."],
       [
         "useLightbox(options?)",
-        "React: a lightbox that is the same object on every render and holds no React state, so its component does not re-render when the viewer changes. Changed options reach it after the render, plain objects and arrays compared by value, and it is destroyed in the task after unmount, so StrictMode keeps one object.",
+        "React: a lightbox that is the same object on every render and holds no React state, so its component does not re-render when the viewer changes. Changed options reach it after the render, plain objects and arrays compared by value. Effect cleanup, on unmount, under StrictMode or when Activity hides the component, closes it at once and frees its dialog and listeners, and the same object opens again, so StrictMode and an Activity reveal keep one object.",
       ],
       [
         "useLightboxState(lightbox, selector)",

@@ -60,7 +60,7 @@ export function Gallery() {
         blocks: [
           {
             kind: "prose",
-            text: "Links still open the image without JavaScript. The native dialog keeps focus inside, Escape closes it, and close returns focus to the current photo's tile. The React hook destroys its viewer on unmount.",
+            text: "Links still open the image without JavaScript. The native dialog keeps focus inside, Escape closes it, and close returns focus to the current photo's tile. The React hook closes its viewer at once and frees it on unmount or when Activity hides it, and opens the same viewer again when Activity shows it.",
           },
         ],
       },
@@ -212,7 +212,7 @@ export function ProductGallery() {
         blocks: [
           {
             kind: "prose",
-            text: "The small item list describes the two actual product assets. Keep image dimensions and alt text with each asset. Native gallery binding collects images in DOM order. Links still open the image without JavaScript. The native dialog keeps focus inside, Escape closes it, and close returns focus to the current photo's tile. The React hook destroys its viewer on unmount.",
+            text: "The small item list describes the two actual product assets. Keep image dimensions and alt text with each asset. Native gallery binding collects images in DOM order. Links still open the image without JavaScript. The native dialog keeps focus inside, Escape closes it, and close returns focus to the current photo's tile. The React hook closes its viewer at once and frees it on unmount or when Activity hides it, and opens the same viewer again when Activity shows it.",
           },
         ],
       },
@@ -356,7 +356,7 @@ export function MessageAttachments({ sources }: { sources: string[] }) {
         blocks: [
           {
             kind: "prose",
-            text: "Mount the message component for every message rather than passing every conversation attachment to a global viewer. Destroy the binding when a message is removed. Links still open the image without JavaScript. The native dialog keeps focus inside, Escape closes it, and close returns focus to the current photo's tile. The React hook destroys its viewer on unmount.",
+            text: "Mount the message component for every message rather than passing every conversation attachment to a global viewer. Destroy the binding when a message is removed. Links still open the image without JavaScript. The native dialog keeps focus inside, Escape closes it, and close returns focus to the current photo's tile. The React hook closes its viewer at once and frees it on unmount or when Activity hides it, and opens the same viewer again when Activity shows it.",
           },
         ],
       },
@@ -508,7 +508,7 @@ export function Gallery() {
         blocks: [
           {
             kind: "prose",
-            text: "A cropped article thumbnail does not constrain the full-size viewer image. Give captions with a figcaption or the image's data-lightbox-caption attribute, and keep nearby article text outside the gallery root if it contains unrelated images. Links still open the image without JavaScript. The native dialog keeps focus inside, Escape closes it, and close returns focus to the current photo's tile. The React hook destroys its viewer on unmount.",
+            text: "A cropped article thumbnail does not constrain the full-size viewer image. Give captions with a figcaption or the image's data-lightbox-caption attribute, and keep nearby article text outside the gallery root if it contains unrelated images. Links still open the image without JavaScript. The native dialog keeps focus inside, Escape closes it, and close returns focus to the current photo's tile. The React hook closes its viewer at once and frees it on unmount or when Activity hides it, and opens the same viewer again when Activity shows it.",
           },
         ],
       },
@@ -842,7 +842,7 @@ export function Conversation({ messages }: { messages: Message[] }) {
         blocks: [
           {
             kind: "prose",
-            text: "While the viewer shows a photo, its tile is hidden, so the +3 tile stays hidden for each of the three photos it stands for. The native dialog keeps focus inside, Escape closes it, and close returns focus to the current photo's tile. The React hook destroys its viewer on unmount.",
+            text: "While the viewer shows a photo, its tile is hidden, so the +3 tile stays hidden for each of the three photos it stands for. The native dialog keeps focus inside, Escape closes it, and close returns focus to the current photo's tile. The React hook closes its viewer at once and frees it on unmount or when Activity hides it, and opens the same viewer again when Activity shows it.",
           },
         ],
       },

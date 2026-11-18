@@ -54,6 +54,8 @@ type LightboxInternals = {
   initial: LightboxState<never>;
   shows(type: string): boolean;
   destroyed(): boolean;
+  /** Closes at once without a flight and frees the DOM and listeners; the lightbox opens again. */
+  release(): void;
   /** Runs open() with options that fill what the lightbox's own options leave unset, until that viewer closes. */
   openWith(
     options: Partial<LightboxOptions<never>> | undefined,
@@ -4837,32 +4839,40 @@ export function createLightbox<Item extends LightboxItem = LightboxItem>(
     destroy: () => {
       if (destroyed) return;
       destroyed = true;
-      pendingClosed?.();
-      const s = session;
-      if (s) teardown(s);
-      closePromise = undefined;
-      publish({
-        isOpen: false,
-        isClosing: false,
-        isAnimating: false,
-        zoom: { ...identity },
-      });
-      if (s) emit("closed", null);
-      const win = historyWindow;
-      if (win && ownsHistory(win)) goBack(win);
-      else if (win) {
-        orphan(win, historyId);
-        if (!historyBacks.has(win)) releaseScroll(win);
-      }
-      win?.removeEventListener("popstate", onPopState);
-      historyWindow = undefined;
+      release();
       for (const stop of [...stops]) stop();
       listeners.clear();
       handlers.clear();
     },
   };
+
+  function release() {
+    pendingClosed?.();
+    const s = session;
+    if (s) teardown(s);
+    closePromise = undefined;
+    publish({
+      isOpen: false,
+      isClosing: false,
+      isAnimating: false,
+      zoom: { ...identity },
+    });
+    if (s) emit("closed", null);
+    const win = historyWindow;
+    if (win && ownsHistory(win)) goBack(win);
+    else if (win) {
+      orphan(win, historyId);
+      if (!historyBacks.has(win)) releaseScroll(win);
+    }
+    win?.removeEventListener("popstate", onPopState);
+    historyWindow = undefined;
+  }
+
   const reach: LightboxInternals = {
     initial: initial as LightboxState<never>,
+    release: () => {
+      if (!destroyed) release();
+    },
     shows: (type) =>
       Boolean(current.content?.some((module) => module.type === type)),
     destroyed: () => destroyed,

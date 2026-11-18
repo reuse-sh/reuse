@@ -10,7 +10,17 @@ import {
 } from "./index.js";
 
 const lightboxInternals = Symbol.for("@reuse-sh/lightbox internals");
-const destroyed = new WeakSet<object>();
+
+type Internals<Item extends LightboxItem> = {
+  initial: LightboxState<Item>;
+  release(): void;
+};
+
+function internalsOf<Item extends LightboxItem>(lightbox: Lightbox<Item>) {
+  return (lightbox as { [lightboxInternals]?: Internals<Item> })[
+    lightboxInternals
+  ];
+}
 
 function isPlain(value: unknown): value is Record<string, unknown> {
   if (typeof value !== "object" || value === null) return false;
@@ -37,20 +47,18 @@ function same(a: unknown, b: unknown): boolean {
 
 /**
  * A lightbox for the component's lifetime. It is the same object on every render and holds no
- * React state, so the component does not re-render on lightbox changes; it is destroyed in the
- * task after unmount, so an effect that runs again at once, as under StrictMode, keeps it. An
+ * React state, so the component does not re-render on lightbox changes. Effect cleanup, on
+ * unmount, under StrictMode or when Activity hides the component, closes it at once and frees
+ * its DOM and listeners; it is never destroyed, so an effect that runs again opens it again. An
  * option that changes reaches it through setOptions after the render; plain objects and arrays
  * compare by value and functions by identity. container is read once.
  */
 export function useLightbox<Item extends LightboxItem = LightboxItem>(
   options: LightboxOptions<Item> = {},
 ): Lightbox<Item> {
-  const [lightbox, setLightbox] = useState(() => createLightbox(options));
-  const latest = useRef(options);
+  const [lightbox] = useState(() => createLightbox(options));
   const applied = useRef(options);
-  const pending = useRef<ReturnType<typeof setTimeout>>(undefined);
   useEffect(() => {
-    latest.current = options;
     const changed: Partial<LightboxOptions<Item>> = {};
     const keys = new Set([
       ...Object.keys(options),
@@ -62,21 +70,7 @@ export function useLightbox<Item extends LightboxItem = LightboxItem>(
     applied.current = options;
     if (Object.keys(changed).length) lightbox.setOptions(changed);
   });
-  useEffect(() => {
-    clearTimeout(pending.current);
-    // A component shown again after its lightbox was destroyed, such as in Activity, gets a new one.
-    if (destroyed.has(lightbox)) {
-      applied.current = latest.current;
-      setLightbox(createLightbox(latest.current));
-      return;
-    }
-    return () => {
-      pending.current = setTimeout(() => {
-        destroyed.add(lightbox);
-        lightbox.destroy();
-      });
-    };
-  }, [lightbox]);
+  useEffect(() => () => internalsOf(lightbox)?.release(), [lightbox]);
   return lightbox;
 }
 
@@ -112,12 +106,7 @@ export function useLightboxState<Item extends LightboxItem, Selected>(
     cache.current = { state, selector, value };
     return value;
   };
-  const initial =
-    (
-      lightbox as {
-        [lightboxInternals]?: { initial: LightboxState<Item> };
-      }
-    )[lightboxInternals]?.initial ?? lightbox.getState();
+  const initial = internalsOf(lightbox)?.initial ?? lightbox.getState();
   return useSyncExternalStore(
     lightbox.subscribe,
     () => pick(client, lightbox.getState()),
