@@ -46,8 +46,15 @@ async function setup(
     async ([list, extra, index, image, frameOptions]) => {
       const { createLightbox } = await import("/modules/lightbox/index.js");
       const { video } = await import("/modules/lightbox/video.js");
-      const { embed } = await import("/modules/lightbox/embed.js");
+      const { embed, registerEmbed } = await import(
+        "/modules/lightbox/embed.js"
+      );
       const { iframe } = await import("/modules/lightbox/iframe.js");
+      registerEmbed({
+        name: "videos",
+        pattern: /^https:\/\/videos\.test\/(\w+)/,
+        url: (match) => `https://player.videos.test/${match[1]}`,
+      });
       // A short WebM recorded from a canvas, so the page needs no media file.
       const recorded = async () => {
         const canvas = document.createElement("canvas");
@@ -102,13 +109,25 @@ async function setup(
         }),
         page: async () => ({ type: "iframe", src: "https://evil.test/page" }),
         local: async () => ({ type: "iframe", src: "/quick-view" }),
+        registered: async () => ({
+          type: "embed",
+          embed: "https://videos.test/abc123",
+        }),
+        frameScript: async () => ({
+          type: "iframe",
+          src: "java\tscript:alert(1)",
+        }),
+        frameShout: async () => ({
+          type: "iframe",
+          src: "JAVASCRIPT:alert(1)",
+        }),
       };
       const items = await Promise.all(
         list.split(",").map((kind) => kinds[kind]()),
       );
       const lightbox = createLightbox({
         history: false,
-        content: [video(), embed(), iframe(frameOptions)],
+        content: [video(), embed(frameOptions), iframe(frameOptions)],
         ...extra,
       });
       Object.assign(window, { lightbox });
@@ -179,26 +198,31 @@ test("the embed carries the link's own parameters and uses youtube-nocookie", as
     "strict-origin-when-cross-origin",
   );
   await expect(frame).toHaveAttribute("loading", "lazy");
+  await expect(frame).toHaveAttribute("sandbox", sandbox);
 });
 
 test("a frame loads only web pages: a script URL or an empty one stays blank", async ({
   page,
 }) => {
-  await setup(page, "script,empty", { preload: 1 });
-  await expect(page.locator(".re-lightbox-media iframe")).toHaveCount(2);
+  await setup(page, "script,empty,frameScript,frameShout", { preload: 2 }, 1);
+  await expect(page.locator(".re-lightbox-media iframe")).toHaveCount(4);
   expect(
     await page
       .locator(".re-lightbox-media iframe")
       .evaluateAll((frames) =>
         frames.map((frame) => frame.getAttribute("src")),
       ),
-  ).toEqual(["about:blank", "about:blank"]);
+  ).toEqual(["about:blank", "about:blank", "about:blank", "about:blank"]);
 });
 
 // A page that tries to take over the tab that frames it.
 const takeover = `<!doctype html><button id="go" style="width:100%;height:100%">Continue</button><script>
 document.getElementById("go").onclick = () => { top.location.href = "https://evil.test/phish"; };
 </script>`;
+
+// Popups may leave the sandbox, so a player's own links open a working tab.
+const sandbox =
+  "allow-scripts allow-same-origin allow-forms allow-presentation allow-popups allow-popups-to-escape-sandbox";
 
 const frameOf = (page: Page) =>
   page.locator(".re-lightbox-media iframe").evaluate((frame) => ({
@@ -225,7 +249,23 @@ test("an iframe sandboxes a page from another origin, so a click inside cannot n
   await setup(page, "page");
   expect(await frameOf(page)).toEqual({
     src: "https://evil.test/page",
-    sandbox: "allow-scripts allow-same-origin allow-forms allow-presentation",
+    sandbox,
+  });
+  await page.frameLocator(".re-lightbox-media iframe").locator("#go").click();
+  await page.waitForTimeout(500);
+  expect(page.url()).toBe("http://reuse.test/");
+});
+
+test("a registered provider's player is sandboxed too, so a click inside cannot navigate the tab", async ({
+  page,
+}) => {
+  await page.route("https://player.videos.test/**", (route) =>
+    route.fulfill({ contentType: "text/html", body: takeover }),
+  );
+  await setup(page, "registered");
+  expect(await frameOf(page)).toEqual({
+    src: "https://player.videos.test/abc123",
+    sandbox,
   });
   await page.frameLocator(".re-lightbox-media iframe").locator("#go").click();
   await page.waitForTimeout(500);
@@ -240,7 +280,7 @@ test("an iframe leaves a same-origin page unsandboxed, and the sandbox option wi
     src: "http://reuse.test/quick-view",
     sandbox: null,
   });
-  await setup(page, "local,page", { preload: 1 }, 0, {
+  await setup(page, "local,page,registered", { preload: 2 }, 0, {
     sandbox: "allow-scripts",
   });
   expect(
@@ -249,7 +289,7 @@ test("an iframe leaves a same-origin page unsandboxed, and the sandbox option wi
       .evaluateAll((frames) =>
         frames.map((frame) => frame.getAttribute("sandbox")),
       ),
-  ).toEqual(["allow-scripts", "allow-scripts"]);
+  ).toEqual(["allow-scripts", "allow-scripts", "allow-scripts"]);
 });
 
 test("a Shorts link opens at 9:16", async ({ page }) => {

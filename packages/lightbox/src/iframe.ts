@@ -5,16 +5,15 @@ export interface FrameOptions {
   sandbox?: string;
 }
 
-// No top navigation and no popups for a page from another origin.
+// No top navigation for a page from another origin; its popups open as normal tabs.
 const CROSS_ORIGIN_SANDBOX =
-  "allow-scripts allow-same-origin allow-forms allow-presentation";
+  "allow-scripts allow-same-origin allow-forms allow-presentation allow-popups allow-popups-to-escape-sandbox";
 
 export function frameOf(
   container: HTMLElement,
   src: string,
   title: string,
   sandbox: string | undefined,
-  crossOrigin?: string,
 ) {
   const document = container.ownerDocument;
   const frame = document.createElement("iframe");
@@ -24,15 +23,15 @@ export function frameOf(
   frame.loading = "lazy";
   frame.title = title;
   // Only web pages load: a javascript: URL would run in the host page.
-  let url = "about:blank";
+  frame.src = "about:blank";
   if (src.trim())
     try {
       const parsed = new URL(src, document.baseURI);
-      if (/^https?:$/.test(parsed.protocol)) url = parsed.href;
-      if (parsed.origin !== document.location.origin) sandbox ??= crossOrigin;
+      if (/^https?:$/.test(parsed.protocol)) frame.src = parsed.href;
+      if (parsed.origin !== document.location.origin)
+        sandbox ??= CROSS_ORIGIN_SANDBOX;
     } catch {}
-  if (sandbox != null) frame.setAttribute("sandbox", sandbox);
-  frame.src = url;
+  if (sandbox != null) frame.sandbox = sandbox;
   container.append(frame);
   return frame;
 }
@@ -53,7 +52,6 @@ export function iframe(options: FrameOptions = {}): LightboxContent {
         item.embed ?? item.src ?? "",
         item.alt ?? "",
         options.sandbox,
-        CROSS_ORIGIN_SANDBOX,
       );
       return {
         interactive: true,
