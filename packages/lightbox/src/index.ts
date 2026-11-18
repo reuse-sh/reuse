@@ -921,10 +921,10 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
       // The last photo springs back to the first, as the carousel's autoplay does.
       finishFade(s, true);
       clearStands(s);
-      syncingCarousel = true;
-      activeChanged(s, 0);
-      s.carousel.goTo(0, "smooth");
-      syncingCarousel = false;
+      quietly(() => {
+        activeChanged(s, 0);
+        s.carousel.goTo(0, "smooth");
+      });
     }
     restartSlideshow(s);
   }
@@ -1043,6 +1043,17 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
     return loop && items.length > 1;
   }
 
+  // The carousel's change events come from the viewer's own moves here, so they are ignored.
+  function quietly(move: () => void) {
+    const syncing = syncingCarousel;
+    syncingCarousel = true;
+    try {
+      move();
+    } finally {
+      syncingCarousel = syncing;
+    }
+  }
+
   function wrap(index: number) {
     return ((index % items.length) + items.length) % items.length;
   }
@@ -1154,16 +1165,15 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
     const range = limits(s);
     if (s.phase !== "dragging") {
       if (frame) frame.style.transform = zoomTransform(state.zoom);
-      const syncing = syncingCarousel;
-      syncingCarousel = true;
-      s.carousel.setEnabled(
-        state.zoom.scale <= 1 &&
-          state.zoom.scale >= range.min - 1e-3 &&
-          s.gesture?.axis !== "pan" &&
-          s.pointers.size < 2 &&
-          items.length > 1,
+      quietly(() =>
+        s.carousel.setEnabled(
+          state.zoom.scale <= 1 &&
+            state.zoom.scale >= range.min - 1e-3 &&
+            s.gesture?.axis !== "pan" &&
+            s.pointers.size < 2 &&
+            items.length > 1,
+        ),
       );
-      syncingCarousel = syncing;
     }
     const zoomable = range.max > 1 || range.min < 1;
     const clickable = String(
@@ -1436,9 +1446,7 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
       !s.pointers.size &&
       !s.carousel.getState().isDragging
     ) {
-      syncingCarousel = true;
-      s.carousel.goTo(state.index, "instant");
-      syncingCarousel = false;
+      quietly(() => s.carousel.goTo(state.index, "instant"));
       slide = s.slides[state.index]?.getBoundingClientRect();
       if (slide && Math.abs(slide.left - box.left) <= 1)
         live.transform = `translate(${shift}px, 0px) ${live.transform}`;
@@ -1637,11 +1645,11 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
       });
     }
     layout(s);
-    syncingCarousel = true;
-    s.carousel.setEnabled(true);
-    s.carousel.refresh();
-    s.carousel.goTo(state.index, "instant");
-    syncingCarousel = false;
+    quietly(() => {
+      s.carousel.setEnabled(true);
+      s.carousel.refresh();
+      s.carousel.goTo(state.index, "instant");
+    });
     applyZoom(s, false);
     ringThumb(s, false);
     if (!sameZoom(before, state.zoom)) publish({});
@@ -2231,10 +2239,10 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
     finishFade(s, true);
     clearStands(s);
     s.centeredThumb = index;
-    syncingCarousel = true;
-    activeChanged(s, index);
-    s.carousel.goTo(index, "instant");
-    syncingCarousel = false;
+    quietly(() => {
+      activeChanged(s, index);
+      s.carousel.goTo(index, "instant");
+    });
     trimSlides(s);
   }
 
@@ -2361,11 +2369,8 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
     if (!s || state.isClosing || !Number.isFinite(scale)) return;
     const range = limits(s);
     const nextScale = clamp(scale, range.min, range.max);
-    if (nextScale > 1 && state.zoom.scale <= 1) {
-      syncingCarousel = true;
-      s.carousel.goTo(state.index, "instant");
-      syncingCarousel = false;
-    }
+    if (nextScale > 1 && state.zoom.scale <= 1)
+      quietly(() => s.carousel.goTo(state.index, "instant"));
     const animated = notify && Math.abs(nextScale - state.zoom.scale) > 0.001;
     if (animated && s.animations.size > 0 && !s.zoomMotion)
       interruptImageMotion(s);
@@ -2520,9 +2525,7 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
       jump: () => {
         fade.jumped = true;
         if (session !== s) return;
-        syncingCarousel = true;
-        s.carousel.goTo(target, "instant");
-        syncingCarousel = false;
+        quietly(() => s.carousel.goTo(target, "instant"));
         trimSlides(s);
       },
     };
@@ -2573,17 +2576,22 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
         : gap) > 1;
     const from = state.index;
     const paged = far || (s.stands !== undefined && target !== from);
-    syncingCarousel = true;
-    if (paged) s.leaving = from;
-    activeChanged(s, target);
-    if (paged) {
-      slideTo(s, from, target, direction ? direction > 0 : target > from);
-      s.leaving = undefined;
-      trimSlides(s);
-    } else if (direction && looping() && s.carousel.getState().isLooping)
-      s.carousel[direction > 0 ? "next" : "prev"]();
-    else s.carousel.goTo(target, "smooth");
-    syncingCarousel = false;
+    quietly(() => {
+      if (paged) s.leaving = from;
+      activeChanged(s, target);
+      // A change listener that paged on owns the strip now.
+      if (session !== s || state.index !== target) {
+        s.leaving = undefined;
+        return;
+      }
+      if (paged) {
+        slideTo(s, from, target, direction ? direction > 0 : target > from);
+        s.leaving = undefined;
+        trimSlides(s);
+      } else if (direction && looping() && s.carousel.getState().isLooping)
+        s.carousel[direction > 0 ? "next" : "prev"]();
+      else s.carousel.goTo(target, "smooth");
+    });
   }
 
   function step(direction: 1 | -1) {
@@ -4066,9 +4074,7 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
       () => {
         if (!s.stands) return;
         clearStands(s);
-        syncingCarousel = true;
-        s.carousel.goTo(state.index, "instant");
-        syncingCarousel = false;
+        quietly(() => s.carousel.goTo(state.index, "instant"));
       },
       { signal: abort.signal, capture: true },
     );

@@ -234,6 +234,41 @@ test("a viewer destroyed under another one leaves no history entry behind", asyn
   ).not.toContain("reuseLightbox");
 });
 
+test("a change listener that pages again sees each photo once", async ({
+  page,
+}) => {
+  await open(page, 6, 0, { history: false });
+  await page.waitForTimeout(500);
+  const seen = await page.evaluate(async () => {
+    const { lightbox } = window as Window & {
+      lightbox: {
+        on(type: string, listener: (event: { index: number }) => void): void;
+        goTo(index: number): void;
+      };
+    };
+    const seen: number[] = [];
+    lightbox.on("change", (event) => {
+      seen.push(event.index);
+      if (event.index === 1) lightbox.goTo(4);
+    });
+    lightbox.next();
+    await new Promise((resolve) => setTimeout(resolve, 1200));
+    const viewport = document.querySelector(
+      ".re-lightbox-viewport",
+    ) as HTMLElement;
+    const slide =
+      document.querySelectorAll<HTMLElement>(".re-lightbox-slide")[
+        lightbox.getState().index
+      ];
+    return {
+      seen,
+      index: lightbox.getState().index,
+      offset: Math.round(viewport.scrollLeft - slide.offsetLeft),
+    };
+  });
+  expect(seen).toEqual({ seen: [1, 4], index: 4, offset: 0 });
+});
+
 test("with two photos in a loop, previous moves the strip backward", async ({
   page,
 }) => {
