@@ -19,3 +19,5 @@ A lightbox without `container` opens in the document of the photo's tile, so a g
 The zoom and the slide fade read `--re-lightbox-zoom-duration` and `--re-lightbox-fade-duration` (220ms and 240ms in theme.css); `0ms` makes them instant.
 
 Download saves a file under the name its `Content-Disposition` header gives when the page can read that header, and otherwise under the decoded last part of its path.
+
+`useLightboxState` renders the lightbox's state at creation on the server and while hydrating, so a Suspense boundary that hydrates after the lightbox opened no longer fails hydration.

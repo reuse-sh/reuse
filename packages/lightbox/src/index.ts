@@ -50,6 +50,8 @@ function carouselInternalsOf(carousel: Carousel) {
 const lightboxInternals = Symbol.for("@reuse-sh/lightbox internals");
 
 type LightboxInternals = {
+  /** The state at creation, which a server render shows. */
+  initial: LightboxState<never>;
   shows(type: string): boolean;
   destroyed(): boolean;
   /** Runs open() with options that fill what the lightbox's own options leave unset, until that viewer closes. */
@@ -860,6 +862,7 @@ export function createLightbox<Item extends LightboxItem = LightboxItem>(
   let forcing = false;
 
   let notifiedState = state;
+  const initial = state;
 
   // A gallery's markup options for the next open, set only while bindLightboxGallery opens.
   let galleryOptions: Partial<LightboxOptions<Item>> | undefined;
@@ -4854,6 +4857,7 @@ export function createLightbox<Item extends LightboxItem = LightboxItem>(
     },
   };
   const reach: LightboxInternals = {
+    initial: initial as LightboxState<never>,
     shows: (type) =>
       Boolean(current.content?.some((module) => module.type === type)),
     destroyed: () => destroyed,

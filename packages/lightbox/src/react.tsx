@@ -9,6 +9,7 @@ import {
   type LightboxState,
 } from "./index.js";
 
+const lightboxInternals = Symbol.for("@reuse-sh/lightbox internals");
 const destroyed = new WeakSet<object>();
 
 /**
@@ -50,11 +51,18 @@ export function useLightbox<Item extends LightboxItem = LightboxItem>(
   return lightbox;
 }
 
+type Selection<Item extends LightboxItem, Selected> = {
+  state: LightboxState<Item>;
+  selector: (state: LightboxState<Item>) => Selected;
+  value: Selected;
+} | null;
+
 /**
  * The part of a lightbox's state that selector picks, read with useSyncExternalStore. The
  * component re-renders when the selected value changes by Object.is, so a selector that builds
  * an object re-renders on each state change but never loops. The server and the hydrating render
- * read the lightbox's initial state.
+ * read the lightbox's state at creation, also when the lightbox opened before a boundary
+ * hydrates.
  */
 export function useLightboxState<Item extends LightboxItem, Selected>(
   lightbox: Lightbox<Item>,
@@ -62,13 +70,12 @@ export function useLightboxState<Item extends LightboxItem, Selected>(
 ): Selected {
   // A cached value depends only on its state and selector, so an entry a discarded render
   // wrote is still right for both.
-  const cache = useRef<{
-    state: LightboxState<Item>;
-    selector: (state: LightboxState<Item>) => Selected;
-    value: Selected;
-  } | null>(null);
-  const read = () => {
-    const state = lightbox.getState();
+  const client = useRef<Selection<Item, Selected>>(null);
+  const server = useRef<Selection<Item, Selected>>(null);
+  const pick = (
+    cache: { current: Selection<Item, Selected> },
+    state: LightboxState<Item>,
+  ) => {
     const last = cache.current;
     if (last && last.state === state && last.selector === selector)
       return last.value;
@@ -76,5 +83,15 @@ export function useLightboxState<Item extends LightboxItem, Selected>(
     cache.current = { state, selector, value };
     return value;
   };
-  return useSyncExternalStore(lightbox.subscribe, read, read);
+  const initial =
+    (
+      lightbox as {
+        [lightboxInternals]?: { initial: LightboxState<Item> };
+      }
+    )[lightboxInternals]?.initial ?? lightbox.getState();
+  return useSyncExternalStore(
+    lightbox.subscribe,
+    () => pick(client, lightbox.getState()),
+    () => pick(server, initial),
+  );
 }

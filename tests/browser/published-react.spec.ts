@@ -201,7 +201,11 @@ export function App() {
   return <><Trigger lightbox={lightbox} /><Index lightbox={lightbox} /><Count lightbox={lightbox} /><Summary lightbox={lightbox} /></>;
 }`;
 
-async function bundleApp(entry: string, platform: "browser" | "node") {
+async function bundleApp(
+  entry: string,
+  platform: "browser" | "node",
+  source = lightboxApp,
+) {
   const input = resolve(`apps/site/lightbox-app-${platform}.tsx`);
   const app = resolve("apps/site/lightbox-app.tsx");
   const bundle = await rolldown({
@@ -220,7 +224,7 @@ async function bundleApp(entry: string, platform: "browser" | "node") {
         },
         load(id: string) {
           if (id === input) return entry;
-          if (id === app) return lightboxApp;
+          if (id === app) return source;
         },
       },
     ],
@@ -233,12 +237,13 @@ async function bundleApp(entry: string, platform: "browser" | "node") {
   return chunk.code as string;
 }
 
-async function serverHtml() {
+async function serverHtml(source = lightboxApp) {
   const code = await bundleApp(
     `import { renderToString } from "react-dom/server";
 import { App } from "./lightbox-app.tsx";
 export const html = renderToString(<App />);`,
     "node",
+    source,
   );
   const file = test.info().outputPath("server.mjs");
   await writeFile(file, code);
@@ -337,4 +342,53 @@ createRoot(document.getElementById("app")).render(<StrictMode><App /></StrictMod
   expect(after.commits.index - before.commits.index).toBe(5);
   expect(after.handles).toEqual(before.handles);
   expect(errors).toEqual([]);
+});
+
+// A boundary whose code arrives after the lightbox opened hydrates against the server's HTML.
+const lateApp = `import { useLightbox, useLightboxState } from "@reuse-sh/lightbox/react";
+import { Suspense } from "react";
+const items = [{ src: "data:image/gif;base64,R0lGODlhAQABAAAAACw=", width: 1200, height: 800, alt: "Photo" }];
+export function Summary({ lightbox }) {
+  const open = useLightboxState(lightbox, (state) => state.isOpen);
+  return <output data-late="">{open ? "open" : "closed"}</output>;
+}
+export function App({ Late = Summary }) {
+  const lightbox = useLightbox({ history: false });
+  return <><button type="button" onClick={() => lightbox.open(items, 0)}>Open</button><Suspense fallback={null}><Late lightbox={lightbox} /></Suspense></>;
+}`;
+
+test("useLightboxState hydrates a late Suspense boundary with the server's state after open()", async ({
+  page,
+}) => {
+  const html = await serverHtml(lateApp);
+  expect(html).toContain('<output data-late="">closed</output>');
+  const client = await bundleApp(
+    `import { lazy } from "react";
+import { hydrateRoot } from "react-dom/client";
+import { App, Summary } from "./lightbox-app.tsx";
+window.__errors = [];
+const Late = lazy(() => new Promise((resolve) => { window.__release = () => resolve({ default: Summary }); }));
+hydrateRoot(document.getElementById("app"), <App Late={Late} />, {
+  onRecoverableError: (error) => window.__errors.push(String(error)),
+});`,
+    "browser",
+    lateApp,
+  );
+  await mount(page, `<div id="app">${html}</div>`, [
+    "lightbox/base.css",
+    "lightbox/theme.css",
+  ]);
+  await page.addScriptTag({ type: "module", content: client });
+  await page.waitForFunction(() => "__release" in window);
+  await page.getByRole("button", { name: "Open" }).click();
+  await expect(page.locator("dialog")).toHaveCount(1);
+  await page.evaluate(() =>
+    (window as unknown as { __release: () => void }).__release(),
+  );
+  await expect(page.locator("[data-late]")).toHaveText("open");
+  expect(
+    await page.evaluate(
+      () => (window as unknown as { __errors: string[] }).__errors,
+    ),
+  ).toEqual([]);
 });
