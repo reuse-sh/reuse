@@ -4,7 +4,6 @@ import { FrameworkOnly } from "../../lib/framework-context";
 import { photos } from "../../lib/photos";
 import { CodeBlock } from "../shell/code-block";
 import { Kbd } from "../ui/typography";
-import { previewIcons } from "./lightbox-icons";
 import { LightboxLaunch } from "./lightbox-launch";
 import {
   lightboxCode,
@@ -34,7 +33,6 @@ export function LightboxStylePage({ style }: { style: string }) {
           }))}
           module={lightboxPreviewModule(options)}
           css={lightboxStyleCss(options)}
-          icons={previewIcons}
         />
         <Keys>
           Click an image, then <Kbd>←</Kbd> <Kbd>→</Kbd> to page and{" "}

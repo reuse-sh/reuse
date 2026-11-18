@@ -7,6 +7,7 @@ import {
   type LightboxOptions,
 } from "@reuse-sh/lightbox";
 import { useEffect, useRef } from "react";
+import { iconNode, lightboxIcons } from "../icons";
 import { Card, CardContent } from "../ui/card";
 
 export type LaunchItem = LightboxItem & {
@@ -18,9 +19,15 @@ export type LaunchItem = LightboxItem & {
 
 type Make = (
   create: (options?: LightboxOptions) => Lightbox,
-  icons: Record<string, () => Element | null>,
+  icons: typeof setupIcons,
   items: () => LaunchItem[],
 ) => Lightbox;
+
+const setupIcons = {
+  ...lightboxIcons,
+  info: () => iconNode("info", 18),
+  heart: () => iconNode("heart", 18),
+};
 
 /**
  * A gallery that opens a real lightbox over the whole page. `module` is the same setup
@@ -31,13 +38,11 @@ export function LightboxLaunch({
   module,
   css,
   scope,
-  icons = {},
 }: {
   items: readonly LaunchItem[];
   module: string;
   css: string;
   scope?: string;
-  icons?: Record<string, string>;
 }) {
   const root = useRef<HTMLDivElement>(null);
   const viewer = useRef<Promise<Lightbox> | null>(null);
@@ -62,20 +67,11 @@ export function LightboxLaunch({
         );
         const create = (options?: LightboxOptions) =>
           createLightbox({
+            icons: lightboxIcons,
             ...options,
             className: [options?.className, scope].filter(Boolean).join(" "),
           });
-        const elements = Object.fromEntries(
-          Object.entries(icons).map(([name, svg]) => [
-            name,
-            () => {
-              const template = document.createElement("template");
-              template.innerHTML = svg;
-              return template.content.firstElementChild;
-            },
-          ]),
-        );
-        return make(create, elements, () => [...items]);
+        return make(create, setupIcons, () => [...items]);
       } finally {
         URL.revokeObjectURL(url);
       }

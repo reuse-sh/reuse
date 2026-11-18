@@ -12,8 +12,10 @@ import Cursor01Icon from "@hugeicons/core-free-icons/Cursor01Icon";
 import CursorInWindowIcon from "@hugeicons/core-free-icons/CursorInWindowIcon";
 import DashboardSquare02Icon from "@hugeicons/core-free-icons/DashboardSquare02Icon";
 import Delete02Icon from "@hugeicons/core-free-icons/Delete02Icon";
+import Download04Icon from "@hugeicons/core-free-icons/Download04Icon";
 import Edit02Icon from "@hugeicons/core-free-icons/Edit02Icon";
 import FavouriteIcon from "@hugeicons/core-free-icons/FavouriteIcon";
+import FullScreenIcon from "@hugeicons/core-free-icons/FullScreenIcon";
 import GithubIcon from "@hugeicons/core-free-icons/GithubIcon";
 import Image02Icon from "@hugeicons/core-free-icons/Image02Icon";
 import InformationCircleIcon from "@hugeicons/core-free-icons/InformationCircleIcon";
@@ -64,6 +66,7 @@ export const iconData = {
   js: JavaScriptIcon,
   react: ReactIcon,
   heart: FavouriteIcon,
+  info: InformationCircleIcon,
   share: Share08Icon,
   trash: Delete02Icon,
   cursor: Cursor01Icon,
@@ -130,4 +133,6 @@ export const lightboxIcons = {
   previous: () => nativeArrow("left"),
   next: () => nativeArrow("right"),
   zoom: () => nativeIcon(ZoomInAreaIcon),
+  fullscreen: () => nativeIcon(FullScreenIcon),
+  download: () => nativeIcon(Download04Icon),
 };

@@ -89,7 +89,7 @@ const lightbox = createLightbox({
     const heart = document.createElement("span");
     heart.className = "feed-heart";
     heart.setAttribute("aria-hidden", "true");
-    heart.textContent = "♥";
+    heart.append(icons.heart());
     container.append(heart);
     let last = -Infinity;
     const onTap = (event) => {
@@ -117,7 +117,7 @@ const lightbox = createLightbox({
       const like = document.createElement("button");
       like.type = "button";
       like.className = "re-lightbox-button feed-like";
-      like.textContent = "♥";
+      like.append(icons.heart());
       const dots = document.createElement("div");
       dots.className = "feed-dots";
       dots.setAttribute("aria-hidden", "true");
@@ -154,11 +154,16 @@ const lightbox = createLightbox({
   display: grid;
   place-items: center;
   color: #fff;
-  font-size: 96px;
   opacity: 0;
   pointer-events: none;
-  text-shadow: 0 4px 24px rgb(0 0 0 / 30%);
+  filter: drop-shadow(0 4px 24px rgb(0 0 0 / 30%));
 }
+.feed-heart svg {
+  width: 96px;
+  height: 96px;
+}
+.feed-heart svg *,
+.feed-like[aria-pressed="true"] svg * { fill: currentColor; }
 .feed-heart-on {
   animation: feed-heart 900ms cubic-bezier(0.2, 0.9, 0.3, 1.2);
 }
@@ -210,7 +215,7 @@ const lightbox = createLightbox({
       info.className = "re-lightbox-button";
       info.setAttribute("aria-label", "Info");
       info.setAttribute("aria-pressed", "false");
-      info.textContent = "i";
+      info.append(icons.info());
       info.addEventListener("click", () => {
         const shown = info.closest(".re-lightbox").toggleAttribute("data-info");
         info.setAttribute("aria-pressed", String(shown));
@@ -224,8 +229,7 @@ const lightbox = createLightbox({
   --re-lightbox-aside-width: 0px;
   --re-lightbox-aside-height: 0px;
 }
-.cloud-library:not([data-info]) .re-lightbox-aside { display: none; }
-.cloud-library [aria-label="Info"] { font-size: 18px; font-style: italic; font-family: Georgia, serif; }`,
+.cloud-library:not([data-info]) .re-lightbox-aside { display: none; }`,
   },
   minimal: {
     name: "Minimal",
@@ -316,15 +320,16 @@ const sample = (preset?: Preset) => {
 export function lightboxThemeCode(id: string) {
   const preset = lightboxPresets[id];
   const theme = preset?.theme ?? id;
+  const setup = preset?.setup ?? defaultSetup;
   const imports = `import { createLightbox } from "@reuse-sh/lightbox";
 import "@reuse-sh/lightbox/base.css";
 import "@reuse-sh/lightbox/theme.css";
-import "@reuse-sh/lightbox/themes/${theme}.css";`;
+import "@reuse-sh/lightbox/themes/${theme}.css";${setup.includes("icons.") ? '\nimport { icons } from "./icons.js";' : ""}`;
   return {
     js: `${imports}
 
 ${sample(preset)}
-${preset?.setup ?? defaultSetup}
+${setup}
 
 lightbox.open(items, 0);`,
     css: preset?.css ?? (theme === "page" ? pageColors : undefined),

@@ -367,6 +367,72 @@ test("every control style shows an icon in each lightbox button", async ({
   }
 });
 
+test("every lightbox on the site uses the site's icons and font", async ({
+  page,
+}) => {
+  const closeIcons = new Set<string>();
+  const check = async (where: string, open: () => Promise<void>) => {
+    await open();
+    await expect(
+      page.locator("dialog[open] .re-lightbox-image").first(),
+      where,
+    ).toBeVisible();
+    const viewer = await page.locator("dialog[open]").evaluate((dialog) => ({
+      textOnly: [...dialog.querySelectorAll(".re-lightbox-button")]
+        .filter(
+          (button) => button.checkVisibility() && !button.querySelector("svg"),
+        )
+        .map(
+          (button) =>
+            `${button.getAttribute("aria-label")}: ${button.textContent}`,
+        ),
+      close: dialog.querySelector(".re-lightbox-close svg")?.innerHTML ?? "",
+      hearts: dialog.textContent?.includes("\u2665") ?? false,
+      font:
+        getComputedStyle(dialog.querySelector(".re-lightbox") ?? dialog)
+          .fontFamily === getComputedStyle(document.body).fontFamily,
+    }));
+    expect(viewer.textOnly, where).toEqual([]);
+    expect(viewer.hearts, where).toBe(false);
+    expect(viewer.font, where).toBe(true);
+    closeIcons.add(viewer.close);
+    await page.keyboard.press("Escape");
+    await expect(page.locator("dialog[open]")).toHaveCount(0);
+  };
+  const tile = (card: number) =>
+    page
+      .locator('main [data-slot="card"]:has(a[href^="/images/marble"])')
+      .nth(card)
+      .locator('a[href^="/images/marble"]')
+      .first();
+  await page.goto("/lightbox/themes");
+  for (const theme of ["Dark", "Light", "Page", "Photos"]) {
+    await page.getByRole("tab", { name: theme, exact: true }).click();
+    await check(`theme ${theme}`, () => tile(0).click());
+  }
+  for (const preset of [1, 2, 3, 4])
+    await check(`preset ${preset}`, () => tile(preset).click());
+  for (const path of [
+    "/",
+    "/lightbox/examples/carousel",
+    "/lightbox/examples/album",
+    "/justified-gallery/examples/lightbox",
+    "/carousel",
+    "/carousel/examples/editorial",
+  ]) {
+    await page.goto(path);
+    const area = page.locator(path === "/" ? "main" : preview);
+    await check(path, () =>
+      area
+        .locator("button:has(img), a:has(img)")
+        .filter({ visible: true })
+        .first()
+        .click(),
+    );
+  }
+  expect([...closeIcons]).toHaveLength(1);
+});
+
 test("the panel style shows the photo's position once", async ({ page }) => {
   for (const width of [390, 1280]) {
     await page.setViewportSize({ width, height: 844 });
