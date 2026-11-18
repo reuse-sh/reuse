@@ -1880,7 +1880,8 @@ export function createCarousel(
     if (pointer?.moved) recenterLoop();
     scrolling = true;
     unsettled = true;
-    lastScroll = window.performance.now();
+    if (Math.abs(position() - written) > 0.5)
+      lastScroll = window.performance.now();
     trackScroll();
     render();
     publish(pendingIndex ?? nearestIndex());

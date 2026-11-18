@@ -376,6 +376,39 @@ test("quick thumbnail clicks while the strip still moves each pick their slide",
   ).toBe(true);
 });
 
+test("a click right after an instant goTo reaches the slide, since the strip is not moving", async ({
+  page,
+}) => {
+  await setup(page);
+  await page.mouse.move(300, 100);
+  const jumped = await page.evaluate(
+    () =>
+      new Promise<number>((resolve) => {
+        const strip = document.getElementById("strip") as HTMLElement;
+        strip.addEventListener("click", () =>
+          Object.assign(window, { clicked: true }),
+        );
+        (
+          window as unknown as {
+            carousel: { goTo(index: number, behavior: string): void };
+          }
+        ).carousel.goTo(3, "instant");
+        strip.addEventListener("scroll", () => resolve(performance.now()), {
+          once: true,
+        });
+      }),
+  );
+  await page.mouse.click(300, 100);
+  const elapsed = await page.evaluate(
+    (time) => performance.now() - time,
+    jumped,
+  );
+  expect(elapsed).toBeLessThan(100);
+  expect(
+    await page.evaluate(() => (window as { clicked?: boolean }).clicked),
+  ).toBe(true);
+});
+
 test("a strip whose slides take their width from the package stylesheet overflows from the start", async ({
   page,
 }) => {
