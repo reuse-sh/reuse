@@ -2000,6 +2000,8 @@ export function createLightbox<Item extends LightboxItem = LightboxItem>(
         if (!alive || session !== s) return;
         if (entry.natural !== undefined && width <= entry.natural) return;
         entry.natural = width;
+        const before =
+          index === state.index && !s.flying ? fit(index, s) : undefined;
         const shape =
           size ??
           (source.naturalWidth && source.naturalHeight
@@ -2018,6 +2020,22 @@ export function createLightbox<Item extends LightboxItem = LightboxItem>(
         display(source.currentSrc || source.src);
         frame.removeAttribute("data-loading");
         layout(s);
+        const after = before && fit(index, s);
+        if (
+          before &&
+          after &&
+          (Math.abs(after.width - before.width) > 0.5 ||
+            Math.abs(after.height - before.height) > 0.5)
+        )
+          void animate(
+            s,
+            frame,
+            [
+              { width: `${before.width}px`, height: `${before.height}px` },
+              { width: `${after.width}px`, height: `${after.height}px` },
+            ],
+            zoomDuration(s),
+          );
       };
       const failed = () => {
         frame.removeAttribute("data-loading");

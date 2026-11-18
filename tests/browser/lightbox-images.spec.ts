@@ -1,5 +1,5 @@
 import { expect, type Page, test } from "@playwright/test";
-import { mount } from "./harness";
+import { framesUntilIdle, mount } from "./harness";
 
 type Lightbox = {
   open(items: unknown[], index?: number): void;
@@ -296,6 +296,11 @@ test("without a size the frame fits the screen at the tile's proportions, then t
   const before = await frame.boundingBox();
   release();
   await expect(frame).not.toHaveAttribute("data-loading");
+  await expect
+    .poll(() =>
+      page.evaluate(() => (window as Window).lightbox.getState().isAnimating),
+    )
+    .toBe(false);
   const after = await frame.boundingBox();
   if (!before || !after) throw new Error("Missing frame");
   expect(Math.round(before.width)).toBe(936);
@@ -306,6 +311,31 @@ test("without a size the frame fits the screen at the tile's proportions, then t
     before.y + before.height / 2,
     0,
   );
+});
+
+test("a file without a size that is smaller than the screen shrinks the frame to it on landing instead of snapping", async ({
+  page,
+}) => {
+  await mount(page, "", ["lightbox/base.css", "lightbox/theme.css"]);
+  await serveImages(page, () => ({}));
+  await create(page);
+  await open(page, [
+    {
+      src: "/img/small-400x300.jpg",
+      previewSrc:
+        "data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20width='40'%20height='30'/%3E",
+    },
+  ]);
+  const widths = await framesUntilIdle(
+    page,
+    "document.querySelector('.re-lightbox-frame')?.offsetWidth ?? 0",
+    600,
+  );
+  expect(widths[0]).toBeGreaterThan(800);
+  expect(widths.at(-1)).toBe(400);
+  expect(
+    widths.filter((width) => width > 410 && width < widths[0] - 10).length,
+  ).toBeGreaterThan(2);
 });
 
 test("bindLightboxGallery opens the file a link points to", async ({
