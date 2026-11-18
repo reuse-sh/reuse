@@ -1110,6 +1110,7 @@ export function createCarousel(
     releaseSpeed?: number,
     reference = pendingPosition ?? position(),
   ) {
+    if (pointer?.moved && !destroyed && enabled) endDrag(false);
     if (
       destroyed ||
       !enabled ||

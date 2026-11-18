@@ -461,3 +461,26 @@ test("slides keep their size during a mouse drag unless the page sets a press sc
   );
   expect(await pressed()).toBe("0.96");
 });
+
+test("an arrow key during a held mouse drag pages on and the release keeps the page", async ({
+  page,
+}) => {
+  await setup(page);
+  await page.focus("#strip");
+  await page.mouse.move(400, 100);
+  await page.mouse.down();
+  await page.mouse.move(340, 100, { steps: 8 });
+  await page.keyboard.press("ArrowRight");
+  await page.mouse.move(380, 100, { steps: 4 });
+  await page.mouse.up();
+  const values = await framesUntilIdle(page, scrollLeft);
+  expect(values.at(-1)).toBe(300);
+  expect(
+    await page.evaluate(
+      () =>
+        (
+          window as unknown as { carousel: { getState(): { index: number } } }
+        ).carousel.getState().index,
+    ),
+  ).toBe(1);
+});
