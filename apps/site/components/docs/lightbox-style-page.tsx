@@ -1,10 +1,17 @@
 import { findLibrary } from "@reuse-sh/catalog";
 import { notFound } from "next/navigation";
 import { FrameworkOnly } from "../../lib/framework-context";
+import { photos } from "../../lib/photos";
 import { CodeBlock } from "../shell/code-block";
-import { Card, CardContent } from "../ui/card";
 import { Kbd } from "../ui/typography";
-import { lightboxCode, lightboxStyles } from "./lightbox-styles";
+import { previewIcons } from "./lightbox-icons";
+import { LightboxLaunch } from "./lightbox-launch";
+import {
+  lightboxCode,
+  lightboxPreviewModule,
+  lightboxStyleCss,
+  lightboxStyles,
+} from "./lightbox-styles";
 import { C, CodePair, Install, Keys, Section, Text } from "./parts";
 
 export function LightboxStylePage({ style }: { style: string }) {
@@ -15,19 +22,23 @@ export function LightboxStylePage({ style }: { style: string }) {
   return (
     <>
       <div className="space-y-4">
-        <Card>
-          <CardContent padding="none" className="overflow-hidden rounded-panel">
-            <iframe
-              className="block aspect-portrait w-full border-0 md:aspect-lightbox"
-              title={`Lightbox preview, ${style} style`}
-              src={`/lightbox/controls/${style}/frame`}
-              loading="lazy"
-            />
-          </CardContent>
-        </Card>
+        <LightboxLaunch
+          items={photos.map((photo) => ({
+            src: photo.src,
+            previewSrc: photo.src,
+            thumbnailSrc: photo.src,
+            alt: photo.alt,
+            caption: photo.caption,
+            width: photo.width,
+            height: photo.height,
+          }))}
+          module={lightboxPreviewModule(options)}
+          css={lightboxStyleCss(options)}
+          icons={previewIcons}
+        />
         <Keys>
-          A real lightbox, open inside the frame. Use <Kbd>←</Kbd> <Kbd>→</Kbd>{" "}
-          to page and <Kbd>Esc</Kbd> to close it.
+          Click an image, then <Kbd>←</Kbd> <Kbd>→</Kbd> to page and{" "}
+          <Kbd>Esc</Kbd> to close.
         </Keys>
       </div>
       <section className="space-y-10" aria-label="Usage">

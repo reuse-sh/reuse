@@ -90,3 +90,22 @@ for (const viewport of viewports) {
     });
   });
 }
+
+test("the classic preview's corner counter reads 1 / 8 on one line", async ({
+  page,
+}) => {
+  await page.goto("/lightbox/controls/classic");
+  await page.locator('main a[href^="/images/marble"]').first().click();
+  const counter = page.locator(".re-lightbox-counter");
+  await expect(counter).toHaveText("1 / 8");
+  const parts = await counter.evaluate((element) =>
+    [...element.children].map((child) =>
+      Math.round(child.getBoundingClientRect().top),
+    ),
+  );
+  expect(parts).toHaveLength(3);
+  expect(new Set(parts).size).toBe(1);
+  const box = await counter.boundingBox();
+  expect(box?.height).toBe(40);
+  expect(box?.width).toBeGreaterThan(56);
+});

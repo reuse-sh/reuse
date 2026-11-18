@@ -2,13 +2,20 @@
 
 import { type ReactNode, useState } from "react";
 import { Tabs, tabPanelProps } from "../shell/tabs";
-import { Card, CardContent } from "../ui/card";
+import { type LaunchItem, LightboxLaunch } from "./lightbox-launch";
+
+export interface ThemePreview {
+  scope: string;
+  css: string;
+  items: LaunchItem[];
+  module: string;
+}
 
 export function LightboxThemeSwitcher({
   themes,
   panels,
 }: {
-  themes: readonly { id: string; name: string }[];
+  themes: readonly { id: string; name: string; preview: ThemePreview }[];
   panels: readonly ReactNode[];
 }) {
   const [selected, setSelected] = useState(themes[0].id);
@@ -21,16 +28,9 @@ export function LightboxThemeSwitcher({
         selected={selected}
         onSelect={setSelected}
       />
-      <Card>
-        <CardContent padding="none" className="overflow-hidden rounded-panel">
-          <iframe
-            key={selected}
-            className="block aspect-portrait w-full border-0 md:aspect-lightbox"
-            title={`Lightbox preview, ${selected} theme`}
-            src={`/lightbox/themes/${selected}/frame`}
-          />
-        </CardContent>
-      </Card>
+      {themes.map(({ id, preview }) =>
+        id === selected ? <LightboxLaunch key={id} {...preview} /> : null,
+      )}
       {themes.map(({ id }, index) => (
         <div key={id} {...tabPanelProps("lightbox-theme", id, selected)}>
           {panels[index]}

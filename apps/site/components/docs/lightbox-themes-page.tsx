@@ -1,12 +1,13 @@
 import { findLibrary } from "@reuse-sh/catalog";
 import { notFound } from "next/navigation";
 import { CodeBlock } from "../shell/code-block";
-import { Card, CardContent } from "../ui/card";
 import { Kbd } from "../ui/typography";
+import { LightboxLaunch } from "./lightbox-launch";
 import { LightboxThemeSwitcher } from "./lightbox-theme-switcher";
 import {
   lightboxPresets,
   lightboxThemeCode,
+  lightboxThemePreview,
   lightboxThemes,
 } from "./lightbox-themes";
 import { C, Install, Keys, Section, Text } from "./parts";
@@ -21,10 +22,10 @@ const names: Record<string, string> = {
 export function LightboxThemesPage() {
   const library = findLibrary("lightbox");
   if (!library) notFound();
-  const themes = Object.keys(lightboxThemes).map((id) => ({
-    id,
-    name: names[id] ?? id,
-  }));
+  const themes = Object.keys(lightboxThemes).flatMap((id) => {
+    const preview = lightboxThemePreview(id);
+    return preview ? [{ id, name: names[id] ?? id, preview }] : [];
+  });
   return (
     <>
       <LightboxThemeSwitcher
@@ -53,8 +54,8 @@ export function LightboxThemesPage() {
         })}
       />
       <Keys>
-        A real lightbox, open inside the frame. Use <Kbd>←</Kbd> <Kbd>→</Kbd> to
-        page and <Kbd>Esc</Kbd> to close it.
+        Click an image, then <Kbd>←</Kbd> <Kbd>→</Kbd> to page and{" "}
+        <Kbd>Esc</Kbd> to close.
       </Keys>
       <Section title="Install">
         <Install library={library} />
@@ -67,22 +68,11 @@ export function LightboxThemesPage() {
       </Section>
       {Object.entries(lightboxPresets).map(([id, preset]) => {
         const code = lightboxThemeCode(id);
+        const preview = lightboxThemePreview(id);
         return (
           <Section key={id} title={preset.name}>
             <Text>{preset.lead}</Text>
-            <Card>
-              <CardContent
-                padding="none"
-                className="overflow-hidden rounded-panel"
-              >
-                <iframe
-                  className="block aspect-portrait w-full border-0 md:aspect-lightbox"
-                  title={`Lightbox preview, ${preset.name}`}
-                  src={`/lightbox/themes/${id}/frame`}
-                  loading="lazy"
-                />
-              </CardContent>
-            </Card>
+            {preview ? <LightboxLaunch {...preview} /> : null}
             <CodeBlock
               tabs={{ code: code.js, lang: "ts" }}
               caption={preset.name}

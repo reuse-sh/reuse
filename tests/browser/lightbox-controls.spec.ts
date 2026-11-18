@@ -509,6 +509,41 @@ test("the side column keeps the ring at its middle, a wheel over it opens the ph
   expect((await ringBox(page))?.top).toBeCloseTo(before.top, 0);
 });
 
+// rgb() reports 0-255 and color(srgb) reports 0-1, so both come back as 0-1.
+const channels = (color: string) => {
+  const values = (color.match(/[\d.]+/g) ?? []).slice(0, 3).map(Number);
+  return color.startsWith("rgb") ? values.map((value) => value / 255) : values;
+};
+
+test("a button's hover follows a theme's own control color, and the default stays dark", {
+  tag: "@desktop",
+}, async ({ page }) => {
+  await open(page, { className: "pale" }, { count: 2 });
+  await page.addStyleTag({
+    content:
+      ".re-lightbox.pale{--re-lightbox-control:#fff;--re-lightbox-foreground:#111}",
+  });
+  const close = page.getByRole("button", { name: "Close gallery" });
+  const hovered = async () => {
+    await page.mouse.move(0, 0);
+    await close.hover();
+    await page.waitForTimeout(100);
+    return channels(
+      await close.evaluate(
+        (element) => getComputedStyle(element).backgroundColor,
+      ),
+    );
+  };
+  for (const channel of await hovered()) {
+    expect(channel).toBeGreaterThan(0.8);
+    expect(channel).toBeLessThan(0.95);
+  }
+  await page.evaluate(() =>
+    document.querySelector(".re-lightbox")?.classList.remove("pale"),
+  );
+  for (const channel of await hovered()) expect(channel).toBeLessThan(0.3);
+});
+
 test("the strip is one tab stop: Tab reaches the active thumbnail, arrows move focus, Enter opens", async ({
   page,
 }) => {
