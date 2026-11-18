@@ -574,4 +574,20 @@ test.describe("lightbox paging during a held mouse drag", {
         .poll(() => settled(page))
         .toEqual({ index: target, page: target });
     });
+
+  test("End while the mouse is pressed on the photo but has not moved is kept by the drag that follows", async ({
+    page,
+  }) => {
+    await open(page);
+    await page.waitForTimeout(500);
+    const from = await photoCenter(page);
+    await page.mouse.move(from.x, from.y);
+    await page.mouse.down();
+    await page.keyboard.press("End");
+    await expect.poll(() => settled(page)).toEqual({ index: 5, page: 5 });
+    await page.mouse.move(from.x - 20, from.y, { steps: 4 });
+    expect((await settled(page)).page).toBeGreaterThanOrEqual(5);
+    await page.mouse.up();
+    await expect.poll(() => settled(page)).toEqual({ index: 5, page: 5 });
+  });
 });

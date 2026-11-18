@@ -1813,8 +1813,10 @@ export function createCarousel(
     const delta = input.clientX - pointer.x;
     if (!pointer.moved && Math.abs(delta) < 5) return;
     if (!pointer.moved) {
-      if (taken) {
-        interruptTake();
+      // A driver or a move from code that started during the press moved the strip, so the drag starts from there.
+      if (taken || pendingIndex !== undefined) {
+        if (taken) interruptTake();
+        else interrupt(false);
         if (!pointer) return;
         pointer.position = position() + (rtl ? -delta : delta);
       }

@@ -555,3 +555,28 @@ test("next() during a held mouse drag across the seam of a looped strip moves on
   ).toEqual([]);
   expect(values.at(-1)).toBe(0);
 });
+
+test("an arrow key while the mouse is pressed but has not moved is kept by the drag that follows", {
+  tag: "@desktop",
+}, async ({ page }) => {
+  await setup(page);
+  await page.focus("#strip");
+  await page.mouse.move(400, 100);
+  await page.mouse.down();
+  await page.keyboard.press("ArrowRight");
+  expect((await framesUntilIdle(page, scrollLeft)).at(-1)).toBe(300);
+  await page.mouse.move(380, 100, { steps: 4 });
+  expect(await page.evaluate(scrollLeft)).toBeGreaterThanOrEqual(300);
+  // Holding still lets the release settle instead of flicking on.
+  await page.waitForTimeout(100);
+  await page.mouse.up();
+  expect((await framesUntilIdle(page, scrollLeft)).at(-1)).toBe(300);
+  expect(
+    await page.evaluate(
+      () =>
+        (
+          window as unknown as { carousel: { getState(): { index: number } } }
+        ).carousel.getState().index,
+    ),
+  ).toBe(1);
+});
