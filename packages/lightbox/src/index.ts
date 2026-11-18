@@ -2057,9 +2057,10 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
       const href = largestSource(item.srcset, item.src ?? "");
       let file = false;
       try {
-        file = /^(https?|blob):$/.test(
-          new URL(href, s.dialog.ownerDocument.baseURI).protocol,
-        );
+        const url = new URL(href, s.dialog.ownerDocument.baseURI);
+        file =
+          /^(https?|blob):$/.test(url.protocol) ||
+          /^data:image\/(png|jpeg|gif|webp|avif)[;,]/i.test(url.href);
       } catch {}
       s.download.hidden = Boolean(item.type) || !file;
       if (file) s.download.setAttribute("href", href);
@@ -3652,12 +3653,58 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
       ? button("a", "download", strings.download, "↓", undefined, toolbarEnd)
       : undefined;
     download?.setAttribute("download", "");
-    // Browsers ignore the download attribute across origins and navigate the tab instead.
+    download?.setAttribute("rel", "noopener");
+    // Browsers ignore the download attribute across origins and navigate the tab instead,
+    // and block a popup opened after an await, so the fetch starts before the click.
+    let fetched:
+      | { href: string; blob?: Blob; failed?: boolean; wanted?: boolean }
+      | undefined;
+    const native = () =>
+      !download ||
+      download.origin === doc.location.origin ||
+      download.protocol === "data:";
+    const save = (blob: Blob, pathname: string) => {
+      const link = doc.createElement("a");
+      link.href = URL.createObjectURL(blob);
+      const name = pathname.split("/").pop() ?? "";
+      try {
+        link.download = decodeURIComponent(name);
+      } catch {
+        link.download = name;
+      }
+      link.click();
+      setTimeout(() => URL.revokeObjectURL(link.href), 60_000);
+    };
+    const prefetch = () => {
+      if (!download || native() || fetched?.href === download.href) return;
+      const { href, pathname } = download;
+      const entry: NonNullable<typeof fetched> = { href };
+      fetched = entry;
+      fetch(href)
+        .then((response) => (response.ok ? response.blob() : Promise.reject()))
+        .then(
+          (blob) => {
+            entry.blob = blob;
+            if (entry.wanted) save(blob, pathname);
+            entry.wanted = false;
+          },
+          () => {
+            entry.failed = true;
+            if (entry.wanted) doc.defaultView?.open(href, "_blank", "noopener");
+            entry.wanted = false;
+          },
+        );
+    };
+    download?.addEventListener("pointerdown", prefetch, {
+      signal: abort.signal,
+    });
+    download?.addEventListener("focus", prefetch, { signal: abort.signal });
     download?.addEventListener(
       "click",
       (event) => {
+        download.removeAttribute("target");
         if (
-          download.origin === doc.location.origin ||
+          native() ||
           event.button ||
           event.metaKey ||
           event.ctrlKey ||
@@ -3665,24 +3712,16 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
           event.altKey
         )
           return;
+        prefetch();
+        const entry = fetched;
+        if (!entry) return;
+        if (entry.failed) {
+          download.target = "_blank";
+          return;
+        }
         event.preventDefault();
-        const { href, pathname } = download;
-        fetch(href)
-          .then((response) =>
-            response.ok ? response.blob() : Promise.reject(),
-          )
-          .then(
-            (blob) => {
-              const link = doc.createElement("a");
-              link.href = URL.createObjectURL(blob);
-              link.download = pathname.split("/").pop() ?? "";
-              link.click();
-              abort.signal.addEventListener("abort", () =>
-                URL.revokeObjectURL(link.href),
-              );
-            },
-            () => doc.defaultView?.open(href, "_blank", "noopener"),
-          );
+        if (entry.blob) save(entry.blob, download.pathname);
+        else entry.wanted = true;
       },
       { signal: abort.signal },
     );
