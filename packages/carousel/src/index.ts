@@ -422,6 +422,8 @@ export function createCarousel(
     velocity: number;
     target: number;
     time: number;
+    started: number;
+    takeover: boolean;
     frequency: number;
     fresh: boolean;
   } | null = null;
@@ -905,11 +907,15 @@ export function createCarousel(
 
   function springFrame(now: number) {
     if (!spring) return;
-    // A native scroll can still run when a spring starts; the spring's first write ends it.
+    // Chrome's wheel animation and a touch fling keep scrolling after a spring's first
+    // write, so a spring started during one writes over it until new input arrives.
     if (spring.fresh) {
       spring.value = position() + stretch;
       spring.fresh = false;
-    } else if (Math.abs(position() - written) > 1) {
+    } else if (
+      Math.abs(position() - written) > 1 &&
+      (!spring.takeover || lastInput > spring.started)
+    ) {
       yieldToScroll();
       return;
     }
@@ -954,6 +960,11 @@ export function createCarousel(
       velocity: speed,
       target,
       time: moving?.time ?? window.performance.now(),
+      started: window.performance.now(),
+      takeover:
+        moving?.takeover ??
+        (window.performance.now() - lastScroll < INPUT_WINDOW &&
+          Math.abs(position() - written) > 1),
       fresh: moving?.fresh ?? true,
       frequency:
         speed * distance > 0

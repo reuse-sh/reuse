@@ -146,6 +146,46 @@ test.describe("carousel spring", { tag: "@desktop" }, () => {
     expect(values.at(-1)?.left).toBe(900);
   });
 
+  test("next() right after a horizontal wheel scroll keeps going forward to the slide it chose", async ({
+    page,
+  }) => {
+    await setup(
+      page,
+      `<div id="strip" style="width:600px;--re-carousel-gap:0px">${slideRow(20)}</div>`,
+    );
+    await page.mouse.move(300, 100);
+    for (let notch = 0; notch < 6; notch++) {
+      await page.mouse.wheel(60, 0);
+      await page.waitForTimeout(16);
+    }
+    const { from, target, values } = await page.evaluate(
+      () =>
+        new Promise<{ from: number; target: number; values: number[] }>(
+          (resolve) => {
+            const strip = document.getElementById("strip") as HTMLElement;
+            const { carousel } = window as unknown as { carousel: Strip };
+            const from = strip.scrollLeft;
+            carousel.next();
+            const target = carousel.getState().index * 300;
+            const values: number[] = [];
+            let changed = performance.now();
+            const tick = () => {
+              const now = performance.now();
+              if (strip.scrollLeft !== values.at(-1)) changed = now;
+              values.push(strip.scrollLeft);
+              if (now - changed > 400) resolve({ from, target, values });
+              else requestAnimationFrame(tick);
+            };
+            requestAnimationFrame(tick);
+          },
+        ),
+    );
+    expect(target).toBeGreaterThan(from);
+    expect(values.at(-1)).toBe(target);
+    const back = values.filter((value, at) => at && value < values[at - 1]);
+    expect(back).toEqual([]);
+  });
+
   test("next() during a native smooth scroll takes over from it", async ({
     page,
   }) => {
