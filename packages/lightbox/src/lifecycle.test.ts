@@ -1802,6 +1802,44 @@ describe("lightbox public API", () => {
     expect(click()).toBe(false);
   });
 
+  it("applies a gallery's data-lightbox-options only while one of its photos is open", async () => {
+    const galleries = [
+      { loop: true, thumbnails: "bottom" },
+      undefined,
+      { loop: false, thumbnails: false, strings: { close: "Fermer" } },
+    ].map((options) => {
+      const root = document.createElement("div");
+      if (options) root.dataset.lightboxOptions = JSON.stringify(options);
+      root.innerHTML = `<a href="/0.jpg"><img src="/0.jpg"></a><a href="/1.jpg"><img src="/1.jpg"></a>`;
+      document.body.append(root);
+      return root;
+    });
+    const controller = create({ history: false, strings: { next: "Onward" } });
+    for (const root of galleries) bindLightboxGallery(root, controller);
+    const seen = [];
+    for (const at of [0, 1, 2, 0]) {
+      galleries[at].querySelector("img")?.click();
+      seen.push([
+        controller.getState().canPrev,
+        Boolean(dialog().querySelector(".re-lightbox-thumbnails")),
+        dialog().querySelector(".re-lightbox-close")?.getAttribute("aria-label"),
+        dialog().querySelector(".re-lightbox-next")?.getAttribute("aria-label"),
+      ]);
+      await controller.close();
+      seen.push(controller.getState().canPrev);
+    }
+    expect(seen).toEqual([
+      [true, true, "Close gallery", "Onward"],
+      false,
+      [false, false, "Close gallery", "Onward"],
+      false,
+      [false, false, "Fermer", "Onward"],
+      false,
+      [true, true, "Close gallery", "Onward"],
+      false,
+    ]);
+  });
+
   it("knows the modules of a lightbox made by another copy of the package", async () => {
     const copy = (await import(
       "./index.js?second-copy" as string

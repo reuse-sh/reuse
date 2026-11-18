@@ -52,7 +52,8 @@ const lightboxInternals = Symbol.for("@reuse-sh/lightbox internals");
 type LightboxInternals = {
   shows(type: string): boolean;
   destroyed(): boolean;
-  options: LightboxOptions<never>;
+  /** Runs open() with options that fill what the lightbox's own options leave unset, until that viewer closes. */
+  openWith(options: Partial<LightboxOptions<never>> | undefined, open: () => void): void;
 };
 
 function internalsOf(lightbox: unknown) {
@@ -853,8 +854,17 @@ export function createLightbox<Item extends LightboxItem = LightboxItem>(
 
   let notifiedState = state;
 
-  function configure() {
+  // A gallery's markup options for the next open, set only while bindLightboxGallery opens.
+  let galleryOptions: Partial<LightboxOptions<Item>> | undefined;
+
+  function configure(layer?: Partial<LightboxOptions<Item>>) {
     settings = { ...current };
+    for (const [key, value] of Object.entries(layer ?? {}))
+      if (settings[key as keyof typeof settings] === undefined)
+        Object.assign(settings, { [key]: value });
+    if (layer?.strings && current.strings)
+      settings.strings = { ...layer.strings, ...current.strings };
+    loop = Boolean(settings.loop);
     preload = clamp(Math.floor(settings.preload ?? 1), 0, 2);
     autoHide =
       settings.autoHide === false
@@ -2495,7 +2505,10 @@ export function createLightbox<Item extends LightboxItem = LightboxItem>(
   }
 
   function teardown(s: Session) {
-    if (session === s) session = undefined;
+    if (session === s) {
+      session = undefined;
+      configure();
+    }
     s.abort.abort();
     clearTimeout(s.wheelTimer);
     clearTimeout(s.sharpTimer);
@@ -3913,9 +3926,9 @@ export function createLightbox<Item extends LightboxItem = LightboxItem>(
     const nextItems = validateItems(input, current.content);
     if (!Number.isFinite(index))
       throw new TypeError("Image index must be finite.");
-    configure();
+    const layer = galleryOptions;
     const doc =
-      settings.container?.ownerDocument ??
+      current.container?.ownerDocument ??
       (typeof document === "undefined" ? undefined : document);
     if (!doc?.body)
       throw new Error("Opening a lightbox needs a browser document.");
@@ -3925,6 +3938,7 @@ export function createLightbox<Item extends LightboxItem = LightboxItem>(
       emit("closed", null);
     }
     if (destroyed) return;
+    configure(layer);
     items = nextItems;
     sources = [...input];
     closePromise = undefined;
@@ -4806,8 +4820,15 @@ export function createLightbox<Item extends LightboxItem = LightboxItem>(
   const reach: LightboxInternals = {
     shows: (type) =>
       Boolean(current.content?.some((module) => module.type === type)),
-    options: current as LightboxOptions<never>,
     destroyed: () => destroyed,
+    openWith: (layer, open) => {
+      galleryOptions = layer as Partial<LightboxOptions<Item>> | undefined;
+      try {
+        open();
+      } finally {
+        galleryOptions = undefined;
+      }
+    },
   };
   Object.defineProperty(controller, lightboxInternals, { value: reach });
   return controller;
@@ -4998,15 +5019,6 @@ export function bindLightboxGallery<Item extends LightboxItem = LightboxItem>(
       "bindLightboxGallery needs a lightbox from createLightbox() as its second argument.",
     );
   const markup = markupOptions(root);
-  const set = reach.options;
-  if (markup)
-    lightbox.setOptions(
-      Object.fromEntries(
-        Object.entries(markup).filter(
-          ([key]) => set[key as keyof typeof set] === undefined,
-        ),
-      ),
-    );
   const selector = options.selector ?? DEFAULT_TRIGGERS;
   const read =
     options.item ??
@@ -5054,9 +5066,11 @@ export function bindLightboxGallery<Item extends LightboxItem = LightboxItem>(
       );
     const at = opened.findIndex(([candidate]) => candidate === trigger);
     if (at < 0) return;
-    lightbox.open(
-      opened.map(([, item]) => item),
-      at,
+    reach.openWith(markup, () =>
+      lightbox.open(
+        opened.map(([, item]) => item),
+        at,
+      ),
     );
     event.preventDefault();
   };

@@ -9,3 +9,5 @@
 `bindLightboxGallery` throws a `TypeError` when its second argument is not a lightbox, such as the options object of the old call shape. A click on a trigger is left to the page when the lightbox is destroyed or `open()` throws, instead of being cancelled with nothing opened.
 
 `bindLightboxGallery` no longer takes a text link to an image, such as "Download full size", as a photo. By default a link is a trigger only when it holds an `img` or carries `data-lightbox-type` or `data-lightbox-src`, and a link with `download` never is. Pass `selector` to keep the old `"a[href], button, img"`.
+
+A gallery's `data-lightbox-options` apply only while a photo from that gallery is open, so two galleries can share one lightbox with different options, and the lightbox's own options return on close. Markup strings fill the text strings the lightbox's own `strings` leave unset.
