@@ -149,3 +149,45 @@ test.describe("a page with a classic scrollbar", { tag: "@desktop" }, () => {
     expectOn(frames.copy, frames.tile);
   });
 });
+
+test("a page wider than the window but not taller keeps its width through the close", async ({
+  page,
+}, testInfo) => {
+  test.skip(
+    testInfo.project.name === "firefox-desktop",
+    "headless Firefox draws overlay scrollbars",
+  );
+  await mount(
+    page,
+    `<style>html::-webkit-scrollbar{width:15px;height:15px;background:#ddd}html::-webkit-scrollbar-thumb{background:#999}</style><div style="width:3000px;height:300px;padding:40px"><img class="tile" src="${photo(0)}" alt="Photo 1" style="display:block;width:240px;height:160px"></div>`,
+    ["lightbox/base.css", "lightbox/theme.css"],
+  );
+  const widths = await page.evaluate(async () => {
+    const { createLightbox } = await import("/modules/lightbox/index.js");
+    const tile = document.querySelector(".tile") as HTMLImageElement;
+    const lightbox = createLightbox({ history: false, autoHide: false });
+    await new Promise<void>((resolve) => {
+      const stop = lightbox.on("opened", () => {
+        stop();
+        resolve();
+      });
+      lightbox.open([
+        { src: tile.src, width: 1200, height: 800, origin: () => tile },
+      ]);
+    });
+    const seen: number[] = [];
+    let flying = true;
+    const sample = () => {
+      seen.push(document.documentElement.clientWidth);
+      if (flying) requestAnimationFrame(sample);
+    };
+    requestAnimationFrame(sample);
+    await lightbox.close();
+    flying = false;
+    return {
+      during: [...new Set(seen)],
+      after: document.documentElement.clientWidth,
+    };
+  });
+  expect(widths.during).toEqual([widths.after]);
+});

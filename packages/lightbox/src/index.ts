@@ -165,6 +165,12 @@ const builtInIcons: Record<LightboxIcon, BuiltInIcon> = {
   slideshowPause: "pause",
 };
 
+const firstStateIcon: Partial<Record<LightboxIcon, LightboxIcon>> = {
+  zoomOut: "zoom",
+  fullscreenExit: "fullscreen",
+  slideshowPause: "slideshow",
+};
+
 export type LightboxIcon =
   | "close"
   | "previous"
@@ -4003,8 +4009,19 @@ export function createLightbox<Item extends LightboxItem = LightboxItem>(
         lightbox: controller,
         document: doc,
         icon: (name) => {
-          const own = settings.icons?.[name]?.();
-          if (own) return own;
+          const own =
+            settings.icons?.[name]?.() ??
+            (firstStateIcon[name]
+              ? settings.icons?.[firstStateIcon[name]]?.()
+              : undefined);
+          if (own) {
+            if (
+              (name === "previous" || name === "next") &&
+              own instanceof Element
+            )
+              own.classList.add("re-lightbox-arrow-icon");
+            return own;
+          }
           const holder = doc.createElement("span");
           showIcon(holder, builtInIcons[name]);
           return holder.firstElementChild as Node;
