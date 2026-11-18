@@ -377,6 +377,77 @@ test("a slideshow holds while the video plays and goes on once it pauses", async
   await expect.poll(() => changes(page)).toEqual([1]);
 });
 
+test("a slideshow moves on as soon as the video ends", async ({ page }) => {
+  await setup(page, "video,photo,photo", {
+    controls: { slideshow: true },
+    slideshow: { interval: 20_000 },
+  });
+  await expect
+    .poll(() => page.evaluate(() => document.querySelector("video")?.paused))
+    .toBe(false);
+  await watchChanges(page);
+  await page.mouse.move(500, 350);
+  await page
+    .locator(".re-lightbox-slideshow")
+    .evaluate((button: HTMLElement) => button.click());
+  const sinceEnd = await page.evaluate(
+    () =>
+      new Promise<number>((resolve) => {
+        let ended = Number.NaN;
+        document.addEventListener(
+          "ended",
+          () => {
+            ended = performance.now();
+          },
+          { capture: true, once: true },
+        );
+        (
+          window as unknown as {
+            lightbox: { on(type: string, listener: () => void): void };
+          }
+        ).lightbox.on("change", () => resolve(performance.now() - ended));
+      }),
+  );
+  expect(sinceEnd).toBeLessThan(500);
+  expect(await changes(page)).toEqual([1]);
+});
+
+test("a slideshow paused by a playing video goes on with the time it had left", async ({
+  page,
+}) => {
+  await setup(page, "video,photo,photo", {
+    controls: { slideshow: true },
+    slideshow: { interval: 1200 },
+  });
+  await expect
+    .poll(() => page.evaluate(() => document.querySelector("video")?.paused))
+    .toBe(false);
+  await page.evaluate(() => document.querySelector("video")?.pause());
+  await watchChanges(page);
+  await page.mouse.move(500, 350);
+  await page
+    .locator(".re-lightbox-slideshow")
+    .evaluate((button: HTMLElement) => button.click());
+  await page.waitForTimeout(800);
+  await page.evaluate(() => document.querySelector("video")?.play());
+  await page.waitForTimeout(1500);
+  expect(await changes(page)).toEqual([]);
+  const sincePause = await page.evaluate(
+    () =>
+      new Promise<number>((resolve) => {
+        const paused = performance.now();
+        (
+          window as unknown as {
+            lightbox: { on(type: string, listener: () => void): void };
+          }
+        ).lightbox.on("change", () => resolve(performance.now() - paused));
+        document.querySelector("video")?.pause();
+      }),
+  );
+  expect(sincePause).toBeGreaterThan(200);
+  expect(sincePause).toBeLessThan(800);
+});
+
 test("a slideshow holds on an embed until the visitor pages", async ({
   page,
 }) => {

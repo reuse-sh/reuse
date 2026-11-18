@@ -199,7 +199,7 @@ export const libraries: Library[] = [
       ],
       [
         "Let a slideshow yield",
-        "A slideshow waits while the photo is zoomed, a video or audio slide plays, an embed is on screen, the mouse is over the controls, the tab is hidden or a slot's menu is open, and goes on with the time it had left. From the last photo it returns to the first without showing the photos between.",
+        "A slideshow waits while the photo is zoomed, a video or audio slide plays, an embed is on screen, the mouse is over the controls, the tab is hidden or a slot's menu is open, and goes on with the time it had left, or at once when the video or audio ends. From the last photo it returns to the first without showing the photos between.",
         "tests/browser/lightbox-controls.spec.ts",
       ],
       [

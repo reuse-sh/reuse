@@ -3694,10 +3694,23 @@ export function createLightbox<Item extends LightboxItem = LightboxItem>(
       signal,
     });
     for (const type of ["play", "pause", "ended"])
-      s.viewport.addEventListener(type, () => holdForMedia(s), {
-        signal,
-        capture: true,
-      });
+      s.viewport.addEventListener(
+        type,
+        (event) => {
+          holdForMedia(s);
+          const player = s.loaded
+            .get(state.index)
+            ?.media?.holder?.querySelector("video, audio");
+          if (
+            type === "ended" &&
+            event.target === player &&
+            s.slideshow &&
+            slideshowRuns(s)
+          )
+            advanceSlideshow(s);
+        },
+        { signal, capture: true },
+      );
     const hover = (event: PointerEvent, target: EventTarget | null) => {
       if (event.pointerType !== "mouse") return;
       holdSlideshow(
