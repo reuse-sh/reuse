@@ -562,9 +562,15 @@ export function createCarousel(
         : previousCursor;
   }
 
+  function wrap(offset: number) {
+    return ((offset % span) + span) % span;
+  }
+
+  // Browsers round scrollLeft, so the lap boundary sits midway between snap points, not on one.
   function loopPosition(current: number) {
-    const origin = targets[0] ?? span;
-    return origin + ((((current - origin) % span) + span) % span);
+    const first = targets[0] ?? span;
+    const origin = first - (first + span - (targets.at(-1) ?? first)) / 2;
+    return origin + wrap(current - origin);
   }
 
   function jumpLoop(target: number) {
@@ -708,7 +714,7 @@ export function createCarousel(
       count: slides.length,
       progress:
         span > 0
-          ? (loopPosition(current) - (targets[0] ?? span)) / span
+          ? wrap(current - (targets[0] ?? span)) / span
           : max > 0
             ? current / max
             : 0,

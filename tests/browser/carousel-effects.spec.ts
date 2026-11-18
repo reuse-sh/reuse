@@ -400,3 +400,86 @@ test.describe("carousel groups and drivers on touch", { tag: "@touch" }, () => {
       await cdp.detach();
     });
 });
+
+// A browser rounds scrollLeft to device pixels, so a looped strip with fractional sizes
+// rests a fraction away from its measured snap points.
+for (const scale of [1, 1.5, 2])
+  test.describe(`a looped strip at device pixel ratio ${scale}`, () => {
+    test.use({ deviceScaleFactor: scale });
+
+    test("with fractional sizes comes to rest after creation and after crossing the seam", {
+      tag: "@desktop",
+    }, async ({ page }) => {
+      const strips = [601.7, 599.3, 640.5, 377.25].flatMap((width) =>
+        [7.3, 0.5, 12.6].flatMap((gap) =>
+          ["33.33%", "47.5%"].map((slide) => ({ width, gap, slide })),
+        ),
+      );
+      await mount(
+        page,
+        strips
+          .map(
+            ({ width, gap, slide }) =>
+              `<div class="strip" data-case="${width}px ${gap}px ${slide}" style="width:${width}px;margin-left:3.3px;--re-carousel-gap:${gap}px">${Array.from(
+                { length: 9 },
+                (_, index) =>
+                  `<div data-carousel-slide style="flex:0 0 ${slide};height:20px">${index}</div>`,
+              ).join("")}</div>`,
+          )
+          .join(""),
+        ["carousel/styles.css"],
+      );
+      await page.evaluate(async () => {
+        const { createCarousel } = await import("/modules/carousel/index.js");
+        const carousels = [
+          ...document.querySelectorAll<HTMLElement>(".strip"),
+        ].map((strip) => createCarousel(strip, { loop: true }));
+        Object.assign(window, { carousels });
+      });
+      // Resolves once no strip has scrolled for 400ms, naming the strips still moving after 3s.
+      const moving = () =>
+        page.evaluate(
+          () =>
+            new Promise<string[]>((resolve) => {
+              const elements = [
+                ...document.querySelectorAll<HTMLElement>(".strip"),
+              ];
+              const last = elements.map((strip) => strip.scrollLeft);
+              const changed = elements.map(() => performance.now());
+              const started = performance.now();
+              const tick = () => {
+                const now = performance.now();
+                elements.forEach((strip, index) => {
+                  if (strip.scrollLeft === last[index]) return;
+                  last[index] = strip.scrollLeft;
+                  changed[index] = now;
+                });
+                const busy = elements
+                  .filter((_, index) => now - changed[index] < 400)
+                  .map((strip) => strip.dataset.case ?? "");
+                if (!busy.length || now - started > 3000) resolve(busy);
+                else requestAnimationFrame(tick);
+              };
+              requestAnimationFrame(tick);
+            }),
+        );
+      const each = (method: "prev" | "next") =>
+        page.evaluate((name) => {
+          for (const carousel of (window as unknown as { carousels: Strip[] })
+            .carousels)
+            carousel[name]();
+        }, method);
+      expect(await moving()).toEqual([]);
+      await each("prev");
+      expect(await moving()).toEqual([]);
+      await each("next");
+      expect(await moving()).toEqual([]);
+      expect(
+        await page.evaluate(() =>
+          (window as unknown as { carousels: Strip[] }).carousels.map(
+            (carousel) => carousel.getState().index,
+          ),
+        ),
+      ).toEqual(strips.map(() => 0));
+    });
+  });
