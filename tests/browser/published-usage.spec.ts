@@ -107,6 +107,13 @@ for (const [path, recipe] of Object.entries(usageRecipes)) {
       await page.keyboard.press("Escape");
       await expect(page.getByRole("tooltip")).toHaveCount(0);
     }
+    if (path.startsWith("demo-stage/")) {
+      await expect(page.locator(".re-stage-cursor[data-visible]")).toHaveCount(
+        1,
+      );
+      await expect(page.locator("#share-menu")).toBeVisible();
+      await expect(page.locator("#share-menu")).toBeHidden();
+    }
     if (path.startsWith("copy-button/")) {
       await page.locator("#copy").click();
       await expect

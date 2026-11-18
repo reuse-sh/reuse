@@ -546,3 +546,46 @@ test("the narrow header keeps a visible library icon and a usable keyboard switc
     await expect(button).toBeFocused();
   }
 });
+
+test("every library preview plays its real scene and keeps the menu open", async ({
+  page,
+}) => {
+  const errors: string[] = [];
+  page.on("pageerror", (error) => errors.push(error.message));
+  await page.route("https://cdn.visitors.now/v.js", (route) => route.abort());
+  await page.goto("/");
+  await page.getByRole("button", { name: "Libraries" }).click();
+  await page.mouse.move(1200, 700);
+  const rows = page.locator("[data-peek]");
+  const count = await rows.count();
+  expect(count).toBe(14);
+  for (let index = 0; index < count; index++) {
+    await rows.nth(index).hover();
+    await expect(
+      page.locator(".f-peek-tip:not([hidden]) .re-stage-cursor[data-visible]"),
+    ).toHaveCount(1);
+    await expect(page.locator(".library-menu")).toBeVisible();
+    await page.mouse.move(1200, 700);
+  }
+  expect(errors).toEqual([]);
+});
+
+test("a playing demo stage leaves the visitor's tooltip where the pointer is", async ({
+  page,
+}) => {
+  await page.goto("/demo-stage");
+  await page.locator(".re-stage").scrollIntoViewIfNeeded();
+  await expect(page.locator(".re-stage-cursor[data-visible]")).toHaveCount(1);
+  const github = page.locator('[data-re-tooltip="GitHub"]');
+  const box = await github.boundingBox();
+  if (!box) throw new Error("The GitHub link is not on screen.");
+  await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2, {
+    steps: 3,
+  });
+  const tip = page.getByRole("tooltip").filter({ hasText: "GitHub" });
+  await expect(tip).toBeVisible();
+  const first = await tip.boundingBox();
+  await page.waitForTimeout(2000);
+  await expect(tip).toBeVisible();
+  expect(await tip.boundingBox()).toEqual(first);
+});

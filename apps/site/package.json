@@ -24,6 +24,7 @@
     "@reuse-sh/lightbox": "workspace:*",
     "@reuse-sh/loaders": "workspace:*",
     "@reuse-sh/shadows": "workspace:*",
+    "@reuse-sh/stage": "workspace:*",
     "class-variance-authority": "0.7.1",
     "cn": "0.5.0",
     "geist": "^1.9.0",

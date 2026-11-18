@@ -216,6 +216,41 @@ describe("annotation editing", () => {
       line: [10, 20, 70, 80],
     });
   });
+  it("reports the reshaped marks during a drag, then null once it ends", () => {
+    const area: Annotation = {
+      kind: "area",
+      box: [10, 20, 30, 40],
+      label: "Original",
+    };
+    const root = document.createElement("div");
+    document.body.append(root);
+    controllers.push(
+      createAnnotatedImage(root, {
+        src: "/example.webp",
+        alt: "Example dashboard",
+        width: 200,
+        height: 100,
+        annotations: [area],
+      }),
+    );
+    const media = root.querySelector("[data-annot-media]") as Element;
+    rect(root, 10, 20, 200, 100);
+    rect(media, 10, 20, 200, 100);
+    const previews: (Annotation[] | null)[] = [];
+    const editor = createAnnotationEditor(root, {
+      annotations: [area],
+      onChange() {},
+      onPreview: (next) => previews.push(next),
+    });
+    controllers.push(editor);
+    editor.select(0);
+    const corner = root.querySelector('[data-corner="se"]') as Element;
+    pointer(corner, "pointerdown", 40, 60);
+    pointer(window, "pointermove", 50, 70);
+    expect(previews.at(-1)).toEqual([{ ...area, box: [10, 20, 40, 50] }]);
+    pointer(window, "pointerup", 50, 70);
+    expect(previews.at(-1)).toBe(null);
+  });
   it.each(["Escape", "pointercancel", "blur"])(
     "discards an unfinished gesture on %s",
     (reason) => {

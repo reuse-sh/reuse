@@ -1,3 +1,5 @@
+import Add01Icon from "@hugeicons/core-free-icons/Add01Icon";
+import ArrowUp02Icon from "@hugeicons/core-free-icons/ArrowUp02Icon";
 import BlendIcon from "@hugeicons/core-free-icons/BlendIcon";
 import BookOpen01Icon from "@hugeicons/core-free-icons/BookOpen01Icon";
 import Cancel01Icon from "@hugeicons/core-free-icons/Cancel01Icon";
@@ -18,7 +20,9 @@ import InformationCircleIcon from "@hugeicons/core-free-icons/InformationCircleI
 import JavaScriptIcon from "@hugeicons/core-free-icons/JavaScriptIcon";
 import Layers01Icon from "@hugeicons/core-free-icons/Layers01Icon";
 import Layout07Icon from "@hugeicons/core-free-icons/Layout07Icon";
+import Link01Icon from "@hugeicons/core-free-icons/Link01Icon";
 import Loading03Icon from "@hugeicons/core-free-icons/Loading03Icon";
+import Presentation01Icon from "@hugeicons/core-free-icons/Presentation01Icon";
 import ReactIcon from "@hugeicons/core-free-icons/ReactIcon";
 import Share08Icon from "@hugeicons/core-free-icons/Share08Icon";
 import SquareDashedMousePointerIcon from "@hugeicons/core-free-icons/SquareDashedMousePointerIcon";
@@ -47,6 +51,7 @@ export const iconData = {
   avatars: UserGroupIcon,
   "easing-gradients": BlendIcon,
   "copy-button": ClipboardCopyIcon,
+  "demo-stage": Presentation01Icon,
   book: BookOpen01Icon,
   code: CodeIcon,
   terminal: ComputerTerminal01Icon,
@@ -62,6 +67,9 @@ export const iconData = {
   share: Share08Icon,
   trash: Delete02Icon,
   cursor: Cursor01Icon,
+  add: Add01Icon,
+  send: ArrowUp02Icon,
+  link: Link01Icon,
 };
 
 export type IconName = keyof typeof iconData | ArrowName;

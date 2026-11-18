@@ -1222,4 +1222,182 @@ fallback.hidden = false;`,
       },
     ],
   },
+  "demo-stage/getting-started": {
+    react: [
+      {
+        title: "Package styles",
+        blocks: [
+          {
+            kind: "prose",
+            text: "Import the package stylesheet once in your main CSS. The components layer lets Tailwind utilities adapt its presentation.",
+          },
+          {
+            kind: "code",
+            id: "demo-stage-getting-started-package-styles",
+            language: "css",
+            code: '@import "@reuse-sh/stage/styles.css" layer(components);',
+            role: "setup",
+          },
+        ],
+      },
+      {
+        title: "Usage",
+        blocks: [
+          {
+            kind: "prose",
+            text: "Render the scene as children of Stage and mark the controls the cursor aims at with data-stage-target. The script is one pass. It plays again from reset until the stage leaves the screen.",
+          },
+          {
+            kind: "code",
+            id: "demo-stage-getting-started-react",
+            language: "tsx",
+            code: `"use client";
+
+import { Stage, type StageAct } from "@reuse-sh/stage/react";
+import { useState } from "react";
+
+export function ShareDemo() {
+  const [open, setOpen] = useState(false);
+  async function script(act: StageAct) {
+    await act.click("share");
+    await act.wait(1400);
+    await act.click("done");
+    await act.wait(600);
+  }
+  return (
+    <Stage width={480} height={280} label="A pointer opens the share menu and closes it" script={script} reset={() => setOpen(false)} interactive className="rounded-xl bg-neutral-100">
+      <div className="flex justify-end p-4">
+        <button type="button" data-stage-target="share" onClick={() => setOpen(true)} className="rounded-md bg-neutral-900 px-3 py-1.5 text-sm text-white">
+          Share
+        </button>
+      </div>
+      {open ? (
+        <div className="mx-4 rounded-lg bg-white p-4 text-sm shadow-lg">
+          <p>Anyone with the link can view.</p>
+          <button type="button" data-stage-target="done" onClick={() => setOpen(false)} className="mt-3 rounded-md bg-neutral-100 px-3 py-1.5">
+            Done
+          </button>
+        </div>
+      ) : null}
+    </Stage>
+  );
+}`,
+            role: "usage",
+          },
+        ],
+      },
+      {
+        title: "Integration",
+        blocks: [
+          {
+            kind: "prose",
+            text: "The cursor clicks the real buttons, so their click handlers run the same code a visitor's click does. reset puts the scene back before every pass, and a pass should end where it began. With reduced motion the script never runs and the first frame stays. A scripted click is real, so keep links, clipboard writes and modal dialogs out of a scene.",
+          },
+        ],
+      },
+    ],
+    html: [
+      {
+        title: "Usage",
+        blocks: [
+          {
+            kind: "prose",
+            text: "The root's content becomes the scene. Mark the controls the cursor aims at with data-stage-target.",
+          },
+          {
+            kind: "code",
+            id: "demo-stage-getting-started-markup",
+            language: "html",
+            code: `<div id="demo">
+  <button type="button" data-stage-target="share">Share</button>
+  <div id="share-menu" hidden>
+    <p>Anyone with the link can view.</p>
+    <button type="button" data-stage-target="done">Done</button>
+  </div>
+</div>`,
+            role: "usage",
+          },
+        ],
+      },
+      {
+        title: "Styles",
+        blocks: [
+          {
+            kind: "prose",
+            text: "Import the package stylesheet once. The stage keeps the scene's proportions, so give it a width and the height follows.",
+          },
+          {
+            kind: "code",
+            id: "demo-stage-getting-started-css",
+            language: "css",
+            code: `@import "@reuse-sh/stage/styles.css";
+
+#demo { max-width: 480px; border-radius: 12px; background: #f2f2f1; }
+#demo [data-stage-target="share"] { position: absolute; top: 16px; right: 16px; }
+#share-menu { position: absolute; top: 60px; right: 16px; padding: 16px; border-radius: 10px; background: #fff; }`,
+            role: "usage",
+          },
+        ],
+      },
+      {
+        title: "Initialize",
+        blocks: [
+          {
+            kind: "prose",
+            text: "Run this after the markup exists. The script is one pass, and the stage plays it again from reset while it stays on screen.",
+          },
+          {
+            kind: "code",
+            id: "demo-stage-getting-started-initialize",
+            language: "javascript",
+            code: `import { createStage } from "@reuse-sh/stage";
+
+const root = document.querySelector("#demo");
+const menu = root.querySelector("#share-menu");
+root.querySelector('[data-stage-target="share"]').addEventListener("click", () => { menu.hidden = false; });
+root.querySelector('[data-stage-target="done"]').addEventListener("click", () => { menu.hidden = true; });
+const stage = createStage(root, {
+  width: 480,
+  height: 280,
+  label: "A pointer opens the share menu and closes it",
+  interactive: true,
+  reset: () => { menu.hidden = true; },
+  async script(act) {
+    await act.click("share");
+    await act.wait(1400);
+    await act.click("done");
+    await act.wait(600);
+  },
+});`,
+            role: "setup",
+          },
+        ],
+      },
+      {
+        title: "Integration",
+        blocks: [
+          {
+            kind: "prose",
+            text: "The cursor clicks the real buttons, so their click handlers run the same code a visitor's click does. reset puts the scene back before every pass, and a pass should end where it began. With reduced motion the script never runs and the first frame stays. A scripted click is real, so keep links, clipboard writes and modal dialogs out of a scene.",
+          },
+        ],
+      },
+      {
+        title: "Cleanup",
+        blocks: [
+          {
+            kind: "prose",
+            text: "Run this when the view is removed. It stops the pass and puts the markup back.",
+          },
+          {
+            kind: "code",
+            id: "demo-stage-getting-started-cleanup",
+            language: "javascript",
+            code: "stage.destroy();",
+            role: "cleanup",
+          },
+        ],
+      },
+    ],
+  },
 };

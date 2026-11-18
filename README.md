@@ -46,6 +46,7 @@ What carries from one product to the next is not the code but the rules behind i
 - [Loaders](https://reuse.sh/loaders), a few dots that change shape while an answer is on its way.
 - [Shadows](https://reuse.sh/shadows), six shadow levels and a hairline ring in one stylesheet, with no JavaScript.
 - [Easing gradients](https://reuse.sh/easing-gradients), gradients that follow an easing curve, so a fade ends without a hard edge.
+- [Demo stage](https://reuse.sh/demo-stage), a scripted cursor that plays your real components in a live, looping product demo.
 
 ## Use it
 

@@ -13,6 +13,7 @@ These are the rules the code keeps. An adaptation on any framework keeps them to
 - **Share one popup.** Nearby triggers share one tooltip, so moving along a toolbar slides it across instead of closing and reopening it.
 - **Follow the pointer on a spring.** It trails the pointer with a little weight, below and to the right, and never jumps.
 - **Anchor to keyboard focus.** Keyboard focus places it on the element, and Escape hides it.
+- **Follow one pointer.** The pointer that opened it moves and closes it. A scripted pointer, such as a demo cursor, never moves, closes or takes over a tooltip the visitor's pointer opened. The visitor's pointer takes over by entering another trigger.
 - **Treat touch as touch.** A touch is not hover, so touch input never opens it.
 - **Hold only a hint.** It describes its trigger through aria-describedby and never holds controls or required instructions.
 - **Stay inside the window.** It keeps a margin from every edge of the viewport.
@@ -30,7 +31,7 @@ These are the rules the code keeps. An adaptation on any framework keeps them to
 
 - **Confirm once per hold.** A completed hold calls onConfirm exactly once, and the next action needs a new press.
 - **Hold the result.** A confirmed button keeps its fill and ignores presses until resetMs ends it. Releasing, blur or disabling it does not empty the fill early.
-- **Cancel on any doubt.** Letting go early, leaving the button, blur, Escape or disabling the button cancels the hold.
+- **Cancel on any doubt.** Letting go early, leaving the button, blur, Escape or disabling the button cancels the hold. A release from another pointer does not.
 - **Accept pointer and keys.** A pointer, Space or Enter can hold, and keyboard auto-repeat never starts a new hold.
 - **Let assistive technology click.** A click without a physical press, as from a screen reader, confirms at once.
 - **Own the gesture, not the action.** Your code owns the request, the loading state, success and failure.

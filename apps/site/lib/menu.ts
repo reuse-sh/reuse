@@ -15,7 +15,10 @@ export const menuGroups = [
       "copy-button",
     ],
   ],
-  ["Motion and style", ["loaders", "shadows", "easing-gradients"]],
+  [
+    "Motion and style",
+    ["loaders", "shadows", "easing-gradients", "demo-stage"],
+  ],
 ] as const;
 
 export type MenuSlug = (typeof menuGroups)[number][1][number];
@@ -34,6 +37,7 @@ export const shortLines: Record<MenuSlug, string> = {
   loaders: "Dot figures that change shape",
   shadows: "Two-layer depth with a fine edge",
   "easing-gradients": "Fades without a hard edge",
+  "demo-stage": "Live demos with a scripted cursor",
 };
 
 const bySlug = new Map<string, Library>(
