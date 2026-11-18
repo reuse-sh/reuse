@@ -309,7 +309,6 @@ type Session = {
   slides: HTMLDivElement[];
   loaded: Map<number, LoadedSlide>;
   carousel: Carousel;
-  carouselLoops: boolean;
   heading: 1 | -1;
   marked?: number;
   strings: LightboxStrings;
@@ -695,6 +694,10 @@ function isHTMLElement(value: unknown): value is HTMLElement {
   );
 }
 
+function resolveOrigin(origin: LightboxItem["origin"]) {
+  return (typeof origin === "function" ? origin() : origin) ?? null;
+}
+
 function sameZoom(a: Zoom, b: Zoom) {
   return a.scale === b.scale && a.x === b.x && a.y === b.y;
 }
@@ -1059,8 +1062,7 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
   }
 
   function originOf(index: number) {
-    const origin = settings.getOrigin?.(index) ?? items[index]?.origin;
-    return (typeof origin === "function" ? origin() : origin) ?? null;
+    return resolveOrigin(settings.getOrigin?.(index) ?? items[index]?.origin);
   }
 
   function rendered(element: HTMLElement) {
@@ -1661,7 +1663,7 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
     if (!size) return [];
     const width = s.viewport.clientWidth;
     const start = Math.abs(s.viewport.scrollLeft);
-    const looped = s.carouselLoops && s.carousel.getState().isLooping;
+    const looped = s.carousel.getState().isLooping;
     const visible = new Set<number>();
     for (
       let k = Math.floor((start + 1) / size) - 1;
@@ -3329,17 +3331,6 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
     return carousel;
   }
 
-  // The carousel reads loop only when created until its setOptions (VPF-255) lands.
-  function reconnect(s: Session, index: number) {
-    const syncing = syncingCarousel;
-    syncingCarousel = true;
-    s.carousel.destroy();
-    s.carousel = connect(s.viewport, s.strings);
-    s.carouselLoops = looping();
-    s.carousel.goTo(index, "instant");
-    syncingCarousel = syncing;
-  }
-
   function ownsHistory(win: Window) {
     return entryOf(win) === historyId;
   }
@@ -3908,7 +3899,6 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
       slides,
       loaded: new Map(),
       carousel: connect(viewport, strings),
-      carouselLoops: looping(),
       heading: 1,
       strings,
       slots: [],
@@ -4375,17 +4365,17 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
     s.centeredThumb = Number.NaN;
     placeAside(s, true);
     const changed = target !== state.index;
-    if ((changed || !kept || s.carouselLoops) && state.zoom.scale > 1) {
+    const looped = s.carousel.getState().isLooping;
+    if ((changed || !kept || looped) && state.zoom.scale > 1) {
       updateState({ zoom: restZoom(s, target) });
       applyZoom(s);
     } else if (changed || !kept) updateState({ zoom: restZoom(s, target) });
-    syncingCarousel = true;
-    if (s.carouselLoops !== looping()) reconnect(s, target);
-    else {
+    quietly(() => {
       s.carousel.refresh();
-      if (!kept) s.carousel.goTo(target, "instant");
-    }
-    syncingCarousel = false;
+      s.carousel.setOptions({ loop: looping() });
+      if (!kept || looped !== s.carousel.getState().isLooping)
+        s.carousel.goTo(target, "instant");
+    });
     publish({ index: target, count: items.length });
     update(s);
     if (changed) emit("change", s);
@@ -4421,10 +4411,12 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
       loop = Boolean(next.loop);
       const s = session;
       if (!s || state.isClosing) return;
-      if (s.carouselLoops !== looping()) {
-        reconnect(s, state.index);
-        applyZoom(s);
-      }
+      const looped = s.carousel.getState().isLooping;
+      quietly(() => {
+        s.carousel.setOptions({ loop: looping() });
+        s.carousel.goTo(state.index, "instant");
+      });
+      if (looped !== s.carousel.getState().isLooping) applyZoom(s);
       update(s);
     },
     getSlide: (index) => session?.slides[index] ?? null,
@@ -4569,11 +4561,7 @@ export function bindLightboxGallery(
     let index: number;
     if (options.items) {
       list = options.items(root);
-      index = list.findIndex(
-        (item) =>
-          (typeof item.origin === "function" ? item.origin() : item.origin) ===
-          image,
-      );
+      index = list.findIndex((item) => resolveOrigin(item.origin) === image);
       if (index < 0) index = images.indexOf(image);
     } else {
       const group =
