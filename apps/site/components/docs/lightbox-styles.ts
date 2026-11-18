@@ -360,7 +360,7 @@ export function lightboxChrome(options: LightboxStyle) {
       bar.setAttribute("aria-label", "Photo controls");${
         options.arrows === "Toolbar"
           ? `
-      const prev = button("prev", "Previous image", "‹", () => lightbox.prev());
+      const prev = button("previous", "Previous image", "‹", () => lightbox.prev());
       const next = button("next", "Next image", "›", () => lightbox.next());`
           : ""
       }${

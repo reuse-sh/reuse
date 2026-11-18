@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { lightboxStyles } from "../../apps/site/components/docs/lightbox-styles";
 import originalGeometry from "./fixtures/demo-geometry.json" with {
   type: "json",
 };
@@ -336,6 +337,34 @@ test("the narrow panel style shows both caption lines", async ({ page }) => {
     ),
   }));
   expect(size).toEqual({ clipped: false, lines: 2 });
+});
+
+test("every control style shows an icon in each lightbox button", async ({
+  page,
+}) => {
+  for (const style of Object.keys(lightboxStyles)) {
+    await page.goto(`/lightbox/controls/${style}`);
+    await page.locator('main a[href^="/images/marble"]').first().click();
+    await expect(
+      page.locator("dialog[open] .re-lightbox-image").first(),
+    ).toBeVisible();
+    const textOnly = await page
+      .locator("dialog[open] .re-lightbox-button")
+      .evaluateAll((buttons) =>
+        buttons
+          .filter(
+            (button) =>
+              button.checkVisibility() && !button.querySelector("svg"),
+          )
+          .map(
+            (button) =>
+              `${button.getAttribute("aria-label")}: ${button.textContent}`,
+          ),
+      );
+    expect(textOnly, style).toEqual([]);
+    await page.keyboard.press("Escape");
+    await expect(page.locator("dialog[open]")).toHaveCount(0);
+  }
 });
 
 test("the footer lines up with the documentation column and the page bottom", async ({
