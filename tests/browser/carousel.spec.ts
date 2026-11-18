@@ -523,3 +523,35 @@ for (const release of ["over the strip", "outside the strip"])
     await page.keyboard.press("Enter");
     expect(await clicks()).toEqual(["1"]);
   });
+
+test("next() during a held mouse drag across the seam of a looped strip moves one slide forward", {
+  tag: "@desktop",
+}, async ({ page }) => {
+  await mount(
+    page,
+    `<div id="strip" style="width:600px;--re-carousel-gap:0px">${slides}</div>`,
+    ["carousel/styles.css"],
+  );
+  await page.evaluate(async () => {
+    const { createCarousel } = await import("/modules/carousel/index.js");
+    const strip = document.getElementById("strip") as HTMLElement;
+    Object.assign(window, { carousel: createCarousel(strip, { loop: true }) });
+  });
+  await framesUntilIdle(page, scrollLeft);
+  const first =
+    "Math.round(document.querySelector('#strip > [data-carousel-slide]').getBoundingClientRect().left - document.getElementById('strip').getBoundingClientRect().left)";
+  await page.mouse.move(200, 100);
+  await page.mouse.down();
+  await page.mouse.move(500, 100, { steps: 10 });
+  expect(await page.evaluate(first)).toBe(300);
+  await page.evaluate(() =>
+    (window as unknown as { carousel: { next(): void } }).carousel.next(),
+  );
+  const values = await framesUntilIdle(page, first);
+  await page.mouse.up();
+  expect(values.filter((value) => value < -1 || value > 301)).toEqual([]);
+  expect(
+    values.filter((value, at) => at && value > values[at - 1] + 1),
+  ).toEqual([]);
+  expect(values.at(-1)).toBe(0);
+});

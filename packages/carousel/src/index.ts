@@ -1108,7 +1108,7 @@ export function createCarousel(
     behavior: ScrollBehavior = "smooth",
     direction?: 1 | -1,
     releaseSpeed?: number,
-    reference = pendingPosition ?? position(),
+    from?: number,
   ) {
     if (pointer?.moved && !destroyed && enabled) {
       endDrag(false);
@@ -1131,6 +1131,7 @@ export function createCarousel(
       publish(next);
       return;
     }
+    const reference = from ?? pendingPosition ?? position();
     let target = targetAt(next, reference);
     if (span && direction === 1 && target <= reference + 0.5) target += span;
     if (span && direction === -1 && target >= reference - 0.5) target -= span;
