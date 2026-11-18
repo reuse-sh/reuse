@@ -561,8 +561,10 @@ describe("native carousel", () => {
     viewport.dispatchEvent(new Event("wheel"));
     const wheeled = viewport.scrollLeft;
     expect(wheeled).toBeGreaterThan(150);
-    vi.advanceTimersByTime(1000);
+    vi.advanceTimersByTime(170);
     expect(viewport.scrollLeft).toBe(wheeled);
+    vi.advanceTimersByTime(1000);
+    expect(viewport.scrollLeft).toBe(200);
     const before = release();
     carousel.goTo(0);
     vi.advanceTimersByTime(16);

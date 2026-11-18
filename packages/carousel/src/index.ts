@@ -1647,7 +1647,10 @@ export function createCarousel(
         step(direction);
         return;
       }
-      if (pendingIndex !== undefined && !stretch) interrupt();
+      if (pendingIndex === undefined || stretch) return;
+      interrupt(false);
+      clearTimeout(settleTimer);
+      settleTimer = setTimeout(settle, 180);
     },
     { passive: options.wheel !== "vertical" },
   );

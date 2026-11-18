@@ -124,30 +124,35 @@ test.describe("carousel spring", { tag: "@desktop" }, () => {
     expect(rest).toBeGreaterThanOrEqual(600);
   });
 
-  test("a wheel during a move stops the spring and the strip snaps to the point nearest where it stopped", async ({
+  test("a wheel during a move stops the spring and the strip glides to the point nearest where it stopped", async ({
     page,
   }) => {
     await setup(page);
     await page.mouse.move(300, 100);
-    await page.evaluate(() => {
-      const strip = document.getElementById("strip") as HTMLElement;
-      strip.addEventListener(
-        "wheel",
-        () => Object.assign(window, { stoppedAt: strip.scrollLeft }),
-        { once: true },
-      );
-    });
     await page.evaluate(() =>
       (window as unknown as { carousel: Strip }).carousel.goTo(4),
     );
-    // The wheel lands on the frame the strip passes 300px, since a wheel sent from the test
-    // can arrive after the 500ms move on a busy runner.
-    await page.evaluate(
+    // The wheel lands on the frame the strip passes 420px, 116 to 150px from the nearest point,
+    // since a wheel sent from the test can arrive after the 500ms move on a busy runner. Every
+    // frame after it is sampled in the page, so a one-frame jump shows as one step.
+    const { stoppedAt, values } = await page.evaluate(
       () =>
-        new Promise<void>((resolve) => {
+        new Promise<{ stoppedAt: number; values: number[] }>((resolve) => {
           const strip = document.getElementById("strip") as HTMLElement;
+          const values: number[] = [];
+          let stoppedAt = 0;
+          let changed = 0;
+          const sample = () => {
+            const now = performance.now();
+            if (strip.scrollLeft !== values.at(-1)) changed = now;
+            values.push(strip.scrollLeft);
+            if (now - changed > 300) resolve({ stoppedAt, values });
+            else requestAnimationFrame(sample);
+          };
           const watch = () => {
-            if (strip.scrollLeft <= 300) return requestAnimationFrame(watch);
+            if (strip.scrollLeft <= 420) return requestAnimationFrame(watch);
+            stoppedAt = strip.scrollLeft;
+            changed = performance.now();
             strip.dispatchEvent(
               new WheelEvent("wheel", {
                 bubbles: true,
@@ -157,18 +162,20 @@ test.describe("carousel spring", { tag: "@desktop" }, () => {
                 clientY: 100,
               }),
             );
-            resolve();
+            requestAnimationFrame(sample);
           };
           watch();
         }),
     );
-    const values = await framesUntilIdle(page, scrollLeft);
-    const stoppedAt = await page.evaluate(
-      () => (window as unknown as { stoppedAt: number }).stoppedAt,
-    );
-    expect(stoppedAt).toBeGreaterThan(0);
+    expect(stoppedAt).toBeGreaterThan(420);
     expect(stoppedAt).toBeLessThan(1000);
-    expect(values.at(-1)).toBe(Math.round(stoppedAt / 300) * 300);
+    const rest = values.at(-1) ?? 0;
+    expect(rest % 300).toBe(0);
+    expect(Math.abs(rest - stoppedAt)).toBeLessThanOrEqual(150.5);
+    const steps = values.map((value, at) =>
+      Math.abs(value - (at ? values[at - 1] : stoppedAt)),
+    );
+    expect(Math.max(...steps)).toBeLessThan(Math.abs(rest - stoppedAt) / 2);
   });
 
   test('moveMotion "native" moves with the browser smooth scroll and the spring does not', async ({
