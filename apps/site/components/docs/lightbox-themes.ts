@@ -1,5 +1,6 @@
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { photos } from "../../lib/photos";
-import { buttonVariants } from "../ui/button";
 
 export const lightboxThemes = {
   dark: "The default. A near-black room with frosted controls.",
@@ -236,7 +237,7 @@ const lightbox = createLightbox({
   },
 };
 
-function frameItems(preset?: Preset) {
+function previewItems(preset?: Preset) {
   return photos.map((photo, index) => {
     const src = preset?.square
       ? `/images/marble-${photo.id}-1200x1200.svg`
@@ -261,80 +262,39 @@ const pageColors = `.re-lightbox {
   --re-lightbox-page-foreground: var(--foreground);
 }`;
 
-/** A standalone page that opens a real lightbox in one theme or preset, for an iframe preview. */
-export function lightboxThemeFrame(id: string) {
+// A theme file styles every .re-lightbox, so a page with several previews scopes each copy
+// to its own class.
+const scoped = (css: string, scope: string) =>
+  css.replace(/\.re-lightbox(?![-\w])/g, `.re-lightbox.${scope}`);
+
+/** A theme or preset preview: its setup as an ES module, its items, and its scoped CSS. */
+export function lightboxThemePreview(id: string) {
   const preset = lightboxPresets[id];
   const theme = preset?.theme ?? (id as LightboxTheme);
   if (!(theme in lightboxThemes)) return null;
-  const items = frameItems(preset);
-  const data = JSON.stringify(items).replace(/</g, "\\u003c");
-  const css = [theme === "page" ? pageColors : "", preset?.css ?? ""].join(
-    "\n",
+  const scope = `re-preview-${id}`;
+  const file = readFileSync(
+    join(
+      process.cwd(),
+      "node_modules/@reuse-sh/lightbox/dist/themes",
+      `${theme}.css`,
+    ),
+    "utf8",
   );
-  return `<!doctype html>
-<html lang="en">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="robots" content="noindex">
-<title>Lightbox preview</title>
-<link rel="stylesheet" href="/styles/site.css">
-<link rel="stylesheet" href="/modules/lightbox/base.css">
-<link rel="stylesheet" href="/modules/lightbox/theme.css">
-<link rel="stylesheet" href="/modules/lightbox/themes/${theme}.css">
-<script type="importmap">{"imports":{"@reuse-sh/carousel":"/modules/carousel/index.js","@reuse-sh/lightbox":"/modules/lightbox/index.js","@reuse-sh/loaders":"/modules/loaders/index.js"}}</script>
-<style>${css}</style>
-</head>
-<body class="grid h-screen min-h-0 place-items-center overflow-hidden bg-secondary font-sans text-ui">
-<main class="f-fallback grid max-h-full w-full grid-cols-2 gap-3 overflow-auto p-4">${items.map((item) => `<a href="${item.src}"><img src="${item.src}" alt="${item.alt}" width="${item.width}" height="${item.height}" class="block h-auto w-full"></a>`).join("")}</main>
-<button type="button" class="f-again ${buttonVariants({ variant: "surface", size: "default" })}" hidden>Open again</button>
-<script type="application/json" id="frame-data">${data}</script>
-<script type="module">
-import { createLightbox } from "@reuse-sh/lightbox";
-
-const items = JSON.parse(document.getElementById("frame-data").textContent);
-const again = document.querySelector(".f-again");
-let index = 0;
-let current = null;
-
-function withoutFocus(fn) {
-  const host = window.frameElement;
-  if (!host || document.hasFocus()) return fn();
-  const previous = host.ownerDocument.activeElement;
-  try {
-    return fn();
-  } finally {
-    if (previous && previous !== host && previous !== host.ownerDocument.body) previous.focus({ preventScroll: true });
-    else host.blur();
-  }
-}
-
-function render({ animate = false } = {}) {
-  current?.destroy();
-  again.hidden = true;
+  const css = [file, theme === "page" ? pageColors : "", preset?.css ?? ""]
+    .map((part) => scoped(part, scope))
+    .join("\n");
+  return {
+    scope,
+    css,
+    items: previewItems(preset),
+    module: `export default (createLightbox, icons, getItems) => {
+  const items = getItems();
 ${(preset?.setup ?? defaultSetup).replace(/^/gm, "  ")}
-  current = lightbox;
-  lightbox.on("change", (event) => { index = event.index; });
-  lightbox.on("closed", () => {
-    if (current !== lightbox) return;
-    lightbox.destroy();
-    current = null;
-    again.hidden = false;
-    if (document.hasFocus()) again.focus({ preventScroll: true });
-  });
-  withoutFocus(() => lightbox.open(items, index));
-  if (!animate)
-    for (const animation of document.querySelector("dialog.re-lightbox").getAnimations({ subtree: true }))
-      animation.finish();
-}
-
-again.addEventListener("click", () => render({ animate: true }));
-render();
-document.querySelector(".f-fallback").style.display = "none";
-</script>
-</body>
-</html>
-`;
+  return lightbox;
+};
+`,
+  };
 }
 
 const sample = (preset?: Preset) => {

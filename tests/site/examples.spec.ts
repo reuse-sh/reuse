@@ -324,9 +324,10 @@ test("narrow API tables show every description without sideways scrolling", asyn
 test("the narrow panel style shows both caption lines", async ({ page }) => {
   await page.setViewportSize({ width: 320, height: 900 });
   await page.goto("/lightbox/controls/panel");
-  const text = page
-    .frameLocator("iframe")
-    .locator(".re-lightbox-style-panel-text");
+  // The eighth caption is the one long enough to wrap at 320px.
+  await page.locator('main a[href^="/images/marble"]').nth(7).click();
+  const text = page.locator(".re-lightbox-style-panel-text");
+  await expect(text).toBeVisible();
   const size = await text.evaluate((element) => ({
     clipped: element.scrollHeight > element.clientHeight,
     lines: Math.round(
@@ -486,22 +487,34 @@ test("the shadow card stays inside its narrow showcase", async ({ page }) => {
   expect(bounds.right).toBeGreaterThanOrEqual(32);
 });
 
-test("lightbox preview shows its reopen action only after closing", async ({
-  page,
-}) => {
-  await page.goto("/lightbox/controls/classic");
-  const frame = page.frameLocator("iframe");
-  await expect(frame.locator("dialog[open]")).toHaveCount(1);
-  await expect(
-    frame.getByRole("button", { name: "Open again", exact: true }),
-  ).toBeHidden();
-  await frame
-    .getByRole("button", { name: "Close gallery", exact: true })
-    .click();
-  await expect(
-    frame.getByRole("button", { name: "Open again", exact: true }),
-  ).toBeVisible();
-});
+for (const [path, section] of [
+  ["/lightbox/controls/classic", null],
+  ["/lightbox/themes", null],
+  ["/lightbox/themes", "Photos app"],
+] as const) {
+  test(`the ${section ?? path} preview opens the lightbox over the whole page from its tile`, async ({
+    page,
+  }) => {
+    await page.goto(path);
+    const scope = section
+      ? page.locator("section").filter({
+          has: page.getByRole("heading", { name: section, exact: true }),
+        })
+      : page.locator("main");
+    const tile = scope.locator('a[href^="/images/marble"]').first();
+    await tile.scrollIntoViewIfNeeded();
+    await tile.click();
+    const dialog = page.locator("dialog.re-lightbox[open]");
+    await expect(dialog).toHaveCount(1);
+    const box = await dialog.boundingBox();
+    const viewport = page.viewportSize();
+    expect(box?.width).toBe(viewport?.width);
+    expect(box?.height).toBe(viewport?.height);
+    await expect(page.locator("iframe")).toHaveCount(0);
+    await page.keyboard.press("Escape");
+    await expect(dialog).toHaveCount(0);
+  });
+}
 
 test("the narrow header keeps a visible library icon and a usable keyboard switcher", async ({
   page,

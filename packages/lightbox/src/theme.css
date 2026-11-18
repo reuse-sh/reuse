@@ -2,7 +2,11 @@
   --re-lightbox-background: rgb(15 15 17 / 96%);
   --re-lightbox-foreground: #fff;
   --re-lightbox-control: rgb(35 35 38 / 96%);
-  --re-lightbox-control-hover: rgb(58 58 62 / 98%);
+  --re-lightbox-control-hover: color-mix(
+    in srgb,
+    var(--re-lightbox-control) 88%,
+    var(--re-lightbox-foreground)
+  );
   --re-lightbox-panel: rgb(24 24 27 / 96%);
   --re-lightbox-button-size: 44px;
   --re-lightbox-button-padding: 10px;

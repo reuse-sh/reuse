@@ -117,10 +117,10 @@ const rules: readonly (readonly [(o: LightboxStyle) => boolean, string])[] = [
   z-index: 2;
   top: var(--re-lightbox-pad);
   left: var(--re-lightbox-pad);
-  display: grid;
+  display: flex;
   height: 40px;
   padding: 0 14px;
-  place-items: center;
+  align-items: center;
   border-radius: 999px;
   background: #fff;
   box-shadow: var(--re-lightbox-ring);
@@ -433,6 +433,23 @@ ${slots.join("\n")}
   };
 }`);
   return modules.join("\n\n");
+}
+
+/** The style preview's setup as an ES module: its default export builds the lightbox. */
+export function lightboxPreviewModule(options: LightboxStyle) {
+  const chromeSource = lightboxChrome(options);
+  const slots = chromeSource?.includes("chromeSlots") ?? false;
+  return `${chromeSource ?? ""}
+
+export default (createLightbox, icons, getItems) =>
+  createLightbox({
+    className: "${LIGHTBOX_STYLE_CLASS}",
+    icons,
+    thumbnails: ${options.thumbnails ? '"bottom"' : "false"},${options.autoHide ? "\n    autoHide: 2000," : ""}
+    label: "Photos",
+    padding: window.innerWidth < 560 ? 12 : 24,${slots ? "\n    slots: chromeSlots(getItems, icons)," : ""}
+  });
+`;
 }
 
 export function lightboxCode(options: LightboxStyle) {
