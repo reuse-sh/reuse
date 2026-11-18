@@ -576,20 +576,62 @@ test("closing during a held dismiss drag carries the photo from the finger into 
   expectOn(landing.copy, tile);
 });
 
-test("closing while a mouse drag holds the strip between two photos fades in place", async ({
-  page,
-}) => {
-  await stripPage(page);
-  await openAt(page, 1);
-  await page.mouse.move(500, 20);
-  await page.mouse.down();
-  for (let x = 480; x >= 300; x -= 20) await page.mouse.move(x, 20);
-  const landing = await closeAtLastFrame(page);
-  await page.mouse.up();
-  expect(landing.copy).toBeNull();
-  expect(landing.frame.width).toBeGreaterThan(600);
-  expect(landing.frameOpacity).toBe(0);
-});
+for (const release of ["held", "released during the flight"])
+  test(`a close while a mouse drag holds the strip between two photos ends the drag and lands on the tile (mouse ${release})`, {
+    tag: "@desktop",
+  }, async ({ page }) => {
+    await stripPage(page);
+    await openAt(page, 1);
+    const frame = await page
+      .locator('.re-lightbox-slide[aria-hidden="false"] .re-lightbox-frame')
+      .boundingBox();
+    if (!frame) throw new Error("Missing photo");
+    const from = {
+      x: frame.x + frame.width / 2,
+      y: frame.y + frame.height / 2,
+    };
+    await page.mouse.move(from.x, from.y);
+    await page.mouse.down();
+    for (let step = 1; step <= 10; step++) {
+      await page.mouse.move(from.x - step * 22, from.y);
+      await page.waitForTimeout(16);
+    }
+    await page.waitForTimeout(100);
+    const neighbors = await page.evaluate(() => {
+      const win = window as Window;
+      win.closing = win.lightbox.close();
+      const box = (
+        document.querySelector(".re-lightbox-viewport") as Element
+      ).getBoundingClientRect();
+      const index = win.lightbox.getState().index;
+      return [...document.querySelectorAll(".re-lightbox-slide")]
+        .filter((slide, at) => {
+          const rect = slide.getBoundingClientRect();
+          return (
+            at !== index &&
+            Math.min(rect.right, box.right) - Math.max(rect.left, box.left) > 1
+          );
+        })
+        .map((slide) => slide.getAttribute("aria-label"));
+    });
+    expect(neighbors).toEqual([]);
+    if (release !== "held") await page.mouse.up();
+    const landing = await page.evaluate(() => {
+      for (const animation of document.getAnimations()) {
+        animation.pause();
+        animation.currentTime = Number(
+          animation.effect?.getComputedTiming().endTime ?? 0,
+        );
+      }
+      const copy = document.querySelector(".re-lightbox-landing");
+      const { x, y, width, height } = (copy as Element).getBoundingClientRect();
+      return { x, y, width, height };
+    });
+    expectOn(landing, await tileBox(page, 1));
+    await finishClose(page);
+    if (release === "held") await page.mouse.up();
+    await expect(page.locator("dialog")).toHaveCount(0);
+  });
 
 test("a tile under display: none fades in place", async ({ page }) => {
   await stripPage(page);

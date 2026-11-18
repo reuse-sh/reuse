@@ -1603,13 +1603,14 @@ export function createLightbox<Item extends LightboxItem = LightboxItem>(
     const box = s.viewport.getBoundingClientRect();
     let slide = s.slides[state.index]?.getBoundingClientRect();
     const shift = slide ? slide.left - box.left : 0;
-    if (
-      closing &&
-      Math.abs(shift) > 1 &&
-      !s.pointers.size &&
-      !s.carousel.getState().isDragging
-    ) {
-      quietly(() => s.carousel.goTo(state.index, "instant"));
+    // Disabling ends a held mouse drag and a touch fling, and keeps the strip still while it flies.
+    if (closing) quietly(() => s.carousel.setEnabled(false));
+    if (closing && Math.abs(shift) > 1) {
+      quietly(() => {
+        s.carousel.setEnabled(true);
+        s.carousel.goTo(state.index, "instant");
+        s.carousel.setEnabled(false);
+      });
       slide = s.slides[state.index]?.getBoundingClientRect();
       if (slide && Math.abs(slide.left - box.left) <= 1)
         live.transform = `translate(${shift}px, 0px) ${live.transform}`;
