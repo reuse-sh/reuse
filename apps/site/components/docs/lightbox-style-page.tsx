@@ -137,10 +137,10 @@ export function LightboxStylePage({ style }: { style: string }) {
             />
           </FrameworkOnly>
           <Text>
-            The preview supplies SVG icons through <C>icons</C> and uses
-            responsive image padding. This integration uses the package’s text
-            controls and default image padding. The control layout and helper
-            are the same.
+            The preview supplies the site’s icons through <C>icons</C> and uses
+            responsive image padding. This integration uses the package’s
+            built-in icons and default image padding. The control layout and
+            helper are the same.
           </Text>
         </Section>
       </section>
