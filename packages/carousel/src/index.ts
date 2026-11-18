@@ -872,6 +872,12 @@ export function createCarousel(
     publish(nearestIndex());
   }
 
+  function stopMove() {
+    interrupt(false);
+    clearTimeout(settleTimer);
+    settleTimer = setTimeout(settle, 180);
+  }
+
   function scrollTo(target: number, behavior: ScrollBehavior) {
     const resolved = reducedMotion?.matches ? "instant" : behavior;
     if (resolved === "smooth" && instantFrame) {
@@ -1668,10 +1674,7 @@ export function createCarousel(
         step(direction);
         return;
       }
-      if (pendingIndex === undefined || stretch) return;
-      interrupt(false);
-      clearTimeout(settleTimer);
-      settleTimer = setTimeout(settle, 180);
+      if (pendingIndex !== undefined && !stretch) stopMove();
     },
     { passive: options.wheel !== "vertical" },
   );
@@ -1727,16 +1730,7 @@ export function createCarousel(
       interruptTake();
       return;
     }
-    if (
-      !enabled ||
-      options.drag === false ||
-      input.button !== 0 ||
-      target.closest(
-        "input, select, textarea, [contenteditable], [role=slider], [data-carousel-no-drag]",
-      )
-    ) {
-      return;
-    }
+    if (!enabled || input.button !== 0) return;
     if (input.pointerType !== "mouse") {
       // A touch on a moving strip stops it; release continues to a snap point.
       if (pendingIndex === undefined) return;
@@ -1747,8 +1741,16 @@ export function createCarousel(
     const inner = target.closest(".re-carousel");
     if (inner && inner !== viewport && inner.scrollWidth > inner.clientWidth)
       return;
-    readyDrag();
-    if (!dragReady) return;
+    const draggable =
+      options.drag !== false &&
+      !target.closest(
+        "input, select, textarea, [contenteditable], [role=slider], [data-carousel-no-drag]",
+      );
+    if (draggable) readyDrag();
+    if (!draggable || !dragReady) {
+      if (pendingIndex !== undefined) stopMove();
+      return;
+    }
     const caught =
       catchesClicks &&
       (spring !== null || window.performance.now() - lastScroll < 100);

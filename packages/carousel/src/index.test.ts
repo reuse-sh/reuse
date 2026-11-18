@@ -531,6 +531,51 @@ describe("native carousel", () => {
     expect(off.viewport.style.cursor).toBe("");
   });
 
+  it("stops a moving strip on a press that cannot drag it", () => {
+    for (const press of [
+      "drag off",
+      "no-drag slide",
+      "coarse pointer",
+      "touch, drag off",
+    ]) {
+      if (press === "coarse pointer")
+        vi.stubGlobal("matchMedia", (query: string) =>
+          Object.assign(new EventTarget(), {
+            matches:
+              !query.includes("reduced-motion") && !query.includes("fine"),
+          }),
+        );
+      const { viewport, slides } = fixture([100, 100, 100, 100]);
+      slides[1].toggleAttribute(
+        "data-carousel-no-drag",
+        press === "no-drag slide",
+      );
+      const carousel = createCarousel(viewport, {
+        drag: !press.includes("drag off"),
+      });
+      cleanups.push(carousel.destroy);
+      pointer(viewport, "pointermove", 50);
+      carousel.goTo(3);
+      vi.advanceTimersByTime(100);
+      const pressedAt = viewport.scrollLeft;
+      expect(pressedAt).toBeGreaterThan(0);
+      expect(pressedAt).toBeLessThan(300);
+      pointer(slides[1], "pointerdown", 50, {
+        pointerType: press.startsWith("touch") ? "touch" : "mouse",
+      });
+      vi.advanceTimersByTime(100);
+      expect([press, viewport.scrollLeft]).toEqual([press, pressedAt]);
+      pointer(slides[1], "pointerup", 50, {
+        pointerType: press.startsWith("touch") ? "touch" : "mouse",
+      });
+      vi.advanceTimersByTime(2000);
+      expect([press, viewport.scrollLeft]).toEqual([
+        press,
+        Math.round(pressedAt / 100) * 100,
+      ]);
+    }
+  });
+
   it("cancels a release glide for a new drag or a wheel and redirects it for a programmatic move", () => {
     const { viewport } = fixture([100, 100, 100, 100]);
     const carousel = createCarousel(viewport);
