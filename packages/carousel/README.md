@@ -18,7 +18,7 @@ These are the rules the code keeps. An adaptation on any framework keeps them to
 - **Put back what it moved.** Destroy cancels timers and restores the styles, transforms and listeners it added.
 - **Move the same way every time.** Next, dots, goTo and a released drag use one motion, so browsers do not differ.
 - **Hold hover while the strip moves.** Slides ignore hover during a fast swipe or wheel scroll and respond again once it slows down.
-- **Publish one state.** Index, pages, visible slides and autoplay progress come from one source that every control reads.
+- **Publish one state.** Index, pages, visible slides and autoplay progress come from one source that every control reads, and every label and announcement from the carousel's strings.
 - **Swipe by the group the buttons use.** With group set, only the first slide of each group and the slide a move was sent to snap, so a swipe and a released drag move a group like next() does.
 - **Give the strip back to the visitor.** A drag or a touch takes the position from a driver such as a marquee, and the strip snaps again once the driver lets go.
 - **Let the markup carry the options.** Options printed in data-carousel-options apply under the options from code, key by key, and an attribute that is not a JSON object stops with the element's name instead of a strip with defaults.

@@ -2134,6 +2134,51 @@ describe("controls binder", () => {
     expect(prev?.hasAttribute("aria-controls")).toBe(false);
   });
 
+  it("names its controls from the carousel's strings and renames them when the strings change", () => {
+    const { root, carousel } = bound(
+      '<button data-carousel-prev></button><button data-carousel-next>Next</button><div data-carousel-dots></div><button data-carousel-play></button><div data-carousel-progress aria-label="Scroll"></div><span data-carousel-counter></span>',
+    );
+    const unbind = bindCarouselControls(root, carousel);
+    const find = (selector: string) => root.querySelector(selector);
+    expect(find("[data-carousel-prev]")?.getAttribute("aria-label")).toBe(
+      "Previous slide",
+    );
+    carousel.setOptions({
+      strings: {
+        previous: "Zurück",
+        goTo: (index, count) => `Bild ${index + 1} von ${count}`,
+        pause: "Anhalten",
+        progress: "Position",
+        counter: (index, count) => `${index + 1} von ${count}`,
+      },
+    });
+    expect(find("[data-carousel-prev]")?.getAttribute("aria-label")).toBe(
+      "Zurück",
+    );
+    expect(find("[data-carousel-next]")?.hasAttribute("aria-label")).toBe(
+      false,
+    );
+    expect(
+      root
+        .querySelectorAll("[data-carousel-dots] button")[1]
+        ?.getAttribute("aria-label"),
+    ).toBe("Bild 2 von 6");
+    expect(find("[data-carousel-play]")?.getAttribute("aria-label")).toBe(
+      "Anhalten",
+    );
+    expect(find("[data-carousel-progress]")?.getAttribute("aria-label")).toBe(
+      "Scroll",
+    );
+    expect(find("[data-carousel-counter]")?.textContent).toBe("1 von 8");
+    unbind();
+    expect(find("[data-carousel-prev]")?.hasAttribute("aria-label")).toBe(
+      false,
+    );
+    expect(find("[data-carousel-progress]")?.getAttribute("aria-label")).toBe(
+      "Scroll",
+    );
+  });
+
   it("leaves no listener on the root or a control after unbinding", () => {
     const counts = new Map<EventTarget, number>();
     const add = EventTarget.prototype.addEventListener;
@@ -2260,9 +2305,8 @@ describe("controls binder", () => {
 
   it("makes the progress bar a slider for the pointer and the keys", () => {
     const { root, carousel } = bound("<div data-carousel-progress></div>");
-    const unbind = bindCarouselControls(root, carousel, {
-      strings: { progress: "Position" },
-    });
+    carousel.setOptions({ strings: { progress: "Position" } });
+    const unbind = bindCarouselControls(root, carousel);
     const bar = root.querySelector<HTMLElement>("[data-carousel-progress]");
     if (!bar) throw new Error("No bar");
     bar.getBoundingClientRect = () => ({ left: 0, width: 100 }) as DOMRect;

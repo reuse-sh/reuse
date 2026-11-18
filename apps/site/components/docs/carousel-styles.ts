@@ -241,14 +241,12 @@ const builders: Record<CarouselStyleName, (demo: HTMLElement) => Cleanup> = {
           <button type="button" class="cc-round" data-carousel-next aria-label="Next slide">${arrow("right")}</button>
         </div>
       </div>`,
-      { loop: false },
+      { loop: false, strings: { counter: (index) => pad(index + 1) } },
     );
     const caption = find(box, "[data-caption]");
     const place = find(box, "[data-place]");
     const captionBox = find(box, ".cc-caption");
-    const unbind = bindCarouselControls(box, carousel, {
-      strings: { counter: (index) => pad(index + 1) },
-    });
+    const unbind = bindCarouselControls(box, carousel);
     let shown = -1;
     const unsubscribe = follow(carousel, (state) => {
       if (state.index === shown) return;
@@ -327,12 +325,10 @@ const builders: Record<CarouselStyleName, (demo: HTMLElement) => Cleanup> = {
           <span class="cc-scrub-handle"></span>
         </span>
       </div>`,
-      { loop: false },
+      { loop: false, strings: { progress: "Scroll position" } },
     );
     const ticks = find(box, ".cc-scrub-ticks");
-    const unbind = bindCarouselControls(box, carousel, {
-      strings: { progress: "Scroll position" },
-    });
+    const unbind = bindCarouselControls(box, carousel);
     // One tick per distinct snap point; slides that end the strip share the last one.
     const measure = () => {
       const max = viewport.scrollWidth - viewport.clientWidth;
