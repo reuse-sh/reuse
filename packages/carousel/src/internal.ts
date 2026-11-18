@@ -12,6 +12,7 @@ export interface CarouselInternals {
   slides(): readonly HTMLElement[];
   pages(): readonly Page[];
   requested(): boolean;
+  onRequest(listener: () => void): () => void;
   align(): "start" | "center" | undefined;
   goTo(index: number, behavior?: ScrollBehavior, announce?: boolean): void;
   silence(): void;

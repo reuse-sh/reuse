@@ -244,6 +244,7 @@ export function createCarousel(
   } | null = null;
   let stops: boolean[] = [];
   const listeners = new Set<(state: CarouselState) => void>();
+  const requestListeners = new Set<() => void>();
   const holds = new Set<string>();
   const internalHolds = new Set<string>();
   const cleanup: (() => void)[] = [];
@@ -1262,6 +1263,12 @@ export function createCarousel(
     if (ownsLabel) slide.removeAttribute("aria-label");
   }
 
+  function request(playing: boolean) {
+    requestedPlaying = playing;
+    schedule();
+    for (const listener of requestListeners) listener();
+  }
+
   function hold(reason: string, isHeld: boolean) {
     if (destroyed) return;
     if (isHeld) holds.add(reason);
@@ -1357,13 +1364,11 @@ export function createCarousel(
     },
     play() {
       if (destroyed) return;
-      requestedPlaying = true;
-      schedule();
+      request(true);
     },
     pause() {
       if (destroyed) return;
-      requestedPlaying = false;
-      schedule();
+      request(false);
     },
     hold,
     take(owner, { onInterrupt } = {}) {
@@ -1425,7 +1430,8 @@ export function createCarousel(
       if (changed.some((name) => name !== "autoplay" && name !== "drag"))
         refresh();
       updateCursor();
-      schedule();
+      if (changed.includes("autoplay")) request(requestedPlaying);
+      else schedule();
     },
     destroy() {
       if (destroyed) return;
@@ -1444,6 +1450,7 @@ export function createCarousel(
       intersection?.disconnect();
       for (const remove of cleanup) remove();
       listeners.clear();
+      requestListeners.clear();
       if (!hadClass) viewport.classList.remove("re-carousel");
       for (const name of stateAttributes) viewport.removeAttribute(name);
       viewport.style.removeProperty("--re-carousel-autoplay-progress");
@@ -1784,6 +1791,10 @@ export function createCarousel(
             : 0,
       })),
     requested: () => requestedPlaying && options.autoplay !== undefined,
+    onRequest: (listener) => {
+      requestListeners.add(listener);
+      return () => requestListeners.delete(listener);
+    },
     align: () => options.align,
     goTo: (index, behavior, announce) =>
       announce ? announced(() => goTo(index, behavior)) : goTo(index, behavior),

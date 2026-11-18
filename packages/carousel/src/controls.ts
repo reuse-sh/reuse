@@ -245,8 +245,8 @@ export function bindCarouselControls(
     listen(button, "click", () => {
       if (strip.requested()) carousel.pause();
       else carousel.play();
-      render();
     });
+    cleanup.push(strip.onRequest(render));
     renders.push(render);
   }
 

@@ -1990,6 +1990,15 @@ describe("controls binder", () => {
     expect(carousel.getState().isPlaying).toBe(false);
     click(play);
     expect(carousel.getState().isPlaying).toBe(true);
+    carousel.hold("x", true);
+    carousel.pause();
+    expect(play?.getAttribute("aria-pressed")).toBe("false");
+    expect(play?.getAttribute("aria-label")).toBe("Play slideshow");
+    carousel.play();
+    expect(play?.getAttribute("aria-pressed")).toBe("true");
+    expect(play?.getAttribute("aria-label")).toBe("Pause slideshow");
+    carousel.setOptions({ autoplay: undefined });
+    expect(play?.getAttribute("aria-pressed")).toBe("false");
     unbind();
     expect(play?.hasAttribute("aria-pressed")).toBe(false);
   });
