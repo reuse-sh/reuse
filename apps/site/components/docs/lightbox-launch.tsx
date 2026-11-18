@@ -96,12 +96,7 @@ export function LightboxLaunch({
     <Card>
       <style>{css}</style>
       <CardContent padding="none" className="rounded-panel">
-        <div
-          ref={root}
-          className="grid grid-cols-2 gap-1.5 p-4 sm:grid-cols-4"
-          onPointerEnter={() => void load()}
-          onFocus={() => void load()}
-        >
+        <div ref={root} className="grid grid-cols-2 gap-1.5 p-4 sm:grid-cols-4">
           {items.map((item, index) => (
             <a
               key={item.src}
@@ -121,6 +116,7 @@ export function LightboxLaunch({
                 void open(index);
               }}
             >
+              {/* biome-ignore lint/performance/noImgElement: marble SVGs are served as is; the lightbox reads the rendered image as its origin. */}
               <img
                 src={item.src}
                 alt={item.alt}
