@@ -1500,6 +1500,26 @@ describe("lightbox public API", () => {
     expect(() => controller.open([])).toThrow(TypeError);
   });
 
+  it("builds append during the close flight on the list that waits for the close", async () => {
+    const controller = create({ history: false });
+    controller.open(gallery.slice(0, 2), 0);
+    let closing = controller.close();
+    expect(controller.getState().isClosing).toBe(true);
+    controller.append([gallery[2]]);
+    controller.append([gallery[3]]);
+    await closing;
+    expect(controller.getState()).toMatchObject({ isOpen: false, count: 4 });
+    controller.open(gallery.slice(0, 2), 0);
+    closing = controller.close();
+    controller.setItems([gallery[4]]);
+    controller.append([gallery[5]]);
+    await closing;
+    expect(controller.getState()).toMatchObject({
+      count: 2,
+      item: gallery[4],
+    });
+  });
+
   it("closes when setItems empties the list although beforeclose vetoes, and says that close cannot be cancelled", async () => {
     const controller = create({ history: false });
     const cancelable: boolean[] = [];

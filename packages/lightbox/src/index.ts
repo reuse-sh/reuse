@@ -4808,7 +4808,8 @@ export function createLightbox<Item extends LightboxItem = LightboxItem>(
         signal,
       );
     },
-    append: (input) => setItems([...sources, ...input]),
+    append: (input) =>
+      setItems([...(listAfterClose?.sources ?? sources), ...input]),
     setItems,
     setOptions: (next) => {
       for (const key of Object.keys(next) as (keyof typeof next)[])
