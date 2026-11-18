@@ -19,6 +19,7 @@ type Lightbox = {
 };
 type Carousel = {
   getState(): { index: number; isPlaying: boolean; count: number };
+  goTo(index: number, behavior?: "instant" | "smooth"): void;
   pause(): void;
 };
 type Window = globalThis.Window &
@@ -178,6 +179,40 @@ test("after paging to photo 3, close brings the strip to slide 3 and lands on it
       dialogs: document.querySelectorAll("dialog").length,
     })),
   ).toEqual({ visibility: "", copies: 0, dialogs: 0 });
+});
+
+test("the landing copy at the strip's last photo leaves the strip's scroll width alone", async ({
+  page,
+}) => {
+  await stripPage(page);
+  // A carousel viewport is the copy's containing block when its tiles have no position.
+  await page.addStyleTag({ content: "#strip{position:relative}" });
+  await page.evaluate(() => (window as Window).carousel.goTo(5, "instant"));
+  await openAt(page, 5);
+  const strip = () =>
+    page.evaluate(() => {
+      const element = document.getElementById("strip") as HTMLElement;
+      return {
+        width: element.scrollWidth,
+        left: Math.round(element.scrollLeft),
+      };
+    });
+  const before = await strip();
+  const tile = await tileBox(page, 5);
+  const start = await page.evaluate(() => {
+    const win = window as Window;
+    win.closing = win.lightbox.close();
+    for (const animation of document.getAnimations()) animation.pause();
+    const element = document.getElementById("strip") as HTMLElement;
+    return {
+      width: element.scrollWidth,
+      left: Math.round(element.scrollLeft),
+    };
+  });
+  expect(start).toEqual(before);
+  expectOn((await closeAtLastFrame(page)).copy, tile);
+  await finishClose(page);
+  expect(await strip()).toEqual(before);
 });
 
 test("a close right after paging still lands on the new photo's tile", async ({

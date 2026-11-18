@@ -353,7 +353,7 @@ type Session = {
   input?: "keyboard" | "pointer";
   restoreScroll: () => void;
   hiddenOrigin?: { element: HTMLElement; visibility: string };
-  landing?: HTMLImageElement;
+  landing?: HTMLElement;
   counter?: HTMLSpanElement;
   counterText: string;
   status: HTMLDivElement;
@@ -1400,6 +1400,7 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
     s: Session,
     image: HTMLImageElement,
     origin: HTMLElement,
+    rect: DOMRect,
     size: Size,
     box: DOMRect,
   ) {
@@ -1419,14 +1420,24 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
     copy.setAttribute("aria-hidden", "true");
     copy.draggable = false;
     copy.src = src;
-    copy.style.cssText = `position:absolute;left:0;top:0;right:auto;bottom:auto;display:block;box-sizing:content-box;width:${size.width}px;height:${size.height}px;min-width:0;min-height:0;max-width:none;max-height:none;margin:0;padding:0;border:0;border-radius:0;box-shadow:none;outline:0;object-fit:fill;opacity:1;visibility:visible;filter:none;transition:none;animation:none;translate:none;rotate:none;scale:none;transform-origin:center;pointer-events:none`;
+    const reset =
+      "position:absolute;left:0;top:0;right:auto;bottom:auto;display:block;box-sizing:content-box;min-width:0;min-height:0;max-width:none;max-height:none;margin:0;padding:0;border:0;border-radius:0;box-shadow:none;outline:0;opacity:1;visibility:visible;filter:none;transition:none;animation:none;transform:none;translate:none;rotate:none;scale:none;pointer-events:none";
+    copy.style.cssText = `${reset};width:${size.width}px;height:${size.height}px;object-fit:fill;transform-origin:center`;
+    // The box covers the tile and clips the copy, so the full-size copy adds no scrollable
+    // overflow to a strip whose tiles have no position of their own.
+    const holder = doc.createElement("span");
+    holder.setAttribute("aria-hidden", "true");
+    holder.style.cssText = `${reset};width:${rect.width}px;height:${rect.height}px;overflow:hidden;overflow:clip`;
+    holder.append(copy);
     // A carousel of bare children would count a copy beside its slide as one more slide.
     const parent = origin.parentElement;
-    (parent?.classList.contains("re-carousel") ? parent : origin).after(copy);
-    const at = copy.getBoundingClientRect();
-    copy.style.left = `${box.left + (box.width - size.width) / 2 - at.left}px`;
-    copy.style.top = `${box.top + (box.height - size.height) / 2 - at.top}px`;
-    return copy;
+    (parent?.classList.contains("re-carousel") ? parent : origin).after(holder);
+    const at = holder.getBoundingClientRect();
+    holder.style.left = `${rect.left - at.left}px`;
+    holder.style.top = `${rect.top - at.top}px`;
+    copy.style.left = `${box.left + (box.width - size.width) / 2 - rect.left}px`;
+    copy.style.top = `${box.top + (box.height - size.height) / 2 - rect.top}px`;
+    return { holder, copy };
   }
 
   function morph(s: Session, closing: boolean, landing: boolean) {
@@ -1545,12 +1556,13 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
     };
     if (!closing)
       return animate(s, entry.frame, [clipped, expanded], duration, ease);
-    const copy =
+    const made =
       landing && duration > 0
-        ? landingCopy(s, entry.image, origin, size, box)
+        ? landingCopy(s, entry.image, origin, rect, size, box)
         : undefined;
-    if (!copy) return animate(s, entry.frame, [live, clipped], duration, ease);
-    s.landing = copy;
+    if (!made) return animate(s, entry.frame, [live, clipped], duration, ease);
+    const { holder, copy } = made;
+    s.landing = holder;
     return Promise.all([
       animate(
         s,
