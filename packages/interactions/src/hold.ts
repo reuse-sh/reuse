@@ -96,6 +96,11 @@ export function createHoldToConfirm(
     fill.style.transitionDuration = "200ms";
     confirm();
   };
+  const release = (event: PointerEvent) => {
+    if (holdingPointer !== undefined && event.pointerId !== holdingPointer)
+      return;
+    cancel();
+  };
   const onEscape = (event: KeyboardEvent) => {
     if (event.key === "Escape") cancel();
   };
@@ -104,8 +109,8 @@ export function createHoldToConfirm(
   button.addEventListener("keydown", keyDown);
   button.addEventListener("click", click);
   button.addEventListener("blur", cancel);
-  view.addEventListener("pointerup", cancel);
-  view.addEventListener("pointercancel", cancel);
+  view.addEventListener("pointerup", release);
+  view.addEventListener("pointercancel", release);
   view.addEventListener("keyup", keyUp);
   view.addEventListener("keydown", onEscape);
   view.addEventListener("blur", cancel);
@@ -129,8 +134,8 @@ export function createHoldToConfirm(
       button.removeEventListener("keydown", keyDown);
       button.removeEventListener("click", click);
       button.removeEventListener("blur", cancel);
-      view.removeEventListener("pointerup", cancel);
-      view.removeEventListener("pointercancel", cancel);
+      view.removeEventListener("pointerup", release);
+      view.removeEventListener("pointercancel", release);
       view.removeEventListener("keyup", keyUp);
       view.removeEventListener("keydown", onEscape);
       view.removeEventListener("blur", cancel);

@@ -107,6 +107,23 @@ describe("hold to confirm", () => {
       expect(button.hasAttribute("data-holding")).toBe(false);
     },
   );
+  it("lets go only for the holding pointer's release", () => {
+    const { button, count } = setup();
+    button.dispatchEvent(
+      new PointerEvent("pointerdown", {
+        bubbles: true,
+        button: 0,
+        pointerId: 1,
+        isPrimary: true,
+      }),
+    );
+    window.dispatchEvent(new PointerEvent("pointerup", { pointerId: 7 }));
+    expect(button.hasAttribute("data-holding")).toBe(true);
+    window.dispatchEvent(new PointerEvent("pointerup", { pointerId: 1 }));
+    expect(button.hasAttribute("data-holding")).toBe(false);
+    vi.advanceTimersByTime(200);
+    expect(count()).toBe(0);
+  });
   it("cancels when the holding pointer leaves the button, but not for another pointer", () => {
     const { button, count } = setup();
     const withId = (type: string, pointerId: number) => {
@@ -304,6 +321,65 @@ describe("floating tooltip", () => {
     expect(popup.style.transform).toBe(
       "translate3d(170px, 90px, 0) rotate(0deg)",
     );
+  });
+  it("follows only the pointer that opened it", () => {
+    reduced = true;
+    document.body.innerHTML =
+      '<div><button data-re-tooltip="Save">Save</button></div>';
+    const root = document.body.firstElementChild as HTMLElement;
+    const button = root.querySelector("button") as HTMLElement;
+    rect(button, 100, 100, 80, 32);
+    controllers.push(createFloatingTooltip(root, { delay: 0 }));
+    const popup = document.querySelector('[role="tooltip"]') as HTMLElement;
+    const at = (type: string, pointerId: number, x: number, y: number) =>
+      button.dispatchEvent(
+        new PointerEvent(type, {
+          bubbles: true,
+          pointerId,
+          pointerType: "mouse",
+          clientX: x,
+          clientY: y,
+        }),
+      );
+    at("pointerover", 1, 160, 80);
+    const placed = popup.style.transform;
+    at("pointermove", 7, 400, 400);
+    at("pointerout", 7, 400, 400);
+    vi.advanceTimersByTime(500);
+    expect(popup.hidden).toBe(false);
+    expect(popup.style.transform).toBe(placed);
+    at("pointerout", 1, 160, 80);
+    vi.advanceTimersByTime(500);
+    expect(popup.hidden).toBe(true);
+  });
+  it("opens after its delay though another pointer leaves something meanwhile", () => {
+    reduced = true;
+    document.body.innerHTML =
+      '<div><button data-re-tooltip="Save">Save</button><span>Elsewhere</span></div>';
+    const root = document.body.firstElementChild as HTMLElement;
+    const button = root.querySelector("button") as HTMLElement;
+    const other = root.querySelector("span") as HTMLElement;
+    rect(button, 100, 100, 80, 32);
+    controllers.push(createFloatingTooltip(root, { delay: 100 }));
+    const popup = document.querySelector('[role="tooltip"]') as HTMLElement;
+    button.dispatchEvent(
+      new PointerEvent("pointerover", {
+        bubbles: true,
+        pointerId: 1,
+        pointerType: "mouse",
+        clientX: 160,
+        clientY: 80,
+      }),
+    );
+    other.dispatchEvent(
+      new PointerEvent("pointerout", {
+        bubbles: true,
+        pointerId: 7,
+        pointerType: "mouse",
+      }),
+    );
+    vi.advanceTimersByTime(200);
+    expect(popup.hidden).toBe(false);
   });
   it("keeps live rich content in place when it changes while shown", () => {
     reduced = true;
