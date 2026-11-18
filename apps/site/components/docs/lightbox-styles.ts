@@ -47,6 +47,7 @@ const rules: readonly (readonly [(o: LightboxStyle) => boolean, string])[] = [
     always,
     `.re-lightbox-style {
   --re-lightbox-pad: 16px;
+  --re-lightbox-padding: 24px;
   --re-lightbox-inset: var(--re-lightbox-pad);
   --re-lightbox-gap: 8px;
   --re-lightbox-side: 0px;
@@ -275,7 +276,7 @@ const rules: readonly (readonly [(o: LightboxStyle) => boolean, string])[] = [
   [
     always,
     `@media (max-width: 559px) {
-  .re-lightbox-style { --re-lightbox-pad: 12px; }
+  .re-lightbox-style { --re-lightbox-pad: 12px; --re-lightbox-padding: 12px; }
 }`,
   ],
   [
@@ -359,7 +360,7 @@ export function lightboxChrome(options: LightboxStyle) {
       bar.setAttribute("aria-label", "Photo controls");${
         options.arrows === "Toolbar"
           ? `
-      const prev = button("prev", "Previous image", "‹", () => lightbox.prev());
+      const prev = button("previous", "Previous image", "‹", () => lightbox.prev());
       const next = button("next", "Next image", "›", () => lightbox.next());`
           : ""
       }${
@@ -446,8 +447,7 @@ export default (createLightbox, icons, getItems) =>
     className: "${LIGHTBOX_STYLE_CLASS}",
     icons,
     thumbnails: ${options.thumbnails ? '"bottom"' : "false"},${options.autoHide ? "\n    autoHide: 2000," : ""}
-    label: "Photos",
-    padding: window.innerWidth < 560 ? 12 : 24,${slots ? "\n    slots: chromeSlots(getItems, icons)," : ""}
+    strings: { dialog: "Photos" },${slots ? "\n    slots: chromeSlots(getItems, icons)," : ""}
   });
 `;
 }
@@ -472,24 +472,29 @@ import "./lightbox-style.css";${names.length ? `\nimport { ${names.join(", ")} }
   return {
     html: `<div data-gallery>
   <a href="/photos/coast.jpg">
-    <img src="/photos/coast-small.jpg" data-lightbox-src="/photos/coast.jpg" alt="A rocky coast" data-caption="Coast" width="400" height="300">
+    <img src="/photos/coast-small.jpg" data-lightbox-src="/photos/coast.jpg" alt="A rocky coast" data-lightbox-caption="Coast" width="400" height="300">
   </a>
   <a href="/photos/forest.jpg">
-    <img src="/photos/forest-small.jpg" data-lightbox-src="/photos/forest.jpg" alt="A path through a forest" data-caption="Forest" width="400" height="300">
+    <img src="/photos/forest-small.jpg" data-lightbox-src="/photos/forest.jpg" alt="A path through a forest" data-lightbox-caption="Forest" width="400" height="300">
   </a>
 </div>`,
-    js: `import { bindLightboxGallery, lightboxItemFromImage } from "@reuse-sh/lightbox";
+    js: `import { bindLightboxGallery, createLightbox, lightboxItemFromElement } from "@reuse-sh/lightbox";
 ${imports}
 
-const gallery = document.querySelector("[data-gallery]");
-const getItem = (image) => ({
-  ...lightboxItemFromImage(image),
-  caption: image.dataset.caption,${options.thumbnails ? "\n  thumbnailSrc: image.currentSrc || image.src," : ""}
-});${slots ? `\nconst items = () => [...gallery.querySelectorAll("img")].map(getItem);` : ""}
-const lightbox = bindLightboxGallery(gallery, {
+const gallery = document.querySelector("[data-gallery]");${
+      options.thumbnails
+        ? `
+const item = (trigger) => {
+  const found = lightboxItemFromElement(trigger);
+  const image = trigger.querySelector("img");
+  return found && { ...found, thumbnailSrc: image.currentSrc || image.src };
+};`
+        : "\nconst item = lightboxItemFromElement;"
+    }${slots ? `\nconst items = () => [...gallery.querySelectorAll("a")].map(item);` : ""}
+const lightbox = createLightbox({
 ${body("  ", "items")}
-  getItem,
-});`,
+});
+const unbind = bindLightboxGallery(gallery, lightbox, { item });`,
     react: `"use client";
 
 import type { LightboxItem } from "@reuse-sh/lightbox";
@@ -528,6 +533,6 @@ ${body("    ", "() => photos")}
 }`,
     css: lightboxStyleCss(options),
     chrome: chromeSource,
-    cleanup: "lightbox.destroy();",
+    cleanup: "unbind();\nlightbox.destroy();",
   };
 }

@@ -27,7 +27,7 @@ test("opening the lightbox keeps page content and right-anchored fixed elements 
   expect(before.gap).toBeGreaterThan(0);
   await page.evaluate(async (src) => {
     const { createLightbox } = await import("/modules/lightbox/index.js");
-    const lightbox = createLightbox({ duration: 0 });
+    const lightbox = createLightbox();
     lightbox.open([{ src, width: 1200, height: 800 }]);
     Object.assign(window, { lightbox });
   }, photo(1));

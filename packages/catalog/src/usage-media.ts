@@ -60,7 +60,7 @@ export function Gallery() {
         blocks: [
           {
             kind: "prose",
-            text: "Links still open the image without JavaScript. The native dialog keeps focus inside, Escape closes it, and close returns focus to the current photo's tile. The React hook destroys its viewer on unmount.",
+            text: "Links still open the image without JavaScript. The native dialog keeps focus inside, Escape closes it, and close returns focus to the current photo's tile. The React hook closes its viewer at once and frees it on unmount or when Activity hides it, and opens the same viewer again when Activity shows it.",
           },
         ],
       },
@@ -108,15 +108,16 @@ export function Gallery() {
         blocks: [
           {
             kind: "prose",
-            text: "Run this after the markup exists. Keep the returned controller for the lifetime of this content.",
+            text: "Run this after the markup exists. Keep the lightbox and the unbind function for the lifetime of this content.",
           },
           {
             kind: "code",
             id: "lightbox-getting-started-initialize",
             language: "javascript",
-            code: `import { bindLightboxGallery } from "@reuse-sh/lightbox";
+            code: `import { bindLightboxGallery, createLightbox } from "@reuse-sh/lightbox";
 
-const gallery = bindLightboxGallery(document.querySelector("#gallery"), {});`,
+const lightbox = createLightbox();
+const unbind = bindLightboxGallery(document.querySelector("#gallery"), lightbox);`,
             role: "setup",
           },
         ],
@@ -141,7 +142,8 @@ const gallery = bindLightboxGallery(document.querySelector("#gallery"), {});`,
             kind: "code",
             id: "lightbox-getting-started-cleanup",
             language: "javascript",
-            code: "gallery.destroy();",
+            code: `unbind();
+lightbox.destroy();`,
             role: "cleanup",
           },
         ],
@@ -210,7 +212,7 @@ export function ProductGallery() {
         blocks: [
           {
             kind: "prose",
-            text: "The small item list describes the two actual product assets. Keep image dimensions and alt text with each asset. Native gallery binding collects images in DOM order. Links still open the image without JavaScript. The native dialog keeps focus inside, Escape closes it, and close returns focus to the current photo's tile. The React hook destroys its viewer on unmount.",
+            text: "The small item list describes the two actual product assets. Keep image dimensions and alt text with each asset. Native gallery binding collects images in DOM order. Links still open the image without JavaScript. The native dialog keeps focus inside, Escape closes it, and close returns focus to the current photo's tile. The React hook closes its viewer at once and frees it on unmount or when Activity hides it, and opens the same viewer again when Activity shows it.",
           },
         ],
       },
@@ -257,15 +259,16 @@ export function ProductGallery() {
         blocks: [
           {
             kind: "prose",
-            text: "Run this after the markup exists. Keep the returned controller for the lifetime of this content.",
+            text: "Run this after the markup exists. Keep the lightbox and the unbind function for the lifetime of this content.",
           },
           {
             kind: "code",
             id: "lightbox-examples-product-initialize",
             language: "javascript",
-            code: `import { bindLightboxGallery } from "@reuse-sh/lightbox";
+            code: `import { bindLightboxGallery, createLightbox } from "@reuse-sh/lightbox";
 
-const gallery = bindLightboxGallery(document.querySelector("#gallery"), { thumbnails: "bottom" });`,
+const lightbox = createLightbox({ thumbnails: "bottom" });
+const unbind = bindLightboxGallery(document.querySelector("#gallery"), lightbox);`,
             role: "setup",
           },
         ],
@@ -290,7 +293,8 @@ const gallery = bindLightboxGallery(document.querySelector("#gallery"), { thumbn
             kind: "code",
             id: "lightbox-examples-product-cleanup",
             language: "javascript",
-            code: "gallery.destroy();",
+            code: `unbind();
+lightbox.destroy();`,
             role: "cleanup",
           },
         ],
@@ -352,7 +356,7 @@ export function MessageAttachments({ sources }: { sources: string[] }) {
         blocks: [
           {
             kind: "prose",
-            text: "Mount the message component for every message rather than passing every conversation attachment to a global viewer. Destroy the binding when a message is removed. Links still open the image without JavaScript. The native dialog keeps focus inside, Escape closes it, and close returns focus to the current photo's tile. The React hook destroys its viewer on unmount.",
+            text: "Mount the message component for every message rather than passing every conversation attachment to a global viewer. Destroy the binding when a message is removed. Links still open the image without JavaScript. The native dialog keeps focus inside, Escape closes it, and close returns focus to the current photo's tile. The React hook closes its viewer at once and frees it on unmount or when Activity hides it, and opens the same viewer again when Activity shows it.",
           },
         ],
       },
@@ -401,17 +405,18 @@ export function MessageAttachments({ sources }: { sources: string[] }) {
         blocks: [
           {
             kind: "prose",
-            text: "Run this after the markup exists. Keep the returned controller for the lifetime of this content.",
+            text: "Run this after the markup exists. Keep the lightbox and the unbind function for the lifetime of this content.",
           },
           {
             kind: "code",
             id: "lightbox-examples-chat-initialize",
             language: "javascript",
-            code: `import { bindLightboxGallery } from "@reuse-sh/lightbox";
+            code: `import { bindLightboxGallery, createLightbox } from "@reuse-sh/lightbox";
 
-const galleries = Array.from(document.querySelectorAll("[data-message-images]"),
-  (root) => bindLightboxGallery(root));
-const gallery = { destroy: () => galleries.forEach((entry) => entry.destroy()) };`,
+const lightbox = createLightbox();
+const unbinds = Array.from(document.querySelectorAll("[data-message-images]"),
+  (root) => bindLightboxGallery(root, lightbox));
+const unbind = () => unbinds.forEach((stop) => stop());`,
             role: "setup",
           },
         ],
@@ -421,7 +426,7 @@ const gallery = { destroy: () => galleries.forEach((entry) => entry.destroy()) }
         blocks: [
           {
             kind: "prose",
-            text: "Bind each message gallery instead of passing every conversation attachment to a global viewer. Destroy the binding when a message is removed. Links still open the image without JavaScript. The native dialog keeps focus inside, Escape closes it, and close returns focus to the current photo's tile.",
+            text: "Bind each message's images as their own gallery, so a message opens only its own photos, and share one lightbox between them. Unbind a message's gallery when the message is removed. Links still open the image without JavaScript. The native dialog keeps focus inside, Escape closes it, and close returns focus to the current photo's tile.",
           },
         ],
       },
@@ -436,7 +441,8 @@ const gallery = { destroy: () => galleries.forEach((entry) => entry.destroy()) }
             kind: "code",
             id: "lightbox-examples-chat-cleanup",
             language: "javascript",
-            code: "gallery.destroy();",
+            code: `unbind();
+lightbox.destroy();`,
             role: "cleanup",
           },
         ],
@@ -502,7 +508,7 @@ export function Gallery() {
         blocks: [
           {
             kind: "prose",
-            text: "A cropped article thumbnail does not constrain the full-size viewer image. Use descriptive captions through the image data-caption attribute, and keep nearby article text outside the gallery root if it contains unrelated images. Links still open the image without JavaScript. The native dialog keeps focus inside, Escape closes it, and close returns focus to the current photo's tile. The React hook destroys its viewer on unmount.",
+            text: "A cropped article thumbnail does not constrain the full-size viewer image. Give captions with a figcaption or the image's data-lightbox-caption attribute, and keep nearby article text outside the gallery root if it contains unrelated images. Links still open the image without JavaScript. The native dialog keeps focus inside, Escape closes it, and close returns focus to the current photo's tile. The React hook closes its viewer at once and frees it on unmount or when Activity hides it, and opens the same viewer again when Activity shows it.",
           },
         ],
       },
@@ -550,15 +556,16 @@ export function Gallery() {
         blocks: [
           {
             kind: "prose",
-            text: "Run this after the markup exists. Keep the returned controller for the lifetime of this content.",
+            text: "Run this after the markup exists. Keep the lightbox and the unbind function for the lifetime of this content.",
           },
           {
             kind: "code",
             id: "lightbox-examples-journal-initialize",
             language: "javascript",
-            code: `import { bindLightboxGallery, lightboxItemFromImage } from "@reuse-sh/lightbox";
+            code: `import { bindLightboxGallery, createLightbox } from "@reuse-sh/lightbox";
 
-const gallery = bindLightboxGallery(document.querySelector("#gallery"), { imageClick: "close", doubleTapZoom: false, getItem: (image) => ({ ...lightboxItemFromImage(image), caption: image.dataset.caption }) });`,
+const lightbox = createLightbox({ imageClick: "close", doubleTapZoom: false });
+const unbind = bindLightboxGallery(document.querySelector("#gallery"), lightbox);`,
             role: "setup",
           },
         ],
@@ -568,7 +575,7 @@ const gallery = bindLightboxGallery(document.querySelector("#gallery"), { imageC
         blocks: [
           {
             kind: "prose",
-            text: "A cropped article thumbnail does not constrain the full-size viewer image. Use descriptive captions through the image data-caption attribute, and keep nearby article text outside the gallery root if it contains unrelated images. Links still open the image without JavaScript. The native dialog keeps focus inside, Escape closes it, and close returns focus to the current photo's tile.",
+            text: "A cropped article thumbnail does not constrain the full-size viewer image. Give captions with a figcaption or the image's data-lightbox-caption attribute, and keep nearby article text outside the gallery root if it contains unrelated images. Links still open the image without JavaScript. The native dialog keeps focus inside, Escape closes it, and close returns focus to the current photo's tile.",
           },
         ],
       },
@@ -583,7 +590,8 @@ const gallery = bindLightboxGallery(document.querySelector("#gallery"), { imageC
             kind: "code",
             id: "lightbox-examples-journal-cleanup",
             language: "javascript",
-            code: "gallery.destroy();",
+            code: `unbind();
+lightbox.destroy();`,
             role: "cleanup",
           },
         ],
@@ -615,7 +623,7 @@ const gallery = bindLightboxGallery(document.querySelector("#gallery"), { imageC
         blocks: [
           {
             kind: "prose",
-            text: "Each slide opens the viewer at its own index. connectCarousel moves the strip to the photo the viewer settles on and holds its autoplay while the viewer is open, so the close flies back into a tile that is already in view. getOrigin gives the tile for each index.",
+            text: "Each slide opens the viewer at its own index. connectCarousel moves the strip to the photo the viewer settles on and holds its autoplay while the viewer is open, so the close flies back into a tile that is already in view. Each item's origin is a function that returns its tile.",
           },
           {
             kind: "code",
@@ -636,16 +644,15 @@ const photos = [
 
 export function PhotoStrip() {
   const images = useRef<(HTMLImageElement | null)[]>([]);
-  const lightbox = useLightbox({ getOrigin: (index) => images.current[index] ?? null });
-  const viewer = useRef(lightbox);
-  viewer.current = lightbox;
+  const lightbox = useLightbox();
+  const items = photos.map((photo, index) => ({ ...photo, origin: () => images.current[index] ?? null }));
   const { ref, carousel } = useCarousel();
   useEffect(() => {
-    if (carousel) return connectCarousel(viewer.current, carousel);
-  }, [carousel]);
+    if (carousel) return connectCarousel(lightbox, carousel);
+  }, [lightbox, carousel]);
   return <div ref={ref} className="re-carousel" aria-label="Photos">
     {photos.map((photo, index) => (
-      <button key={photo.src} type="button" className="re-carousel__slide basis-1/2" onClick={() => lightbox.open(photos, index)}>
+      <button key={photo.src} type="button" className="re-carousel__slide basis-1/2" onClick={() => lightbox.open(items, index)}>
         <img ref={(image) => { images.current[index] = image; }} src={photo.src} alt={photo.alt} width={photo.width} height={photo.height} />
       </button>
     ))}
@@ -712,20 +719,21 @@ export function PhotoStrip() {
         blocks: [
           {
             kind: "prose",
-            text: "Run this after the markup exists. Keep the returned controllers for the lifetime of this content.",
+            text: "Run this after the markup exists. Keep the controllers and the unbind function for the lifetime of this content.",
           },
           {
             kind: "code",
             id: "lightbox-examples-carousel-initialize",
             language: "javascript",
             code: `import { createCarousel } from "@reuse-sh/carousel";
-import { bindLightboxGallery } from "@reuse-sh/lightbox";
+import { bindLightboxGallery, createLightbox } from "@reuse-sh/lightbox";
 import { connectCarousel } from "@reuse-sh/lightbox/carousel";
 
 const strip = document.querySelector("#photos");
 const carousel = createCarousel(strip);
-const gallery = bindLightboxGallery(strip);
-const disconnect = connectCarousel(gallery, carousel);`,
+const lightbox = createLightbox();
+const unbind = bindLightboxGallery(strip, lightbox);
+const disconnect = connectCarousel(lightbox, carousel);`,
             role: "setup",
           },
         ],
@@ -751,7 +759,8 @@ const disconnect = connectCarousel(gallery, carousel);`,
             id: "lightbox-examples-carousel-cleanup",
             language: "javascript",
             code: `disconnect();
-gallery.destroy();
+unbind();
+lightbox.destroy();
 carousel.destroy();`,
             role: "cleanup",
           },
@@ -783,7 +792,7 @@ carousel.destroy();`,
         blocks: [
           {
             kind: "prose",
-            text: "One viewer opens every photo in the conversation as one sequence. An album shows its first four photos and puts the count of the rest on the fourth tile. getOrigin returns that tile for each photo it stands for, so a close on a photo without a tile shrinks into it.",
+            text: "One viewer opens every photo in the conversation as one sequence. An album shows its first four photos and puts the count of the rest on the fourth tile. Each photo's origin is a function that returns that tile for every photo it stands for, so a close on a photo without a tile shrinks into it.",
           },
           {
             kind: "code",
@@ -801,7 +810,8 @@ const shown = 4;
 export function Conversation({ messages }: { messages: Message[] }) {
   const photos = messages.flatMap((message) => message.photos);
   const tiles = useRef<(HTMLButtonElement | null)[]>([]);
-  const lightbox = useLightbox({ getOrigin: (index) => tiles.current[index] ?? null });
+  const lightbox = useLightbox();
+  const items = photos.map((photo, index) => ({ ...photo, origin: () => tiles.current[index] ?? null }));
   let start = 0;
   return <div>{messages.map((message) => {
     const first = start;
@@ -814,7 +824,7 @@ export function Conversation({ messages }: { messages: Message[] }) {
           <button key={photo.src} type="button" className="relative" ref={(tile) => {
             const last = index === shown - 1 ? message.photos.length : index + 1;
             for (let at = index; at < last; at++) tiles.current[first + at] = tile;
-          }} onClick={() => lightbox.open(photos, first + index)}>
+          }} onClick={() => lightbox.open(items, first + index)}>
             <img src={photo.src} alt={photo.alt} width="160" height="160" />
             {index === shown - 1 && hidden > 0 ? <span className="absolute inset-0 grid place-items-center">+{hidden}</span> : null}
           </button>
@@ -832,7 +842,7 @@ export function Conversation({ messages }: { messages: Message[] }) {
         blocks: [
           {
             kind: "prose",
-            text: "While the viewer shows a photo, its tile is hidden, so the +3 tile stays hidden for each of the three photos it stands for. The native dialog keeps focus inside, Escape closes it, and close returns focus to the current photo's tile. The React hook destroys its viewer on unmount.",
+            text: "While the viewer shows a photo, its tile is hidden, so the +3 tile stays hidden for each of the three photos it stands for. The native dialog keeps focus inside, Escape closes it, and close returns focus to the current photo's tile. The React hook closes its viewer at once and frees it on unmount or when Activity hides it, and opens the same viewer again when Activity shows it.",
           },
         ],
       },
@@ -908,8 +918,8 @@ const conversation = document.querySelector("#conversation");
 const links = [...conversation.querySelectorAll("a[href]")];
 let tile = null;
 const tiles = links.map((link) => (tile = link.hidden ? tile : link));
-const items = links.map((link) => ({ src: link.href, alt: link.querySelector("img").alt }));
-const lightbox = createLightbox({ getOrigin: (index) => tiles[index] });
+const items = links.map((link, index) => ({ src: link.href, alt: link.querySelector("img").alt, origin: tiles[index] }));
+const lightbox = createLightbox();
 const onClick = (event) => {
   const link = event.target.closest("a[href]");
   if (!link || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
@@ -1092,7 +1102,7 @@ export function ImageLink() {
         blocks: [
           {
             kind: "prose",
-            text: "Keep the full-size URL on the anchor; gallery binding opens it when its path ends in an image extension, and `data-lightbox-src` names the file otherwise. The other data attributes below are application metadata, mapped by `getItem` during setup.",
+            text: "Keep the full-size URL on the anchor; gallery binding opens it when its path ends in an image extension, and `data-lightbox-src` names the file otherwise. The other data attributes below are application metadata, mapped by the `item` option during setup.",
           },
           {
             kind: "code",
@@ -1101,7 +1111,7 @@ export function ImageLink() {
             code: `<div id="gallery">
   <a href="/images/print-large.jpg">
     <img src="/images/print.jpg" alt="Blue marble print" width="640" height="480"
-      data-caption="Archival pigment on paper" data-width="2400" data-height="1800" />
+      data-lightbox-caption="Archival pigment on paper" data-width="2400" data-height="1800" />
   </a>
 </div>`,
             role: "usage",
@@ -1126,21 +1136,25 @@ export function ImageLink() {
         blocks: [
           {
             kind: "prose",
-            text: "`lightboxItemFromImage` supplies the source, preview, alt text, caption and origin. It reads `data-lightbox-width` and `data-lightbox-height`, and the thumbnail's own size only when the thumbnail is the full file. Override the dimensions with your full-size metadata, or leave them undefined when unknown.",
+            text: "`lightboxItemFromElement` reads the clicked link and its image for the source, preview, alt text, caption and origin. It reads `data-lightbox-width` and `data-lightbox-height`, and the thumbnail's own size only when the thumbnail is the full file. Override the dimensions with your full-size metadata, or leave them undefined when unknown.",
           },
           {
             kind: "code",
             id: "lightbox-guides-media-initialize",
             language: "javascript",
-            code: `import { bindLightboxGallery, lightboxItemFromImage } from "@reuse-sh/lightbox";
+            code: `import { bindLightboxGallery, createLightbox, lightboxItemFromElement } from "@reuse-sh/lightbox";
 
-const gallery = bindLightboxGallery(document.querySelector("#gallery"), {
-  getItem: (image) => ({
-    ...lightboxItemFromImage(image),
-    caption: image.dataset.caption,
-    width: Number(image.dataset.width) || undefined,
-    height: Number(image.dataset.height) || undefined,
-  }),
+const lightbox = createLightbox();
+const unbind = bindLightboxGallery(document.querySelector("#gallery"), lightbox, {
+  item: (trigger) => {
+    const item = lightboxItemFromElement(trigger);
+    const image = trigger.querySelector("img");
+    return item && image && {
+      ...item,
+      width: Number(image.dataset.width) || undefined,
+      height: Number(image.dataset.height) || undefined,
+    };
+  },
 });`,
             role: "setup",
           },
@@ -1173,13 +1187,14 @@ const gallery = bindLightboxGallery(document.querySelector("#gallery"), {
         blocks: [
           {
             kind: "prose",
-            text: "Destroy the gallery binding when this view is removed. It releases the click listener and its viewer.",
+            text: "Unbind the gallery and destroy the lightbox when this view is removed. Unbinding releases the click listener; destroy releases the viewer.",
           },
           {
             kind: "code",
             id: "lightbox-guides-media-cleanup",
             language: "javascript",
-            code: "gallery.destroy();",
+            code: `unbind();
+lightbox.destroy();`,
             role: "cleanup",
           },
         ],
@@ -2241,18 +2256,19 @@ export function PrintRows() {
         blocks: [
           {
             kind: "prose",
-            text: "Run this after the markup exists. Keep both returned controllers for the lifetime of this content.",
+            text: "Run this after the markup exists. Keep the controllers and the unbind function for the lifetime of this content.",
           },
           {
             kind: "code",
             id: "justified-gallery-examples-lightbox-initialize",
             language: "javascript",
             code: `import { createJustifiedGallery } from "@reuse-sh/gallery";
-import { bindLightboxGallery } from "@reuse-sh/lightbox";
+import { bindLightboxGallery, createLightbox } from "@reuse-sh/lightbox";
 
 const root = document.querySelector("#prints");
 const gallery = createJustifiedGallery(root);
-const viewer = bindLightboxGallery(root, {});`,
+const viewer = createLightbox();
+const unbind = bindLightboxGallery(root, viewer);`,
             role: "setup",
           },
         ],
@@ -2277,7 +2293,8 @@ const viewer = bindLightboxGallery(root, {});`,
             kind: "code",
             id: "justified-gallery-examples-lightbox-cleanup",
             language: "javascript",
-            code: `viewer.destroy();
+            code: `unbind();
+viewer.destroy();
 gallery.destroy();`,
             role: "cleanup",
           },

@@ -46,15 +46,16 @@ async function setup(
     async ([list, extra, index, image, frameOptions]) => {
       const { createLightbox } = await import("/modules/lightbox/index.js");
       const { video } = await import("/modules/lightbox/video.js");
-      const { embed, registerEmbed } = await import(
-        "/modules/lightbox/embed.js"
-      );
+      const { embed } = await import("/modules/lightbox/embed.js");
       const { iframe } = await import("/modules/lightbox/iframe.js");
-      registerEmbed({
-        name: "videos",
-        pattern: /^https:\/\/videos\.test\/(\w+)/,
-        url: (match) => `https://player.videos.test/${match[1]}`,
-      });
+      const providers = [
+        {
+          name: "videos",
+          pattern: /^https:\/\/videos\.test\/(\w+)/,
+          url: (match: RegExpExecArray) =>
+            `https://player.videos.test/${match[1]}`,
+        },
+      ];
       // A short WebM recorded from a canvas, so the page needs no media file.
       const recorded = async () => {
         const canvas = document.createElement("canvas");
@@ -89,29 +90,29 @@ async function setup(
         }),
         video: async () => ({
           type: "video",
-          video: { src: await recorded() },
+          src: await recorded(),
         }),
-        still: async () => ({ type: "video", video: { src: "/missing.webm" } }),
-        slow: async () => ({ type: "video", video: { src: "/slow.webm" } }),
+        still: async () => ({ type: "video", src: "/missing.webm" }),
+        slow: async () => ({ type: "video", src: "/slow.webm" }),
         youtube: async () => ({
           type: "embed",
-          embed: "https://www.youtube.com/watch?v=abc123&t=1m30s",
+          src: "https://www.youtube.com/watch?v=abc123&t=1m30s",
         }),
-        script: async () => ({ type: "embed", embed: "java\tscript:alert(1)" }),
-        empty: async () => ({ type: "embed", embed: "" }),
+        script: async () => ({ type: "embed", src: "java\tscript:alert(1)" }),
+        empty: async () => ({ type: "embed", src: "" }),
         shorts: async () => ({
           type: "embed",
-          embed: "https://www.youtube.com/shorts/abc123",
+          src: "https://www.youtube.com/shorts/abc123",
         }),
         unknown: async () => ({
           type: "embed",
-          embed: "https://evil.test/page",
+          src: "https://evil.test/page",
         }),
         page: async () => ({ type: "iframe", src: "https://evil.test/page" }),
         local: async () => ({ type: "iframe", src: "/quick-view" }),
         registered: async () => ({
           type: "embed",
-          embed: "https://videos.test/abc123",
+          src: "https://videos.test/abc123",
         }),
         frameScript: async () => ({
           type: "iframe",
@@ -127,7 +128,11 @@ async function setup(
       );
       const lightbox = createLightbox({
         history: false,
-        content: [video(), embed(frameOptions), iframe(frameOptions)],
+        content: [
+          video(),
+          embed({ ...frameOptions, providers }),
+          iframe(frameOptions),
+        ],
         ...extra,
       });
       Object.assign(window, { lightbox });
@@ -220,9 +225,18 @@ const takeover = `<!doctype html><button id="go" style="width:100%;height:100%">
 document.getElementById("go").onclick = () => { top.location.href = "https://evil.test/phish"; };
 </script>`;
 
-// Popups may leave the sandbox, so a player's own links open a working tab.
+// Popups keep the frame's sandbox, so a popup cannot navigate the tab either.
 const sandbox =
-  "allow-scripts allow-same-origin allow-forms allow-presentation allow-popups allow-popups-to-escape-sandbox";
+  "allow-scripts allow-same-origin allow-forms allow-presentation allow-popups";
+
+// A page that opens a popup, and the popup tries to take over the tab behind the frame.
+const popupTakeover = `<!doctype html><button id="go" style="width:100%;height:100%">Continue</button><script>
+document.getElementById("go").onclick = () => { open("https://evil.test/popup"); };
+</script>`;
+const popup = `<!doctype html><script>
+try { opener.top.location.href = "https://evil.test/phish"; } catch {}
+document.title = "tried";
+</script>`;
 
 const frameOf = (page: Page) =>
   page.locator(".re-lightbox-media iframe").evaluate((frame) => ({
@@ -256,7 +270,32 @@ test("an iframe sandboxes a page from another origin, so a click inside cannot n
   expect(page.url()).toBe("http://reuse.test/");
 });
 
-test("a registered provider's player is sandboxed too, so a click inside cannot navigate the tab", async ({
+test("a popup from a sandboxed frame keeps the sandbox, so it cannot navigate the tab @desktop", async ({
+  page,
+}) => {
+  await page.route("https://evil.test/page", (route) =>
+    route.fulfill({ contentType: "text/html", body: popupTakeover }),
+  );
+  await page
+    .context()
+    .route("https://evil.test/popup", (route) =>
+      route.fulfill({ contentType: "text/html", body: popup }),
+    );
+  await page
+    .context()
+    .route("https://evil.test/phish", (route) =>
+      route.fulfill({ contentType: "text/html", body: "Phish" }),
+    );
+  await setup(page, "page");
+  const opened = page.context().waitForEvent("page");
+  await page.frameLocator(".re-lightbox-media iframe").locator("#go").click();
+  const tab = await opened;
+  await expect(tab).toHaveTitle("tried");
+  await page.waitForTimeout(500);
+  expect(page.url()).toBe("http://reuse.test/");
+});
+
+test("a provider passed to embed() is sandboxed too, so a click inside cannot navigate the tab", async ({
   page,
 }) => {
   await page.route("https://player.videos.test/**", (route) =>
@@ -372,6 +411,77 @@ test("a slideshow holds while the video plays and goes on once it pauses", async
   await expect.poll(() => changes(page)).toEqual([1]);
 });
 
+test("a slideshow moves on as soon as the video ends", async ({ page }) => {
+  await setup(page, "video,photo,photo", {
+    controls: { slideshow: true },
+    slideshow: { interval: 20_000 },
+  });
+  await expect
+    .poll(() => page.evaluate(() => document.querySelector("video")?.paused))
+    .toBe(false);
+  await watchChanges(page);
+  await page.mouse.move(500, 350);
+  await page
+    .locator(".re-lightbox-slideshow")
+    .evaluate((button: HTMLElement) => button.click());
+  const sinceEnd = await page.evaluate(
+    () =>
+      new Promise<number>((resolve) => {
+        let ended = Number.NaN;
+        document.addEventListener(
+          "ended",
+          () => {
+            ended = performance.now();
+          },
+          { capture: true, once: true },
+        );
+        (
+          window as unknown as {
+            lightbox: { on(type: string, listener: () => void): void };
+          }
+        ).lightbox.on("change", () => resolve(performance.now() - ended));
+      }),
+  );
+  expect(sinceEnd).toBeLessThan(500);
+  expect(await changes(page)).toEqual([1]);
+});
+
+test("a slideshow paused by a playing video goes on with the time it had left", async ({
+  page,
+}) => {
+  await setup(page, "video,photo,photo", {
+    controls: { slideshow: true },
+    slideshow: { interval: 1200 },
+  });
+  await expect
+    .poll(() => page.evaluate(() => document.querySelector("video")?.paused))
+    .toBe(false);
+  await page.evaluate(() => document.querySelector("video")?.pause());
+  await watchChanges(page);
+  await page.mouse.move(500, 350);
+  await page
+    .locator(".re-lightbox-slideshow")
+    .evaluate((button: HTMLElement) => button.click());
+  await page.waitForTimeout(800);
+  await page.evaluate(() => document.querySelector("video")?.play());
+  await page.waitForTimeout(1500);
+  expect(await changes(page)).toEqual([]);
+  const sincePause = await page.evaluate(
+    () =>
+      new Promise<number>((resolve) => {
+        const paused = performance.now();
+        (
+          window as unknown as {
+            lightbox: { on(type: string, listener: () => void): void };
+          }
+        ).lightbox.on("change", () => resolve(performance.now() - paused));
+        document.querySelector("video")?.pause();
+      }),
+  );
+  expect(sincePause).toBeGreaterThan(200);
+  expect(sincePause).toBeLessThan(800);
+});
+
 test("a slideshow holds on an embed until the visitor pages", async ({
   page,
 }) => {
@@ -390,8 +500,8 @@ test("a slideshow holds on an embed until the visitor pages", async ({
   await expect.poll(() => changes(page)).toEqual([1, 2]);
 });
 
-test("with autoplay off the video waits for a press", async ({ page }) => {
-  await setup(page, "video", { autoplay: false });
+test("with autoplayMedia off the video waits for a press", async ({ page }) => {
+  await setup(page, "video", { autoplayMedia: false });
   await page.waitForTimeout(800);
   expect(
     await page.evaluate(() => document.querySelector("video")?.paused),

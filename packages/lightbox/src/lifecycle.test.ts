@@ -1,12 +1,15 @@
 // @vitest-environment jsdom
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { embed } from "./embed.js";
 import {
   bindLightboxGallery,
   createLightbox,
   type Lightbox,
-  lightboxItemFromImage,
+  type LightboxState,
+  lightboxItemFromElement,
 } from "./index.js";
+import { video } from "./video.js";
 
 const gallery = Array.from({ length: 6 }, (_, i) => ({
   src: `https://example.test/full-${i}.jpg`,
@@ -20,9 +23,21 @@ let controllers: Lightbox[] = [];
 let reduced = false;
 
 function create(options: Parameters<typeof createLightbox>[0] = {}) {
-  const controller = createLightbox({ duration: 0, maxZoom: 4, ...options });
+  const controller = createLightbox({ maxZoom: 4, ...options });
   controllers.push(controller);
   return controller;
+}
+
+// The zoom on screen, which a gesture or a wheel moves before the state reports it.
+function shownZoom() {
+  const frame = document.querySelector<HTMLElement>(
+    '.re-lightbox-slide[aria-hidden="false"] .re-lightbox-frame',
+  );
+  const [, x, y, scale] =
+    /translate\((\S+)px, (\S+)px\) scale\((\S+)\)/.exec(
+      frame?.style.transform ?? "",
+    ) ?? [];
+  return { scale: Number(scale), x: Number(x), y: Number(y) };
 }
 
 function dialog() {
@@ -293,7 +308,7 @@ describe("lightbox lifecycle", () => {
         };
       },
     });
-    const controller = create({ duration: 280 });
+    const controller = create();
     controller.open(gallery);
     controller.zoomTo(2);
     vi.advanceTimersByTime(1000);
@@ -318,7 +333,7 @@ describe("lightbox lifecycle", () => {
         };
       },
     });
-    const controller = create({ duration: 280 });
+    const controller = create();
     controller.open(gallery);
     vi.advanceTimersByTime(1000);
     const frame = dialog().querySelector<HTMLElement>(".re-lightbox-frame");
@@ -348,7 +363,7 @@ describe("lightbox lifecycle", () => {
         };
       },
     });
-    const controller = create({ duration: 280 });
+    const controller = create();
     controller.open(gallery);
     controller.zoomTo(2);
     const viewport = dialog().querySelector<HTMLElement>(
@@ -365,7 +380,7 @@ describe("lightbox lifecycle", () => {
         cancelable: true,
       }),
     );
-    expect(controller.getState().zoom.scale).toBeCloseTo(3);
+    expect(shownZoom().scale).toBeCloseTo(3);
     for (const finish of finishes) finish();
     await Promise.resolve();
     expect(frame.style.transform).toBe("translate(0px, 0px) scale(3)");
@@ -389,7 +404,7 @@ describe("lightbox lifecycle", () => {
         };
       },
     });
-    const controller = create({ duration: 280 });
+    const controller = create();
     controller.open(gallery);
     const closing = controller.close();
     const imageFrames = frames.filter((value) =>
@@ -421,7 +436,7 @@ describe("lightbox lifecycle", () => {
     });
     const trigger = document.createElement("button");
     document.body.append(trigger);
-    const controller = create({ duration: 280 });
+    const controller = create();
     controller.open([{ ...gallery[0], origin: trigger }]);
     expect(trigger.style.visibility).toBe("hidden");
     dialog().close();
@@ -451,6 +466,146 @@ describe("lightbox lifecycle", () => {
     expect(document.body.style.overflow).toBe("clip");
     expect(document.body.style.paddingRight).toBe("7px");
     expect(document.activeElement).toBe(trigger);
+  });
+
+  it("reports the current item, where it can page and the slideshow that play() and pause() run", () => {
+    const controller = create({ history: false });
+    const items = gallery.slice(0, 3);
+    const flags = () => {
+      const { canPrev, canNext, isPlaying } = controller.getState();
+      return { canPrev, canNext, isPlaying };
+    };
+    controller.open(items, 0);
+    expect(controller.getState().item).toBe(items[0]);
+    expect(flags()).toEqual({
+      canPrev: false,
+      canNext: true,
+      isPlaying: false,
+    });
+    controller.play();
+    expect(flags().isPlaying).toBe(true);
+    expect(dialog().dataset.slideshow).toBe("playing");
+    controller.goTo(2);
+    expect(controller.getState().item).toBe(items[2]);
+    expect(flags()).toEqual({ canPrev: true, canNext: false, isPlaying: true });
+    controller.pause();
+    expect(flags().isPlaying).toBe(false);
+    expect(dialog().dataset.slideshow).toBeUndefined();
+    controller.setOptions({ loop: true });
+    expect(flags().canNext).toBe(true);
+  });
+
+  it("copies its options, applies setOptions at the next open, and strings at once", async () => {
+    const options: Parameters<typeof createLightbox>[0] = { history: false };
+    const controller = createLightbox(options);
+    controllers.push(controller);
+    options.thumbnails = "bottom";
+    controller.open(gallery);
+    const strip = () => dialog().querySelector(".re-lightbox-thumbnails");
+    const label = (selector: string) =>
+      dialog().querySelector(selector)?.getAttribute("aria-label");
+    expect(strip()).toBeNull();
+    controller.setOptions({
+      thumbnails: "bottom",
+      strings: { dialog: "Galerie", close: "Schließen", next: "Weiter" },
+    });
+    expect(strip()).toBeNull();
+    expect([
+      dialog().getAttribute("aria-label"),
+      label(".re-lightbox-close"),
+      label(".re-lightbox-next"),
+      label(".re-lightbox-prev"),
+    ]).toEqual(["Galerie", "Schließen", "Weiter", "Previous image"]);
+    await controller.close();
+    controller.open(gallery);
+    expect(strip()).not.toBeNull();
+    expect(label(".re-lightbox-close")).toBe("Schließen");
+  });
+
+  it("labels thumbnails rebuilt by append and setItems from the current strings", () => {
+    const controller = create({ history: false, thumbnails: "bottom" });
+    controller.open(gallery.slice(0, 2), 0);
+    controller.setOptions({
+      strings: { thumbnail: (index) => `Bild ${index + 1} zeigen` },
+    });
+    const thumbs = () =>
+      [...dialog().querySelectorAll(".re-lightbox-thumbnails button")].map(
+        (thumb) => thumb.getAttribute("aria-label"),
+      );
+    controller.append([gallery[2]]);
+    expect(thumbs()).toEqual([
+      "Bild 1 zeigen",
+      "Bild 2 zeigen",
+      "Bild 3 zeigen",
+    ]);
+    controller.setItems(gallery.slice(0, 2));
+    expect(thumbs()).toEqual(["Bild 1 zeigen", "Bild 2 zeigen"]);
+  });
+
+  it("renames the open strip's role when setOptions changes carouselRole", () => {
+    const controller = create({ history: false });
+    controller.open(gallery.slice(0, 2), 0);
+    controller.setOptions({ strings: { carouselRole: "Karussell" } });
+    expect(
+      [...dialog().querySelectorAll("[aria-roledescription]")].map((element) =>
+        element.getAttribute("aria-roledescription"),
+      ),
+    ).toEqual(["Karussell"]);
+  });
+  it("stops a subscription and a listener when their signal aborts, and only beforeclose can cancel", () => {
+    const stop = new AbortController();
+    const states: number[] = [];
+    const changes: number[] = [];
+    const cancelable: Record<string, boolean> = {};
+    const controller = create({ history: false });
+    controller.subscribe((state) => states.push(state.index), {
+      signal: stop.signal,
+    });
+    controller.on("change", (event) => changes.push(event.index), {
+      signal: stop.signal,
+    });
+    for (const type of ["change", "beforeclose"] as const)
+      controller.on(type, (event) => {
+        cancelable[type] = "cancelable" in event && event.cancelable;
+      });
+    controller.on("open", () => {}, { signal: AbortSignal.abort() });
+    controller.open(gallery);
+    controller.next();
+    stop.abort();
+    controller.next();
+    void controller.close();
+    expect([states.at(-1), changes, cancelable]).toEqual([
+      1,
+      [1],
+      { change: false, beforeclose: true },
+    ]);
+  });
+
+  it("takes its abort listeners off the callers' signals on destroy", () => {
+    const stop = new AbortController();
+    const added = new Set<unknown>();
+    const { signal } = stop;
+    const add = signal.addEventListener.bind(signal);
+    const remove = signal.removeEventListener.bind(signal);
+    type Args = [
+      string,
+      EventListenerOrEventListenerObject,
+      (boolean | AddEventListenerOptions)?,
+    ];
+    signal.addEventListener = (...args: Args) => {
+      added.add(args[1]);
+      add(...args);
+    };
+    signal.removeEventListener = (...args: Args) => {
+      added.delete(args[1]);
+      remove(...args);
+    };
+    const controller = create({ history: false });
+    controller.subscribe(() => {}, { signal });
+    controller.on("change", () => {}, { signal });
+    expect(added.size).toBe(2);
+    controller.destroy();
+    expect(added.size).toBe(0);
   });
 
   it("handles native cancel and repeated destroy without stale DOM", async () => {
@@ -533,6 +688,31 @@ describe("lightbox lifecycle", () => {
     expect(controller.getState().zoom.scale).toBe(1.5);
   });
 
+  it("returns the snapshot subscribe delivered, with wheel zoom once the wheel rests", () => {
+    vi.useFakeTimers();
+    const controller = create();
+    const seen: LightboxState[] = [];
+    controller.subscribe((state) => seen.push(state));
+    controller.open(gallery);
+    expect(controller.getState()).toBe(seen.at(-1));
+    dialog()
+      .querySelector(".re-lightbox-viewport")
+      ?.dispatchEvent(
+        new WheelEvent("wheel", {
+          ctrlKey: true,
+          deltaY: -100,
+          clientX: 512,
+          clientY: 384,
+          cancelable: true,
+        }),
+      );
+    expect(controller.getState().zoom.scale).toBe(1);
+    vi.advanceTimersByTime(150);
+    expect(controller.getState().zoom.scale).toBeCloseTo(Math.E);
+    expect(controller.getState()).toBe(seen.at(-1));
+    vi.useRealTimers();
+  });
+
   it("zooms on ctrl-wheel and pans on an ordinary wheel at zoom", () => {
     const controller = create();
     controller.open(gallery);
@@ -546,12 +726,11 @@ describe("lightbox lifecycle", () => {
     });
     viewport?.dispatchEvent(wheel);
     expect(wheel.defaultPrevented).toBe(true);
-    expect(controller.getState().zoom.scale).toBeCloseTo(Math.E);
+    expect(shownZoom().scale).toBeCloseTo(Math.E);
     viewport?.dispatchEvent(
       new WheelEvent("wheel", { deltaY: 60, deltaX: -20, cancelable: true }),
     );
-    expect(controller.getState().zoom.x).toBe(20);
-    expect(controller.getState().zoom.y).toBe(-60);
+    expect(shownZoom()).toMatchObject({ x: 20, y: -60 });
   });
 
   it("zooms on Safari's gesture events within the limits, except while a finger is down", () => {
@@ -566,9 +745,9 @@ describe("lightbox lifecycle", () => {
     };
     expect(gesture("gesturestart", 1).defaultPrevented).toBe(true);
     gesture("gesturechange", 2);
-    expect(controller.getState().zoom.scale).toBe(2);
+    expect(shownZoom().scale).toBe(2);
     gesture("gesturechange", 100);
-    expect(controller.getState().zoom.scale).toBeCloseTo(6.818);
+    expect(shownZoom().scale).toBeCloseTo(6.818);
     gesture("gestureend", 100);
     controller.zoomTo(1);
     const down = new MouseEvent("pointerdown", { bubbles: true, button: 0 });
@@ -579,7 +758,7 @@ describe("lightbox lifecycle", () => {
     viewport?.dispatchEvent(down);
     gesture("gesturestart", 1);
     gesture("gesturechange", 2);
-    expect(controller.getState().zoom.scale).toBe(1);
+    expect(shownZoom().scale).toBe(1);
   });
 
   it("cleans presenter resources when slides leave the bounded window", async () => {
@@ -626,7 +805,7 @@ describe("lightbox lifecycle", () => {
         return { finished, cancel() {}, commitStyles() {} };
       },
     });
-    const controller = create({ duration: 280 });
+    const controller = create();
     controller.open(gallery);
     await controller.close();
     expect(animated.length).toBeGreaterThan(0);
@@ -638,14 +817,14 @@ describe("lightbox lifecycle", () => {
     delete (HTMLElement.prototype as { animate?: unknown }).animate;
   });
 
-  it("binds a native gallery without URL side effects and detaches on destroy", () => {
+  it("binds a native gallery without URL side effects and detaches on unbind", async () => {
     const root = document.createElement("div");
     const image = document.createElement("img");
     image.src = "https://example.test/gallery.jpg";
     root.append(image);
     document.body.append(root);
-    const controller = bindLightboxGallery(root, { duration: 0 });
-    controllers.push(controller);
+    const controller = create();
+    const unbind = bindLightboxGallery(root, controller);
     const href = window.location.href;
     image.click();
     expect(controller.getState().count).toBe(1);
@@ -653,7 +832,8 @@ describe("lightbox lifecycle", () => {
       dialog().querySelector<HTMLImageElement>(".re-lightbox-image")?.src,
     ).toBe(image.src);
     expect(window.location.href).toBe(href);
-    controller.destroy();
+    unbind();
+    await controller.close();
     image.click();
     expect(document.querySelector("dialog")).toBeNull();
   });
@@ -792,7 +972,7 @@ describe("lightbox lifecycle", () => {
     pointer("pointerdown", 1, 400, 384);
     pointer("pointerdown", 2, 600, 384);
     pointer("pointermove", 2, 800, 384);
-    expect(controller.getState().zoom.scale).toBe(2);
+    expect(shownZoom().scale).toBe(2);
     pointer("pointercancel", 2, 800, 384);
     pointer("pointercancel", 1, 400, 384);
     expect(controller.getState().isOpen).toBe(true);
@@ -850,7 +1030,7 @@ describe("lightbox lifecycle", () => {
         };
       },
     });
-    const controller = create({ duration: 280 });
+    const controller = create();
     controller.open(gallery);
     expect(active).toBe(2);
     const closing = controller.close();
@@ -879,13 +1059,8 @@ describe("lightbox lifecycle", () => {
     expect(controller.getState().isOpen).toBe(false);
   });
   it("updates native pan geometry live and notifies observers only when the pointer finishes", () => {
-    const changed: Array<{ scale: number; x: number; y: number }> = [];
     const subscribed: Array<{ scale: number; x: number; y: number }> = [];
-    const controller = create({
-      onChange: (next) => {
-        changed.push({ ...next.zoom });
-      },
-    });
+    const controller = create();
     controller.subscribe((next) => {
       subscribed.push({ ...next.zoom });
     });
@@ -920,7 +1095,6 @@ describe("lightbox lifecycle", () => {
       { scale: 1, x: 0, y: 0 },
       { scale: 2, x: 0, y: 0 },
     ];
-    expect(changed).toEqual(discrete);
     expect(subscribed).toEqual(discrete);
     pointer("pointerdown", 512, 384);
     for (const [x, y] of [
@@ -929,20 +1103,14 @@ describe("lightbox lifecycle", () => {
       [572, 414],
     ]) {
       pointer("pointermove", x, y);
-      expect(controller.getState().zoom).toEqual({
-        scale: 2,
-        x: x - 512,
-        y: y - 384,
-      });
+      expect(controller.getState().zoom).toEqual(discrete[1]);
       expect(frame.style.transform).toBe(
         `translate(${x - 512}px, ${y - 384}px) scale(2)`,
       );
-      expect(changed).toEqual(discrete);
       expect(subscribed).toEqual(discrete);
     }
     pointer("pointerup", 572, 414);
     const completed = [...discrete, { scale: 2, x: 60, y: 30 }];
-    expect(changed).toEqual(completed);
     expect(subscribed).toEqual(completed);
     expect(controller.getState().zoom).toEqual(completed[2]);
     expect(frame.style.transform).toBe("translate(60px, 30px) scale(2)");
@@ -951,10 +1119,9 @@ describe("lightbox lifecycle", () => {
   it("keeps wheel zoom and pan native until wheel input settles and cancels its deadline on destroy", () => {
     vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
     const observed: Array<{ scale: number; x: number; y: number }> = [];
-    const controller = create({
-      onChange: (next) => {
-        observed.push({ ...next.zoom });
-      },
+    const controller = create();
+    controller.subscribe((next) => {
+      observed.push({ ...next.zoom });
     });
     controller.open(gallery);
     controller.zoomTo(2);
@@ -976,7 +1143,7 @@ describe("lightbox lifecycle", () => {
       vi.advanceTimersByTime(50);
       expect(observed).toEqual(discrete);
     }
-    expect(controller.getState().zoom).toEqual({ scale: 2, x: 60, y: -30 });
+    expect(controller.getState().zoom).toEqual(discrete[1]);
     expect(frame.style.transform).toBe("translate(60px, -30px) scale(2)");
     vi.advanceTimersByTime(100);
     expect(observed).toEqual([...discrete, { scale: 2, x: 60, y: -30 }]);
@@ -989,7 +1156,7 @@ describe("lightbox lifecycle", () => {
         cancelable: true,
       }),
     );
-    expect(controller.getState().zoom.scale).toBeCloseTo(3);
+    expect(shownZoom().scale).toBeCloseTo(3);
     expect(observed).toHaveLength(3);
     vi.advanceTimersByTime(150);
     expect(observed.at(-1)?.scale).toBeCloseTo(3);
@@ -1130,17 +1297,14 @@ describe("lightbox public API", () => {
     document.body.append(opener, first, second, swapped, picked);
     opener.focus();
     let tile = second;
-    const controller = create({
-      history: false,
-      getOrigin: (index) => (index === 2 ? picked : null),
-    });
+    const controller = create({ history: false });
     controller.on("beforeclose", () => {
       tile = swapped;
     });
     const items = [
       { ...gallery[0], origin: first },
       { ...gallery[1], origin: () => tile },
-      gallery[2],
+      { ...gallery[2], origin: () => picked },
       gallery[3],
     ];
     controller.open(items, 1);
@@ -1366,17 +1530,70 @@ describe("lightbox public API", () => {
     expect(() => controller.open([])).toThrow(TypeError);
   });
 
-  it("leaves no dialog, scroll lock or open state when a slot, renderContent or getOrigin throws in open()", () => {
+  it("builds append during the close flight on the list that waits for the close", async () => {
+    const controller = create({ history: false });
+    controller.open(gallery.slice(0, 2), 0);
+    let closing = controller.close();
+    expect(controller.getState().isClosing).toBe(true);
+    controller.append([gallery[2]]);
+    controller.append([gallery[3]]);
+    await closing;
+    expect(controller.getState()).toMatchObject({ isOpen: false, count: 4 });
+    controller.open(gallery.slice(0, 2), 0);
+    closing = controller.close();
+    controller.setItems([gallery[4]]);
+    controller.append([gallery[5]]);
+    await closing;
+    expect(controller.getState()).toMatchObject({
+      count: 2,
+      item: gallery[4],
+    });
+  });
+
+  it("closes when setItems empties the list although beforeclose vetoes, and says that close cannot be cancelled", async () => {
+    const controller = create({ history: false });
+    const cancelable: boolean[] = [];
+    controller.on("beforeclose", (event) => {
+      event.preventDefault();
+      cancelable.push(event.cancelable, event.defaultPrevented);
+    });
+    controller.open(gallery, 1);
+    controller.setItems([]);
+    expect(controller.getState().isClosing).toBe(true);
+    await controller.close();
+    expect(document.querySelector("dialog")).toBeNull();
+    expect(cancelable).toEqual([false, false]);
+    expect(controller.getState()).toMatchObject({ isOpen: false, count: 0 });
+  });
+
+  it("closes when a beforeclose listener empties the list and then vetoes", async () => {
+    const controller = create({ history: false });
+    const cancelable: boolean[] = [];
+    controller.on("beforeclose", (event) => {
+      cancelable.push(event.cancelable);
+      controller.setItems([]);
+      event.preventDefault();
+    });
+    controller.open(gallery, 1);
+    void controller.close();
+    expect(controller.getState().isClosing).toBe(true);
+    await controller.close();
+    expect(document.querySelector("dialog")).toBeNull();
+    expect(cancelable).toEqual([true]);
+    expect(controller.getState()).toMatchObject({ isOpen: false, count: 0 });
+  });
+
+  it("leaves no dialog, scroll lock or open state when a slot, renderContent or an origin throws in open()", () => {
     const fail = (): never => {
       throw new Error("Broken");
     };
-    for (const options of [
-      { slots: { toolbarEnd: fail } },
-      { renderContent: fail },
-      { getOrigin: fail },
-    ]) {
+    for (const [options, items] of [
+      [{ slots: { toolbarEnd: fail } }, gallery],
+      [{ renderContent: fail }, gallery],
+      [{}, gallery.map((item) => ({ ...item, origin: fail }))],
+    ] as const) {
       const controller = create({ history: false, ...options });
-      expect(() => controller.open(gallery, 1)).toThrow("Broken");
+      expect(() => controller.open(items, 1)).toThrow("Broken");
       expect(document.querySelector("dialog")).toBeNull();
       expect(document.body.style.overflow).toBe("");
       expect(controller.getState()).toMatchObject({
@@ -1386,53 +1603,99 @@ describe("lightbox public API", () => {
     }
   });
 
+  it("keeps embed providers to the module they were passed to", () => {
+    const provider = {
+      name: "videos",
+      pattern: /^https:\/\/videos\.test\/(\w+)/,
+      url: (match: RegExpExecArray) => `https://player.videos.test/${match[1]}`,
+    };
+    const frame = (module: ReturnType<typeof embed>) => {
+      const box = document.createElement("div");
+      module.mount(box, {
+        item: { type: "embed", src: "https://videos.test/abc" },
+        index: 0,
+        signal: new AbortController().signal,
+        autoplay: false,
+      });
+      return box.querySelector("iframe")?.src;
+    };
+    expect([frame(embed({ providers: [provider] })), frame(embed())]).toEqual([
+      "https://player.videos.test/abc",
+      "about:blank",
+    ]);
+  });
+
+  it("plays a video item from src with previewSrc as its poster", async () => {
+    const controller = create({
+      history: false,
+      content: [video()],
+      autoplayMedia: false,
+    });
+    controller.open([
+      {
+        type: "video",
+        src: "https://example.test/clip.webm",
+        previewSrc: "https://example.test/poster.jpg",
+      },
+    ]);
+    await new Promise((resolve) => setTimeout(resolve));
+    const player = document.querySelector("video");
+    expect([player?.getAttribute("src"), player?.poster]).toEqual([
+      "https://example.test/clip.webm",
+      "https://example.test/poster.jpg",
+    ]);
+  });
+
   it("reads an item from the link, data attributes, the tile and its figure", () => {
     const root = document.createElement("div");
     root.innerHTML = `
-      <figure><a href="/large.JPG?w=2000" data-caption="Link caption"><img src="/small.jpg" alt="a"></a><figcaption> Figure caption </figcaption></figure>
-      <a href="/photos/2" data-caption="Link caption"><img src="/tile.jpg" data-lightbox-src="/full.jpg" data-lightbox-srcset="/900.jpg 900w, /1800.jpg 1800w" data-lightbox-sizes="50vw" data-lightbox-width="1800" data-lightbox-height="1200" alt="b"></a>
-      <img src="/same.jpg" data-caption="Image caption" alt="c">`;
+      <figure><a href="/large.JPG?w=2000" data-lightbox-caption="Link caption"><img src="/small.jpg" alt="a"></a><figcaption> Figure caption </figcaption></figure>
+      <a href="/photos/2" data-lightbox-caption="Link caption"><img src="/tile.jpg" data-lightbox-src="/full.jpg" data-lightbox-srcset="/900.jpg 900w, /1800.jpg 1800w" data-lightbox-sizes="50vw" data-lightbox-width="1800" data-lightbox-height="1200" alt="b"></a>
+      <img src="/same.jpg" data-lightbox-caption="Image caption" alt="c">`;
     document.body.append(root);
     const images = [...root.querySelectorAll("img")];
     for (const image of images) {
       Object.defineProperty(image, "naturalWidth", { value: 300 });
       Object.defineProperty(image, "naturalHeight", { value: 200 });
     }
-    expect(images.map((image) => lightboxItemFromImage(image))).toEqual([
-      {
-        src: "/large.JPG?w=2000",
-        srcset: undefined,
-        sizes: undefined,
-        previewSrc: images[0].src,
-        width: undefined,
-        height: undefined,
-        alt: "a",
-        caption: "Figure caption",
-        origin: images[0],
-      },
-      {
-        src: "/full.jpg",
-        srcset: "/900.jpg 900w, /1800.jpg 1800w",
-        sizes: "50vw",
-        previewSrc: images[1].src,
-        width: 1800,
-        height: 1200,
-        alt: "b",
-        caption: "Link caption",
-        origin: images[1],
-      },
-      {
-        src: images[2].src,
-        srcset: undefined,
-        sizes: undefined,
-        previewSrc: images[2].src,
-        width: 300,
-        height: 200,
-        alt: "c",
-        caption: "Image caption",
-        origin: images[2],
-      },
-    ]);
+    const triggers = [...root.querySelectorAll<HTMLElement>("a"), images[2]];
+    expect(triggers.map((trigger) => lightboxItemFromElement(trigger))).toEqual(
+      [
+        {
+          src: "/large.JPG?w=2000",
+          srcset: undefined,
+          sizes: undefined,
+          previewSrc: images[0].src,
+          width: undefined,
+          height: undefined,
+          alt: "a",
+          caption: "Figure caption",
+          origin: images[0],
+        },
+        {
+          src: "/full.jpg",
+          srcset: "/900.jpg 900w, /1800.jpg 1800w",
+          sizes: "50vw",
+          previewSrc: images[1].src,
+          width: 1800,
+          height: 1200,
+          alt: "b",
+          caption: "Link caption",
+          origin: images[1],
+        },
+        {
+          src: images[2].src,
+          srcset: undefined,
+          sizes: undefined,
+          previewSrc: images[2].src,
+          width: 300,
+          height: 200,
+          alt: "c",
+          caption: "Image caption",
+          origin: images[2],
+        },
+      ],
+    );
   });
 
   it("opens a linked image's full file from bindLightboxGallery", () => {
@@ -1450,11 +1713,7 @@ describe("lightbox public API", () => {
     const root = document.createElement("div");
     root.innerHTML = `<a href="/large.jpg"><img src="/small.jpg" alt=""></a>`;
     document.body.append(root);
-    const controller = bindLightboxGallery(root, {
-      duration: 0,
-      history: false,
-    });
-    controllers.push(controller);
+    bindLightboxGallery(root, create({ history: false }));
     root.querySelector("img")?.click();
     expect(loaded).toContain("/large.jpg");
     expect(loaded).not.toContain("/small.jpg");
@@ -1469,11 +1728,8 @@ describe("lightbox public API", () => {
       )
       .join("");
     document.body.append(root);
-    const controller = bindLightboxGallery(root, {
-      duration: 0,
-      history: false,
-    });
-    controllers.push(controller);
+    const controller = create({ history: false });
+    bindLightboxGallery(root, controller);
     root.querySelectorAll("img")[3].click();
     expect(controller.getState()).toMatchObject({ count: 3, index: 1 });
     expect(
@@ -1483,25 +1739,206 @@ describe("lightbox public API", () => {
     ).toEqual(["b1", "b3", "b4"]);
   });
 
-  it("opens the list items(root) returns at the clicked image, origin functions included", () => {
+  it("reads a trigger without an image as a media item, and leaves a page link to the page", () => {
     const root = document.createElement("div");
-    root.innerHTML = `<img src="https://example.test/0.jpg"><img src="https://example.test/1.jpg">`;
+    root.innerHTML = `
+      <a href="/item/7" data-lightbox-type="iframe">Quick view</a>
+      <a href="/about">About</a>
+      <button type="button" data-lightbox-src="/full.jpg"><img src="/tile.jpg" alt="Tile"></button>`;
     document.body.append(root);
-    const [first, second] = root.querySelectorAll("img");
-    const controller = bindLightboxGallery(root, {
-      duration: 0,
-      history: false,
-      items: () => [
-        { src: "https://example.test/hidden.jpg" },
-        { src: "https://example.test/1-large.jpg", origin: second },
-        { src: "https://example.test/0-large.jpg", origin: () => first },
-      ],
+    const [quick, about] = root.querySelectorAll("a");
+    const button = root.querySelector("button") as HTMLElement;
+    expect([
+      lightboxItemFromElement(quick),
+      lightboxItemFromElement(about),
+      lightboxItemFromElement(button),
+    ]).toEqual([
+      {
+        type: "iframe",
+        src: "/item/7",
+        previewSrc: undefined,
+        width: undefined,
+        height: undefined,
+        alt: "Quick view",
+        caption: undefined,
+        origin: quick,
+      },
+      null,
+      expect.objectContaining({ src: "/full.jpg", alt: "Tile" }),
+    ]);
+  });
+
+  it("fills options the lightbox lacks from data-lightbox-options and rejects bad JSON by name", () => {
+    const root = document.createElement("div");
+    root.id = "prints";
+    root.dataset.lightboxOptions = JSON.stringify({
+      thumbnails: "bottom",
+      loop: true,
+      strings: { close: "Fermer" },
     });
-    controllers.push(controller);
-    second.click();
-    expect(controller.getState()).toMatchObject({ count: 3, index: 1 });
-    first.click();
-    expect(controller.getState()).toMatchObject({ count: 3, index: 2 });
+    root.innerHTML = `<a href="/0.jpg"><img src="/0.jpg"></a><a href="/1.jpg"><img src="/1.jpg"></a>`;
+    document.body.append(root);
+    const controller = create({ history: false, loop: false });
+    bindLightboxGallery(root, controller);
+    root.querySelector("img")?.click();
+    expect([
+      Boolean(dialog().querySelector(".re-lightbox-thumbnails")),
+      controller.getState().canPrev,
+      dialog().querySelector(".re-lightbox-close")?.getAttribute("aria-label"),
+    ]).toEqual([true, false, "Fermer"]);
+    for (const value of ["{thumbnails:", '"bottom"', '{"container":1}'])
+      expect(() => {
+        root.dataset.lightboxOptions = value;
+        bindLightboxGallery(root, create());
+      }).toThrow(/data-lightbox-options on div#prints/);
+  });
+
+  it("takes a link as a trigger only for an image or lightbox data, and never a download link", () => {
+    const root = document.createElement("div");
+    root.innerHTML = `<figure>
+      <a href="/full-0.jpg"><img src="/tile-0.jpg" alt="Tile"></a>
+      <figcaption><a href="/full-0.jpg" download>Download full size</a> <a href="/full-0.jpg">Full size</a></figcaption>
+    </figure>
+    <a href="/full-1.jpg" download><img src="/tile-1.jpg" alt="Saved"></a>
+    <a href="/clip.html" data-lightbox-src="/full-2.jpg">Third</a>`;
+    document.body.append(root);
+    const controller = create({ history: false });
+    bindLightboxGallery(root, controller);
+    const click = (element: Element) => {
+      const event = new MouseEvent("click", {
+        bubbles: true,
+        cancelable: true,
+      });
+      element.dispatchEvent(event);
+      return event.defaultPrevented;
+    };
+    const [, download, text, saved] = root.querySelectorAll("a");
+    expect([
+      click(download),
+      click(text),
+      click(saved.querySelector("img") as HTMLImageElement),
+    ]).toEqual([false, false, false]);
+    expect(document.querySelector("dialog")).toBeNull();
+    expect(click(root.querySelector("img") as HTMLImageElement)).toBe(true);
+    expect(controller.getState()).toMatchObject({ index: 0, count: 2 });
+    expect(controller.getState().item?.src).toBe("/full-0.jpg");
+  });
+
+  it("refuses a second argument that is no lightbox, and leaves clicks to the page once the lightbox is destroyed", () => {
+    const root = document.createElement("div");
+    root.innerHTML = `<a href="/0.jpg"><img src="/0.jpg"></a>`;
+    document.body.append(root);
+    expect(() =>
+      bindLightboxGallery(root, { history: false } as unknown as Parameters<
+        typeof bindLightboxGallery
+      >[1]),
+    ).toThrow(TypeError);
+    const click = () => {
+      const event = new MouseEvent("click", {
+        bubbles: true,
+        cancelable: true,
+      });
+      root.querySelector("img")?.dispatchEvent(event);
+      return event.defaultPrevented;
+    };
+    const errors: unknown[] = [];
+    const report = (event: ErrorEvent) => {
+      event.preventDefault();
+      errors.push(event.error);
+    };
+    window.addEventListener("error", report);
+    const unbind = bindLightboxGallery(root, create({ history: false }), {
+      item: () => ({ src: "/0.jpg", width: -1 }),
+    });
+    expect(click()).toBe(false);
+    window.removeEventListener("error", report);
+    unbind();
+    expect(errors).toEqual([expect.any(TypeError)]);
+    const controller = create({ history: false });
+    bindLightboxGallery(root, controller);
+    controller.destroy();
+    expect(click()).toBe(false);
+  });
+
+  it("applies a gallery's data-lightbox-options only while one of its photos is open", async () => {
+    const galleries = [
+      { loop: true, thumbnails: "bottom" },
+      undefined,
+      { loop: false, thumbnails: false, strings: { close: "Fermer" } },
+    ].map((options) => {
+      const root = document.createElement("div");
+      if (options) root.dataset.lightboxOptions = JSON.stringify(options);
+      root.innerHTML = `<a href="/0.jpg"><img src="/0.jpg"></a><a href="/1.jpg"><img src="/1.jpg"></a>`;
+      document.body.append(root);
+      return root;
+    });
+    const controller = create({ history: false, strings: { next: "Onward" } });
+    for (const root of galleries) bindLightboxGallery(root, controller);
+    const seen = [];
+    for (const at of [0, 1, 2, 0]) {
+      galleries[at].querySelector("img")?.click();
+      seen.push([
+        controller.getState().canPrev,
+        Boolean(dialog().querySelector(".re-lightbox-thumbnails")),
+        dialog()
+          .querySelector(".re-lightbox-close")
+          ?.getAttribute("aria-label"),
+        dialog().querySelector(".re-lightbox-next")?.getAttribute("aria-label"),
+      ]);
+      await controller.close();
+      seen.push(controller.getState().canPrev);
+    }
+    expect(seen).toEqual([
+      [true, true, "Close gallery", "Onward"],
+      false,
+      [false, false, "Close gallery", "Onward"],
+      false,
+      [false, false, "Fermer", "Onward"],
+      false,
+      [true, true, "Close gallery", "Onward"],
+      false,
+    ]);
+  });
+
+  it("knows the modules of a lightbox made by another copy of the package", async () => {
+    const copy = (await import(
+      "./index.js?second-copy" as string
+    )) as typeof import("./index.js");
+    expect(copy.bindLightboxGallery).not.toBe(bindLightboxGallery);
+    const root = document.createElement("div");
+    root.innerHTML = `<a href="/0.jpg"><img src="/0.jpg"></a><a href="/clip.mp4" data-lightbox-type="video">Clip</a>`;
+    document.body.append(root);
+    const controller = create({ history: false });
+    copy.bindLightboxGallery(root, controller);
+    const clip = new MouseEvent("click", { bubbles: true, cancelable: true });
+    root.querySelectorAll("a")[1].dispatchEvent(clip);
+    expect(clip.defaultPrevented).toBe(false);
+    root.querySelector("img")?.click();
+    expect(controller.getState()).toMatchObject({ isOpen: true, count: 1 });
+  });
+
+  it("opens what item(trigger) returns and leaves a trigger it returns null for to the page", () => {
+    const root = document.createElement("div");
+    root.innerHTML = `<a href="/0.jpg"><img src="/0.jpg"></a><a href="/1.jpg"><img src="/1.jpg"></a><a href="/2.jpg"><img src="/2.jpg"></a>`;
+    document.body.append(root);
+    const links = [...root.querySelectorAll("a")];
+    const controller = create({ history: false });
+    bindLightboxGallery(root, controller, {
+      item: (trigger) =>
+        trigger === links[1]
+          ? null
+          : { src: `${trigger.getAttribute("href")}?large`, origin: trigger },
+    });
+    const skipped = new MouseEvent("click", {
+      bubbles: true,
+      cancelable: true,
+    });
+    links[1].dispatchEvent(skipped);
+    expect(skipped.defaultPrevented).toBe(false);
+    expect(document.querySelector("dialog")).toBeNull();
+    links[2].querySelector("img")?.click();
+    expect(controller.getState()).toMatchObject({ count: 2, index: 1 });
+    expect(controller.getState().item?.src).toBe("/2.jpg?large");
   });
 
   it("adds one history entry, closes on Back and goes back after another close", async () => {

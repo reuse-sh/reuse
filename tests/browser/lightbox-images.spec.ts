@@ -1,5 +1,5 @@
 import { expect, type Page, test } from "@playwright/test";
-import { mount } from "./harness";
+import { framesUntilIdle, mount } from "./harness";
 
 type Lightbox = {
   open(items: unknown[], index?: number): void;
@@ -296,6 +296,11 @@ test("without a size the frame fits the screen at the tile's proportions, then t
   const before = await frame.boundingBox();
   release();
   await expect(frame).not.toHaveAttribute("data-loading");
+  await expect
+    .poll(() =>
+      page.evaluate(() => (window as Window).lightbox.getState().isAnimating),
+    )
+    .toBe(false);
   const after = await frame.boundingBox();
   if (!before || !after) throw new Error("Missing frame");
   expect(Math.round(before.width)).toBe(936);
@@ -308,6 +313,31 @@ test("without a size the frame fits the screen at the tile's proportions, then t
   );
 });
 
+test("a file without a size that is smaller than the screen shrinks the frame to it on landing instead of snapping", async ({
+  page,
+}) => {
+  await mount(page, "", ["lightbox/base.css", "lightbox/theme.css"]);
+  await serveImages(page, () => ({}));
+  await create(page);
+  await open(page, [
+    {
+      src: "/img/small-400x300.jpg",
+      previewSrc:
+        "data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20width='40'%20height='30'/%3E",
+    },
+  ]);
+  const widths = await framesUntilIdle(
+    page,
+    "document.querySelector('.re-lightbox-frame')?.offsetWidth ?? 0",
+    600,
+  );
+  expect(widths[0]).toBeGreaterThan(800);
+  expect(widths.at(-1)).toBe(400);
+  expect(
+    widths.filter((width) => width > 410 && width < widths[0] - 10).length,
+  ).toBeGreaterThan(2);
+});
+
 test("bindLightboxGallery opens the file a link points to", async ({
   page,
 }) => {
@@ -318,14 +348,13 @@ test("bindLightboxGallery opens the file a link points to", async ({
     root.innerHTML = `<a href="/img/large-1200x800.jpg"><img src="/img/small-300x200.jpg" alt="Small" style="width:300px"></a>`;
     document.body.append(root);
     await root.querySelector("img")?.decode();
-    const { bindLightboxGallery, lightboxItemFromImage } = await import(
-      "/modules/lightbox/index.js"
-    );
+    const { bindLightboxGallery, createLightbox, lightboxItemFromElement } =
+      await import("/modules/lightbox/index.js");
+    const lightbox = createLightbox({ history: false });
+    bindLightboxGallery(root, lightbox);
     Object.assign(window, {
-      lightbox: bindLightboxGallery(root, { history: false }),
-      item: lightboxItemFromImage(
-        root.querySelector("img") as HTMLImageElement,
-      ),
+      lightbox,
+      item: lightboxItemFromElement(root.querySelector("a") as HTMLElement),
     });
   });
   expect(
@@ -399,7 +428,7 @@ test.describe("sizes from a srcset on a 1440px screen", () => {
 test.describe("a responsive tile at 2x", () => {
   test.use({ deviceScaleFactor: 2 });
 
-  test("lightboxItemFromImage reads the shown file's own width, not the tile's CSS size", async ({
+  test("lightboxItemFromElement reads the shown file's own width, not the tile's CSS size", async ({
     page,
   }) => {
     await mount(page, "", ["lightbox/base.css", "lightbox/theme.css"]);
@@ -412,10 +441,12 @@ test.describe("a responsive tile at 2x", () => {
       image.style.width = "300px";
       document.body.append(image);
       await image.decode();
-      const { lightboxItemFromImage } = await import(
+      const { lightboxItemFromElement } = await import(
         "/modules/lightbox/index.js"
       );
-      const { src, width, height } = lightboxItemFromImage(image);
+      const item = lightboxItemFromElement(image);
+      if (!item) throw new Error("No item");
+      const { src, width, height } = item;
       return { src: new URL(src ?? "").pathname, width, height };
     });
     expect(item).toEqual({
@@ -514,6 +545,65 @@ test("an SVG at a URL without an extension takes its viewBox size and zooms like
       page.evaluate(() => (window as Window).lightbox.getState().zoom.scale),
     )
     .toBe(4);
+});
+
+test("a photo at a URL without an extension costs no HEAD request", async ({
+  page,
+}) => {
+  await mount(page, "", ["lightbox/base.css", "lightbox/theme.css"]);
+  const methods: string[] = [];
+  await page.route("http://reuse.test/cdn/photo?w=1200", (route) => {
+    methods.push(route.request().method());
+    return route.fulfill({
+      contentType: "image/svg+xml",
+      body: '<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="800"><rect width="1200" height="800" fill="#5a8"/></svg>',
+    });
+  });
+  await create(page);
+  await open(page, [
+    { src: "/cdn/photo?w=1200", previewSrc: "/cdn/photo?w=1200" },
+  ]);
+  const frame = page.locator(".re-lightbox-frame");
+  await expect(frame).not.toHaveAttribute("data-loading");
+  await expect(page.locator("dialog")).toHaveAttribute("data-phase", "open");
+  expect(methods.filter((method) => method === "HEAD")).toEqual([]);
+});
+
+test("a raster at a URL without an extension replaces its preview after one GET", async ({
+  page,
+}) => {
+  await mount(page, "", ["lightbox/base.css", "lightbox/theme.css"]);
+  const png = Buffer.from(
+    await page.evaluate(() => {
+      const canvas = document.createElement("canvas");
+      canvas.width = 1200;
+      canvas.height = 800;
+      const context = canvas.getContext("2d");
+      if (context) context.fillStyle = "#5a8";
+      context?.fillRect(0, 0, 1200, 800);
+      return canvas.toDataURL("image/png").split(",")[1];
+    }),
+    "base64",
+  );
+  const methods: string[] = [];
+  await page.route("http://reuse.test/cdn/raster?w=1200", async (route) => {
+    methods.push(route.request().method());
+    if (route.request().method() === "HEAD")
+      await new Promise((resolve) => setTimeout(resolve, 3000));
+    return route.fulfill({ contentType: "image/png", body: png });
+  });
+  await create(page);
+  await open(page, [
+    {
+      src: "/cdn/raster?w=1200",
+      previewSrc:
+        "data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20width='120'%20height='80'/%3E",
+      width: 1200,
+      height: 800,
+    },
+  ]);
+  await expect.poll(() => shown(page), { timeout: 2000 }).toBe("/cdn/raster");
+  expect(methods).toEqual(["GET"]);
 });
 
 const photos = Array.from({ length: 8 }, (_, index) => ({

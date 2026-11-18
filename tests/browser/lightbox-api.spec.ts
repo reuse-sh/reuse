@@ -379,11 +379,86 @@ test("inside a frame the lightbox leaves the page's history alone unless history
       "http://reuse.test/modules/lightbox/browser/lightbox.js"
     );
     const length = history.length;
-    const lightbox = createLightbox({ duration: 0 });
+    const lightbox = createLightbox();
     lightbox.open([{ src, width: 1200, height: 800 }]);
     const opened = history.length;
     await lightbox.close();
     return { length, opened };
   }, photo(1));
   expect(result.opened).toBe(result.length);
+});
+
+test("--re-lightbox-padding sets the space around the fitted photo, 32px without it", async ({
+  page,
+}) => {
+  await mount(page, "", ["lightbox/base.css", "lightbox/theme.css"]);
+  await page.addStyleTag({
+    content: ".re-lightbox{--re-lightbox-padding:100px}",
+  });
+  await page.evaluate(async (src) => {
+    const { createLightbox } = await import("/modules/lightbox/index.js");
+    createLightbox({ history: false }).open([
+      { src, width: 1200, height: 800 },
+    ]);
+  }, photo(1));
+  await expect(page.locator("dialog")).toHaveAttribute("data-phase", "open");
+  expect(Math.round((await current(page).boundingBox())?.height ?? 0)).toBe(
+    700 - 2 * 100,
+  );
+  await page.evaluate(() =>
+    document.querySelector("style:last-of-type")?.remove(),
+  );
+  await page.setViewportSize({ width: 1000, height: 701 });
+  await expect
+    .poll(async () =>
+      Math.round((await current(page).boundingBox())?.height ?? 0),
+    )
+    .toBe(((1000 - 2 * 32) * 800) / 1200);
+});
+
+for (const [padding, height] of [
+  ["2rem", ((1000 - 2 * 32) * 800) / 1200],
+  ["calc(50px + 2rem)", 700 - 2 * 82],
+] as const)
+  test(`--re-lightbox-padding: ${padding} is read as the length it computes to`, async ({
+    page,
+  }) => {
+    await mount(page, "", ["lightbox/base.css", "lightbox/theme.css"]);
+    await page.addStyleTag({
+      content: `.re-lightbox{--re-lightbox-padding:${padding}}`,
+    });
+    await page.evaluate(async (src) => {
+      const { createLightbox } = await import("/modules/lightbox/index.js");
+      createLightbox({ history: false }).open([
+        { src, width: 1200, height: 800 },
+      ]);
+    }, photo(1));
+    await expect(page.locator("dialog")).toHaveAttribute("data-phase", "open");
+    expect(Math.round((await current(page).boundingBox())?.height ?? 0)).toBe(
+      height,
+    );
+  });
+
+test("an item type of your own comes back as state.item, the object passed in", async ({
+  page,
+}) => {
+  await mount(page, "", ["lightbox/base.css", "lightbox/theme.css"]);
+  const result = await page.evaluate(async (src) => {
+    const { createLightbox } = await import("/modules/lightbox/index.js");
+    type Photo = { id: string; src: string; width: number; height: number };
+    const photos: Photo[] = [
+      { id: "first", src, width: 1200, height: 800 },
+      { id: "second", src, width: 1200, height: 800 },
+    ];
+    const lightbox = createLightbox<Photo>({ history: false });
+    lightbox.open(photos, 1);
+    const { item, canPrev, canNext } = lightbox.getState();
+    return { id: item?.id, same: item === photos[1], canPrev, canNext };
+  }, photo(1));
+  expect(result).toEqual({
+    id: "second",
+    same: true,
+    canPrev: true,
+    canNext: false,
+  });
 });

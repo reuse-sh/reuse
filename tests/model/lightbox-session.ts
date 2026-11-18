@@ -85,7 +85,7 @@ export function lightboxSession(): World {
   });
   const startHistory = history.length;
   let destroyed = false;
-  const lightbox: Lightbox = createLightbox({ duration: 280 });
+  const lightbox: Lightbox = createLightbox();
   const items = tiles.map((tile, index) => ({
     src: `https://example.test/full-${index}.jpg`,
     width: 1600,

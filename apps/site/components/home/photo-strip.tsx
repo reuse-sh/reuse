@@ -23,22 +23,17 @@ export function PhotoStrip() {
     }),
   );
   const images = useRef<(HTMLImageElement | null)[]>([]);
-  const viewer = useLightbox({
-    icons: lightboxIcons,
-    thumbnails: "bottom",
-    getOrigin: (index) => images.current[index] ?? null,
-  });
-  const lightbox = useRef(viewer);
-  lightbox.current = viewer;
+  const lightbox = useLightbox({ icons: lightboxIcons, thumbnails: "bottom" });
   useEffect(() => {
-    if (carousel) return connectCarousel(lightbox.current, carousel);
-  }, [carousel]);
+    if (carousel) return connectCarousel(lightbox, carousel);
+  }, [lightbox, carousel]);
   const open = (index: number) =>
-    viewer.open(
+    lightbox.open(
       strip.map((photo, at) => ({
         ...photo,
         thumbnailSrc: photo.src,
         previewSrc: images.current[at]?.currentSrc || photo.src,
+        origin: () => images.current[at] ?? null,
       })),
       index,
     );

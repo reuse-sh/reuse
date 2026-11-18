@@ -40,7 +40,7 @@ export function lightboxImages(): World {
     width: 1600,
     height: 1200,
   }));
-  const lightbox: Lightbox = createLightbox({ duration: 280, history: false });
+  const lightbox: Lightbox = createLightbox({ history: false });
   const current = () => {
     const { index } = lightbox.getState();
     return requests.findLast((image) => image.src === items[index].src);

@@ -38,9 +38,34 @@ import {
 
 const carouselInternals = Symbol.for("@reuse-sh/carousel internals");
 
-function internalsOf(carousel: Carousel) {
+function carouselInternalsOf(carousel: Carousel) {
   return (carousel as unknown as Record<symbol, CarouselInternals | undefined>)[
     carouselInternals
+  ];
+}
+
+// What bindLightboxGallery reads from a controller it did not create, under a key that another
+// copy of this package finds too: whether a module plays a type, and the options set so far,
+// which markup options must not override.
+const lightboxInternals = Symbol.for("@reuse-sh/lightbox internals");
+
+type LightboxInternals = {
+  /** The state at creation, which a server render shows. */
+  initial: LightboxState<never>;
+  shows(type: string): boolean;
+  destroyed(): boolean;
+  /** Closes at once without a flight and frees the DOM and listeners; the lightbox opens again. */
+  release(): void;
+  /** Runs open() with options that fill what the lightbox's own options leave unset, until that viewer closes. */
+  openWith(
+    options: Partial<LightboxOptions<never>> | undefined,
+    open: () => void,
+  ): void;
+};
+
+function internalsOf(lightbox: unknown) {
+  return (lightbox as { [lightboxInternals]?: LightboxInternals } | null)?.[
+    lightboxInternals
   ];
 }
 
@@ -96,12 +121,12 @@ export type LightboxSlotName =
   | "footer"
   | "aside";
 
-export type LightboxSlot = (context: {
-  lightbox: Lightbox;
+export type LightboxSlot<Item extends LightboxItem = LightboxItem> = (context: {
+  lightbox: Lightbox<Item>;
   document: Document;
 }) => {
   node: Node;
-  update?: (state: LightboxState) => void;
+  update?: (state: LightboxState<Item>) => void;
   destroy?: () => void;
 };
 
@@ -126,73 +151,105 @@ const defaultControls: Record<LightboxControl, boolean> = {
 
 export type LightboxIcon =
   | "close"
-  | "prev"
+  | "previous"
   | "next"
   | "zoom"
   | "fullscreen"
   | "download"
   | "slideshow";
 
-export type LightboxEventName =
-  | "open"
-  | "opened"
-  | "change"
-  | "settle"
-  | "beforeclose"
-  | "closed";
-
 export interface LightboxEvent {
   readonly type: LightboxEventName;
   readonly index: number;
   readonly slide: HTMLElement | null;
+}
+
+export interface LightboxCancelableEvent extends LightboxEvent {
+  /** False for the close an emptied list starts, which preventDefault() cannot stop. */
+  readonly cancelable: boolean;
   readonly defaultPrevented: boolean;
-  /** Keeps the viewer open when called during beforeclose; other events ignore it. */
+  /** Keeps the viewer open. */
   preventDefault(): void;
 }
 
-export interface LightboxItem {
-  /** The image file; an item with a type uses it as its media source where its module says so. */
-  src?: string;
-  /** Picks the content module whose type matches; without one the item is an image. */
-  type?: string;
-  video?: { src: string; poster?: string };
-  embed?: string;
-  /** Builds an HTML slide's content; HTML strings are never parsed. */
-  html?: () => Node;
-  srcset?: string;
-  sizes?: string;
-  previewSrc?: string;
-  width?: number;
-  height?: number;
+export interface LightboxEventMap {
+  open: LightboxEvent;
+  opened: LightboxEvent;
+  change: LightboxEvent;
+  settle: LightboxEvent;
+  beforeclose: LightboxCancelableEvent;
+  closed: LightboxEvent;
+}
+
+export type LightboxEventName = keyof LightboxEventMap;
+
+export interface LightboxListenOptions {
+  /** Removes the listener when it aborts. */
+  signal?: AbortSignal;
+}
+
+interface LightboxItemBase {
   alt?: string;
   caption?: string;
+  /** The file's own size; without it the viewer fits the preview's proportions until the file decodes. */
+  width?: number;
+  height?: number;
+  /** Shown while the file loads when the origin has no loaded image, and as a player's poster. */
+  previewSrc?: string;
   thumbnailSrc?: string;
+  /** The tile the photo opens from and closes to, read again whenever the photo changes. */
   origin?: HTMLElement | null | (() => HTMLElement | null);
 }
 
-export interface LightboxState {
-  isOpen: boolean;
-  isClosing: boolean;
-  isAnimating: boolean;
-  index: number;
-  count: number;
-  zoom: Zoom;
-  chrome: "shown" | "hidden";
+export interface LightboxImageItem extends LightboxItemBase {
+  type?: undefined;
+  src: string;
+  srcset?: string;
+  sizes?: string;
 }
 
-export interface LightboxContentContext {
-  item: LightboxItem;
+export interface LightboxMediaItem extends LightboxItemBase {
+  /** Picks the content module whose type matches, such as "video" for video(). */
+  type: string;
+  /** The media file, page or player link its module plays. */
+  src?: string;
+  /** Builds an HTML slide's content; HTML strings are never parsed. */
+  html?: () => Node;
+}
+
+export type LightboxItem = LightboxImageItem | LightboxMediaItem;
+
+export interface LightboxState<Item extends LightboxItem = LightboxItem> {
+  readonly isOpen: boolean;
+  readonly isClosing: boolean;
+  readonly isAnimating: boolean;
+  readonly index: number;
+  readonly count: number;
+  /** The item at index, the object passed to open() or setItems(). */
+  readonly item: Item | undefined;
+  readonly canPrev: boolean;
+  readonly canNext: boolean;
+  /** The slideshow runs, also while it waits on a zoom, a player or a hover. */
+  readonly isPlaying: boolean;
+  readonly zoom: Readonly<Zoom>;
+  readonly chrome: "shown" | "hidden";
+}
+
+export interface LightboxContentContext<
+  Item extends LightboxItem = LightboxItem,
+> {
+  item: Extract<Item, LightboxImageItem>;
   index: number;
   container: HTMLElement;
   image: HTMLImageElement;
 }
 
 export interface LightboxMountContext {
-  item: LightboxItem;
+  item: LightboxMediaItem;
   index: number;
   /** Aborts when the slide unmounts. */
   signal: AbortSignal;
-  /** True when the player should start once it is current: the autoplay option and an open by a user action. */
+  /** True when the player should start once it is current: the autoplayMedia option and an open by a user action. */
   autoplay: boolean;
 }
 
@@ -215,9 +272,8 @@ export interface LightboxContent {
   mount(container: HTMLElement, context: LightboxMountContext): LightboxMounted;
 }
 
-export interface LightboxOptions {
+export interface LightboxOptions<Item extends LightboxItem = LightboxItem> {
   container?: HTMLElement;
-  label?: string;
   imageClick?: "zoom" | "close" | "none";
   doubleTapZoom?: boolean;
   maxZoom?: number;
@@ -227,46 +283,51 @@ export interface LightboxOptions {
   thumbnails?: false | "bottom" | "side";
   caption?: "bottom" | "side";
   slideshow?: { interval?: number };
-  padding?: number;
-  duration?: number;
   autoHide?: number | false;
   className?: string;
   icons?: Partial<Record<LightboxIcon, () => Node>>;
-  renderContent?: (context: LightboxContentContext) => undefined | (() => void);
+  renderContent?: (
+    context: LightboxContentContext<Item>,
+  ) => undefined | (() => void);
   /** Content modules for items with a type, such as video() from @reuse-sh/lightbox/video. */
   content?: readonly LightboxContent[];
   /** Starts the current player once it shows, when the viewer opened from a user action; default true. */
-  autoplay?: boolean;
+  autoplayMedia?: boolean;
   loop?: boolean;
   history?: boolean;
   strings?: Partial<LightboxStrings>;
-  slots?: Partial<Record<LightboxSlotName, LightboxSlot>>;
-  getOrigin?: (index: number) => HTMLElement | null;
+  slots?: Partial<Record<LightboxSlotName, LightboxSlot<Item>>>;
   protect?: boolean;
-  /** Reports discrete actions, completed pointer gestures, and wheel input after 150ms idle. */
-  onChange?: (state: LightboxState) => void;
 }
 
-export interface Lightbox {
-  open(items: readonly LightboxItem[], index?: number): void;
+export interface Lightbox<Item extends LightboxItem = LightboxItem> {
+  open(items: readonly Item[], index?: number): void;
   close(): Promise<void>;
   next(): void;
   prev(): void;
   goTo(index: number): void;
   zoomTo(scale: number, focus?: Point): void;
   toggleZoom(focus?: Point): void;
-  /** Returns live geometry, including pointer and wheel samples before notification. */
-  getState(): LightboxState;
-  /** Subscribes to the settled changes reported by onChange. */
-  subscribe(listener: (state: LightboxState) => void): () => void;
-  on(
-    type: LightboxEventName,
-    listener: (event: LightboxEvent) => void,
+  /** Starts the slideshow on the open viewer. */
+  play(): void;
+  pause(): void;
+  /** The last state subscribers received; a gesture or a wheel shows up once it settles. */
+  getState(): LightboxState<Item>;
+  /** Reports discrete actions, completed pointer gestures, and wheel input after 150ms idle. */
+  subscribe(
+    listener: (state: LightboxState<Item>) => void,
+    options?: LightboxListenOptions,
   ): () => void;
-  append(items: readonly LightboxItem[]): void;
+  on<K extends LightboxEventName>(
+    type: K,
+    listener: (event: LightboxEventMap[K]) => void,
+    options?: LightboxListenOptions,
+  ): () => void;
+  append(items: readonly Item[]): void;
   /** Keeps the current image when the new list still has it, otherwise shows index or the nearest image left. */
-  setItems(items: readonly LightboxItem[], index?: number): void;
-  setOptions(options: Pick<LightboxOptions, "loop">): void;
+  setItems(items: readonly Item[], index?: number): void;
+  /** Takes effect at the next open; loop and strings also change an open viewer at once. */
+  setOptions(options: Partial<Omit<LightboxOptions<Item>, "container">>): void;
   getSlide(index: number): HTMLElement | null;
   destroy(): void;
 }
@@ -306,6 +367,7 @@ type Session = {
   dialog: HTMLDialogElement;
   stage: HTMLDivElement;
   viewport: HTMLDivElement;
+  paddingProbe: HTMLDivElement;
   backdrop: HTMLDivElement;
   slides: HTMLDivElement[];
   loaded: Map<number, LoadedSlide>;
@@ -318,7 +380,13 @@ type Session = {
   /** The photo changed since the last settle. */
   paged: boolean;
   phase: "entering" | "opening" | "open" | "dragging" | "returning" | "closing";
-  timing: { open: number; close: number; ease: string };
+  timing: {
+    open: number;
+    close: number;
+    zoom: number;
+    fade: number;
+    ease: string;
+  };
   chrome: ChromeModel;
   chromeRoots: HTMLElement[];
   chromeTimer?: ReturnType<typeof setTimeout>;
@@ -353,7 +421,7 @@ type Session = {
   input?: "keyboard" | "pointer";
   restoreScroll: () => void;
   hiddenOrigin?: { element: HTMLElement; visibility: string };
-  landing?: HTMLImageElement;
+  landing?: HTMLElement;
   counter?: HTMLSpanElement;
   counterText: string;
   status: HTMLDivElement;
@@ -366,7 +434,7 @@ type Session = {
   slideshowButton?: HTMLButtonElement;
   thumbs: HTMLButtonElement[];
   makeSlide: () => HTMLDivElement;
-  makeThumbs: () => void;
+  makeThumbs: (strings: LightboxStrings) => void;
   pointers: Map<number, Point>;
   box: Rect;
   gesture?: {
@@ -666,6 +734,9 @@ function validateItems(
 const OPEN_DURATION = 400;
 const CLOSE_DURATION = 300;
 const REDUCED_DURATION = 150;
+const ZOOM_DURATION = 220;
+const FADE_DURATION = 240;
+const PADDING = 32;
 const FLIGHT_EASE = "cubic-bezier(0.32, 0.72, 0, 1)";
 const ZOOM_EASE = "cubic-bezier(.16,1,.3,1)";
 const DOUBLE_TAP_TIME = 300;
@@ -751,46 +822,65 @@ function midpoint(points: Point[]): Point {
   };
 }
 
-export function createLightbox(options: LightboxOptions = {}): Lightbox {
-  let settings: LightboxOptions = { ...options };
+export function createLightbox<Item extends LightboxItem = LightboxItem>(
+  options: LightboxOptions<Item> = {},
+): Lightbox<Item> {
+  // The caller's object is copied once, so changing it later changes nothing; setOptions does.
+  const current: LightboxOptions<Item> = { ...options };
+  let settings: LightboxOptions<Item> = { ...current };
   let preload = 1;
-  let padding = 32;
+  let padding = PADDING;
   let autoHide: number | false = 2500;
   let loop = Boolean(options.loop);
   let items: LightboxItem[] = [];
-  let sources: readonly LightboxItem[] = [];
+  let sources: readonly Item[] = [];
   let session: Session | undefined;
   let destroyed = false;
   let syncingCarousel = false;
   let closePromise: Promise<void> | undefined;
   let pendingClosed: (() => void) | undefined;
   let listAfterClose:
-    | { items: LightboxItem[]; sources: readonly LightboxItem[] }
+    | { items: LightboxItem[]; sources: readonly Item[] }
     | undefined;
-  let state: LightboxState = {
+  let state: LightboxState<Item> = {
     isOpen: false,
     isClosing: false,
     isAnimating: false,
     index: 0,
     count: 0,
+    item: undefined,
+    canPrev: false,
+    canNext: false,
+    isPlaying: false,
     zoom: { ...identity },
     chrome: "shown",
   };
-  const listeners = new Set<(state: LightboxState) => void>();
+  const listeners = new Set<(state: LightboxState<Item>) => void>();
+  const stops = new Set<() => void>();
   const handlers = new Map<
     LightboxEventName,
-    Set<(event: LightboxEvent) => void>
+    Set<(event: LightboxCancelableEvent) => void>
   >();
   const historyId = Math.random().toString(36).slice(2);
   let historyWindow: Window | undefined;
   let vetting = false;
+  let forcing = false;
 
   let notifiedState = state;
+  const initial = state;
 
-  function configure() {
-    settings = { ...options };
+  // A gallery's markup options for the next open, set only while bindLightboxGallery opens.
+  let galleryOptions: Partial<LightboxOptions<Item>> | undefined;
+
+  function configure(layer?: Partial<LightboxOptions<Item>>) {
+    settings = { ...current };
+    for (const [key, value] of Object.entries(layer ?? {}))
+      if (settings[key as keyof typeof settings] === undefined)
+        Object.assign(settings, { [key]: value });
+    if (layer?.strings && current.strings)
+      settings.strings = { ...layer.strings, ...current.strings };
+    loop = Boolean(settings.loop);
     preload = clamp(Math.floor(settings.preload ?? 1), 0, 2);
-    padding = Math.max(0, settings.padding ?? 32);
     autoHide =
       settings.autoHide === false
         ? false
@@ -800,11 +890,19 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
   }
   configure();
 
-  function updateState(update: Partial<LightboxState>) {
-    state = { ...state, ...update };
+  // item, canPrev and canNext follow index, count, the list and loop.
+  function updateState(update: Partial<LightboxState<Item>>) {
+    const next = { ...state, ...update };
+    const many = next.count > 1;
+    state = {
+      ...next,
+      item: sources[next.index],
+      canPrev: many && (loop || next.index > 0),
+      canNext: many && (loop || next.index < next.count - 1),
+    };
   }
 
-  function publish(update: Partial<LightboxState>) {
+  function publish(update: Partial<LightboxState<Item>>) {
     updateState(update);
     if (
       state.isOpen === notifiedState.isOpen &&
@@ -812,6 +910,10 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
       state.isAnimating === notifiedState.isAnimating &&
       state.index === notifiedState.index &&
       state.count === notifiedState.count &&
+      state.item === notifiedState.item &&
+      state.canPrev === notifiedState.canPrev &&
+      state.canNext === notifiedState.canNext &&
+      state.isPlaying === notifiedState.isPlaying &&
       state.chrome === notifiedState.chrome &&
       state.zoom.scale === notifiedState.zoom.scale &&
       state.zoom.x === notifiedState.zoom.x &&
@@ -819,25 +921,29 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
     )
       return;
     notifiedState = state;
-    settings.onChange?.(state);
     for (const listener of listeners) listener(state);
     for (const slot of session?.slots ?? []) slot.update?.(state);
   }
 
-  function emit(type: LightboxEventName, s: Session | null) {
+  function emit(type: LightboxEventName, s: Session | null, cancelable = true) {
     let prevented = false;
     const event: LightboxEvent = {
       type,
       index: state.index,
       slide: s?.slides[state.index] ?? null,
-      get defaultPrevented() {
-        return prevented;
-      },
-      preventDefault() {
-        if (type === "beforeclose") prevented = true;
-      },
     };
-    for (const listener of [...(handlers.get(type) ?? [])]) listener(event);
+    if (type === "beforeclose")
+      Object.defineProperties(event, {
+        cancelable: { value: cancelable, enumerable: true },
+        defaultPrevented: { get: () => prevented, enumerable: true },
+        preventDefault: {
+          value: () => {
+            prevented = cancelable;
+          },
+        },
+      });
+    for (const listener of [...(handlers.get(type) ?? [])])
+      listener(event as LightboxCancelableEvent);
     return prevented;
   }
 
@@ -961,6 +1067,8 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
     }
     if (on) s.dialog.dataset.slideshow = "playing";
     else delete s.dialog.dataset.slideshow;
+    if (session === s) publish({ isPlaying: on });
+    else updateState({ isPlaying: on });
     if (!button) return;
     button.setAttribute(
       "aria-label",
@@ -986,17 +1094,11 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
       s.dialog,
     );
     const read = (name: string) => style?.getPropertyValue(name) ?? "";
-    const fixed =
-      settings.duration === undefined
-        ? undefined
-        : Math.max(0, settings.duration);
     s.timing = {
-      open:
-        fixed ??
-        milliseconds(read("--re-lightbox-open-duration"), OPEN_DURATION),
-      close:
-        fixed ??
-        milliseconds(read("--re-lightbox-close-duration"), CLOSE_DURATION),
+      open: milliseconds(read("--re-lightbox-open-duration"), OPEN_DURATION),
+      close: milliseconds(read("--re-lightbox-close-duration"), CLOSE_DURATION),
+      zoom: milliseconds(read("--re-lightbox-zoom-duration"), ZOOM_DURATION),
+      fade: milliseconds(read("--re-lightbox-fade-duration"), FADE_DURATION),
       ease: easing(
         read("--re-lightbox-ease").trim(),
         s.dialog.ownerDocument.defaultView,
@@ -1070,7 +1172,7 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
   }
 
   function originOf(index: number) {
-    return resolveOrigin(settings.getOrigin?.(index) ?? items[index]?.origin);
+    return resolveOrigin(items[index]?.origin);
   }
 
   function rendered(element: HTMLElement) {
@@ -1080,9 +1182,13 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
     return rect.width > 0 && rect.height > 0 ? rect : undefined;
   }
 
-  function measure(viewport: HTMLElement): Rect {
+  function measure(viewport: HTMLElement, paddingProbe: HTMLElement): Rect {
     const rect = viewport.getBoundingClientRect();
     const win = viewport.ownerDocument.defaultView;
+    const space = Number.parseFloat(
+      win?.getComputedStyle(paddingProbe).paddingLeft ?? "",
+    );
+    padding = Number.isFinite(space) ? Math.max(0, space) : PADDING;
     return {
       left: rect.left,
       top: rect.top,
@@ -1156,7 +1262,7 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
   function limits(s: Session, index = state.index) {
     const item = items[index];
     const entry = s.loaded.get(index);
-    if (entry?.status === "failed" || item?.type)
+    if (entry?.status === "failed" || item?.type !== undefined)
       return { min: 1, max: 1, tap: 1 };
     return zoomLimits({
       fileWidth: largestWidth(item?.srcset) ?? entry?.natural ?? item?.width,
@@ -1273,11 +1379,17 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
       };
       // A timeline that has not advanced by the deadline still lands the last keyframe. It is
       // written directly, since WebKit commits the first keyframe of an animation that never got a frame.
-      // The deadline counts from the animation's start, so a busy main thread does not cut it short.
+      // The deadline counts from the animation's start, so a busy main thread does not cut it short,
+      // and waits while a visible document has yet to start it.
       let elapsed = -1;
       const deadline = () => {
         const time = Number(animation.currentTime);
         if (
+          animation.pending &&
+          node.ownerDocument.visibilityState === "visible"
+        )
+          timer = setTimeout(deadline, duration + 80);
+        else if (
           animation.startTime === null ||
           !(time > elapsed) ||
           time >= duration
@@ -1361,9 +1473,7 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
   }
 
   function zoomDuration(s: Session) {
-    return prefersReducedMotion(s)
-      ? 0
-      : Math.min(220, Math.max(0, settings.duration ?? 280));
+    return prefersReducedMotion(s) ? 0 : s.timing.zoom;
   }
 
   function flightDuration(s: Session, closing: boolean) {
@@ -1400,6 +1510,7 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
     s: Session,
     image: HTMLImageElement,
     origin: HTMLElement,
+    rect: DOMRect,
     size: Size,
     box: DOMRect,
   ) {
@@ -1419,14 +1530,24 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
     copy.setAttribute("aria-hidden", "true");
     copy.draggable = false;
     copy.src = src;
-    copy.style.cssText = `position:absolute;left:0;top:0;right:auto;bottom:auto;display:block;box-sizing:content-box;width:${size.width}px;height:${size.height}px;min-width:0;min-height:0;max-width:none;max-height:none;margin:0;padding:0;border:0;border-radius:0;box-shadow:none;outline:0;object-fit:fill;opacity:1;visibility:visible;filter:none;transition:none;animation:none;translate:none;rotate:none;scale:none;transform-origin:center;pointer-events:none`;
+    const reset =
+      "position:absolute;left:0;top:0;right:auto;bottom:auto;display:block;box-sizing:content-box;min-width:0;min-height:0;max-width:none;max-height:none;margin:0;padding:0;border:0;border-radius:0;box-shadow:none;outline:0;opacity:1;visibility:visible;filter:none;transition:none;animation:none;transform:none;translate:none;rotate:none;scale:none;pointer-events:none";
+    copy.style.cssText = `${reset};width:${size.width}px;height:${size.height}px;object-fit:fill;transform-origin:center`;
+    // The box covers the tile and clips the copy, so the full-size copy adds no scrollable
+    // overflow to a strip whose tiles have no position of their own.
+    const holder = doc.createElement("span");
+    holder.setAttribute("aria-hidden", "true");
+    holder.style.cssText = `${reset};width:${rect.width}px;height:${rect.height}px;overflow:hidden;overflow:clip`;
+    holder.append(copy);
     // A carousel of bare children would count a copy beside its slide as one more slide.
     const parent = origin.parentElement;
-    (parent?.classList.contains("re-carousel") ? parent : origin).after(copy);
-    const at = copy.getBoundingClientRect();
-    copy.style.left = `${box.left + (box.width - size.width) / 2 - at.left}px`;
-    copy.style.top = `${box.top + (box.height - size.height) / 2 - at.top}px`;
-    return copy;
+    (parent?.classList.contains("re-carousel") ? parent : origin).after(holder);
+    const at = holder.getBoundingClientRect();
+    holder.style.left = `${rect.left - at.left}px`;
+    holder.style.top = `${rect.top - at.top}px`;
+    copy.style.left = `${box.left + (box.width - size.width) / 2 - rect.left}px`;
+    copy.style.top = `${box.top + (box.height - size.height) / 2 - rect.top}px`;
+    return { holder, copy };
   }
 
   function morph(s: Session, closing: boolean, landing: boolean) {
@@ -1545,12 +1666,13 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
     };
     if (!closing)
       return animate(s, entry.frame, [clipped, expanded], duration, ease);
-    const copy =
+    const made =
       landing && duration > 0
-        ? landingCopy(s, entry.image, origin, size, box)
+        ? landingCopy(s, entry.image, origin, rect, size, box)
         : undefined;
-    if (!copy) return animate(s, entry.frame, [live, clipped], duration, ease);
-    s.landing = copy;
+    if (!made) return animate(s, entry.frame, [live, clipped], duration, ease);
+    const { holder, copy } = made;
+    s.landing = holder;
     return Promise.all([
       animate(
         s,
@@ -1581,7 +1703,13 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
   function requestSizes(s: Session) {
     for (const [index, entry] of s.loaded) {
       const item = items[index];
-      if (!item.srcset || !entry.loader || entry.status === "failed") continue;
+      if (
+        item.type !== undefined ||
+        !item.srcset ||
+        !entry.loader ||
+        entry.status === "failed"
+      )
+        continue;
       const width = fit(index, s).width;
       const scale =
         index === state.index ? Math.min(s.sharpScale, state.zoom.scale) : 1;
@@ -1636,7 +1764,7 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
     const before = state.zoom;
     const from = fit(state.index, s);
     const resting = s.rest !== undefined && sameZoom(before, s.rest);
-    s.box = measure(s.viewport);
+    s.box = measure(s.viewport, s.paddingProbe);
     s.pinned = undefined;
     s.thumbCenters = undefined;
     if (resting) updateState({ zoom: restZoom(s, state.index) });
@@ -1760,14 +1888,16 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
   // A player mounts in its own layer above the poster, which stays under it.
   function mountMedia(s: Session, index: number, entry: LoadedSlide) {
     const media = entry.media;
-    if (!media || media.mounted || session !== s) return;
+    const item = items[index];
+    if (!media || media.mounted || session !== s || item.type === undefined)
+      return;
     const doc = s.dialog.ownerDocument;
     const holder = doc.createElement("div");
     holder.className = "re-lightbox-media";
     entry.frame.append(holder);
     const abort = new AbortController();
     const mounted = media.content.mount(holder, {
-      item: items[index],
+      item,
       index,
       signal: abort.signal,
       autoplay: s.autoplay,
@@ -1853,13 +1983,13 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
       image.alt = item.alt || "";
       image.draggable = false;
       image.decoding = "async";
-      const content =
-        item.type === undefined
-          ? undefined
-          : settings.content?.find((module) => module.type === item.type);
-      if (content) {
+      if (item.type !== undefined) {
+        const content = settings.content?.find(
+          (module) => module.type === item.type,
+        );
+        if (!content) continue;
         frame.dataset.media = content.type;
-        const poster = item.video?.poster || previewOf(index);
+        const poster = previewOf(index);
         if (poster) image.src = poster;
         frame.append(image);
         s.slides[index].append(frame);
@@ -1907,7 +2037,7 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
         };
         const format = formatOf(url, doc.baseURI);
         mark(format);
-        if (!format)
+        if (!format && /^blob:/i.test(url))
           void lookupFormat(url, doc.baseURI, fetcher).then((found) => {
             if (alive && shown === url) mark(found);
           });
@@ -1916,6 +2046,8 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
         if (!alive || session !== s) return;
         if (entry.natural !== undefined && width <= entry.natural) return;
         entry.natural = width;
+        const before =
+          index === state.index && !s.flying ? fit(index, s) : undefined;
         const shape =
           size ??
           (source.naturalWidth && source.naturalHeight
@@ -1934,6 +2066,22 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
         display(source.currentSrc || source.src);
         frame.removeAttribute("data-loading");
         layout(s);
+        const after = before && fit(index, s);
+        if (
+          before &&
+          after &&
+          (Math.abs(after.width - before.width) > 0.5 ||
+            Math.abs(after.height - before.height) > 0.5)
+        )
+          void animate(
+            s,
+            frame,
+            [
+              { width: `${before.width}px`, height: `${before.height}px` },
+              { width: `${after.width}px`, height: `${after.height}px` },
+            ],
+            zoomDuration(s),
+          );
       };
       const failed = () => {
         frame.removeAttribute("data-loading");
@@ -2000,6 +2148,14 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
             const sized = Boolean(item.width && item.height);
             const format = formatOf(source, doc.baseURI);
             if (format && (format !== "svg" || sized)) return ready();
+            // Only an SVG without its own size decodes at 300x150, so a CDN URL without an
+            // extension asks for no type.
+            if (
+              !format &&
+              !/^blob:/i.test(source) &&
+              (loader.naturalWidth !== 300 || loader.naturalHeight !== 150)
+            )
+              return ready();
             void lookupFormat(source, doc.baseURI, fetcher)
               .then((found) =>
                 found === "svg" && !sized
@@ -2029,7 +2185,7 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
           loader.srcset = item.srcset;
           requestSizes(s);
         }
-        loader.src = item.src ?? "";
+        loader.src = item.src;
       };
       const preview = previewOf(index);
       if (preview) display(preview);
@@ -2055,7 +2211,7 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
       };
       s.loaded.set(index, entry);
       cleanup = settings.renderContent?.({
-        item,
+        item: item as Extract<Item, LightboxImageItem>,
         index,
         container: frame,
         image,
@@ -2188,15 +2344,17 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
       s.next.disabled = !looping() && state.index === items.length - 1;
     if (single) toggleSlideshow(s, false);
     if (s.download) {
-      const href = largestSource(item.srcset, item.src ?? "");
+      const href =
+        item.type === undefined ? largestSource(item.srcset, item.src) : "";
       let file = false;
-      try {
-        const url = new URL(href, s.dialog.ownerDocument.baseURI);
-        file =
-          /^(https?|blob):$/.test(url.protocol) ||
-          /^data:image\/(png|jpeg|gif|webp|avif)[;,]/i.test(url.href);
-      } catch {}
-      s.download.hidden = Boolean(item.type) || !file;
+      if (href)
+        try {
+          const url = new URL(href, s.dialog.ownerDocument.baseURI);
+          file =
+            /^(https?|blob):$/.test(url.protocol) ||
+            /^data:image\/(png|jpeg|gif|webp|avif)[;,]/i.test(url.href);
+        } catch {}
+      s.download.hidden = !file;
       if (file) s.download.setAttribute("href", href);
       else s.download.removeAttribute("href");
     }
@@ -2297,18 +2455,18 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
     trimSlides(s);
   }
 
-  function scrubNow(s: Session) {
+  function scrubNow(s: Session, ended = false) {
     const strip = s.thumbStrip;
     if (s.scrubFrame !== undefined)
       s.dialog.ownerDocument.defaultView?.cancelAnimationFrame(s.scrubFrame);
     s.scrubFrame = undefined;
-    if (strip && s.stripInput) scrubTo(s, thumbUnderRing(s, strip));
+    if (strip && (ended || s.stripInput)) scrubTo(s, thumbUnderRing(s, strip));
   }
 
   // The photo the strip landed on is reported once, and focus and the tab stop follow it.
   function endScrub(s: Session) {
     clearTimeout(s.scrubTimer);
-    if (s.scrubFrame !== undefined) scrubNow(s);
+    if (s.scrubFrame !== undefined) scrubNow(s, true);
     if (!s.scrubbing) return;
     s.scrubbing = false;
     if (session !== s) return;
@@ -2362,7 +2520,10 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
   }
 
   function teardown(s: Session) {
-    if (session === s) session = undefined;
+    if (session === s) {
+      session = undefined;
+      configure();
+    }
     s.abort.abort();
     clearTimeout(s.wheelTimer);
     clearTimeout(s.sharpTimer);
@@ -2503,7 +2664,7 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
   }
 
   function keepLaps(s: Session, slides: readonly HTMLElement[]) {
-    internalsOf(s.carousel)?.keepLaps(slides);
+    carouselInternalsOf(s.carousel)?.keepLaps(slides);
   }
 
   function clearStands(s: Session) {
@@ -2618,9 +2779,12 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
         trimSlides(s);
       },
     };
-    const reduced = prefersReducedMotion(s);
-    const duration = Math.min(240, Math.max(0, settings.duration ?? 280));
-    if (reduced || duration <= 0 || typeof s.viewport.animate !== "function") {
+    const duration = s.timing.fade;
+    if (
+      prefersReducedMotion(s) ||
+      duration <= 0 ||
+      typeof s.viewport.animate !== "function"
+    ) {
       fade.jump();
       return;
     }
@@ -3000,7 +3164,7 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
           publish({});
         }
         interruptImageMotion(s);
-        if (!s.pointers.size) s.box = measure(s.viewport);
+        if (!s.pointers.size) s.box = measure(s.viewport, s.paddingProbe);
         s.pointers.set(event.pointerId, point(event));
         resetGesture();
         if (s.gesture) {
@@ -3368,7 +3532,7 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
         )
           return;
         freezeZoom(s);
-        s.box = measure(s.viewport);
+        s.box = measure(s.viewport, s.paddingProbe);
         s.safariScale = state.zoom.scale;
       },
       { signal },
@@ -3419,7 +3583,7 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
       )
         activeChanged(session, value.index);
     });
-    internalsOf(carousel)?.silence();
+    carouselInternalsOf(carousel)?.silence();
     return carousel;
   }
 
@@ -3540,7 +3704,7 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
       s.footer.append(strip);
       strip.tabIndex = -1;
       s.thumbCarousel = createCarousel(strip, { drag: true, align: "center" });
-      const internals = internalsOf(s.thumbCarousel);
+      const internals = carouselInternalsOf(s.thumbCarousel);
       internals?.silence();
       internals?.passClicks();
     }
@@ -3572,10 +3736,23 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
       signal,
     });
     for (const type of ["play", "pause", "ended"])
-      s.viewport.addEventListener(type, () => holdForMedia(s), {
-        signal,
-        capture: true,
-      });
+      s.viewport.addEventListener(
+        type,
+        (event) => {
+          holdForMedia(s);
+          const player = s.loaded
+            .get(state.index)
+            ?.media?.holder?.querySelector("video, audio");
+          if (
+            type === "ended" &&
+            event.target === player &&
+            s.slideshow &&
+            slideshowRuns(s)
+          )
+            advanceSlideshow(s);
+        },
+        { signal, capture: true },
+      );
     const hover = (event: PointerEvent, target: EventTarget | null) => {
       if (event.pointerType !== "mouse") return;
       holdSlideshow(
@@ -3641,7 +3818,10 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
         if (to === undefined) return;
         event.preventDefault();
         s.stripInput = false;
-        const index = clamp(to, 0, s.thumbs.length - 1);
+        const count = s.thumbs.length;
+        const index = looping()
+          ? (to + count) % count
+          : clamp(to, 0, count - 1);
         rove(s, index);
         goTo(index);
         s.thumbs[index].focus({ preventScroll: true });
@@ -3665,14 +3845,7 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
     };
     strip.addEventListener("pointerdown", pressed, { signal });
     strip.addEventListener("wheel", pressed, { signal, passive: true });
-    strip.addEventListener(
-      "re-carousel:settle",
-      () => {
-        s.stripInput = false;
-        endScrub(s);
-      },
-      { signal },
-    );
+    strip.addEventListener("re-carousel:settle", () => endScrub(s), { signal });
     strip.addEventListener(
       "scroll",
       () => {
@@ -3692,6 +3865,43 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
         .addEventListener("change", () => placeThumbs(s), { signal });
   }
 
+  // New strings reach every label at once; the live region keeps its last announcement.
+  function relabel(s: Session) {
+    const strings = { ...defaultStrings, ...settings.strings };
+    s.strings = strings;
+    const doc = s.dialog.ownerDocument;
+    const name = (selector: string, label: string) =>
+      s.stage.querySelector(selector)?.setAttribute("aria-label", label);
+    s.dialog.setAttribute("aria-label", strings.dialog);
+    s.viewport.setAttribute("aria-label", strings.dialog);
+    s.carousel.setOptions({ strings: { carouselRole: strings.carouselRole } });
+    name(".re-lightbox-close", strings.close);
+    name(".re-lightbox-prev", strings.previous);
+    name(".re-lightbox-next", strings.next);
+    name(".re-lightbox-download", strings.download);
+    name(
+      ".re-lightbox-fullscreen",
+      doc.fullscreenElement === s.stage
+        ? strings.fullscreenExit
+        : strings.fullscreenEnter,
+    );
+    name(
+      ".re-lightbox-slideshow",
+      s.slideshow ? strings.slideshowStop : strings.slideshowStart,
+    );
+    s.thumbStrip?.setAttribute("aria-label", strings.thumbnails);
+    for (const [index, thumb] of s.thumbs.entries())
+      thumb.setAttribute("aria-label", strings.thumbnail(index, items.length));
+    for (const node of s.stage.querySelectorAll(".re-lightbox-loading"))
+      node.setAttribute("aria-label", strings.loading);
+    for (const node of s.stage.querySelectorAll(".re-lightbox-error p"))
+      node.textContent = strings.error;
+    for (const node of s.stage.querySelectorAll(".re-lightbox-retry"))
+      node.textContent = strings.retry;
+    s.marked = undefined;
+    update(s);
+  }
+
   function mountSlots(
     s: Session,
     places: Record<LightboxSlotName, (node: Node) => void>,
@@ -3702,12 +3912,12 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
       if (!slot) continue;
       const instance = slot({ lightbox: controller, document: doc });
       places[name](instance.node);
-      s.slots.push(instance);
+      s.slots.push(instance as ReturnType<LightboxSlot>);
       instance.update?.(state);
     }
   }
 
-  function open(input: readonly LightboxItem[], index = 0) {
+  function open(input: readonly Item[], index = 0) {
     const before = session;
     try {
       openSession(input, index);
@@ -3730,14 +3940,17 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
     }
   }
 
-  function openSession(input: readonly LightboxItem[], index: number) {
+  function openSession(input: readonly Item[], index: number) {
     if (destroyed) throw new Error("This lightbox has been destroyed.");
-    const nextItems = validateItems(input, options.content);
+    const nextItems = validateItems(input, current.content);
     if (!Number.isFinite(index))
       throw new TypeError("Image index must be finite.");
-    configure();
+    const layer = galleryOptions;
     const doc =
-      settings.container?.ownerDocument ??
+      current.container?.ownerDocument ??
+      resolveOrigin(
+        nextItems[clamp(Math.floor(index), 0, nextItems.length - 1)].origin,
+      )?.ownerDocument ??
       (typeof document === "undefined" ? undefined : document);
     if (!doc?.body)
       throw new Error("Opening a lightbox needs a browser document.");
@@ -3747,6 +3960,7 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
       emit("closed", null);
     }
     if (destroyed) return;
+    configure(layer);
     items = nextItems;
     sources = [...input];
     closePromise = undefined;
@@ -3757,7 +3971,7 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
     dialog.className = ["re-lightbox", settings.className]
       .filter(Boolean)
       .join(" ");
-    dialog.setAttribute("aria-label", settings.label || strings.dialog);
+    dialog.setAttribute("aria-label", strings.dialog);
     dialog.dataset.chrome = "shown";
     dialog.dataset.phase = "entering";
     if (settings.protect) dialog.dataset.protect = "";
@@ -3769,7 +3983,7 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
     const viewport = doc.createElement("div");
     viewport.className = "re-lightbox-viewport";
     viewport.tabIndex = 0;
-    viewport.setAttribute("aria-label", settings.label || strings.dialog);
+    viewport.setAttribute("aria-label", strings.dialog);
     const makeSlide = () => {
       const slide = doc.createElement("div");
       slide.className = "re-lightbox-slide";
@@ -3789,7 +4003,11 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
     const toolbarEnd = doc.createElement("div");
     toolbarEnd.className = "re-lightbox-toolbar-end";
     toolbar.append(toolbarStart, toolbarEnd);
-    stage.append(backdrop, viewport, toolbar);
+    const paddingProbe = doc.createElement("div");
+    paddingProbe.setAttribute("aria-hidden", "true");
+    paddingProbe.style.cssText =
+      "position:absolute;left:0;top:0;width:0;height:0;visibility:hidden;pointer-events:none;padding-left:var(--re-lightbox-padding, 32px)";
+    stage.append(backdrop, viewport, toolbar, paddingProbe);
     const abort = new AbortController();
     const button = <K extends "button" | "a">(
       tag: K,
@@ -3801,7 +4019,7 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
     ) => {
       const element = doc.createElement(tag);
       if (tag === "button") element.setAttribute("type", "button");
-      element.className = `re-lightbox-button re-lightbox-${name}`;
+      element.className = `re-lightbox-button re-lightbox-${name === "previous" ? "prev" : name}`;
       element.setAttribute("aria-label", label);
       const icon = settings.icons?.[name]?.();
       if (icon) element.append(icon);
@@ -3859,21 +4077,28 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
       : undefined;
     download?.setAttribute("download", "");
     download?.setAttribute("rel", "noopener");
-    // Browsers ignore the download attribute across origins and navigate the tab instead,
-    // and block a popup opened after an await, so the fetch starts before the click.
+    // Browsers ignore the download attribute across origins, also after a same-origin URL
+    // redirects to another one, and navigate the tab instead, and block a popup opened after
+    // an await, so every web file is fetched before the click.
     let fetched:
-      | { href: string; blob?: Blob; failed?: boolean; wanted?: boolean }
+      | {
+          href: string;
+          blob?: Blob;
+          name?: string;
+          failed?: boolean;
+          wanted?: boolean;
+        }
       | undefined;
     const native = () =>
       !download ||
-      download.origin === doc.location.origin ||
-      download.protocol === "data:";
-    const save = (blob: Blob, pathname: string) => {
+      download.protocol === "data:" ||
+      download.protocol === "blob:";
+    const save = (blob: Blob, pathname: string, named?: string) => {
       const link = doc.createElement("a");
       link.href = URL.createObjectURL(blob);
       const name = pathname.split("/").pop() ?? "";
       try {
-        link.download = decodeURIComponent(name);
+        link.download = named ?? decodeURIComponent(name);
       } catch {
         link.download = name;
       }
@@ -3886,11 +4111,17 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
       const entry: NonNullable<typeof fetched> = { href };
       fetched = entry;
       fetch(href)
-        .then((response) => (response.ok ? response.blob() : Promise.reject()))
+        .then((response) => {
+          if (!response.ok) return Promise.reject();
+          entry.name = dispositionName(
+            response.headers.get("content-disposition"),
+          );
+          return response.blob();
+        })
         .then(
           (blob) => {
             entry.blob = blob;
-            if (entry.wanted) save(blob, pathname);
+            if (entry.wanted) save(blob, pathname, entry.name);
             entry.wanted = false;
           },
           () => {
@@ -3903,7 +4134,13 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
     download?.addEventListener("pointerdown", prefetch, {
       signal: abort.signal,
     });
-    download?.addEventListener("focus", prefetch, { signal: abort.signal });
+    download?.addEventListener(
+      "keydown",
+      (event) => {
+        if (event.key === "Enter" || event.key === " ") prefetch();
+      },
+      { signal: abort.signal },
+    );
     download?.addEventListener(
       "click",
       (event) => {
@@ -3925,7 +4162,7 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
           return;
         }
         event.preventDefault();
-        if (entry.blob) save(entry.blob, download.pathname);
+        if (entry.blob) save(entry.blob, download.pathname, entry.name);
         else entry.wanted = true;
       },
       { signal: abort.signal },
@@ -3942,7 +4179,14 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
       : undefined;
     if (closeButton) closeButton.autofocus = true;
     const prev = control("arrows")
-      ? button("button", "prev", strings.previous, "‹", () => step(-1), stage)
+      ? button(
+          "button",
+          "previous",
+          strings.previous,
+          "‹",
+          () => step(-1),
+          stage,
+        )
       : undefined;
     const next = control("arrows")
       ? button("button", "next", strings.next, "›", () => step(1), stage)
@@ -3969,7 +4213,7 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
       thumbRing.setAttribute("aria-hidden", "true");
       thumbRing.hidden = true;
     }
-    const makeThumbs = () => {
+    const makeThumbs = (labels: LightboxStrings) => {
       if (!thumbStrip) return;
       thumbs.length = 0;
       thumbStrip.replaceChildren(
@@ -3982,7 +4226,7 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
               item.width > MAX_THUMB_RATIO * item.height
                 ? String(MAX_THUMB_RATIO)
                 : `${item.width} / ${item.height}`;
-          thumb.setAttribute("aria-label", strings.thumbnail(i, items.length));
+          thumb.setAttribute("aria-label", labels.thumbnail(i, items.length));
           const thumbnailSrc = item.thumbnailSrc || item.previewSrc;
           if (thumbnailSrc) {
             const image = doc.createElement("img");
@@ -4007,7 +4251,7 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
         }),
       );
     };
-    makeThumbs();
+    makeThumbs(strings);
     const previousFocus = isHTMLElement(doc.activeElement)
       ? doc.activeElement
       : null;
@@ -4046,7 +4290,13 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
       previousFocus,
       restoreScroll,
       phase: "entering",
-      timing: { open: OPEN_DURATION, close: CLOSE_DURATION, ease: FLIGHT_EASE },
+      timing: {
+        open: OPEN_DURATION,
+        close: CLOSE_DURATION,
+        zoom: ZOOM_DURATION,
+        fade: FADE_DURATION,
+        ease: FLIGHT_EASE,
+      },
       chrome: initialChrome(false),
       chromeRoots: [toolbar, footer, ...(prev && next ? [prev, next] : [])],
       openingFocus: closeButton ?? viewport,
@@ -4065,14 +4315,15 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
       makeSlide,
       makeThumbs,
       pointers: new Map(),
-      box: measure(viewport),
+      paddingProbe,
+      box: measure(viewport, paddingProbe),
       suppressClickUntil: 0,
       paged: false,
       flying: true,
       watchedScale: 1,
       sharpScale: 1,
       autoplay:
-        settings.autoplay !== false &&
+        settings.autoplayMedia !== false &&
         (doc.defaultView?.navigator.userActivation?.isActive ?? true),
     };
     session = s;
@@ -4095,7 +4346,7 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
       aside: (node) => s.aside?.append(node),
     });
     placeThumbs(s);
-    s.box = measure(viewport);
+    s.box = measure(viewport, paddingProbe);
     update(s);
     s.carousel.goTo(state.index, "instant");
     dialog.addEventListener(
@@ -4361,17 +4612,22 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
     return landing.then(report);
   }
 
-  function closeSession(fromHistory: boolean): Promise<void> {
+  function closeSession(fromHistory: boolean, force = false): Promise<void> {
     const s = session;
     if (!s) return closePromise ?? Promise.resolve();
     if (closePromise) return closePromise;
-    if (vetting) return Promise.resolve();
+    if (vetting) {
+      forcing ||= force;
+      return Promise.resolve();
+    }
     vetting = true;
+    forcing = force;
     let prevented: boolean;
     try {
-      prevented = emit("beforeclose", s);
+      prevented = emit("beforeclose", s, !force) && !forcing;
     } finally {
       vetting = false;
+      forcing = false;
     }
     if (prevented) {
       if (fromHistory && historyWindow) pushHistory(historyWindow);
@@ -4417,9 +4673,11 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
     return closing;
   }
 
-  function setItems(input: readonly LightboxItem[], index?: number) {
+  function setItems(input: readonly Item[], index?: number) {
     if (destroyed) throw new Error("This lightbox has been destroyed.");
-    const nextItems = input.length ? validateItems(input, options.content) : [];
+    const nextItems = input.length
+      ? validateItems(input, (session ? settings : current).content)
+      : [];
     if (index !== undefined && !Number.isFinite(index))
       throw new TypeError("Image index must be finite.");
     const s = session;
@@ -4431,8 +4689,9 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
     }
     if (state.isClosing || !nextItems.length) {
       listAfterClose = { items: nextItems, sources: [...input] };
-      if (!state.isClosing) void close();
-      if (!state.isClosing && session === s) listAfterClose = undefined;
+      if (!state.isClosing) void closeSession(false, true);
+      if (!state.isClosing && !forcing && session === s)
+        listAfterClose = undefined;
       return;
     }
     finishFade(s, true);
@@ -4499,7 +4758,7 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
     s.slides = slides;
     s.loaded = loaded;
     s.marked = undefined;
-    s.makeThumbs();
+    s.makeThumbs(s.strings);
     s.thumbCenters = undefined;
     s.roving = -1;
     s.thumbCarousel?.refresh();
@@ -4524,7 +4783,7 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
     else if (changed) emit("change", s);
   }
 
-  const controller: Lightbox = {
+  const controller: Lightbox<Item> = {
     open,
     close,
     next: () => step(1),
@@ -4532,27 +4791,41 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
     goTo,
     zoomTo,
     toggleZoom,
-    getState: () => state,
-    subscribe: (listener) => {
-      listeners.add(listener);
-      return () => {
-        listeners.delete(listener);
-      };
+    play: () => {
+      if (session && !state.isClosing && items.length > 1)
+        toggleSlideshow(session, true);
     },
-    on: (type, listener) => {
+    pause: () => {
+      if (session) toggleSlideshow(session, false);
+    },
+    getState: () => notifiedState,
+    subscribe: (listener, { signal } = {}) =>
+      listen(listeners, listener, stops, signal),
+    on: (type, listener, { signal } = {}) => {
       const set = handlers.get(type) ?? new Set();
       handlers.set(type, set);
-      set.add(listener);
-      return () => {
-        set.delete(listener);
-      };
+      return listen(
+        set,
+        listener as (event: LightboxCancelableEvent) => void,
+        stops,
+        signal,
+      );
     },
-    append: (input) => setItems([...sources, ...input]),
+    append: (input) =>
+      setItems([...(listAfterClose?.sources ?? sources), ...input]),
     setItems,
     setOptions: (next) => {
-      if (!("loop" in next)) return;
-      loop = Boolean(next.loop);
+      for (const key of Object.keys(next) as (keyof typeof next)[])
+        if ((key as string) !== "container")
+          Object.assign(current, { [key]: next[key] });
       const s = session;
+      if ("strings" in next) {
+        settings.strings = next.strings;
+        if (s) relabel(s);
+      }
+      if (!("loop" in next) || Boolean(next.loop) === loop) return;
+      loop = Boolean(next.loop);
+      publish({});
       if (!s || state.isClosing) return;
       const looped = s.carousel.getState().isLooping;
       quietly(() => {
@@ -4566,30 +4839,85 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
     destroy: () => {
       if (destroyed) return;
       destroyed = true;
-      pendingClosed?.();
-      const s = session;
-      if (s) teardown(s);
-      closePromise = undefined;
-      publish({
-        isOpen: false,
-        isClosing: false,
-        isAnimating: false,
-        zoom: { ...identity },
-      });
-      if (s) emit("closed", null);
-      const win = historyWindow;
-      if (win && ownsHistory(win)) goBack(win);
-      else if (win) {
-        orphan(win, historyId);
-        if (!historyBacks.has(win)) releaseScroll(win);
-      }
-      win?.removeEventListener("popstate", onPopState);
-      historyWindow = undefined;
+      release();
+      for (const stop of [...stops]) stop();
       listeners.clear();
       handlers.clear();
     },
   };
+
+  function release() {
+    pendingClosed?.();
+    const s = session;
+    if (s) teardown(s);
+    closePromise = undefined;
+    publish({
+      isOpen: false,
+      isClosing: false,
+      isAnimating: false,
+      zoom: { ...identity },
+    });
+    if (s) emit("closed", null);
+    const win = historyWindow;
+    if (win && ownsHistory(win)) goBack(win);
+    else if (win) {
+      orphan(win, historyId);
+      if (!historyBacks.has(win)) releaseScroll(win);
+    }
+    win?.removeEventListener("popstate", onPopState);
+    historyWindow = undefined;
+  }
+
+  const reach: LightboxInternals = {
+    initial: initial as LightboxState<never>,
+    release: () => {
+      if (!destroyed) release();
+    },
+    shows: (type) =>
+      Boolean(current.content?.some((module) => module.type === type)),
+    destroyed: () => destroyed,
+    openWith: (layer, open) => {
+      galleryOptions = layer as Partial<LightboxOptions<Item>> | undefined;
+      try {
+        open();
+      } finally {
+        galleryOptions = undefined;
+      }
+    },
+  };
+  Object.defineProperty(controller, lightboxInternals, { value: reach });
   return controller;
+}
+
+function listen<T>(
+  set: Set<T>,
+  listener: T,
+  stops: Set<() => void>,
+  signal?: AbortSignal,
+) {
+  const stop = () => {
+    set.delete(listener);
+    stops.delete(stop);
+    signal?.removeEventListener("abort", stop);
+  };
+  if (signal?.aborted) return stop;
+  set.add(listener);
+  stops.add(stop);
+  signal?.addEventListener("abort", stop, { once: true });
+  return stop;
+}
+
+function dispositionName(header: string | null) {
+  if (!header) return undefined;
+  const extended = /filename\*\s*=\s*utf-8'[^']*'([^;\s]+)/i.exec(header);
+  if (extended)
+    try {
+      return decodeURIComponent(extended[1]);
+    } catch {}
+  const plain = /filename\s*=\s*(?:"((?:\\.|[^"\\])*)"|([^;\s]+))/i.exec(
+    header,
+  );
+  return plain?.[1]?.replace(/\\(.)/g, "$1") || plain?.[2] || undefined;
 }
 
 function dimension(value: string | undefined) {
@@ -4597,19 +4925,54 @@ function dimension(value: string | undefined) {
   return value && Number.isFinite(number) && number > 0 ? number : undefined;
 }
 
-export function lightboxItemFromImage(
-  image: HTMLImageElement,
-  source?: string,
-): LightboxItem {
-  const base = image.baseURI;
-  const link = image.closest<HTMLAnchorElement>("a[href]");
-  const href = link?.getAttribute("href");
-  const tile = image.currentSrc || image.src;
+/**
+ * The item a gallery trigger opens: a link, a button or an img, and the img inside it. Returns
+ * null when the trigger names no image file and no media type, so the page keeps its click.
+ */
+export function lightboxItemFromElement(
+  trigger: HTMLElement,
+): LightboxItem | null {
+  const image =
+    trigger.localName === "img"
+      ? (trigger as HTMLImageElement)
+      : trigger.querySelector("img");
+  const base = trigger.baseURI;
+  const link = trigger.closest<HTMLAnchorElement>("a[href]");
+  const href = link?.getAttribute("href") || undefined;
+  const data = (name: string) =>
+    trigger.dataset[name] || image?.dataset[name] || undefined;
+  const tile = (image && (image.currentSrc || image.src)) || undefined;
+  const width = dimension(data("lightboxWidth"));
+  const height = dimension(data("lightboxHeight"));
+  const caption =
+    trigger
+      .closest("figure")
+      ?.querySelector(":scope > figcaption")
+      ?.textContent?.trim() ||
+    data("lightboxCaption") ||
+    link?.dataset.lightboxCaption;
+  const alt = image
+    ? image.alt
+    : trigger.getAttribute("aria-label") || trigger.textContent?.trim();
+  const origin = image ?? trigger;
+  // Without JavaScript the link still leads to the video or the page it plays.
+  const type = data("lightboxType") || link?.dataset.lightboxType;
+  if (type)
+    return {
+      type,
+      src: href || data("lightboxSrc") || tile,
+      previewSrc: tile,
+      width,
+      height,
+      alt,
+      caption: caption || undefined,
+      origin,
+    };
   const src =
-    source ||
     (href && isImageFile(href, base) ? href : undefined) ||
-    image.dataset.lightboxSrc ||
+    data("lightboxSrc") ||
     tile;
+  if (!src) return null;
   const resolve = (url: string) => {
     try {
       return new URL(url, base).href;
@@ -4617,73 +4980,126 @@ export function lightboxItemFromImage(
       return url;
     }
   };
-  const sameFile = resolve(src) === resolve(tile);
-  const width = dimension(image.dataset.lightboxWidth);
-  const height = dimension(image.dataset.lightboxHeight);
   const file =
-    sameFile && image.naturalWidth && image.naturalHeight
+    image?.naturalWidth &&
+    image.naturalHeight &&
+    resolve(src) === resolve(tile ?? "")
       ? fileWidth(image, image.srcset || undefined, base)
       : undefined;
-  const caption =
-    image
-      .closest("figure")
-      ?.querySelector(":scope > figcaption")
-      ?.textContent?.trim() ||
-    image.dataset.caption ||
-    link?.dataset.caption;
-  // Without JavaScript the link still leads to the video or the page it plays.
-  const type = link?.dataset.lightboxType || image.dataset.lightboxType;
-  if (type) {
-    const media = href || src;
-    return {
-      type,
-      src: media,
-      embed: media,
-      video: { src: media, poster: tile },
-      previewSrc: tile,
-      width,
-      height,
-      alt: image.alt,
-      caption: caption || undefined,
-      origin: image,
-    };
-  }
   return {
     src,
-    srcset: image.dataset.lightboxSrcset || undefined,
-    sizes: image.dataset.lightboxSizes || undefined,
+    srcset: data("lightboxSrcset"),
+    sizes: data("lightboxSizes"),
     previewSrc: tile,
     width: width ?? file,
     height:
       height ??
-      (file && Math.round((file * image.naturalHeight) / image.naturalWidth)),
-    alt: image.alt,
+      (file && image
+        ? Math.round((file * image.naturalHeight) / image.naturalWidth)
+        : undefined),
+    alt,
     caption: caption || undefined,
-    origin: image,
+    origin,
   };
 }
 
-export function bindLightboxGallery(
+// Options that JSON can carry; strings only the ones that are text, not functions.
+const MARKUP_OPTIONS = new Set([
+  "imageClick",
+  "doubleTapZoom",
+  "maxZoom",
+  "tapZoom",
+  "preload",
+  "controls",
+  "thumbnails",
+  "caption",
+  "slideshow",
+  "autoHide",
+  "className",
+  "autoplayMedia",
+  "loop",
+  "history",
+  "strings",
+  "protect",
+]);
+
+function markupOptions(root: HTMLElement) {
+  const text = root.dataset.lightboxOptions;
+  if (text === undefined) return undefined;
+  const name = [
+    root.localName,
+    root.id && `#${root.id}`,
+    ...[...root.classList].map((name) => `.${name}`),
+  ].join("");
+  const fail = (reason: string): never => {
+    throw new TypeError(`Invalid data-lightbox-options on ${name}: ${reason}`);
+  };
+  let value: unknown;
+  try {
+    value = JSON.parse(text);
+  } catch (error) {
+    fail((error as Error).message);
+  }
+  if (typeof value !== "object" || value === null || Array.isArray(value))
+    fail("expected a JSON object");
+  const options = value as Record<string, unknown>;
+  for (const key of Object.keys(options))
+    if (!MARKUP_OPTIONS.has(key)) fail(`${key} cannot be set in markup`);
+  const strings = options.strings;
+  if (
+    strings !== undefined &&
+    (typeof strings !== "object" || strings === null || Array.isArray(strings))
+  )
+    fail("strings must be an object");
+  if (strings)
+    for (const [key, text] of Object.entries(strings))
+      if (
+        typeof text !== "string" ||
+        typeof defaultStrings[key as keyof LightboxStrings] !== "string"
+      )
+        fail(`strings.${key} must be one of the text strings`);
+  return options as Partial<LightboxOptions>;
+}
+
+const DEFAULT_TRIGGERS =
+  "a[href]:not([download]):is(:has(img), [data-lightbox-type], [data-lightbox-src]), button, img:not(a[download] img)";
+
+export interface LightboxGalleryOptions<
+  Item extends LightboxItem = LightboxItem,
+> {
+  /** The triggers inside root; by default buttons, images and links that hold an img or carry data-lightbox-type or data-lightbox-src, never a[download]. A trigger inside another counts as the outer one. */
+  selector?: string;
+  /** The item a trigger opens, lightboxItemFromElement by default; null leaves the trigger's click to the page. */
+  item?: (trigger: HTMLElement) => Item | null;
+  /** Triggers open only with the triggers of the same group, the closest data-lightbox-group by default. */
+  group?: (trigger: HTMLElement) => string;
+}
+
+/** Opens the triggers inside root in the lightbox on a plain click, and returns the function that unbinds. */
+export function bindLightboxGallery<Item extends LightboxItem = LightboxItem>(
   root: HTMLElement,
-  options: LightboxOptions & {
-    selector?: string;
-    getItem?: (image: HTMLImageElement) => LightboxItem;
-    /** Images open only with the images of the same group, data-lightbox-group by default. */
-    group?: (image: HTMLImageElement) => string;
-    /** Replaces the images in root as the list; a click opens at the item whose origin is the image. */
-    items?: (root: HTMLElement) => readonly LightboxItem[];
-  } = {},
-) {
-  const controller = createLightbox({
-    ...options,
-    // Read at each open, so a page that swaps its body still gets the dialog in the live one.
-    get container() {
-      return options.container ?? root.ownerDocument.body;
-    },
-  });
+  lightbox: Lightbox<Item>,
+  options: LightboxGalleryOptions<Item> = {},
+): () => void {
+  const reach = internalsOf(lightbox);
+  if (!reach)
+    throw new TypeError(
+      "bindLightboxGallery needs a lightbox from createLightbox() as its second argument.",
+    );
+  const markup = markupOptions(root);
+  const selector = options.selector ?? DEFAULT_TRIGGERS;
+  const read =
+    options.item ??
+    (lightboxItemFromElement as (trigger: HTMLElement) => Item | null);
+  const group =
+    options.group ??
+    ((trigger: HTMLElement) =>
+      trigger.closest<HTMLElement>("[data-lightbox-group]")?.dataset
+        .lightboxGroup ?? "");
   const click = (event: MouseEvent) => {
     if (
       event.defaultPrevented ||
+      reach.destroyed() ||
       event.button !== 0 ||
       event.metaKey ||
       event.ctrlKey ||
@@ -4693,55 +5109,39 @@ export function bindLightboxGallery(
       return;
     const target = event.target;
     if (!isElement(target) || target.closest(".re-lightbox")) return;
-    const images = [
-      ...root.querySelectorAll<HTMLImageElement>(options.selector || "img"),
-    ].filter(
-      (image) =>
-        !image.classList.contains("re-lightbox-landing") &&
-        !image.closest(".re-lightbox"),
+    const triggers = [...root.querySelectorAll<HTMLElement>(selector)].filter(
+      (element) => {
+        if (
+          element.classList.contains("re-lightbox-landing") ||
+          element.closest(".re-lightbox")
+        )
+          return false;
+        const outer = element.parentElement?.closest(selector);
+        return !outer || outer === root || !root.contains(outer);
+      },
     );
-    const image = images.find(
-      (candidate) =>
-        candidate === target ||
-        candidate.closest("a, button")?.contains(target),
-    );
-    if (!image) return;
-    let list: readonly LightboxItem[];
-    let index: number;
-    if (options.items) {
-      list = options.items(root);
-      index = list.findIndex((item) => resolveOrigin(item.origin) === image);
-      if (index < 0) index = images.indexOf(image);
-    } else {
-      const group =
-        options.group ??
-        ((element: HTMLImageElement) =>
-          element.closest<HTMLElement>("[data-lightbox-group]")?.dataset
-            .lightboxGroup ?? "");
-      const name = group(image);
-      const members = images.filter((candidate) => group(candidate) === name);
-      list = members.map((member) =>
-        (options.getItem || lightboxItemFromImage)(member),
+    const trigger = triggers.find((candidate) => candidate.contains(target));
+    if (!trigger) return;
+    const name = group(trigger);
+    // A clicked trigger whose media type has no module is followed; others leave such items out.
+    const opened = triggers
+      .filter((candidate) => group(candidate) === name)
+      .map((candidate) => [candidate, read(candidate)] as const)
+      .filter(
+        (entry): entry is readonly [HTMLElement, Item] =>
+          entry[1] !== null &&
+          (entry[1].type === undefined || reach.shows(entry[1].type)),
       );
-      index = members.indexOf(image);
-    }
-    // A clicked link whose media type has no module is followed; others leave such items out.
-    const supported = list.filter(
-      (item) =>
-        item.type === undefined ||
-        options.content?.some((module) => module.type === item.type),
-    );
-    const at = supported.indexOf(list[index]);
+    const at = opened.findIndex(([candidate]) => candidate === trigger);
     if (at < 0) return;
+    reach.openWith(markup, () =>
+      lightbox.open(
+        opened.map(([, item]) => item),
+        at,
+      ),
+    );
     event.preventDefault();
-    controller.open(supported, at);
   };
   root.addEventListener("click", click);
-  return {
-    ...controller,
-    destroy: () => {
-      root.removeEventListener("click", click);
-      controller.destroy();
-    },
-  };
+  return () => root.removeEventListener("click", click);
 }

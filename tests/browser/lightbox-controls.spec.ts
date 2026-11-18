@@ -1,3 +1,5 @@
+import { createServer, type Server } from "node:http";
+import type { AddressInfo } from "node:net";
 import { expect, type Page, test } from "@playwright/test";
 import { mount } from "./harness";
 
@@ -142,8 +144,8 @@ test("the controls sit in their corners in a fixed order", async ({ page }) => {
   );
 });
 
-async function openFiles(page: Page, files: string[]) {
-  await mount(page, "", ["lightbox/base.css", "lightbox/theme.css"]);
+async function openFiles(page: Page, files: string[], origin?: string) {
+  await mount(page, "", ["lightbox/base.css", "lightbox/theme.css"], origin);
   await page.evaluate(async (sources) => {
     const { createLightbox } = await import("/modules/lightbox/index.js");
     const blob = URL.createObjectURL(
@@ -325,7 +327,7 @@ test("Download opens a file whose fetch already failed as a plain link, so no po
     );
   await openFiles(page, ["https://cdn.test/photo.jpg"]);
   const failed = page.waitForEvent("requestfailed");
-  await page.focus(".re-lightbox-download");
+  await page.locator(".re-lightbox-download").dispatchEvent("pointerdown");
   await failed;
   await page.evaluate(() => {
     Object.assign(window, { prevented: [] as boolean[] });
@@ -351,6 +353,37 @@ test("Download opens a file whose fetch already failed as a plain link, so no po
   expect(page.url()).toBe("http://reuse.test/");
 });
 
+test("Tab past Download fetches nothing, and Enter on it starts the fetch", async ({
+  page,
+}) => {
+  const fetched: string[] = [];
+  await page.route("https://cdn.test/photo.jpg", (route) => {
+    if (route.request().resourceType() === "fetch")
+      fetched.push(route.request().url());
+    return route.fulfill({
+      contentType: "image/jpeg",
+      headers: { "access-control-allow-origin": "*" },
+      body: "photo",
+    });
+  });
+  await openFiles(page, ["https://cdn.test/photo.jpg"]);
+  const focused = () =>
+    page.evaluate(() => document.activeElement?.className ?? "");
+  for (let i = 0; i < 8 && !(await focused()).includes("download"); i++)
+    await page.keyboard.press("Tab");
+  expect(await focused()).toContain("re-lightbox-download");
+  await page.keyboard.press("Tab");
+  await page.waitForTimeout(300);
+  expect(fetched).toEqual([]);
+  await page.keyboard.press("Shift+Tab");
+  const [file] = await Promise.all([
+    page.waitForEvent("download"),
+    page.keyboard.press("Enter"),
+  ]);
+  expect(file.suggestedFilename()).toBe("photo.jpg");
+  expect(fetched).toEqual(["https://cdn.test/photo.jpg"]);
+});
+
 test("Download saves a raster data file without leaving the page", async ({
   page,
 }) => {
@@ -363,7 +396,9 @@ test("Download saves a raster data file without leaving the page", async ({
   expect(page.url()).toBe("http://reuse.test/");
 });
 
-test("Download saves a same-origin file natively", async ({ page }) => {
+test("Download saves a same-origin file without leaving the page", async ({
+  page,
+}) => {
   await openFiles(page, ["/photo.jpg"]);
   await page.route("http://reuse.test/photo.jpg", (route) =>
     route.fulfill({ contentType: "image/jpeg", body: "photo" }),
@@ -378,6 +413,77 @@ test("Download saves a same-origin file natively", async ({ page }) => {
   ]);
   expect(file.suggestedFilename()).toBe("photo.jpg");
   expect(page.url()).toBe("http://reuse.test/");
+});
+
+test("Download names a file after the Content-Disposition it can read, else its decoded path", async ({
+  page,
+}) => {
+  await openFiles(page, ["/files/7", "/files/8", "/files/My%20Photo.jpg"]);
+  const dispositions: Record<string, string> = {
+    "/files/7": 'attachment; filename="Sunset at sea.jpg"',
+    "/files/8":
+      "attachment; filename=fallback.jpg; filename*=UTF-8''%D1%84%D0%BE%D1%82%D0%BE.jpg",
+  };
+  await page.route("http://reuse.test/files/**", (route) => {
+    const disposition = dispositions[new URL(route.request().url()).pathname];
+    return route.fulfill({
+      contentType: "image/jpeg",
+      headers: disposition ? { "content-disposition": disposition } : {},
+      body: "photo",
+    });
+  });
+  const names: string[] = [];
+  for (const index of [0, 1, 2]) {
+    await page.evaluate((i) => (window as Window).lightbox.goTo(i), index);
+    const [file] = await Promise.all([
+      page.waitForEvent("download"),
+      page.click(".re-lightbox-download"),
+    ]);
+    names.push(file.suggestedFilename());
+  }
+  expect(names).toEqual(["Sunset at sea.jpg", "фото.jpg", "My Photo.jpg"]);
+});
+
+test("Download keeps the tab when a same-origin file redirects to another origin", {
+  tag: "@desktop",
+}, async ({ page, browserName }) => {
+  // Playwright cannot fulfill a fetch with a redirect, so two real servers stand for the page and the other origin.
+  const listen = async (server: Server) => {
+    await new Promise<void>((resolve) =>
+      server.listen(0, "127.0.0.1", resolve),
+    );
+    return `http://127.0.0.1:${(server.address() as AddressInfo).port}`;
+  };
+  const files = createServer((_, response) =>
+    response
+      .writeHead(200, {
+        "content-type": "image/jpeg",
+        "access-control-allow-origin": "*",
+      })
+      .end("photo"),
+  );
+  const other = await listen(files);
+  const site = createServer((_, response) =>
+    response.writeHead(302, { location: `${other}/moved.jpg` }).end(),
+  );
+  const origin = await listen(site);
+  // Chromium asks before a page it takes for public reaches a loopback server.
+  if (browserName === "chromium")
+    await page.context().grantPermissions(["local-network-access"]);
+  try {
+    await openFiles(page, ["/moved.jpg"], origin);
+    await page.route(`${origin}/moved.jpg`, (route) => route.continue());
+    const [file] = await Promise.all([
+      page.waitForEvent("download"),
+      page.click(".re-lightbox-download"),
+    ]);
+    expect(file.suggestedFilename()).toBe("moved.jpg");
+    expect(page.url()).toBe(`${origin}/`);
+    expect(await lightbox(page)).toMatchObject({ isOpen: true });
+  } finally {
+    site.close();
+    files.close();
+  }
 });
 
 test("the fullscreen button toggles the viewer's stage, and leaving fullscreen keeps it open", async ({
@@ -419,7 +525,10 @@ test("in RTL previous sits on the right and next on the left, each icon mirrored
     const { createLightbox } = await import("/modules/lightbox/index.js");
     const icon = () =>
       document.createElementNS("http://www.w3.org/2000/svg", "svg");
-    createLightbox({ history: false, icons: { prev: icon, next: icon } }).open(
+    createLightbox({
+      history: false,
+      icons: { previous: icon, next: icon },
+    }).open(
       Array.from({ length: 3 }, () => ({
         src: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='1200' height='800'/%3E",
         width: 1200,
@@ -815,6 +924,27 @@ test("the side column keeps the ring at its middle, a wheel over it opens the ph
   expect((await ringBox(page))?.top).toBeCloseTo(before.top, 0);
 });
 
+test("a wheel over the bottom strip that scrolls in one step opens the photo under the ring", {
+  tag: "@desktop",
+}, async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await open(page, { thumbnails: "bottom" }, { count: 20 });
+  const strip = await page.locator(".re-lightbox-thumbnails").boundingBox();
+  if (!strip) throw new Error("No strip");
+  await page.mouse.move(strip.x + strip.width / 2, strip.y + strip.height / 2);
+  const scrolled = () =>
+    page.evaluate(
+      () => document.querySelector(".re-lightbox-thumbnails")?.scrollLeft ?? 0,
+    );
+  const start = await scrolled();
+  await page.mouse.wheel(52 * 4, 0);
+  await expect.poll(scrolled).toBeGreaterThan(start + 100);
+  await expect
+    .poll(async () => (await lightbox(page)).index)
+    .toBeGreaterThan(0);
+  await expect.poll(() => ringOnCurrent(page)).toBeLessThanOrEqual(1);
+});
+
 // rgb() reports 0-255 and color(srgb) reports 0-1, so both come back as 0-1.
 const channels = (color: string) => {
   const values = (color.match(/[\d.]+/g) ?? []).slice(0, 3).map(Number);
@@ -887,6 +1017,27 @@ test("the strip is one tab stop: Tab reaches the active thumbnail, and arrows, H
   await page.keyboard.press("Tab");
   await page.keyboard.press("Shift+Tab");
   expect(await focused()).toBe("Show image 1");
+});
+
+test("with loop on, the strip's arrows wrap from the last thumbnail to the first and back", async ({
+  page,
+}) => {
+  await open(page, { thumbnails: "bottom", loop: true }, { count: 6 });
+  const focused = () =>
+    page.evaluate(() => document.activeElement?.getAttribute("aria-label"));
+  for (let i = 0; i < 8 && (await focused()) !== "Show image 1"; i++)
+    await page.keyboard.press("Tab");
+  expect(await focused()).toBe("Show image 1");
+  for (const [key, index] of [
+    ["ArrowLeft", 5],
+    ["ArrowRight", 0],
+    ["End", 5],
+    ["ArrowRight", 0],
+  ] as const) {
+    await page.keyboard.press(key);
+    await expect.poll(async () => (await lightbox(page)).index).toBe(index);
+    expect(await focused()).toBe(`Show image ${index + 1}`);
+  }
 });
 
 test("a mouse drag on the strip reports and announces the photo once, when the strip settles, and leaves the tab stop on it", {

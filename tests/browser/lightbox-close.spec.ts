@@ -19,6 +19,7 @@ type Lightbox = {
 };
 type Carousel = {
   getState(): { index: number; isPlaying: boolean; count: number };
+  goTo(index: number, behavior?: "instant" | "smooth"): void;
   pause(): void;
 };
 type Window = globalThis.Window &
@@ -178,6 +179,40 @@ test("after paging to photo 3, close brings the strip to slide 3 and lands on it
       dialogs: document.querySelectorAll("dialog").length,
     })),
   ).toEqual({ visibility: "", copies: 0, dialogs: 0 });
+});
+
+test("the landing copy at the strip's last photo leaves the strip's scroll width alone", async ({
+  page,
+}) => {
+  await stripPage(page);
+  // A carousel viewport is the copy's containing block when its tiles have no position.
+  await page.addStyleTag({ content: "#strip{position:relative}" });
+  await page.evaluate(() => (window as Window).carousel.goTo(5, "instant"));
+  await openAt(page, 5);
+  const strip = () =>
+    page.evaluate(() => {
+      const element = document.getElementById("strip") as HTMLElement;
+      return {
+        width: element.scrollWidth,
+        left: Math.round(element.scrollLeft),
+      };
+    });
+  const before = await strip();
+  const tile = await tileBox(page, 5);
+  const start = await page.evaluate(() => {
+    const win = window as Window;
+    win.closing = win.lightbox.close();
+    for (const animation of document.getAnimations()) animation.pause();
+    const element = document.getElementById("strip") as HTMLElement;
+    return {
+      width: element.scrollWidth,
+      left: Math.round(element.scrollLeft),
+    };
+  });
+  expect(start).toEqual(before);
+  expectOn((await closeAtLastFrame(page)).copy, tile);
+  await finishClose(page);
+  expect(await strip()).toEqual(before);
 });
 
 test("a close right after paging still lands on the new photo's tile", async ({
@@ -444,6 +479,27 @@ test("a 200ms stall right after open() does not cut the open flight short", asyn
   expect(flight).toBeGreaterThan(380);
 });
 
+test("a 600ms stall right after open(), longer than the flight, still flies", async ({
+  page,
+}) => {
+  await tilePage(page, `<div style="padding:100px">${tile(0)}</div>`);
+  const flight = await page.evaluate(
+    () =>
+      new Promise<number>((resolve) => {
+        const win = window as Window & { items: unknown[] };
+        win.lightbox.open(win.items, 0);
+        const until = performance.now() + 600;
+        while (performance.now() < until);
+        const stalled = performance.now();
+        const stop = win.lightbox.on("opened", () => {
+          stop();
+          resolve(performance.now() - stalled);
+        });
+      }),
+  );
+  expect(flight).toBeGreaterThan(380);
+});
+
 test("an easing list in --re-lightbox-ease falls back to the default curve and still flies", async ({
   page,
 }) => {
@@ -570,17 +626,14 @@ test("a photo behind the +3 tile of a seven-photo album lands in that tile with 
     const shown = [...album.querySelectorAll("img")];
     const more = document.getElementById("more") as HTMLElement;
     const sources = [...shown.map((image) => image.src)];
-    const lightbox = createLightbox({
-      history: false,
-      autoHide: false,
-      getOrigin: (index) => shown[index] ?? more,
-    });
+    const lightbox = createLightbox({ history: false, autoHide: false });
     const items = Array.from({ length: 7 }, (_, index) => ({
       src:
         sources[index] ??
         `data:image/svg+xml,${encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="800"><rect width="1200" height="800" fill="hsl(${index * 47} 60% 55%)"/></svg>`)}`,
       width: 1200,
       height: 800,
+      origin: () => shown[index] ?? more,
     }));
     Object.assign(window, { lightbox, items, tiles: [more] });
   });
@@ -747,8 +800,10 @@ test("a wheel during an Escape close keeps the page where it scrolled after the 
     content: ".re-lightbox{--re-lightbox-close-duration:600ms}",
   });
   await page.evaluate(async () => {
-    const { bindLightboxGallery } = await import("/modules/lightbox/index.js");
-    bindLightboxGallery(document.body, { autoHide: false });
+    const { bindLightboxGallery, createLightbox } = await import(
+      "/modules/lightbox/index.js"
+    );
+    bindLightboxGallery(document.body, createLightbox({ autoHide: false }));
     scrollTo(0, 200);
   });
   await page.locator(".tile img").click();
@@ -885,15 +940,13 @@ test.describe("focus after close", { tag: "@desktop" }, () => {
       styles,
     );
     await page.evaluate(async (useHistory) => {
-      const { bindLightboxGallery } = await import(
+      const { bindLightboxGallery, createLightbox } = await import(
         "/modules/lightbox/index.js"
       );
       const gallery = document.getElementById("gallery") as HTMLElement;
-      const lightbox = bindLightboxGallery(gallery, {
-        history: useHistory,
-        autoHide: false,
-      });
-      Object.assign(window, { lightbox });
+      const lightbox = createLightbox({ history: useHistory, autoHide: false });
+      const unbind = bindLightboxGallery(gallery, lightbox);
+      Object.assign(window, { lightbox, unbind });
     }, history);
   }
 
@@ -958,16 +1011,15 @@ test.describe("focus after close", { tag: "@desktop" }, () => {
   }) => {
     await galleryPage(page);
     await page.evaluate(async () => {
-      (window as Window).lightbox.destroy();
-      const { bindLightboxGallery } = await import(
+      const old = window as Window & { unbind: () => void };
+      old.unbind();
+      old.lightbox.destroy();
+      const { bindLightboxGallery, createLightbox } = await import(
         "/modules/lightbox/index.js"
       );
-      Object.assign(window, {
-        lightbox: bindLightboxGallery(document.body, {
-          history: false,
-          autoHide: false,
-        }),
-      });
+      const lightbox = createLightbox({ history: false, autoHide: false });
+      bindLightboxGallery(document.body, lightbox);
+      Object.assign(window, { lightbox });
     });
     await slowClose(page);
     await page.locator("#gallery").getByAltText("Photo 2").click();

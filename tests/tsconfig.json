@@ -16,5 +16,10 @@
       ]
     }
   },
-  "include": ["browser/**/*.ts", "model/**/*.ts", "site/**/*.ts"]
+  "include": [
+    "browser/**/*.ts",
+    "model/**/*.ts",
+    "site/**/*.ts",
+    "../packages/lightbox/src/*.test.ts"
+  ]
 }

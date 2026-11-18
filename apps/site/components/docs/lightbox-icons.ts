@@ -27,7 +27,7 @@ const arrow = (path: string) =>
 /** The SVG icons the style previews pass to the lightbox through `icons`. */
 export const previewIcons = {
   close: hugeicon(Cancel01Icon as IconData),
-  prev: arrow(arrowPaths.left[0]),
+  previous: arrow(arrowPaths.left[0]),
   next: arrow(arrowPaths.right[0]),
   zoom: hugeicon(ZoomInAreaIcon as IconData),
 };

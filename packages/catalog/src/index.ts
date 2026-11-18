@@ -125,7 +125,7 @@ export const libraries: Library[] = [
       ],
       [
         "Scrub through the strip",
-        "A drag on the thumbnail strip swaps the photo as each thumbnail reaches the ring, with previews standing in until it stops, and reports and announces the photo it stops on once. Arrows, Home and End in the strip page the viewer, and focus and the tab stop follow the thumbnail under the ring. A thumbnail is at most three times as wide as it is tall.",
+        "A drag or a wheel on the thumbnail strip swaps the photo as each thumbnail reaches the ring, a scroll that ends in one frame too, with previews standing in until it stops, and reports and announces the photo it stops on once. Arrows, Home and End in the strip page the viewer, the arrows wrapping when loop is on, and focus and the tab stop follow the thumbnail under the ring. A thumbnail is at most three times as wide as it is tall.",
         "tests/browser/lightbox-controls.spec.ts",
       ],
       [
@@ -139,7 +139,7 @@ export const libraries: Library[] = [
       ],
       [
         "Leave the page as it was",
-        "Destroy restores the page scroll, the hidden thumbnail, and every style and listener the viewer touched. Back closes the viewer, and its one history entry leaves without a navigation, also when another viewer opened above it.",
+        "Destroy restores the page scroll, the hidden thumbnail, and every style and listener the viewer touched, the abort listeners on your signals included. Back closes the viewer, and its one history entry leaves without a navigation, also when another viewer opened above it.",
         "tests/browser/lightbox-api.spec.ts",
       ],
       [
@@ -159,12 +159,12 @@ export const libraries: Library[] = [
       ],
       [
         "Return to what is on screen",
-        "Close goes back to the current photo's tile, after bringing it into view in its own carousel, and fades in place when the tile cannot be seen, in the window and in every container that clips it, or the strip is still moving. The page scrolls and takes clicks during the flight and stays where it was scrolled once the viewer is gone, focus moved there stays, and the tile's container does not cut the photo before it nears the tile.",
+        "Close goes back to the current photo's tile, after bringing it into view in its own carousel, and fades in place when the tile cannot be seen, in the window and in every container that clips it, or the strip is still moving. The page scrolls and takes clicks during the flight and stays where it was scrolled once the viewer is gone, focus moved there stays, the tile's container does not cut the photo before it nears the tile, and the landing photo never changes the size of a scroll area.",
         "tests/browser/lightbox-close.spec.ts",
       ],
       [
         "Fetch the pixels the screen shows",
-        "Each image loads the source that fits the rendered size, a zoom asks for more, and the preview stays until the sharper file has decoded and no finger holds the photo. A photo without a size fits the screen at its tile's proportions from the start.",
+        "Each image loads the source that fits the rendered size, a zoom asks for more, and the preview stays until the sharper file has decoded and no finger holds the photo. A photo without a size fits the screen at its tile's proportions from the start and eases to its file's size once the file decodes.",
         "tests/browser/lightbox-images.spec.ts",
       ],
       [
@@ -199,7 +199,7 @@ export const libraries: Library[] = [
       ],
       [
         "Let a slideshow yield",
-        "A slideshow waits while the photo is zoomed, a video or audio slide plays, an embed is on screen, the mouse is over the controls, the tab is hidden or a slot's menu is open, and goes on with the time it had left. From the last photo it returns to the first without showing the photos between.",
+        "A slideshow waits while the photo is zoomed, a video or audio slide plays, an embed is on screen, the mouse is over the controls, the tab is hidden or a slot's menu is open, and goes on with the time it had left, or at once when the video or audio ends. From the last photo it returns to the first without showing the photos between.",
         "tests/browser/lightbox-controls.spec.ts",
       ],
       [
@@ -209,8 +209,18 @@ export const libraries: Library[] = [
       ],
       [
         "Trust no page by default",
-        "Items read from markup are untrusted. An embed plays only a known provider, every frame from another origin is sandboxed, and Download offers only web, blob and raster data files and never navigates the tab away.",
+        "Items read from markup are untrusted. An embed plays only a known provider, every frame from another origin and every popup it opens is sandboxed, and Download offers only web, blob and raster data files and never navigates the tab away.",
         "tests/browser/lightbox-media-modules.spec.ts",
+      ],
+      [
+        "Publish one state",
+        "getState() returns the snapshot subscribers last received, so a gesture shows up once it settles, and a React component re-renders only for the part of it that it selects and hydrates from the state the lightbox was created with.",
+        "packages/lightbox/src/lifecycle.test.ts",
+      ],
+      [
+        "Take settings from markup or code",
+        "A gallery reads JSON options from its markup under the options given in code, only while a photo from that gallery is open, and JSON it cannot read throws an error that names the element. A link is a trigger only when it holds an image or carries lightbox data, never a download link, and a trigger with no image file and no media type, or one clicked after the lightbox is destroyed, keeps its own click.",
+        "packages/lightbox/src/lifecycle.test.ts",
       ],
       [
         "Survive every interruption",
@@ -221,11 +231,11 @@ export const libraries: Library[] = [
     api: [
       [
         "createLightbox(options?)",
-        "Creates a viewer. Options include controls, thumbnails, caption, slideshow, content, autoplay, loop, history, strings, slots, imageClick, doubleTapZoom, autoHide, maxZoom, protect, padding, className and icons, read again at every open.",
+        "Creates a viewer. Options include controls, thumbnails, caption, slideshow, content, autoplayMedia, loop, history, strings, slots, imageClick, doubleTapZoom, autoHide, maxZoom, protect, className and icons, copied at creation and changed with setOptions. The space around the photo is --re-lightbox-padding, any CSS length, 32px by default.",
       ],
       [
-        "bindLightboxGallery(root, options?)",
-        "Opens the images inside root in the viewer, in page order, only those of the clicked image's data-lightbox-group or group(image). Each image opens the file its link points to, else data-lightbox-src, with data-lightbox-srcset, -sizes, -width and -height and its figure's caption. items(root) supplies the list instead. Its destroy also removes the click listener.",
+        "bindLightboxGallery(root, lightbox, options?)",
+        'Opens the buttons, images and links that hold an image or carry data-lightbox-type or data-lightbox-src inside root in a lightbox you created, in page order, only those of the clicked trigger\'s data-lightbox-group or group(trigger), and returns the function that unbinds. lightboxItemFromElement reads each trigger: the file its link points to, else data-lightbox-src, with data-lightbox-srcset, -sizes, -width, -height and -type and its figure\'s caption, so a quick-view link without an image opens too. item(trigger) supplies the item instead, and null leaves the click to the page. data-lightbox-options on root holds JSON options, such as {"thumbnails":"bottom"}, that fill what the lightbox was not given in code while a photo from root is open. A second argument that is not a lightbox throws a TypeError.',
       ],
       [
         "open(items, index?)",
@@ -236,42 +246,54 @@ export const libraries: Library[] = [
         "Moves through the set from code. Close returns to the current photo's tile.",
       ],
       [
+        "play(), pause()",
+        "Starts and stops the slideshow of the open viewer, as its button does.",
+      ],
+      [
         "zoomTo(scale, focus?), toggleZoom(focus?)",
         "Zooms to a scale around a point, up to the photo's maximum, or between fit and the tap zoom.",
       ],
       [
-        "getState(), subscribe(listener)",
-        "Reads and listens to the index, zoom, open, animation and controls state.",
+        "getState(), subscribe(listener, { signal }?)",
+        "Reads and listens to the index, the current item, canPrev, canNext, isPlaying, zoom, open, animation and controls state. getState() returns the snapshot subscribers last received, so a gesture shows up once it settles.",
       ],
       [
-        "on(type, listener)",
-        "Listens to open, opened, change, settle, beforeclose and closed. preventDefault() in beforeclose keeps the viewer open.",
+        "on(type, listener, { signal }?)",
+        "Listens to open, opened, change, settle, beforeclose and closed, until the returned function runs or the signal aborts. Only beforeclose carries preventDefault(), which keeps the viewer open.",
       ],
       [
         "append(items), setItems(items, index?)",
-        "Adds images at the end or replaces the list while the viewer is open, without moving the current image. An empty list closes the viewer.",
+        "Adds images at the end or replaces the list while the viewer is open, without moving the current image. An empty list closes the viewer, and its beforeclose cannot be cancelled. During the close a list waits until the dialog is removed, and append() adds to the waiting list.",
       ],
       [
-        "setOptions({ loop }), getSlide(index)",
-        "Turns the loop on or off while open, and returns the element of a slide.",
+        "setOptions(options), getSlide(index)",
+        "Changes any option but container for the next open, and loop and strings at once, and returns the element of a slide. createLightbox copies its options, so changing the object you passed does nothing.",
       ],
       ["destroy()", "Removes listeners and restores the page."],
+      [
+        "useLightbox(options?)",
+        "React: a lightbox that is the same object on every render and holds no React state, so its component does not re-render when the viewer changes. Changed options reach it after the render, plain objects and arrays compared by value. Effect cleanup, on unmount, under StrictMode or when Activity hides the component, closes it at once and frees its dialog and listeners, and the same object opens again, so StrictMode and an Activity reveal keep one object.",
+      ],
+      [
+        "useLightboxState(lightbox, selector)",
+        "React: re-renders only when the value selector picks changes by Object.is, on the server and during hydration from the state at creation.",
+      ],
     ],
     notes: [
       'A click on the image zooms by default, and a click beside it closes. On a phone a tap on the photo shows or hides the controls once the 300ms double-tap window passes, a double tap zooms, and a tap beside it closes. For a publishing gallery, set imageClick: "close", which also turns off the double tap.',
-      "A vertical swipe either way closes past 120px or 0.5px/ms, measured over the last 80ms before the finger lifts. The controls hide after autoHide ms of a still mouse, 2500 by default, and while zoomed, and come back on a key, a 24px move, or a tap. The open and close flights take --re-lightbox-open-duration and --re-lightbox-close-duration on the --re-lightbox-ease curve.",
+      "A vertical swipe either way closes past 120px or 0.5px/ms, measured over the last 80ms before the finger lifts. The controls hide after autoHide ms of a still mouse, 2500 by default, and while zoomed, and come back on a key, a 24px move, or a tap. The open and close flights take --re-lightbox-open-duration and --re-lightbox-close-duration on the --re-lightbox-ease curve, a zoom --re-lightbox-zoom-duration (220ms) and a fade to a distant photo --re-lightbox-fade-duration (240ms); 0ms makes each instant.",
       "Zoom follows the file's pixels: a double tap, a click or the zoom button goes to 1:1, or to tapZoom (2.5) when that is larger, and maxZoom (1) is a multiple of 1:1. A photo the screen already shows at full resolution has no zoom, and an SVG zooms up to maxZoom times its fitted size, 4 by default. A pinch below 0.75 closes, Ctrl or Cmd with the wheel and a trackpad pinch zoom, and a plain wheel does nothing until you zoom in, then pans. While zoomed the arrow keys pan and a pan glides on release; the next photo is a second swipe once the photo rests against its edge.",
       "A photo more than twice as tall as it is wide that would run past two screens at the screen's width opens at that width, top first, and scrolls; a swipe down closes it only from its top edge, and a double tap shows its whole height. A photo more than three times as wide as it is tall opens whole and zooms to the screen's height on a double tap. PNG, WebP, AVIF, GIF and SVG photos sit on --re-lightbox-media-background, #f2f2f2 in the default theme; JPEG gets none. An SVG takes its size from its own width and height, else its viewBox.",
       "The photo is a real img: right click and a long press open the browser's image menu, a mouse drag on it pages like a swipe, and Cmd or Ctrl and C copies it as PNG where the browser supports image copy. protect: true turns off the menu and the copy. A swipe that passes the closing distance taps the vibration motor once where the device has one.",
-      'Built-in controls: the counter sits top left before the toolbarStart slot, and zoom, slideshow, fullscreen, download, the toolbarEnd slot and close sit top right; the arrows sit at the sides, previous on the right and next on the left with mirrored icons on a right-to-left page, and hide below 480px. controls turns each one on or off, and fullscreen, download and slideshow start off. Fullscreen covers the viewer\'s stage, since browsers refuse a dialog, and is missing where document.fullscreenEnabled is false. Download links the widest srcset candidate, else src, only when it is an http, https or blob URL or a PNG, JPEG, GIF, WebP or AVIF data URL; a file from another origin is fetched when the button is pressed or focused and saved under its decoded name, or opens in a new tab when its server refuses scripts. thumbnails: "bottom" is a carousel strip that keeps the current thumbnail centered, crops thumbnails wider than 3:1, and takes one Tab stop whose arrow, Home and End keys page the viewer; "side" is a column at the end edge that becomes the strip below 720px, and both hide below 480px of height. caption: "side" moves captions into the aside panel. The slideshow advances every slideshow.interval ms, 4000 by default, waits while a video or audio slide plays and on an embed until the visitor pages, returns to the first photo at the end without loop the way a jump does, and publishes --re-lightbox-slideshow-progress from 0 to 1.',
+      'Built-in controls: the counter sits top left before the toolbarStart slot, and zoom, slideshow, fullscreen, download, the toolbarEnd slot and close sit top right; the arrows sit at the sides, previous on the right and next on the left with mirrored icons on a right-to-left page, and hide below 480px. controls turns each one on or off, and fullscreen, download and slideshow start off. Fullscreen covers the viewer\'s stage, since browsers refuse a dialog, and is missing where document.fullscreenEnabled is false. Download links the widest srcset candidate, else src, only when it is an http, https or blob URL or a PNG, JPEG, GIF, WebP or AVIF data URL; a web file, same-origin included, is fetched when the button is pressed and saved under its Content-Disposition name when the page can read it, else its decoded name, or opens in a new tab when its server refuses scripts. thumbnails: "bottom" is a carousel strip that keeps the current thumbnail centered, crops thumbnails wider than 3:1, and takes one Tab stop whose arrow, Home and End keys page the viewer; "side" is a column at the end edge that becomes the strip below 720px, and both hide below 480px of height. caption: "side" moves captions into the aside panel. The slideshow advances every slideshow.interval ms, 4000 by default, waits while a video or audio slide plays and on an embed until the visitor pages, returns to the first photo at the end without loop the way a jump does, and publishes --re-lightbox-slideshow-progress from 0 to 1.',
       "Paging runs on the carousel package. Only the current and neighboring images stay loaded. Next and previous scroll smoothly, and a jump to a distant thumbnail pages in like the next photo, so the photos between never flash past.",
       "Give an item a srcset and the viewer picks the file: it sets sizes to the photo's shown width, or uses yours, and 150ms after a zoom comes to rest asks for the zoomed width, swapping the file in only once it has decoded and never for a smaller one. While the photo flies open it shows the tile's loaded pixels or previewSrc. The current photo loads at high fetch priority and its neighbors at low priority once it has decoded, and Save-Data skips the neighbors. A photo still loading after 300ms shows a spinner from @reuse-sh/loaders over the --re-lightbox-placeholder background, and a failed one shows strings.error with a strings.retry button.",
-      'Images are the core. Video, audio, iframe and HTML slides are separate modules: @reuse-sh/lightbox/video, /audio, /iframe, /html and /embed export video(), audio(), iframe(), html() and embed(), which you pass in the content option. An item picks its module by type; without one it is an image. The embed module turns YouTube (youtube-nocookie.com, Shorts at 9:16) and Vimeo links into players and registerEmbed adds more; any other URL stays blank. Items read from markup are untrusted, so every iframe() and embed() frame from another origin, registered providers included, gets sandbox "allow-scripts allow-same-origin allow-forms allow-presentation allow-popups allow-popups-to-escape-sandbox", and a same-origin page loads as it is; the sandbox option replaces the default. A same-origin URL is trusted, so an open redirect on your own site defeats the sandbox. Only the current slide plays: leaving it pauses the player, close pauses every one, and a player starts by itself only the first time it shows, when autoplay is on and a click opened the viewer, muted if the browser refuses sound. Over a player the pointer belongs to the player, and paging works from the 24px beside it and the arrows. HTML slides take a function that returns a Node, never an HTML string. Live Photos and HDR are not supported.',
+      'Images are the core. Video, audio, iframe and HTML slides are separate modules: @reuse-sh/lightbox/video, /audio, /iframe, /html and /embed export video(), audio(), iframe(), html() and embed(), which you pass in the content option. An item picks its module by type; without one it is an image. The embed module turns YouTube (youtube-nocookie.com, Shorts at 9:16) and Vimeo links into players and embed({ providers }) adds more for that module only; any other URL stays blank. Items read from markup are untrusted, so every iframe() and embed() frame from another origin, providers passed to embed() included, gets sandbox "allow-scripts allow-same-origin allow-forms allow-presentation allow-popups", which its popups keep, and a same-origin page loads as it is; the sandbox option replaces the default. A same-origin URL is trusted, so an open redirect on your own site defeats the sandbox. Only the current slide plays: leaving it pauses the player, close pauses every one, and a player starts by itself only the first time it shows, when autoplayMedia is on and a click opened the viewer, muted if the browser refuses sound. Over a player the pointer belongs to the player, and paging works from the 24px beside it and the arrows. HTML slides take a function that returns a Node, never an HTML string. Live Photos and HDR are not supported.',
       'For a page without a bundler or an import map, such as a theme or a plugin, load @reuse-sh/lightbox/browser/lightbox.js with <script type="module">. It is one minified ES module with a source map and the carousel inside. Each media module is a separate file in the same folder, audio.js loads video.js and embed.js loads iframe.js, and the carousel link is carousel-link.js beside them, so copy the folder whole.',
       "Styles come in two files: base.css holds the layout and states in @layer re.base and is required, and theme.css holds the default dark theme in @layer re.theme. themes/dark.css, light.css, page.css and photos.css load after theme.css and change only its custom properties: page follows --re-lightbox-page, and photos is white with a black room while the controls are hidden. Every theme value is a --re-lightbox-* custom property. dist/unlayered/ holds the same files without layers for sites whose own unlayered styles would win.",
       "Every visible and spoken text comes from the strings option, such as counter(index, count), close and carouselRole, the screen reader description of the photo strip, with English defaults, so a translation passes only the strings it changes.",
       "Slots add your own controls: toolbarStart, toolbarEnd, footer and aside each take a function that returns a node with optional update(state) and destroy(). Slot buttons take the theme's look with the re-lightbox-button class and hide with the other controls. Share is not built in; build it as a slot.",
-      "Events: on(type, listener) reports open, opened, change, settle, beforeclose and closed. beforeclose runs before the close flight is measured, and preventDefault() keeps the viewer open.",
+      "Events: on(type, listener, { signal }) reports open, opened, change, settle, beforeclose and closed. beforeclose runs before the close flight is measured, and its preventDefault() keeps the viewer open; the other events cannot be cancelled. subscribe(listener, { signal }) reports the state, and there is no onChange option.",
       "connectCarousel(lightbox, carousel, { slideOf }) from @reuse-sh/lightbox/carousel moves a carousel on the page to the current photo on every settle and before close, and holds its autoplay while the viewer is open, so close returns to a tile that is already in view.",
     ],
     pages: [
@@ -382,7 +404,7 @@ export const libraries: Library[] = [
       {
         path: "api",
         title: "API",
-        lead: "The browser module exports createLightbox and bindLightboxGallery. The React hook returns the same viewer.",
+        lead: "The browser module exports createLightbox and bindLightboxGallery. @reuse-sh/lightbox/react adds useLightbox, which returns the same viewer, and useLightboxState, which reads part of its state.",
       },
     ],
   },
