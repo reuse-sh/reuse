@@ -51,6 +51,7 @@ const lightboxInternals = Symbol.for("@reuse-sh/lightbox internals");
 
 type LightboxInternals = {
   shows(type: string): boolean;
+  destroyed(): boolean;
   options: LightboxOptions<never>;
 };
 
@@ -4806,6 +4807,7 @@ export function createLightbox<Item extends LightboxItem = LightboxItem>(
     shows: (type) =>
       Boolean(current.content?.some((module) => module.type === type)),
     options: current as LightboxOptions<never>,
+    destroyed: () => destroyed,
   };
   Object.defineProperty(controller, lightboxInternals, { value: reach });
   return controller;
@@ -4987,13 +4989,18 @@ export function bindLightboxGallery<Item extends LightboxItem = LightboxItem>(
   lightbox: Lightbox<Item>,
   options: LightboxGalleryOptions<Item> = {},
 ): () => void {
+  const reach = internalsOf(lightbox);
+  if (!reach)
+    throw new TypeError(
+      "bindLightboxGallery needs a lightbox from createLightbox() as its second argument.",
+    );
   const markup = markupOptions(root);
-  const set = internalsOf(lightbox)?.options;
+  const set = reach.options;
   if (markup)
     lightbox.setOptions(
       Object.fromEntries(
         Object.entries(markup).filter(
-          ([key]) => set?.[key as keyof typeof set] === undefined,
+          ([key]) => set[key as keyof typeof set] === undefined,
         ),
       ),
     );
@@ -5009,6 +5016,7 @@ export function bindLightboxGallery<Item extends LightboxItem = LightboxItem>(
   const click = (event: MouseEvent) => {
     if (
       event.defaultPrevented ||
+      reach.destroyed() ||
       event.button !== 0 ||
       event.metaKey ||
       event.ctrlKey ||
@@ -5033,22 +5041,21 @@ export function bindLightboxGallery<Item extends LightboxItem = LightboxItem>(
     if (!trigger) return;
     const name = group(trigger);
     // A clicked trigger whose media type has no module is followed; others leave such items out.
-    const shows = internalsOf(lightbox)?.shows;
     const opened = triggers
       .filter((candidate) => group(candidate) === name)
       .map((candidate) => [candidate, read(candidate)] as const)
       .filter(
         (entry): entry is readonly [HTMLElement, Item] =>
           entry[1] !== null &&
-          (entry[1].type === undefined || !shows || shows(entry[1].type)),
+          (entry[1].type === undefined || reach.shows(entry[1].type)),
       );
     const at = opened.findIndex(([candidate]) => candidate === trigger);
     if (at < 0) return;
-    event.preventDefault();
     lightbox.open(
       opened.map(([, item]) => item),
       at,
     );
+    event.preventDefault();
   };
   root.addEventListener("click", click);
   return () => root.removeEventListener("click", click);

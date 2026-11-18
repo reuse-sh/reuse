@@ -1738,6 +1738,42 @@ describe("lightbox public API", () => {
       }).toThrow(/data-lightbox-options on div#prints/);
   });
 
+  it("refuses a second argument that is no lightbox, and leaves clicks to the page once the lightbox is destroyed", () => {
+    const root = document.createElement("div");
+    root.innerHTML = `<a href="/0.jpg"><img src="/0.jpg"></a>`;
+    document.body.append(root);
+    expect(() =>
+      bindLightboxGallery(
+        root,
+        { history: false } as unknown as Parameters<
+          typeof bindLightboxGallery
+        >[1],
+      ),
+    ).toThrow(TypeError);
+    const click = () => {
+      const event = new MouseEvent("click", { bubbles: true, cancelable: true });
+      root.querySelector("img")?.dispatchEvent(event);
+      return event.defaultPrevented;
+    };
+    const errors: unknown[] = [];
+    const report = (event: ErrorEvent) => {
+      event.preventDefault();
+      errors.push(event.error);
+    };
+    window.addEventListener("error", report);
+    const unbind = bindLightboxGallery(root, create({ history: false }), {
+      item: () => ({ src: "/0.jpg", width: -1 }),
+    });
+    expect(click()).toBe(false);
+    window.removeEventListener("error", report);
+    unbind();
+    expect(errors).toEqual([expect.any(TypeError)]);
+    const controller = create({ history: false });
+    bindLightboxGallery(root, controller);
+    controller.destroy();
+    expect(click()).toBe(false);
+  });
+
   it("knows the modules of a lightbox made by another copy of the package", async () => {
     const copy = (await import(
       "./index.js?second-copy" as string
