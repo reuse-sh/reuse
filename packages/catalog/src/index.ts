@@ -134,7 +134,7 @@ export const libraries: Library[] = [
       ],
       [
         "Leave the page as it was",
-        "Destroy restores the page scroll, the hidden thumbnail, and every style and listener the viewer touched. Back closes the viewer, and its one history entry leaves without a navigation.",
+        "Destroy restores the page scroll, the hidden thumbnail, and every style and listener the viewer touched. Back closes the viewer, and its one history entry leaves without a navigation, also when another viewer opened above it.",
         "tests/browser/lightbox-api.spec.ts",
       ],
       [

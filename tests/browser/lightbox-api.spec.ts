@@ -189,6 +189,51 @@ test("close resolves after its history entry is gone, so a navigation right afte
   expect(new URL(page.url()).pathname).toBe("/next");
 });
 
+test("a viewer opened during another's close flight leaves no history entry behind", async ({
+  page,
+}) => {
+  await mount(page, "", ["lightbox/base.css", "lightbox/theme.css"]);
+  await page.evaluate(async (src) => {
+    const { createLightbox } = await import("/modules/lightbox/index.js");
+    const items = [0, 1].map(() => ({ src, width: 1200, height: 800 }));
+    const a = createLightbox();
+    const b = createLightbox();
+    await new Promise<void>((resolve) => {
+      const stop = a.on("opened", () => {
+        stop();
+        resolve();
+      });
+      a.open(items, 0);
+    });
+    const closing = a.close();
+    b.open(items, 0);
+    await closing;
+    await b.close();
+  }, photo(1));
+  expect(
+    await page.evaluate(() => JSON.stringify(history.state)),
+  ).not.toContain("reuseLightbox");
+});
+
+test("a viewer destroyed under another one leaves no history entry behind", async ({
+  page,
+}) => {
+  await mount(page, "", ["lightbox/base.css", "lightbox/theme.css"]);
+  await page.evaluate(async (src) => {
+    const { createLightbox } = await import("/modules/lightbox/index.js");
+    const items = [0, 1].map(() => ({ src, width: 1200, height: 800 }));
+    const a = createLightbox();
+    const b = createLightbox();
+    a.open(items, 0);
+    b.open(items, 0);
+    a.destroy();
+    await b.close();
+  }, photo(1));
+  expect(
+    await page.evaluate(() => JSON.stringify(history.state)),
+  ).not.toContain("reuseLightbox");
+});
+
 test("with two photos in a loop, previous moves the strip backward", async ({
   page,
 }) => {

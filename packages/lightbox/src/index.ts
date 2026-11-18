@@ -530,11 +530,42 @@ const historyBacks = new WeakMap<
 >();
 const landings = new WeakSet<Event>();
 
+// A viewer that leaves while another viewer's entry sits above its own cannot go back to it, so
+// its entry is drained once it becomes the current one.
+const HISTORY_KEY = "reuseLightbox";
+const orphans = new WeakMap<Window, Set<string>>();
+
+function entryOf(win: Window) {
+  const current: unknown = win.history.state;
+  const id =
+    typeof current === "object" && current !== null
+      ? (current as Record<string, unknown>)[HISTORY_KEY]
+      : undefined;
+  return typeof id === "string" ? id : undefined;
+}
+
+function orphan(win: Window, id: string) {
+  const current = entryOf(win);
+  if (current === undefined || current === id) return;
+  const set = orphans.get(win) ?? new Set();
+  orphans.set(win, set);
+  set.add(id);
+}
+
+function takeOrphan(win: Window) {
+  const id = entryOf(win);
+  return id !== undefined && Boolean(orphans.get(win)?.delete(id));
+}
+
 function landed(win: Window, event: Event) {
   if (landings.has(event)) return true;
   const back = historyBacks.get(win);
   if (!back) return false;
   landings.add(event);
+  if (takeOrphan(win)) {
+    win.history.back();
+    return true;
+  }
   win.removeEventListener("popstate", back.drain);
   historyBacks.delete(win);
   releaseScroll(win);
@@ -735,7 +766,6 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
     LightboxEventName,
     Set<(event: LightboxEvent) => void>
   >();
-  const historyKey = "reuseLightbox";
   const historyId = Math.random().toString(36).slice(2);
   let historyWindow: Window | undefined;
   let vetting = false;
@@ -3303,12 +3333,7 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
   }
 
   function ownsHistory(win: Window) {
-    const current: unknown = win.history.state;
-    return (
-      typeof current === "object" &&
-      current !== null &&
-      (current as Record<string, unknown>)[historyKey] === historyId
-    );
+    return entryOf(win) === historyId;
   }
 
   function pushHistory(win: Window) {
@@ -3317,7 +3342,7 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
     win.history.pushState(
       {
         ...(typeof current === "object" && current !== null ? current : {}),
-        [historyKey]: historyId,
+        [HISTORY_KEY]: historyId,
       },
       "",
       win.location.href,
@@ -3342,6 +3367,7 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
   function leaveHistory() {
     const win = historyWindow;
     if (!win) return Promise.resolve();
+    if (!ownsHistory(win)) orphan(win, historyId);
     if (!ownsHistory(win) && !historyBacks.has(win)) releaseScroll(win);
     const landing = ownsHistory(win)
       ? goBack(win)
@@ -3360,11 +3386,18 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
     const win = historyWindow;
     if (!win) return;
     if (landed(win, event)) {
-      if (session && !state.isClosing && !ownsHistory(win)) pushHistory(win);
+      if (
+        session &&
+        !state.isClosing &&
+        !ownsHistory(win) &&
+        !historyBacks.has(win)
+      )
+        pushHistory(win);
       return;
     }
     if (ownsHistory(win)) return;
-    releaseScroll(win);
+    if (takeOrphan(win)) void goBack(win);
+    else releaseScroll(win);
     if (session && !state.isClosing) void closeSession(true);
   }
 
@@ -4405,7 +4438,10 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
       if (s) emit("closed", null);
       const win = historyWindow;
       if (win && ownsHistory(win)) goBack(win);
-      else if (win && !historyBacks.has(win)) releaseScroll(win);
+      else if (win) {
+        orphan(win, historyId);
+        if (!historyBacks.has(win)) releaseScroll(win);
+      }
       win?.removeEventListener("popstate", onPopState);
       historyWindow = undefined;
       listeners.clear();

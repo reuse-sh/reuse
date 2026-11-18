@@ -13,7 +13,7 @@ These are the rules the code keeps. An adaptation on any framework keeps them to
 - **Load only what is near.** Only the current and neighboring images load, the current one first, the neighbors not at all under Save-Data, and a long jump skips the pages in between. While the thumbnail strip is dragged, previews stand in until it stops.
 - **Zoom around the point you touch.** Pinch, wheel and double-tap zoom in around the pointer or fingers, and a tap, click or the zoom button zooms back out to the whole photo.
 - **Keep focus inside and give it back.** The viewer is a native modal dialog, and closing it returns focus to the current photo's tile, or else to the element that opened it.
-- **Leave the page as it was.** Destroy restores the page scroll, the hidden thumbnail, and every style and listener the viewer touched. Back closes the viewer, and its one history entry leaves without a navigation.
+- **Leave the page as it was.** Destroy restores the page scroll, the hidden thumbnail, and every style and listener the viewer touched. Back closes the viewer, and its one history entry leaves without a navigation, also when another viewer opened above it.
 - **Behave like the platform's photo viewer.** Gestures, keys and timing match iOS Photos, macOS Photos and Google Photos unless a recorded decision says otherwise.
 - **Dismiss like a photos app.** A vertical swipe carries the photo, fades the backdrop and the controls with it, and closes past a distance or a speed. A cancelled pointer never closes, a second finger leaves the swipe with the first, and a close ends the gesture.
 - **Let the photo lead.** Controls fade in after the photo starts moving and leave before it. They hide while zoomed and after a still pointer, never while hovered or focused.
