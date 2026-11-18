@@ -335,6 +335,61 @@ test("leaving a video before its first frame neither unmutes nor plays it", asyn
   ).toEqual({ paused: true, muted: false });
 });
 
+const watchChanges = (page: Page) =>
+  page.evaluate(() => {
+    const changes: number[] = [];
+    (
+      window as unknown as {
+        lightbox: {
+          on(type: string, listener: (event: { index: number }) => void): void;
+        };
+      }
+    ).lightbox.on("change", (event) => changes.push(event.index));
+    Object.assign(window, { changes });
+  });
+
+const changes = (page: Page) =>
+  page.evaluate(() => (window as unknown as { changes: number[] }).changes);
+
+test("a slideshow holds while the video plays and goes on once it pauses", async ({
+  page,
+}) => {
+  await setup(page, "video,photo,photo", {
+    controls: { slideshow: true },
+    slideshow: { interval: 300 },
+  });
+  await expect
+    .poll(() => page.evaluate(() => document.querySelector("video")?.paused))
+    .toBe(false);
+  await watchChanges(page);
+  await page.mouse.move(500, 350);
+  await page
+    .locator(".re-lightbox-slideshow")
+    .evaluate((button: HTMLElement) => button.click());
+  await page.waitForTimeout(900);
+  expect(await changes(page)).toEqual([]);
+  await page.evaluate(() => document.querySelector("video")?.pause());
+  await expect.poll(() => changes(page)).toEqual([1]);
+});
+
+test("a slideshow holds on an embed until the visitor pages", async ({
+  page,
+}) => {
+  await setup(page, "youtube,photo,photo", {
+    controls: { slideshow: true },
+    slideshow: { interval: 300 },
+  });
+  await watchChanges(page);
+  await page.mouse.move(500, 350);
+  await page
+    .locator(".re-lightbox-slideshow")
+    .evaluate((button: HTMLElement) => button.click());
+  await page.waitForTimeout(900);
+  expect(await changes(page)).toEqual([]);
+  await step(page, "next");
+  await expect.poll(() => changes(page)).toEqual([1, 2]);
+});
+
 test("with autoplay off the video waits for a press", async ({ page }) => {
   await setup(page, "video", { autoplay: false });
   await page.waitForTimeout(800);

@@ -275,6 +275,7 @@ type MediaSlide = {
   content: LightboxContent;
   mounted?: LightboxMounted;
   abort?: AbortController;
+  holder?: HTMLElement;
 };
 
 type LoadedSlide = {
@@ -925,15 +926,7 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
       return;
     }
     if (looping() || state.index < items.length - 1) step(1);
-    else {
-      // The last photo springs back to the first, as the carousel's autoplay does.
-      finishFade(s, true);
-      clearStands(s);
-      quietly(() => {
-        activeChanged(s, 0);
-        s.carousel.goTo(0, "smooth");
-      });
-    }
+    else goTo(0);
     restartSlideshow(s);
   }
 
@@ -1774,6 +1767,7 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
     });
     media.abort = abort;
     media.mounted = mounted;
+    media.holder = holder;
     if (mounted.interactive) {
       holder.dataset.lightboxInteractive = "";
       holder.dataset.carouselNoDrag = "";
@@ -1795,6 +1789,21 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
     layout(s);
     if (index === state.index && !s.flying && !state.isClosing)
       mounted.resume?.();
+    if (index === state.index) holdForMedia(s);
+  }
+
+  function holdForMedia(s: Session) {
+    const media = s.loaded.get(state.index)?.media;
+    const player =
+      media?.holder?.querySelector<HTMLMediaElement>("video, audio");
+    holdSlideshow(
+      s,
+      "media",
+      Boolean(media?.mounted) &&
+        (player
+          ? !player.paused && !player.ended
+          : media?.content.type === "embed"),
+    );
   }
 
   function swapHeld(s: Session) {
@@ -1809,7 +1818,7 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
     const media = entry.media;
     if (!media?.mounted) return;
     const { mounted, abort } = media;
-    media.mounted = media.abort = undefined;
+    media.mounted = media.abort = media.holder = undefined;
     abort?.abort();
     mounted.unmount();
     entry.frame.querySelector(":scope > .re-lightbox-media")?.remove();
@@ -2075,6 +2084,7 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
     if (entry?.media?.mounted) entry.media.mounted.resume?.();
     else if (entry) mountMedia(s, index, entry);
     s.status.textContent = s.strings.slide(index, items.length);
+    holdForMedia(s);
     restartSlideshow(s);
     emit("change", s);
   }
@@ -3515,6 +3525,11 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
     doc.addEventListener("visibilitychange", () => scheduleSlideshow(s), {
       signal,
     });
+    for (const type of ["play", "pause", "ended"])
+      s.viewport.addEventListener(type, () => holdForMedia(s), {
+        signal,
+        capture: true,
+      });
     const hover = (event: PointerEvent, target: EventTarget | null) => {
       if (event.pointerType !== "mouse") return;
       holdSlideshow(

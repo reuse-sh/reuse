@@ -917,6 +917,52 @@ test("the last photo without loop goes back to the first, at once under reduced 
   ).toBe("0");
 });
 
+test("the last of 40 photos without loop goes back to the first without showing an empty slide", async ({
+  page,
+}) => {
+  await open(
+    page,
+    { controls: { slideshow: true }, slideshow: { interval: 300 } },
+    { count: 40, index: 39 },
+  );
+  const blank = await page.evaluate(async () => {
+    const viewport = document.querySelector(
+      ".re-lightbox-viewport",
+    ) as HTMLElement;
+    const button = document.querySelector(
+      ".re-lightbox-slideshow",
+    ) as HTMLElement;
+    button.click();
+    let blank = 0;
+    await new Promise<void>((done) => {
+      const tick = () => {
+        const port = viewport.getBoundingClientRect();
+        const slides = [
+          ...viewport.querySelectorAll<HTMLElement>(".re-lightbox-slide"),
+        ];
+        for (const slide of slides) {
+          const box = slide.getBoundingClientRect();
+          if (
+            box.right > port.left + 1 &&
+            box.left < port.right - 1 &&
+            !slide.querySelector(".re-lightbox-frame")
+          )
+            blank++;
+        }
+        const first = slides[0].getBoundingClientRect();
+        const back = (window as Window).lightbox.getState().index === 0;
+        if (back && button.getAttribute("aria-label") === "Stop slideshow")
+          button.click();
+        if (back && Math.abs(first.left - port.left) < 1) done();
+        else requestAnimationFrame(tick);
+      };
+      tick();
+    });
+    return blank;
+  });
+  expect(blank).toBe(0);
+});
+
 test("the photos theme is white with the controls and fades to black over 300ms without them", async ({
   page,
 }) => {
