@@ -627,3 +627,81 @@ test.describe("masonry", () => {
     expect(same).toBe(true);
   });
 });
+
+test.describe("a window resize", () => {
+  const frames = (page: Page) =>
+    page.evaluate(
+      () =>
+        new Promise((resolve) =>
+          requestAnimationFrame(() =>
+            requestAnimationFrame(() => requestAnimationFrame(resolve)),
+          ),
+        ),
+    );
+
+  // Reads the layout in a resize observer callback, which runs after layout
+  // and before paint, and compares it with the layout a few frames later.
+  async function staleFrames(page: Page, items: string) {
+    await page.evaluate((items) => {
+      const box = document.getElementById("gallery") as HTMLElement;
+      const read = () =>
+        [...box.querySelectorAll(items)].map((item) => {
+          const rect = item.getBoundingClientRect();
+          return [Math.round(rect.left), Math.round(rect.top)];
+        });
+      const state = window as unknown as {
+        painted?: number[][];
+        read: () => number[][];
+      };
+      state.read = read;
+      new ResizeObserver(() => {
+        state.painted ??= read();
+      }).observe(box);
+    }, items);
+    await frames(page);
+    let stale = 0;
+    for (const width of [960, 900, 820, 700, 620, 560]) {
+      await page.evaluate(() => {
+        delete (window as unknown as { painted?: number[][] }).painted;
+      });
+      await page.setViewportSize({ width, height: 700 });
+      await frames(page);
+      const [painted, settled] = await page.evaluate(() => {
+        const state = window as unknown as {
+          painted?: number[][];
+          read: () => number[][];
+        };
+        return [state.painted, state.read()];
+      });
+      if (painted && JSON.stringify(painted) !== JSON.stringify(settled))
+        stale++;
+    }
+    return stale;
+  }
+
+  test("paints masonry's new layout in the frame it lands", async ({
+    page,
+  }) => {
+    await mount(
+      page,
+      `<div id="gallery" style="grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:8px">${Array.from(
+        { length: 24 },
+        (_, index) =>
+          `<div style="aspect-ratio:1/${0.5 + (index % 5) * 0.25};background:#ccc"></div>`,
+      ).join("")}</div>`,
+      ["gallery/styles.css"],
+    );
+    await page.evaluate(async () => {
+      const { createMasonry } = await import("/modules/gallery/index.js");
+      createMasonry(document.getElementById("gallery") as HTMLElement);
+    });
+    expect(await staleFrames(page, ":scope > div")).toBe(0);
+  });
+
+  test("paints the justified gallery's new rows in the frame it lands", async ({
+    page,
+  }) => {
+    await justified(page, { width: "100%" });
+    expect(await staleFrames(page, "img")).toBe(0);
+  });
+});
