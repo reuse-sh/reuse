@@ -266,14 +266,17 @@ test("the documented center padding brings the first and last slides to the midd
 });
 
 test.describe("carousel groups and drivers on touch", { tag: "@touch" }, () => {
-  test("a one-slide swipe on group 3 rests on a group start and destroy gives back each slide's snap", async ({
-    page,
-  }) => {
-    await setup(
+  const groups = (page: Page) =>
+    setup(
       page,
       `<div id="strip" style="width:360px;--re-carousel-gap:0px">${row(9, 120)}</div>`,
       { group: 3 },
     );
+
+  test("group 3 snaps only group starts and destroy gives back each slide's snap", async ({
+    page,
+  }) => {
+    await groups(page);
     const aligns = () =>
       page.evaluate(() =>
         [
@@ -288,13 +291,21 @@ test.describe("carousel groups and drivers on touch", { tag: "@touch" }, () => {
       "none",
       "none",
     ]);
-    await swipe(page, { x: 250, y: 100 }, { x: 110, y: 100 }, { speed: 0.6 });
-    const values = await framesUntilIdle(page, scrollLeft, 400);
-    expect([0, 360]).toContain(values.at(-1) ?? 0);
     await page.evaluate(() =>
       (window as unknown as { carousel: Strip }).carousel.destroy(),
     );
     expect(new Set(await aligns())).toEqual(new Set([""]));
+  });
+
+  test("a one-slide swipe on group 3 moves one whole group", async ({
+    page,
+    browserName,
+  }) => {
+    test.skip(browserName === "webkit", "needs native touch scrolling");
+    await groups(page);
+    await swipe(page, { x: 250, y: 100 }, { x: 110, y: 100 }, { speed: 0.6 });
+    const values = await framesUntilIdle(page, scrollLeft, 400);
+    expect(values.at(-1)).toBe(360);
   });
 
   test("a touch takes the position back from a driver", async ({ page }) => {

@@ -176,7 +176,7 @@ test.describe("carousel spring", { tag: "@desktop" }, () => {
   }) => {
     const behaviors = async (options: Record<string, unknown>) => {
       await setup(page, undefined, options);
-      return page.evaluate(() => {
+      await page.evaluate(() => {
         const strip = document.getElementById("strip") as HTMLElement;
         const calls: (string | undefined)[] = [];
         const scrollTo = strip.scrollTo.bind(strip);
@@ -184,12 +184,23 @@ test.describe("carousel spring", { tag: "@desktop" }, () => {
           calls.push(options.behavior);
           scrollTo(options);
         }) as typeof strip.scrollTo;
+        Object.assign(window, { calls });
         (window as unknown as { carousel: Strip }).carousel.next();
-        return calls;
       });
+      await framesUntilIdle(page, scrollLeft);
+      return page.evaluate(() => ({
+        calls: [
+          ...new Set(
+            (window as unknown as { calls: (string | undefined)[] }).calls,
+          ),
+        ],
+        left: document.getElementById("strip")?.scrollLeft,
+      }));
     };
-    expect(await behaviors({ moveMotion: "native" })).toContain("smooth");
-    expect(await behaviors({})).not.toContain("smooth");
+    const native = await behaviors({ moveMotion: "native" });
+    expect(native.calls).toContain("smooth");
+    expect(native.left).toBe(300);
+    expect(await behaviors({})).toEqual({ calls: ["instant"], left: 300 });
   });
 });
 

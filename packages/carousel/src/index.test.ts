@@ -901,15 +901,46 @@ describe("native carousel", () => {
     viewport.tabIndex = 4;
     viewport.style.overflowX = "scroll";
     slides[0].style.scrollSnapAlign = "end";
-    const carousel = createCarousel(viewport, { autoplay: 1000 });
-    carousel.setEnabled(false);
-    carousel.destroy();
-    carousel.destroy();
-    viewport.dispatchEvent(
-      new KeyboardEvent("keydown", { key: "End", bubbles: true }),
-    );
+    const globals = new Map<EventTarget, number>([
+      [window, 0],
+      [document, 0],
+    ]);
+    const { addEventListener, removeEventListener } = EventTarget.prototype;
+    const count = (target: EventTarget, step: number) => {
+      const value = globals.get(target);
+      if (value !== undefined) globals.set(target, value + step);
+    };
+    EventTarget.prototype.addEventListener = function (...args) {
+      count(this, 1);
+      return addEventListener.apply(this, args);
+    };
+    EventTarget.prototype.removeEventListener = function (...args) {
+      count(this, -1);
+      return removeEventListener.apply(this, args);
+    };
+    try {
+      const carousel = createCarousel(viewport, { autoplay: 1000 });
+      pointer(viewport, "pointermove", 10);
+      carousel.goTo(2);
+      expect(carousel.getState().isPlaying).toBe(true);
+      carousel.destroy();
+      carousel.destroy();
+    } finally {
+      EventTarget.prototype.addEventListener = addEventListener;
+      EventTarget.prototype.removeEventListener = removeEventListener;
+    }
+    expect([...globals.values()]).toEqual([0, 0]);
+    expect(vi.getTimerCount()).toBe(0);
+    const left = viewport.scrollLeft;
+    viewport.scrollLeft = left + 30;
+    viewport.dispatchEvent(new Event("scroll"));
+    expect(
+      slides.map((slide) =>
+        slide.style.getPropertyValue("--re-carousel-offset"),
+      ),
+    ).toEqual(["", "", ""]);
     vi.advanceTimersByTime(10000);
-    expect(viewport.scrollLeft).toBe(0);
+    expect(viewport.scrollLeft).toBe(left + 30);
     expect(viewport.tabIndex).toBe(4);
     expect(viewport.style.overflowX).toBe("scroll");
     expect(slides[0].style.scrollSnapAlign).toBe("end");
@@ -1230,12 +1261,13 @@ describe("one state for every control", () => {
     expect(carousel.getState().visible).toEqual([2, 3, 4]);
     viewport.scrollLeft = 260;
     viewport.dispatchEvent(new Event("scroll"));
-    expect(carousel.getState().visible).toEqual([3, 4, 5]);
+    const shown = carousel.getState().visible;
+    expect(shown).toEqual([3, 4, 5]);
+    const published = lists.length;
     viewport.scrollLeft = 265;
     viewport.dispatchEvent(new Event("scroll"));
-    expect(new Set(lists).size).toBe(
-      lists.filter((list, at) => list !== lists[at - 1]).length,
-    );
+    expect(carousel.getState().visible).toBe(shown);
+    expect(lists.slice(published).filter((list) => list !== shown)).toEqual([]);
   });
 
   it("keeps the rest of the autoplay wait over a hover and starts it again on a new slide", () => {
