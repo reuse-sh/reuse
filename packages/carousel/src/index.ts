@@ -237,7 +237,7 @@ export function createCarousel(
   const laps = new Map<HTMLElement, number>();
   const spacers: HTMLElement[] = [];
   const observedSlides = new Set<HTMLElement>();
-  const measured = new Map<Element, number>();
+  const measured = new Map<Element, string | number>();
   let span = 0;
   let starts: number[] = [];
   let aligned: number[] = [];
@@ -812,6 +812,10 @@ export function createCarousel(
     publish(nearestIndex());
   }
 
+  function viewportBox(styles: CSSStyleDeclaration) {
+    return `${viewport.clientWidth} ${styles.paddingLeft} ${styles.paddingRight}`;
+  }
+
   function settle() {
     stopping = false;
     if (pointer || spring || taken || fingers || grabbedTouch !== undefined)
@@ -1206,7 +1210,7 @@ export function createCarousel(
     }
     width = viewportWidth;
     measured.clear();
-    measured.set(viewport, viewportWidth);
+    measured.set(viewport, viewportBox(styles));
     slides.forEach((slide, index) => {
       measured.set(slide, widths[index]);
     });
@@ -1532,7 +1536,7 @@ export function createCarousel(
             ({ target }) =>
               measured.get(target) !==
               (target === viewport
-                ? viewport.clientWidth
+                ? viewportBox(window.getComputedStyle(viewport))
                 : (target as HTMLElement).offsetWidth),
           )
         )

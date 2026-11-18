@@ -130,7 +130,7 @@ test("a click during a smooth scroll travels on to a snap point instead of stopp
   ).toBe("");
 });
 
-test("creating a strip measures it once, and a resize measures it again", async ({
+test("creating a strip measures it once, and a resize or a new padding measures it again", async ({
   page,
 }) => {
   await mount(
@@ -158,9 +158,14 @@ test("creating a strip measures it once, and a resize measures it again", async 
     const created = reads / 6;
     strip.style.width = "500px";
     await frames(5);
-    return { created, resized: reads / 6 - created };
+    const resized = reads / 6 - created;
+    strip.style.boxSizing = "border-box";
+    await frames(5);
+    strip.style.paddingInline = "60px";
+    await frames(5);
+    return { created, resized, padded: reads / 6 - created - resized };
   });
-  expect(refreshes).toEqual({ created: 1, resized: 1 });
+  expect(refreshes).toEqual({ created: 1, resized: 1, padded: 1 });
 });
 
 test("a percentage scroll padding places the slide at the padded edge", async ({
