@@ -305,6 +305,35 @@ describe("floating tooltip", () => {
       "translate3d(170px, 90px, 0) rotate(0deg)",
     );
   });
+  it("keeps live rich content in place when it changes while shown", () => {
+    reduced = true;
+    document.body.innerHTML = '<div><button data-peek="">Peek</button></div>';
+    const root = document.body.firstElementChild as HTMLElement;
+    const button = root.querySelector("button") as HTMLElement;
+    rect(button, 100, 100, 80, 32);
+    const live = document.createElement("div");
+    const strip = document.createElement("div");
+    live.append(strip);
+    const controller = createFloatingTooltip(root, {
+      selector: "[data-peek]",
+      delay: 0,
+      content: () => live,
+    });
+    controllers.push(controller);
+    pointer(button, "pointerover", 160, 80);
+    strip.setAttribute("data-step", "2");
+    const removed = vi.fn();
+    new MutationObserver((records) => {
+      if (records.some((record) => [...record.removedNodes].includes(live)))
+        removed();
+    }).observe(live.parentElement as HTMLElement, { childList: true });
+    controller.refresh();
+    window.dispatchEvent(new Event("scroll"));
+    return Promise.resolve().then(() => {
+      expect(removed).not.toHaveBeenCalled();
+      expect(live.isConnected).toBe(true);
+    });
+  });
   it("applies side, offset, and class changes to an open tooltip", () => {
     reduced = true;
     const { first, popup, controller } = setup();

@@ -291,6 +291,8 @@ export function createFloatingTooltip(
   };
   const resolveContent = (next: HTMLElement) => opts.content(next) ?? null;
   const change = (content: Content, wasOpen: boolean) => {
+    if (typeof content !== "string" && body.firstChild === content)
+      return false;
     if (shown !== null && sameContent(shown, content)) return false;
     const animated =
       wasOpen && !reduced?.matches && typeof popup.animate === "function";
