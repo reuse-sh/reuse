@@ -1037,7 +1037,7 @@ export function ImageLink() {
         blocks: [
           {
             kind: "prose",
-            text: 'Set `thumbnails: "bottom"` to show the strip, or `"side"` for a column at the end edge. Each item uses `thumbnailSrc`, then `previewSrc`. Without either, its button shows the image number instead of downloading the full-size asset as a thumbnail.',
+            text: 'Set `thumbnails: "bottom"` to show the strip, or `"side"` for a column at the end edge. Each item uses `thumbnailSrc`, then `previewSrc`. Without either, its button shows the image number instead of downloading the full-size asset as a thumbnail. In the strip, an item with `width` and `height` gets a thumbnail in its own proportions; an item without them gets a square. A ring stays in the middle of the strip, and dragging or swiping the strip opens each photo as its thumbnail passes under the ring.',
           },
         ],
       },
@@ -1151,7 +1151,7 @@ const gallery = bindLightboxGallery(document.querySelector("#gallery"), {
         blocks: [
           {
             kind: "prose",
-            text: 'Set `thumbnails: "bottom"` to show the strip, or `"side"` for a column at the end edge. Each item uses `thumbnailSrc`, then `previewSrc`. Without either, its button shows the image number instead of downloading the full-size asset as a thumbnail.',
+            text: 'Set `thumbnails: "bottom"` to show the strip, or `"side"` for a column at the end edge. Each item uses `thumbnailSrc`, then `previewSrc`. Without either, its button shows the image number instead of downloading the full-size asset as a thumbnail. In the strip, an item with `width` and `height` gets a thumbnail in its own proportions; an item without them gets a square. A ring stays in the middle of the strip, and dragging or swiping the strip opens each photo as its thumbnail passes under the ring.',
           },
         ],
       },

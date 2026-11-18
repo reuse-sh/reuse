@@ -150,7 +150,7 @@ const rules: readonly (readonly [(o: LightboxStyle) => boolean, string])[] = [
   [
     (o) => o.thumbnails,
     `.re-lightbox-style { --re-lightbox-strip: 64px; }
-.re-lightbox-style .re-lightbox-thumbnails { order: 2; max-width: 100%; gap: 6px; padding-block: 5px; scrollbar-width: none; }
+.re-lightbox-style .re-lightbox-thumbnails { order: 2; max-width: 100%; margin: 0; gap: 6px; padding: 5px 50%; scrollbar-width: none; }
 .re-lightbox-style .re-lightbox-thumbnails::-webkit-scrollbar { display: none; }
 .re-lightbox-style .re-lightbox-thumbnails button {
   flex: 0 0 60px;
@@ -160,10 +160,12 @@ const rules: readonly (readonly [(o: LightboxStyle) => boolean, string])[] = [
   border-radius: 8px;
   background: #e6e6e3;
   opacity: 0.45;
-  transition: opacity 200ms ease, box-shadow 200ms ease;
+  transition: opacity 200ms ease;
 }
-.re-lightbox-style .re-lightbox-thumbnails button[aria-current="true"] {
-  opacity: 1;
+.re-lightbox-style .re-lightbox-thumbnails button[aria-current="true"] { opacity: 1; }
+.re-lightbox-style .re-lightbox-thumbnail-ring {
+  border-radius: 8px;
+  outline: 0;
   box-shadow: 0 0 0 2px var(--re-lightbox-background), 0 0 0 3.5px var(--re-lightbox-foreground);
 }`,
   ],

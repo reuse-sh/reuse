@@ -3,6 +3,7 @@ import { mount } from "./harness";
 
 type Lightbox = {
   open(items: unknown[], index?: number): void;
+  setItems(items: unknown[], index?: number): void;
   next(): void;
   goTo(index: number): void;
   zoomTo(scale: number): void;
@@ -251,7 +252,7 @@ const offCenter = (page: Page) =>
     return Math.abs(b.left + b.width / 2 - (a.left + a.width / 2));
   });
 
-test("the carousel's own stylesheet on the page leaves the slides edge to edge and the thumbnails at 44px, 8px apart", async ({
+test("the carousel's own stylesheet on the page leaves the slides edge to edge and the 3:2 thumbnails 66 by 44px, 8px apart", async ({
   page,
 }) => {
   await open(
@@ -270,14 +271,14 @@ test("the carousel's own stylesheet on the page leaves the slides edge to edge a
     return {
       pitch: slides[1].offsetLeft - slides[0].offsetLeft,
       width: viewport.clientWidth,
-      thumb: first.width,
+      thumb: [first.width, first.height],
       gap: second.left - first.right,
     };
   });
   expect(layout).toEqual({
     pitch: layout.width,
     width: layout.width,
-    thumb: 44,
+    thumb: [66, 44],
     gap: 8,
   });
 });
@@ -346,6 +347,166 @@ test("a second click on a thumbnail while the strip centers it still ends with i
   await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2);
   expect((await lightbox(page)).index).toBe(5);
   await expect.poll(() => offCenter(page)).toBeLessThanOrEqual(2);
+});
+
+test("bottom thumbnails take each photo's proportions, square without a size and 24px at the narrowest, and the ring takes the active one's size", async ({
+  page,
+}) => {
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await open(page, { thumbnails: "bottom" });
+  const ringOff = () =>
+    page.evaluate(() => {
+      const ring = document.querySelector(".re-lightbox-thumbnail-ring");
+      const thumb = document.querySelector(
+        '.re-lightbox-thumbnails [aria-current="true"]',
+      );
+      if (!ring || !thumb) return Number.NaN;
+      const a = ring.getBoundingClientRect();
+      const b = thumb.getBoundingClientRect();
+      return Math.max(
+        Math.abs(a.left - b.left),
+        Math.abs(a.top - b.top),
+        Math.abs(a.width - b.width),
+      );
+    });
+  const widths = await page.evaluate(() => {
+    const src = (
+      document.querySelector(".re-lightbox-thumbnails img") as HTMLImageElement
+    ).src;
+    (window as Window).lightbox.setItems([
+      { src, thumbnailSrc: src, width: 1200, height: 800 },
+      { src: `${src}#2`, thumbnailSrc: src },
+      { src: `${src}#3`, thumbnailSrc: src, width: 300, height: 1200 },
+      { src: `${src}#4`, thumbnailSrc: src, width: 1600, height: 400 },
+    ]);
+    return [...document.querySelectorAll(".re-lightbox-thumbnails button")].map(
+      (thumb) => thumb.getBoundingClientRect().width,
+    );
+  });
+  expect(widths).toEqual([66, 44, 24, 176]);
+  for (const index of [1, 2, 3]) {
+    await page.evaluate((i) => (window as Window).lightbox.goTo(i), index);
+    await expect.poll(ringOff).toBeLessThanOrEqual(1);
+  }
+  await page.setViewportSize({ width: 390, height: 844 });
+  await expect.poll(ringOff).toBeLessThanOrEqual(1);
+});
+
+const ringBox = (page: Page) =>
+  page.evaluate(() => {
+    const ring = document.querySelector(".re-lightbox-thumbnail-ring");
+    const strip = document.querySelector(".re-lightbox-thumbnails");
+    if (!ring || !strip) return undefined;
+    const a = ring.getBoundingClientRect();
+    const b = strip.getBoundingClientRect();
+    return {
+      x: a.left + a.width / 2 - (b.left + b.width / 2),
+      y: a.top + a.height / 2 - (b.top + b.height / 2),
+      top: a.top,
+      left: a.left,
+    };
+  });
+
+const slideOffset = (page: Page) =>
+  page.evaluate(() => {
+    const { index } = (window as Window).lightbox.getState();
+    const viewport = document.querySelector(".re-lightbox-viewport");
+    const slide = document.querySelectorAll(".re-lightbox-slide")[index];
+    if (!viewport || !slide) return Number.NaN;
+    return Math.abs(
+      slide.getBoundingClientRect().left -
+        viewport.getBoundingClientRect().left,
+    );
+  });
+
+test("a mouse drag on the strip keeps the ring still, opens each photo at once as its thumbnail reaches the ring, and loads full files only after the strip settles", {
+  tag: "@desktop",
+}, async ({ page }) => {
+  const requested: string[] = [];
+  await page.route("https://cdn.test/**", (route) => {
+    requested.push(route.request().url());
+    return route.abort();
+  });
+  await open(page, { thumbnails: "bottom" }, { count: 20, srcset: true });
+  await expect.poll(() => requested.length).toBeGreaterThan(0);
+  const before = await ringBox(page);
+  if (!before) throw new Error("No ring");
+  expect(Math.abs(before.x)).toBeLessThanOrEqual(1);
+  const first = await page
+    .getByRole("button", { name: "Show image 1", exact: true })
+    .boundingBox();
+  if (!first) throw new Error("Thumbnail 1 has no box.");
+  const pitch = first.width + 8;
+  requested.length = 0;
+  await page.mouse.move(first.x + first.width / 2, first.y + first.height / 2);
+  await page.mouse.down();
+  const seen: number[] = [];
+  for (let step = 1; step <= 30; step++) {
+    await page.mouse.move(
+      first.x + first.width / 2 - (step * pitch * 3) / 30,
+      first.y + first.height / 2,
+    );
+    const { index } = await lightbox(page);
+    if (seen.at(-1) !== index) {
+      seen.push(index);
+      expect(await slideOffset(page)).toBeLessThanOrEqual(1);
+    }
+    const ring = await ringBox(page);
+    expect(ring?.left).toBeCloseTo(before.left, 0);
+    expect(ring?.top).toBeCloseTo(before.top, 0);
+  }
+  expect(seen).toEqual([0, 1, 2, 3]);
+  expect(requested).toEqual([]);
+  await page.mouse.up();
+  await expect
+    .poll(async () => {
+      const { index } = await lightbox(page);
+      return (
+        (await offCenter(page)) <= 2 &&
+        requested.some((url) => url.includes(`photo-${index}-`))
+      );
+    })
+    .toBe(true);
+  expect((await lightbox(page)).index).toBeGreaterThanOrEqual(3);
+  expect(Math.abs((await ringBox(page))?.x ?? Number.NaN)).toBeLessThanOrEqual(
+    1,
+  );
+});
+
+test("the side column keeps the ring at its middle, a wheel over it opens the photo under the ring, and paging moves that photo's thumbnail under the ring", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1280, height: 800 });
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await open(page, { thumbnails: "side" }, { count: 20 });
+  const centered = () =>
+    page.evaluate(() => {
+      const ring = document.querySelector(".re-lightbox-thumbnail-ring");
+      const thumb = document.querySelector(
+        '.re-lightbox-thumbnails [aria-current="true"]',
+      );
+      if (!ring || !thumb) return Number.NaN;
+      const a = ring.getBoundingClientRect();
+      const b = thumb.getBoundingClientRect();
+      return Math.max(Math.abs(a.top - b.top), Math.abs(a.left - b.left));
+    });
+  const before = await ringBox(page);
+  if (!before) throw new Error("No ring");
+  expect(Math.abs(before.y)).toBeLessThanOrEqual(1);
+  await expect.poll(centered).toBeLessThanOrEqual(1);
+  const strip = await page.locator(".re-lightbox-thumbnails").boundingBox();
+  if (!strip) throw new Error("No strip");
+  await page.mouse.move(strip.x + strip.width / 2, strip.y + strip.height / 2);
+  await page.mouse.wheel(0, 52 * 4);
+  await expect
+    .poll(async () => (await lightbox(page)).index)
+    .toBeGreaterThan(0);
+  await expect.poll(centered).toBeLessThanOrEqual(1);
+  expect((await ringBox(page))?.top).toBeCloseTo(before.top, 0);
+  await page.evaluate(() => (window as Window).lightbox.goTo(12));
+  await expect.poll(centered).toBeLessThanOrEqual(1);
+  expect((await lightbox(page)).index).toBe(12);
+  expect((await ringBox(page))?.top).toBeCloseTo(before.top, 0);
 });
 
 test("the strip is one tab stop: Tab reaches the active thumbnail, arrows move focus, Enter opens", async ({
