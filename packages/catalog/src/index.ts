@@ -130,7 +130,7 @@ export const libraries: Library[] = [
       ],
       [
         "Zoom around the point you touch",
-        "Pinch, wheel and double-tap zoom in around the pointer or fingers, and a tap, click or the zoom button zooms back out to the whole photo.",
+        "Pinch, wheel, a double tap and a click zoom in around the pointer or fingers, and a double tap, a click or the zoom button zooms back out to the whole photo. A single finger tap shows or hides the controls.",
         "tests/browser/lightbox-zoom.spec.ts",
       ],
       [
@@ -154,7 +154,7 @@ export const libraries: Library[] = [
       ],
       [
         "Let the photo lead",
-        "Controls fade in after the photo starts moving and leave before it. They hide while zoomed and after a still pointer, never while hovered or focused.",
+        "Controls fade in after the photo starts moving and leave before it. They hide while zoomed and after a still pointer, never while hovered or keyboard-focused.",
         "tests/browser/lightbox-gestures.spec.ts",
       ],
       [
@@ -189,7 +189,7 @@ export const libraries: Library[] = [
       ],
       [
         "Hand the photo to the system",
-        "The photo is a real image: the browser's menu saves and copies it, and Cmd or Ctrl and C copies it. protect turns these off. A mouse drag on it pages like a finger.",
+        "The photo is a real image: the browser's menu saves and copies it, and Cmd or Ctrl and C copies it. protect turns these off. A mouse drag on it pages like a finger, so saving stays on Download and the context menu.",
         "tests/browser/lightbox-native.spec.ts",
       ],
       [
