@@ -151,6 +151,33 @@ it("keeps options read from markup until the component changes them", async () =
   await act(() => root.unmount());
 });
 
+it("keeps markup options for keys the component leaves undefined", async () => {
+  const host = document.createElement("div");
+  document.body.append(host);
+  const root = createRoot(host);
+  function Picked() {
+    const { ref, carousel } = useCarousel({ align: undefined });
+    current = carousel;
+    return createElement(
+      "div",
+      { ref, "data-carousel-options": '{"slides":"[data-pick]","align":"center"}' },
+      [0, 1, 2, 3].map((index) =>
+        createElement("div", {
+          key: index,
+          "data-carousel-slide": "",
+          "data-pick": index % 2 ? "" : undefined,
+        }),
+      ),
+    );
+  }
+  await act(() => root.render(createElement(Picked)));
+  expect(current?.getState().count).toBe(2);
+  expect(
+    (host.querySelector("[data-pick]") as HTMLElement).style.scrollSnapAlign,
+  ).toBe("center");
+  await act(() => root.unmount());
+});
+
 it("re-renders a component only for the part of the state it selects", async () => {
   vi.useFakeTimers();
   renders = {};

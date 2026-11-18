@@ -61,7 +61,14 @@ export function useCarousel(options: CarouselOptions = {}) {
   useEffect(() => {
     if (!viewport) return;
     applied.current = latest.current;
-    const instance = createCarousel(viewport, { ...latest.current, slides });
+    const instance = createCarousel(
+      viewport,
+      Object.fromEntries(
+        Object.entries(latest.current).filter(
+          ([, value]) => value !== undefined,
+        ),
+      ),
+    );
     setCarousel(instance);
     return () => instance.destroy();
   }, [viewport, slides]);
