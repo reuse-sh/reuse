@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, type Page, test } from "@playwright/test";
 import { lightboxStyles } from "../../apps/site/components/docs/lightbox-styles";
 import originalGeometry from "./fixtures/demo-geometry.json" with {
   type: "json",
@@ -339,6 +339,29 @@ test("the narrow panel style shows both caption lines", async ({ page }) => {
   expect(size).toEqual({ clipped: false, lines: 2 });
 });
 
+// The lightbox leaves its history entry with an asynchronous history.back(), which aborts a
+// navigation that starts before it lands.
+async function closed(page: Page) {
+  await expect(page.locator("dialog[open]")).toHaveCount(0);
+  await expect
+    .poll(() =>
+      page.evaluate(
+        () =>
+          (history.state as { reuseLightbox?: string } | null)?.reuseLightbox,
+      ),
+    )
+    .toBeUndefined();
+}
+
+// Carousel tiles are image links, so a click before hydration follows the link instead of
+// opening the viewer. The arrows turn on once the carousel exists.
+async function hydrated(page: Page, path: string) {
+  if (path.startsWith("/carousel"))
+    await expect(
+      page.getByRole("button", { name: "Next slide", exact: true }),
+    ).toBeEnabled();
+}
+
 test("every control style shows an icon in each lightbox button", async ({
   page,
 }) => {
@@ -363,7 +386,7 @@ test("every control style shows an icon in each lightbox button", async ({
       );
     expect(textOnly, style).toEqual([]);
     await page.keyboard.press("Escape");
-    await expect(page.locator("dialog[open]")).toHaveCount(0);
+    await closed(page);
   }
 });
 
@@ -372,11 +395,13 @@ test("every lightbox on the site uses the site's icons and font", async ({
 }) => {
   const closeIcons = new Set<string>();
   const check = async (where: string, open: () => Promise<void>) => {
-    await open();
-    await expect(
-      page.locator("dialog[open] .re-lightbox-image").first(),
-      where,
-    ).toBeVisible();
+    await expect(async () => {
+      await open();
+      await expect(
+        page.locator("dialog[open] .re-lightbox-image").first(),
+        where,
+      ).toBeVisible({ timeout: 1000 });
+    }).toPass();
     const viewer = await page.locator("dialog[open]").evaluate((dialog) => ({
       textOnly: [...dialog.querySelectorAll(".re-lightbox-button")]
         .filter(
@@ -397,7 +422,7 @@ test("every lightbox on the site uses the site's icons and font", async ({
     expect(viewer.font, where).toBe(true);
     closeIcons.add(viewer.close);
     await page.keyboard.press("Escape");
-    await expect(page.locator("dialog[open]")).toHaveCount(0);
+    await closed(page);
   };
   const tile = (card: number) =>
     page
@@ -421,6 +446,7 @@ test("every lightbox on the site uses the site's icons and font", async ({
     "/carousel/examples/editorial",
   ]) {
     await page.goto(path);
+    await hydrated(page, path);
     const area = page.locator(path === "/" ? "main" : preview);
     await check(path, () =>
       area
@@ -431,6 +457,46 @@ test("every lightbox on the site uses the site's icons and font", async ({
     );
   }
   expect([...closeIcons]).toHaveLength(1);
+});
+
+test("gallery examples give the photo paged to its own tile", async ({
+  page,
+}) => {
+  for (const path of [
+    "/justified-gallery/examples/lightbox",
+    "/carousel",
+    "/carousel/examples/editorial",
+  ]) {
+    await page.goto(path);
+    await hydrated(page, path);
+    const images = page.locator(`${preview} img`);
+    const opened = images.filter({ visible: true }).first();
+    const index = await opened.evaluate((image) =>
+      [
+        ...document.querySelectorAll(`[data-slot="example-preview"] img`),
+      ].indexOf(image),
+    );
+    await expect(async () => {
+      await opened.click();
+      await expect(
+        page.locator("dialog[open] .re-lightbox-image").first(),
+      ).toBeVisible({ timeout: 1000 });
+    }).toPass();
+    await page.keyboard.press("ArrowRight");
+    await expect
+      .poll(
+        () =>
+          images.evaluateAll((all) =>
+            all.flatMap((image, at) =>
+              (image as HTMLElement).style.visibility === "hidden" ? [at] : [],
+            ),
+          ),
+        { message: path },
+      )
+      .toEqual([index + 1]);
+    await page.keyboard.press("Escape");
+    await closed(page);
+  }
 });
 
 test("the panel style shows the photo's position once", async ({ page }) => {

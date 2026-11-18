@@ -17,16 +17,17 @@ export function Example() {
           className="rounded-frame cursor-zoom-in focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
           style={{ "--re-ratio": photo.width / photo.height } as CSSProperties}
           onClick={(event) => {
-            const origin = event.currentTarget.querySelector("img");
+            const tiles =
+              event.currentTarget.parentElement?.querySelectorAll("img");
             viewer.open(
-              galleryPhotos.map((item) => ({
+              galleryPhotos.map((item, at) => ({
                 src: item.src,
                 alt: item.alt,
                 caption: item.title,
                 width: item.width,
                 height: item.height,
                 thumbnailSrc: item.src,
-                origin: item.id === photo.id ? origin : null,
+                origin: tiles?.[at] ?? null,
               })),
               index,
             );

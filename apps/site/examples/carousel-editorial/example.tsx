@@ -102,14 +102,14 @@ export function Example() {
                   )
                     return;
                   event.preventDefault();
+                  const tiles = event.currentTarget
+                    .closest(".re-carousel")
+                    ?.querySelectorAll("img");
                   viewer.open(
-                    photos.map((item) => ({
+                    photos.map((item, at) => ({
                       ...item,
                       thumbnailSrc: item.src,
-                      origin:
-                        item.id === photo.id
-                          ? event.currentTarget.querySelector("img")
-                          : null,
+                      origin: tiles?.[at] ?? null,
                     })),
                     index,
                   );

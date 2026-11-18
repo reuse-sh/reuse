@@ -194,9 +194,10 @@ export function ProductGallery() {
     <a key={item.src} href={item.src} onClick={(event) => {
       if (event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
       event.preventDefault();
+      const tiles = event.currentTarget.parentElement?.querySelectorAll("img");
       lightbox.open(items.map((entry, position) => ({
         ...entry,
-        origin: position === index ? event.currentTarget.querySelector("img") : null,
+        origin: tiles?.[position] ?? null,
       })), index);
     }}>
       <img src={item.thumbnailSrc} alt={item.alt} width="320" height="240" />
@@ -2156,7 +2157,7 @@ const gallery = createJustifiedGallery(document.querySelector("#prints"), { last
         blocks: [
           {
             kind: "prose",
-            text: "Make each item a button around its image. A press opens the whole set in gallery order, and the pressed image is the origin the viewer grows out of and returns to.",
+            text: "Make each item a button around its image. A press opens the whole set in gallery order. Each image is the origin of its own photo, so the viewer grows out of the pressed image and a close returns to the tile of the photo on screen.",
           },
           {
             kind: "code",
@@ -2181,8 +2182,8 @@ export function PrintRows() {
       <button key={print.src} type="button" className="cursor-zoom-in"
         style={{ "--re-ratio": print.width / print.height } as CSSProperties}
         onClick={(event) => {
-          const origin = event.currentTarget.querySelector("img");
-          lightbox.open(prints.map((item) => ({ ...item, origin: item === print ? origin : null })), index);
+          const tiles = event.currentTarget.parentElement?.querySelectorAll("img");
+          lightbox.open(prints.map((item, at) => ({ ...item, origin: tiles?.[at] ?? null })), index);
         }}>
         <img className="re-justified-media" src={print.src} alt={print.alt} width={print.width} height={print.height} />
       </button>
