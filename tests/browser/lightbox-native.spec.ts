@@ -540,13 +540,14 @@ test.describe("lightbox documents", () => {
       ["lightbox/base.css", "lightbox/theme.css"],
     );
     await page.evaluate(async () => {
-      const { bindLightboxGallery } = await import(
+      const { bindLightboxGallery, createLightbox } = await import(
         "/modules/lightbox/index.js"
       );
       for (const name of ["first", "second"])
-        bindLightboxGallery(document.querySelector(`.${name}`) as HTMLElement, {
-          history: false,
-        });
+        bindLightboxGallery(
+          document.querySelector(`.${name}`) as HTMLElement,
+          createLightbox({ history: false }),
+        );
     });
     for (const [name, index] of [
       ["first", 1],
@@ -585,11 +586,11 @@ test.describe("lightbox documents", () => {
       ["lightbox/base.css", "lightbox/theme.css"],
     );
     await page.evaluate(async () => {
-      const { bindLightboxGallery } = await import(
+      const { bindLightboxGallery, createLightbox } = await import(
         "/modules/lightbox/index.js"
       );
       const root = document.querySelector(".gallery") as HTMLElement;
-      bindLightboxGallery(root, { history: false });
+      bindLightboxGallery(root, createLightbox({ history: false }));
       const body = document.createElement("body");
       body.append(root);
       document.documentElement.replaceChild(body, document.body);
@@ -629,37 +630,45 @@ test.describe("lightbox documents", () => {
       const content = page.frames()[1];
       if (from === "frame")
         await content.evaluate(async () => {
-          const { bindLightboxGallery } = await import(
+          const { bindLightboxGallery, createLightbox } = await import(
             "http://reuse.test/modules/lightbox/browser/lightbox.js"
           );
-          bindLightboxGallery(document.body, { history: false });
+          bindLightboxGallery(
+            document.body,
+            createLightbox({ history: false }),
+          );
         });
       else
         await page.evaluate(async (from) => {
-          const { bindLightboxGallery, createLightbox, lightboxItemFromImage } =
-            await import("/modules/lightbox/index.js");
+          const {
+            bindLightboxGallery,
+            createLightbox,
+            lightboxItemFromElement,
+          } = await import("/modules/lightbox/index.js");
           const doc = (document.querySelector("iframe") as HTMLIFrameElement)
             .contentDocument as Document;
+          const lightbox = createLightbox({ container: doc.body });
           if (from === "parent bind") {
-            bindLightboxGallery(doc.body);
+            bindLightboxGallery(doc.body, lightbox);
             return;
           }
           if (from === "parent bind with items that name no origin") {
-            bindLightboxGallery(doc.body, {
-              getItem: (image) => ({
-                src: image.src,
+            bindLightboxGallery(doc.body, lightbox, {
+              item: (trigger) => ({
+                src: trigger.querySelector("img")?.src ?? "",
                 width: 1200,
                 height: 800,
               }),
             });
             return;
           }
-          const lightbox = createLightbox({ container: doc.body });
-          const images = [...doc.querySelectorAll("img")];
-          for (const [index, image] of images.entries())
-            image.addEventListener("click", () =>
+          const buttons = [...doc.querySelectorAll("button")];
+          for (const [index, button] of buttons.entries())
+            button.addEventListener("click", () =>
               lightbox.open(
-                images.map((image) => lightboxItemFromImage(image)),
+                buttons.flatMap(
+                  (button) => lightboxItemFromElement(button) ?? [],
+                ),
                 index,
               ),
             );

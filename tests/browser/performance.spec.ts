@@ -25,9 +25,13 @@ async function browseTenPhotos(
 ) {
   await mount(page, `<div id="gallery">${tiles}</div>`, styles);
   await page.evaluate(async () => {
-    const { bindLightboxGallery } = await import("/modules/lightbox/index.js");
-    const gallery = bindLightboxGallery(
+    const { bindLightboxGallery, createLightbox } = await import(
+      "/modules/lightbox/index.js"
+    );
+    const gallery = createLightbox();
+    bindLightboxGallery(
       document.getElementById("gallery") as HTMLElement,
+      gallery,
     );
     Object.assign(window, { gallery });
   });

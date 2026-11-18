@@ -44,6 +44,9 @@ function internalsOf(carousel: Carousel) {
   ];
 }
 
+// Whether a controller has a content module for a type, for bindLightboxGallery.
+const contentOf = new WeakMap<object, (type: string) => boolean>();
+
 export type { Point, Rect, Size, Zoom } from "./geometry.js";
 
 export interface LightboxStrings {
@@ -4733,6 +4736,9 @@ export function createLightbox<Item extends LightboxItem = LightboxItem>(
       handlers.clear();
     },
   };
+  contentOf.set(controller, (type) =>
+    Boolean(current.content?.some((module) => module.type === type)),
+  );
   return controller;
 }
 
@@ -4752,19 +4758,54 @@ function dimension(value: string | undefined) {
   return value && Number.isFinite(number) && number > 0 ? number : undefined;
 }
 
-export function lightboxItemFromImage(
-  image: HTMLImageElement,
-  source?: string,
-): LightboxItem {
-  const base = image.baseURI;
-  const link = image.closest<HTMLAnchorElement>("a[href]");
-  const href = link?.getAttribute("href");
-  const tile = image.currentSrc || image.src;
+/**
+ * The item a gallery trigger opens: a link, a button or an img, and the img inside it. Returns
+ * null when the trigger names no image file and no media type, so the page keeps its click.
+ */
+export function lightboxItemFromElement(
+  trigger: HTMLElement,
+): LightboxItem | null {
+  const image =
+    trigger.localName === "img"
+      ? (trigger as HTMLImageElement)
+      : trigger.querySelector("img");
+  const base = trigger.baseURI;
+  const link = trigger.closest<HTMLAnchorElement>("a[href]");
+  const href = link?.getAttribute("href") || undefined;
+  const data = (name: string) =>
+    trigger.dataset[name] || image?.dataset[name] || undefined;
+  const tile = (image && (image.currentSrc || image.src)) || undefined;
+  const width = dimension(data("lightboxWidth"));
+  const height = dimension(data("lightboxHeight"));
+  const caption =
+    trigger
+      .closest("figure")
+      ?.querySelector(":scope > figcaption")
+      ?.textContent?.trim() ||
+    data("caption") ||
+    link?.dataset.caption;
+  const alt = image
+    ? image.alt
+    : trigger.getAttribute("aria-label") || trigger.textContent?.trim();
+  const origin = image ?? trigger;
+  // Without JavaScript the link still leads to the video or the page it plays.
+  const type = data("lightboxType") || link?.dataset.lightboxType;
+  if (type)
+    return {
+      type,
+      src: href || data("lightboxSrc") || tile,
+      previewSrc: tile,
+      width,
+      height,
+      alt,
+      caption: caption || undefined,
+      origin,
+    };
   const src =
-    source ||
     (href && isImageFile(href, base) ? href : undefined) ||
-    image.dataset.lightboxSrc ||
+    data("lightboxSrc") ||
     tile;
+  if (!src) return null;
   const resolve = (url: string) => {
     try {
       return new URL(url, base).href;
@@ -4772,71 +4813,55 @@ export function lightboxItemFromImage(
       return url;
     }
   };
-  const sameFile = resolve(src) === resolve(tile);
-  const width = dimension(image.dataset.lightboxWidth);
-  const height = dimension(image.dataset.lightboxHeight);
   const file =
-    sameFile && image.naturalWidth && image.naturalHeight
+    image?.naturalWidth &&
+    image.naturalHeight &&
+    resolve(src) === resolve(tile ?? "")
       ? fileWidth(image, image.srcset || undefined, base)
       : undefined;
-  const caption =
-    image
-      .closest("figure")
-      ?.querySelector(":scope > figcaption")
-      ?.textContent?.trim() ||
-    image.dataset.caption ||
-    link?.dataset.caption;
-  // Without JavaScript the link still leads to the video or the page it plays.
-  const type = link?.dataset.lightboxType || image.dataset.lightboxType;
-  if (type) {
-    const media = href || src;
-    return {
-      type,
-      src: media,
-      previewSrc: tile,
-      width,
-      height,
-      alt: image.alt,
-      caption: caption || undefined,
-      origin: image,
-    };
-  }
   return {
     src,
-    srcset: image.dataset.lightboxSrcset || undefined,
-    sizes: image.dataset.lightboxSizes || undefined,
+    srcset: data("lightboxSrcset"),
+    sizes: data("lightboxSizes"),
     previewSrc: tile,
     width: width ?? file,
     height:
       height ??
-      (file && Math.round((file * image.naturalHeight) / image.naturalWidth)),
-    alt: image.alt,
+      (file && image
+        ? Math.round((file * image.naturalHeight) / image.naturalWidth)
+        : undefined),
+    alt,
     caption: caption || undefined,
-    origin: image,
+    origin,
   };
 }
 
-export function bindLightboxGallery(
+export interface LightboxGalleryOptions<
+  Item extends LightboxItem = LightboxItem,
+> {
+  /** The triggers inside root, "a[href], button, img" by default; a trigger inside another counts as the outer one. */
+  selector?: string;
+  /** The item a trigger opens, lightboxItemFromElement by default; null leaves the trigger's click to the page. */
+  item?: (trigger: HTMLElement) => Item | null;
+  /** Triggers open only with the triggers of the same group, the closest data-lightbox-group by default. */
+  group?: (trigger: HTMLElement) => string;
+}
+
+/** Opens the triggers inside root in the lightbox on a plain click, and returns the function that unbinds. */
+export function bindLightboxGallery<Item extends LightboxItem = LightboxItem>(
   root: HTMLElement,
-  options: LightboxOptions & {
-    selector?: string;
-    getItem?: (image: HTMLImageElement) => LightboxItem;
-    /** Images open only with the images of the same group, data-lightbox-group by default. */
-    group?: (image: HTMLImageElement) => string;
-    /** Replaces the images in root as the list; a click opens at the item whose origin is the image. */
-    items?: (root: HTMLElement) => readonly LightboxItem[];
-  } = {},
-) {
-  // Without a container the dialog goes to the body the page has at each open; a root in another
-  // document, such as a frame, takes that document's body.
-  const controller = createLightbox({
-    ...options,
-    container:
-      options.container ??
-      (typeof document !== "undefined" && root.ownerDocument === document
-        ? undefined
-        : root.ownerDocument.body),
-  });
+  lightbox: Lightbox<Item>,
+  options: LightboxGalleryOptions<Item> = {},
+): () => void {
+  const selector = options.selector ?? "a[href], button, img";
+  const read =
+    options.item ??
+    (lightboxItemFromElement as (trigger: HTMLElement) => Item | null);
+  const group =
+    options.group ??
+    ((trigger: HTMLElement) =>
+      trigger.closest<HTMLElement>("[data-lightbox-group]")?.dataset
+        .lightboxGroup ?? "");
   const click = (event: MouseEvent) => {
     if (
       event.defaultPrevented ||
@@ -4849,55 +4874,38 @@ export function bindLightboxGallery(
       return;
     const target = event.target;
     if (!isElement(target) || target.closest(".re-lightbox")) return;
-    const images = [
-      ...root.querySelectorAll<HTMLImageElement>(options.selector || "img"),
-    ].filter(
-      (image) =>
-        !image.classList.contains("re-lightbox-landing") &&
-        !image.closest(".re-lightbox"),
+    const triggers = [...root.querySelectorAll<HTMLElement>(selector)].filter(
+      (element) => {
+        if (
+          element.classList.contains("re-lightbox-landing") ||
+          element.closest(".re-lightbox")
+        )
+          return false;
+        const outer = element.parentElement?.closest(selector);
+        return !outer || outer === root || !root.contains(outer);
+      },
     );
-    const image = images.find(
-      (candidate) =>
-        candidate === target ||
-        candidate.closest("a, button")?.contains(target),
-    );
-    if (!image) return;
-    let list: readonly LightboxItem[];
-    let index: number;
-    if (options.items) {
-      list = options.items(root);
-      index = list.findIndex((item) => resolveOrigin(item.origin) === image);
-      if (index < 0) index = images.indexOf(image);
-    } else {
-      const group =
-        options.group ??
-        ((element: HTMLImageElement) =>
-          element.closest<HTMLElement>("[data-lightbox-group]")?.dataset
-            .lightboxGroup ?? "");
-      const name = group(image);
-      const members = images.filter((candidate) => group(candidate) === name);
-      list = members.map((member) =>
-        (options.getItem || lightboxItemFromImage)(member),
+    const trigger = triggers.find((candidate) => candidate.contains(target));
+    if (!trigger) return;
+    const name = group(trigger);
+    // A clicked trigger whose media type has no module is followed; others leave such items out.
+    const shows = contentOf.get(lightbox);
+    const opened = triggers
+      .filter((candidate) => group(candidate) === name)
+      .map((candidate) => [candidate, read(candidate)] as const)
+      .filter(
+        (entry): entry is readonly [HTMLElement, Item] =>
+          entry[1] !== null &&
+          (entry[1].type === undefined || !shows || shows(entry[1].type)),
       );
-      index = members.indexOf(image);
-    }
-    // A clicked link whose media type has no module is followed; others leave such items out.
-    const supported = list.filter(
-      (item) =>
-        item.type === undefined ||
-        options.content?.some((module) => module.type === item.type),
-    );
-    const at = supported.indexOf(list[index]);
+    const at = opened.findIndex(([candidate]) => candidate === trigger);
     if (at < 0) return;
     event.preventDefault();
-    controller.open(supported, at);
+    lightbox.open(
+      opened.map(([, item]) => item),
+      at,
+    );
   };
   root.addEventListener("click", click);
-  return {
-    ...controller,
-    destroy: () => {
-      root.removeEventListener("click", click);
-      controller.destroy();
-    },
-  };
+  return () => root.removeEventListener("click", click);
 }

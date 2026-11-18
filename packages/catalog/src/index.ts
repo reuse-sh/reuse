@@ -224,8 +224,8 @@ export const libraries: Library[] = [
         "Creates a viewer. Options include controls, thumbnails, caption, slideshow, content, autoplayMedia, loop, history, strings, slots, imageClick, doubleTapZoom, autoHide, maxZoom, protect, className and icons, copied at creation and changed with setOptions. The space around the photo is --re-lightbox-padding, 32px by default.",
       ],
       [
-        "bindLightboxGallery(root, options?)",
-        "Opens the images inside root in the viewer, in page order, only those of the clicked image's data-lightbox-group or group(image). Each image opens the file its link points to, else data-lightbox-src, with data-lightbox-srcset, -sizes, -width and -height and its figure's caption. items(root) supplies the list instead. Its destroy also removes the click listener.",
+        "bindLightboxGallery(root, lightbox, options?)",
+        "Opens the links, buttons and images inside root in a lightbox you created, in page order, only those of the clicked trigger's data-lightbox-group or group(trigger), and returns the function that unbinds. lightboxItemFromElement reads each trigger: the file its link points to, else data-lightbox-src, with data-lightbox-srcset, -sizes, -width, -height and -type and its figure's caption, so a quick-view link without an image opens too. item(trigger) supplies the item instead, and null leaves the click to the page.",
       ],
       [
         "open(items, index?)",

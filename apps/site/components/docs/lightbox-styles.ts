@@ -478,18 +478,23 @@ import "./lightbox-style.css";${names.length ? `\nimport { ${names.join(", ")} }
     <img src="/photos/forest-small.jpg" data-lightbox-src="/photos/forest.jpg" alt="A path through a forest" data-caption="Forest" width="400" height="300">
   </a>
 </div>`,
-    js: `import { bindLightboxGallery, lightboxItemFromImage } from "@reuse-sh/lightbox";
+    js: `import { bindLightboxGallery, createLightbox, lightboxItemFromElement } from "@reuse-sh/lightbox";
 ${imports}
 
-const gallery = document.querySelector("[data-gallery]");
-const getItem = (image) => ({
-  ...lightboxItemFromImage(image),
-  caption: image.dataset.caption,${options.thumbnails ? "\n  thumbnailSrc: image.currentSrc || image.src," : ""}
-});${slots ? `\nconst items = () => [...gallery.querySelectorAll("img")].map(getItem);` : ""}
-const lightbox = bindLightboxGallery(gallery, {
+const gallery = document.querySelector("[data-gallery]");${
+      options.thumbnails
+        ? `
+const item = (trigger) => {
+  const found = lightboxItemFromElement(trigger);
+  const image = trigger.querySelector("img");
+  return found && { ...found, thumbnailSrc: image.currentSrc || image.src };
+};`
+        : "\nconst item = lightboxItemFromElement;"
+    }${slots ? `\nconst items = () => [...gallery.querySelectorAll("a")].map(item);` : ""}
+const lightbox = createLightbox({
 ${body("  ", "items")}
-  getItem,
-});`,
+});
+const unbind = bindLightboxGallery(gallery, lightbox, { item });`,
     react: `"use client";
 
 import type { LightboxItem } from "@reuse-sh/lightbox";
@@ -528,6 +533,6 @@ ${body("    ", "() => photos")}
 }`,
     css: lightboxStyleCss(options),
     chrome: chromeSource,
-    cleanup: "lightbox.destroy();",
+    cleanup: "unbind();\nlightbox.destroy();",
   };
 }

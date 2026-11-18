@@ -779,8 +779,10 @@ test("a wheel during an Escape close keeps the page where it scrolled after the 
     content: ".re-lightbox{--re-lightbox-close-duration:600ms}",
   });
   await page.evaluate(async () => {
-    const { bindLightboxGallery } = await import("/modules/lightbox/index.js");
-    bindLightboxGallery(document.body, { autoHide: false });
+    const { bindLightboxGallery, createLightbox } = await import(
+      "/modules/lightbox/index.js"
+    );
+    bindLightboxGallery(document.body, createLightbox({ autoHide: false }));
     scrollTo(0, 200);
   });
   await page.locator(".tile img").click();
@@ -917,15 +919,13 @@ test.describe("focus after close", { tag: "@desktop" }, () => {
       styles,
     );
     await page.evaluate(async (useHistory) => {
-      const { bindLightboxGallery } = await import(
+      const { bindLightboxGallery, createLightbox } = await import(
         "/modules/lightbox/index.js"
       );
       const gallery = document.getElementById("gallery") as HTMLElement;
-      const lightbox = bindLightboxGallery(gallery, {
-        history: useHistory,
-        autoHide: false,
-      });
-      Object.assign(window, { lightbox });
+      const lightbox = createLightbox({ history: useHistory, autoHide: false });
+      const unbind = bindLightboxGallery(gallery, lightbox);
+      Object.assign(window, { lightbox, unbind });
     }, history);
   }
 
@@ -990,16 +990,15 @@ test.describe("focus after close", { tag: "@desktop" }, () => {
   }) => {
     await galleryPage(page);
     await page.evaluate(async () => {
-      (window as Window).lightbox.destroy();
-      const { bindLightboxGallery } = await import(
+      const old = window as Window & { unbind: () => void };
+      old.unbind();
+      old.lightbox.destroy();
+      const { bindLightboxGallery, createLightbox } = await import(
         "/modules/lightbox/index.js"
       );
-      Object.assign(window, {
-        lightbox: bindLightboxGallery(document.body, {
-          history: false,
-          autoHide: false,
-        }),
-      });
+      const lightbox = createLightbox({ history: false, autoHide: false });
+      bindLightboxGallery(document.body, lightbox);
+      Object.assign(window, { lightbox });
     });
     await slowClose(page);
     await page.locator("#gallery").getByAltText("Photo 2").click();

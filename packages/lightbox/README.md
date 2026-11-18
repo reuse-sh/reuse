@@ -47,9 +47,13 @@ For a page without a bundler or an import map, such as a theme or a plugin, copy
 <link rel="stylesheet" href="/assets/lightbox/base.css" />
 <link rel="stylesheet" href="/assets/lightbox/theme.css" />
 <script type="module">
-  import { bindLightboxGallery } from "/assets/lightbox/browser/lightbox.js";
+  import {
+    bindLightboxGallery,
+    createLightbox,
+  } from "/assets/lightbox/browser/lightbox.js";
 
-  const gallery = bindLightboxGallery(document.querySelector("#gallery"), {});
+  const lightbox = createLightbox();
+  const unbind = bindLightboxGallery(document.querySelector("#gallery"), lightbox);
 </script>
 ```
 
@@ -130,12 +134,13 @@ Import the package stylesheets once: base.css holds the layout and theme.css the
 
 #### Initialize
 
-Run this after the markup exists. Keep the returned controller for the lifetime of this content.
+Run this after the markup exists. Keep the lightbox and the unbind function for the lifetime of this content.
 
 ```javascript
-import { bindLightboxGallery } from "@reuse-sh/lightbox";
+import { bindLightboxGallery, createLightbox } from "@reuse-sh/lightbox";
 
-const gallery = bindLightboxGallery(document.querySelector("#gallery"), {});
+const lightbox = createLightbox();
+const unbind = bindLightboxGallery(document.querySelector("#gallery"), lightbox);
 ```
 
 #### Integration
@@ -147,7 +152,8 @@ Links still open the image without JavaScript. The native dialog keeps focus ins
 Run this when the view is removed, before mounting another controller on the same element.
 
 ```javascript
-gallery.destroy();
+unbind();
+lightbox.destroy();
 ```
 
 <!-- examples:end -->

@@ -19,9 +19,10 @@ test("the browser builds run on a theme page with plain files and no import map"
 <link rel="stylesheet" href="/assets/lightbox/theme.css">
 <script type="module">
 import { createCarousel } from "/assets/carousel/browser/carousel.js";
-import { bindLightboxGallery } from "/assets/lightbox/browser/lightbox.js";
+import { bindLightboxGallery, createLightbox } from "/assets/lightbox/browser/lightbox.js";
 window.strip = createCarousel(document.getElementById("strip"));
-window.gallery = bindLightboxGallery(document.getElementById("gallery"));
+window.gallery = createLightbox();
+bindLightboxGallery(document.getElementById("gallery"), window.gallery);
 </script></head><body>
 <div id="strip" style="width:300px">${[0, 1, 2]
           .map(

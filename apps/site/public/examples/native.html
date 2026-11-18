@@ -37,15 +37,16 @@
   <p>Drag or scroll the carousel. Open a photograph to use the native viewer.</p>
   <script type="module">
     import { createCarousel } from '/modules/carousel/index.js';
-    import { bindLightboxGallery } from '/modules/lightbox/index.js';
+    import { bindLightboxGallery, createLightbox } from '/modules/lightbox/index.js';
 
     const root = document.querySelector('[data-native-gallery]');
     const carousel = createCarousel(root, { align:'center', loop:true });
-    const lightbox = bindLightboxGallery(root, { thumbnails:"bottom" });
+    const lightbox = createLightbox({ thumbnails:"bottom" });
+    const unbind = bindLightboxGallery(root, lightbox);
     document.querySelector('[data-next]').addEventListener('click', () => carousel.next());
     document.querySelector('[data-previous]').addEventListener('click', () => carousel.prev());
     const unsubscribe = carousel.subscribe(state => { document.querySelector('[data-current]').textContent = `${state.index + 1} / ${state.count}`; });
-    window.addEventListener('pagehide', event => { if (!event.persisted) { unsubscribe(); lightbox.destroy(); carousel.destroy(); } });
+    window.addEventListener('pagehide', event => { if (!event.persisted) { unsubscribe(); unbind(); lightbox.destroy(); carousel.destroy(); } });
   </script>
 </body>
 </html>

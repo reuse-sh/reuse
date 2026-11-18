@@ -318,14 +318,13 @@ test("bindLightboxGallery opens the file a link points to", async ({
     root.innerHTML = `<a href="/img/large-1200x800.jpg"><img src="/img/small-300x200.jpg" alt="Small" style="width:300px"></a>`;
     document.body.append(root);
     await root.querySelector("img")?.decode();
-    const { bindLightboxGallery, lightboxItemFromImage } = await import(
-      "/modules/lightbox/index.js"
-    );
+    const { bindLightboxGallery, createLightbox, lightboxItemFromElement } =
+      await import("/modules/lightbox/index.js");
+    const lightbox = createLightbox({ history: false });
+    bindLightboxGallery(root, lightbox);
     Object.assign(window, {
-      lightbox: bindLightboxGallery(root, { history: false }),
-      item: lightboxItemFromImage(
-        root.querySelector("img") as HTMLImageElement,
-      ),
+      lightbox,
+      item: lightboxItemFromElement(root.querySelector("a") as HTMLElement),
     });
   });
   expect(
@@ -399,7 +398,7 @@ test.describe("sizes from a srcset on a 1440px screen", () => {
 test.describe("a responsive tile at 2x", () => {
   test.use({ deviceScaleFactor: 2 });
 
-  test("lightboxItemFromImage reads the shown file's own width, not the tile's CSS size", async ({
+  test("lightboxItemFromElement reads the shown file's own width, not the tile's CSS size", async ({
     page,
   }) => {
     await mount(page, "", ["lightbox/base.css", "lightbox/theme.css"]);
@@ -412,10 +411,12 @@ test.describe("a responsive tile at 2x", () => {
       image.style.width = "300px";
       document.body.append(image);
       await image.decode();
-      const { lightboxItemFromImage } = await import(
+      const { lightboxItemFromElement } = await import(
         "/modules/lightbox/index.js"
       );
-      const { src, width, height } = lightboxItemFromImage(image);
+      const item = lightboxItemFromElement(image);
+      if (!item) throw new Error("No item");
+      const { src, width, height } = item;
       return { src: new URL(src ?? "").pathname, width, height };
     });
     expect(item).toEqual({

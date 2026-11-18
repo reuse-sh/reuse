@@ -7,7 +7,7 @@ import {
   createLightbox,
   type Lightbox,
   type LightboxState,
-  lightboxItemFromImage,
+  lightboxItemFromElement,
 } from "./index.js";
 import { video } from "./video.js";
 
@@ -760,14 +760,14 @@ describe("lightbox lifecycle", () => {
     delete (HTMLElement.prototype as { animate?: unknown }).animate;
   });
 
-  it("binds a native gallery without URL side effects and detaches on destroy", () => {
+  it("binds a native gallery without URL side effects and detaches on unbind", async () => {
     const root = document.createElement("div");
     const image = document.createElement("img");
     image.src = "https://example.test/gallery.jpg";
     root.append(image);
     document.body.append(root);
-    const controller = bindLightboxGallery(root);
-    controllers.push(controller);
+    const controller = create();
+    const unbind = bindLightboxGallery(root, controller);
     const href = window.location.href;
     image.click();
     expect(controller.getState().count).toBe(1);
@@ -775,7 +775,8 @@ describe("lightbox lifecycle", () => {
       dialog().querySelector<HTMLImageElement>(".re-lightbox-image")?.src,
     ).toBe(image.src);
     expect(window.location.href).toBe(href);
-    controller.destroy();
+    unbind();
+    await controller.close();
     image.click();
     expect(document.querySelector("dialog")).toBeNull();
   });
@@ -1547,41 +1548,44 @@ describe("lightbox public API", () => {
       Object.defineProperty(image, "naturalWidth", { value: 300 });
       Object.defineProperty(image, "naturalHeight", { value: 200 });
     }
-    expect(images.map((image) => lightboxItemFromImage(image))).toEqual([
-      {
-        src: "/large.JPG?w=2000",
-        srcset: undefined,
-        sizes: undefined,
-        previewSrc: images[0].src,
-        width: undefined,
-        height: undefined,
-        alt: "a",
-        caption: "Figure caption",
-        origin: images[0],
-      },
-      {
-        src: "/full.jpg",
-        srcset: "/900.jpg 900w, /1800.jpg 1800w",
-        sizes: "50vw",
-        previewSrc: images[1].src,
-        width: 1800,
-        height: 1200,
-        alt: "b",
-        caption: "Link caption",
-        origin: images[1],
-      },
-      {
-        src: images[2].src,
-        srcset: undefined,
-        sizes: undefined,
-        previewSrc: images[2].src,
-        width: 300,
-        height: 200,
-        alt: "c",
-        caption: "Image caption",
-        origin: images[2],
-      },
-    ]);
+    const triggers = [...root.querySelectorAll<HTMLElement>("a"), images[2]];
+    expect(triggers.map((trigger) => lightboxItemFromElement(trigger))).toEqual(
+      [
+        {
+          src: "/large.JPG?w=2000",
+          srcset: undefined,
+          sizes: undefined,
+          previewSrc: images[0].src,
+          width: undefined,
+          height: undefined,
+          alt: "a",
+          caption: "Figure caption",
+          origin: images[0],
+        },
+        {
+          src: "/full.jpg",
+          srcset: "/900.jpg 900w, /1800.jpg 1800w",
+          sizes: "50vw",
+          previewSrc: images[1].src,
+          width: 1800,
+          height: 1200,
+          alt: "b",
+          caption: "Link caption",
+          origin: images[1],
+        },
+        {
+          src: images[2].src,
+          srcset: undefined,
+          sizes: undefined,
+          previewSrc: images[2].src,
+          width: 300,
+          height: 200,
+          alt: "c",
+          caption: "Image caption",
+          origin: images[2],
+        },
+      ],
+    );
   });
 
   it("opens a linked image's full file from bindLightboxGallery", () => {
@@ -1599,10 +1603,7 @@ describe("lightbox public API", () => {
     const root = document.createElement("div");
     root.innerHTML = `<a href="/large.jpg"><img src="/small.jpg" alt=""></a>`;
     document.body.append(root);
-    const controller = bindLightboxGallery(root, {
-      history: false,
-    });
-    controllers.push(controller);
+    bindLightboxGallery(root, create({ history: false }));
     root.querySelector("img")?.click();
     expect(loaded).toContain("/large.jpg");
     expect(loaded).not.toContain("/small.jpg");
@@ -1617,10 +1618,8 @@ describe("lightbox public API", () => {
       )
       .join("");
     document.body.append(root);
-    const controller = bindLightboxGallery(root, {
-      history: false,
-    });
-    controllers.push(controller);
+    const controller = create({ history: false });
+    bindLightboxGallery(root, controller);
     root.querySelectorAll("img")[3].click();
     expect(controller.getState()).toMatchObject({ count: 3, index: 1 });
     expect(
@@ -1630,24 +1629,57 @@ describe("lightbox public API", () => {
     ).toEqual(["b1", "b3", "b4"]);
   });
 
-  it("opens the list items(root) returns at the clicked image, origin functions included", () => {
+  it("reads a trigger without an image as a media item, and leaves a page link to the page", () => {
     const root = document.createElement("div");
-    root.innerHTML = `<img src="https://example.test/0.jpg"><img src="https://example.test/1.jpg">`;
+    root.innerHTML = `
+      <a href="/item/7" data-lightbox-type="iframe">Quick view</a>
+      <a href="/about">About</a>
+      <button type="button" data-lightbox-src="/full.jpg"><img src="/tile.jpg" alt="Tile"></button>`;
     document.body.append(root);
-    const [first, second] = root.querySelectorAll("img");
-    const controller = bindLightboxGallery(root, {
-      history: false,
-      items: () => [
-        { src: "https://example.test/hidden.jpg" },
-        { src: "https://example.test/1-large.jpg", origin: second },
-        { src: "https://example.test/0-large.jpg", origin: () => first },
-      ],
+    const [quick, about] = root.querySelectorAll("a");
+    const button = root.querySelector("button") as HTMLElement;
+    expect([
+      lightboxItemFromElement(quick),
+      lightboxItemFromElement(about),
+      lightboxItemFromElement(button),
+    ]).toEqual([
+      {
+        type: "iframe",
+        src: "/item/7",
+        previewSrc: undefined,
+        width: undefined,
+        height: undefined,
+        alt: "Quick view",
+        caption: undefined,
+        origin: quick,
+      },
+      null,
+      expect.objectContaining({ src: "/full.jpg", alt: "Tile" }),
+    ]);
+  });
+
+  it("opens what item(trigger) returns and leaves a trigger it returns null for to the page", () => {
+    const root = document.createElement("div");
+    root.innerHTML = `<a href="/0.jpg"><img src="/0.jpg"></a><a href="/1.jpg"><img src="/1.jpg"></a><a href="/2.jpg"><img src="/2.jpg"></a>`;
+    document.body.append(root);
+    const links = [...root.querySelectorAll("a")];
+    const controller = create({ history: false });
+    bindLightboxGallery(root, controller, {
+      item: (trigger) =>
+        trigger === links[1]
+          ? null
+          : { src: `${trigger.getAttribute("href")}?large`, origin: trigger },
     });
-    controllers.push(controller);
-    second.click();
-    expect(controller.getState()).toMatchObject({ count: 3, index: 1 });
-    first.click();
-    expect(controller.getState()).toMatchObject({ count: 3, index: 2 });
+    const skipped = new MouseEvent("click", {
+      bubbles: true,
+      cancelable: true,
+    });
+    links[1].dispatchEvent(skipped);
+    expect(skipped.defaultPrevented).toBe(false);
+    expect(document.querySelector("dialog")).toBeNull();
+    links[2].querySelector("img")?.click();
+    expect(controller.getState()).toMatchObject({ count: 2, index: 1 });
+    expect(controller.getState().item?.src).toBe("/2.jpg?large");
   });
 
   it("adds one history entry, closes on Back and goes back after another close", async () => {
