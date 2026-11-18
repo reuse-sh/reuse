@@ -1,6 +1,7 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { photos } from "../../lib/photos";
+import { iconData } from "../icons";
 
 export const lightboxThemes = {
   dark: "The default. A near-black room with frosted controls.",
@@ -316,6 +317,44 @@ const sample = (preset?: Preset) => {
 ];`;
 };
 
+const strokeAttributes = new Set([
+  "key",
+  "stroke",
+  "strokeLinecap",
+  "strokeLinejoin",
+  "strokeWidth",
+]);
+
+// The published setup draws the site's icons itself, so it runs without the site's icon module.
+function inlineIcons(setup: string) {
+  const names = [
+    ...new Set(
+      [...setup.matchAll(/\bicons\.(\w+)\(/g)].map((match) => match[1]),
+    ),
+  ] as (keyof typeof iconData)[];
+  if (!names.length) return "";
+  const markup = (name: keyof typeof iconData) =>
+    iconData[name]
+      .map(
+        ([tag, attributes]) =>
+          `<${tag} ${Object.entries(attributes)
+            .filter(([key]) => !strokeAttributes.has(key))
+            .map(([key, value]) => `${key}="${value}"`)
+            .join(" ")}/>`,
+      )
+      .join("");
+  return `
+const icon = (markup) => () => {
+  const template = document.createElement("template");
+  template.innerHTML = \`<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">\${markup}</svg>\`;
+  return template.content.firstElementChild;
+};
+const icons = {
+${names.map((name) => `  ${name}: icon('${markup(name)}'),`).join("\n")}
+};
+`;
+}
+
 /** The published setup for a theme or a preset, in plain JavaScript. */
 export function lightboxThemeCode(id: string) {
   const preset = lightboxPresets[id];
@@ -324,12 +363,12 @@ export function lightboxThemeCode(id: string) {
   const imports = `import { createLightbox } from "@reuse-sh/lightbox";
 import "@reuse-sh/lightbox/base.css";
 import "@reuse-sh/lightbox/theme.css";
-import "@reuse-sh/lightbox/themes/${theme}.css";${setup.includes("icons.") ? '\nimport { icons } from "./icons.js";' : ""}`;
+import "@reuse-sh/lightbox/themes/${theme}.css";`;
   return {
     js: `${imports}
 
 ${sample(preset)}
-${setup}
+${inlineIcons(setup)}${setup}
 
 lightbox.open(items, 0);`,
     css: preset?.css ?? (theme === "page" ? pageColors : undefined),
