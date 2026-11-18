@@ -313,7 +313,9 @@ type Session = {
   marked?: number;
   strings: LightboxStrings;
   slots: ReturnType<LightboxSlot>[];
-  motion?: { frame: number; left: number; still: number };
+  motion?: { frame: number; left: number; still: number; moved: boolean };
+  /** The photo changed since the last settle. */
+  paged: boolean;
   phase: "entering" | "opening" | "open" | "dragging" | "returning" | "closing";
   timing: { open: number; close: number; ease: string };
   chrome: ChromeModel;
@@ -755,6 +757,9 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
   let syncingCarousel = false;
   let closePromise: Promise<void> | undefined;
   let pendingClosed: (() => void) | undefined;
+  let listAfterClose:
+    | { items: LightboxItem[]; sources: readonly LightboxItem[] }
+    | undefined;
   let state: LightboxState = {
     isOpen: false,
     isClosing: false,
@@ -1055,6 +1060,10 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
     } finally {
       syncingCarousel = syncing;
     }
+  }
+
+  function lastIndex() {
+    return clamp(state.index, 0, Math.max(0, items.length - 1));
   }
 
   function wrap(index: number) {
@@ -2055,8 +2064,13 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
       looping() && Math.abs(gap) > items.length / 2 ? gap < 0 : gap > 0;
     s.pinned = undefined;
     s.heading = forward ? 1 : -1;
+    s.paged = true;
     publish({ index, zoom: restZoom(s, index) });
     update(s, forward ? 1 : -1);
+    arrived(s, index);
+  }
+
+  function arrived(s: Session, index: number) {
     const entry = s.loaded.get(index);
     if (entry?.media?.mounted) entry.media.mounted.resume?.();
     else if (entry) mountMedia(s, index, entry);
@@ -2328,6 +2342,11 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
       active === s.dialog.ownerDocument.body
     )
       returnFocus(s);
+    if (listAfterClose) {
+      ({ items, sources } = listAfterClose);
+      listAfterClose = undefined;
+      updateState({ count: items.length, index: lastIndex() });
+    }
   }
 
   function leaveFullscreen(s: Session) {
@@ -3624,6 +3643,29 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
   }
 
   function open(input: readonly LightboxItem[], index = 0) {
+    const before = session;
+    try {
+      openSession(input, index);
+    } catch (error) {
+      const s = session;
+      if (s && s !== before) {
+        // The same callback may throw again while focus returns; the first error is the one to report.
+        try {
+          teardown(s);
+        } catch {}
+        publish({
+          isOpen: false,
+          isClosing: false,
+          isAnimating: false,
+          zoom: { ...identity },
+        });
+        void leaveHistory();
+      }
+      throw error;
+    }
+  }
+
+  function openSession(input: readonly LightboxItem[], index: number) {
     if (destroyed) throw new Error("This lightbox has been destroyed.");
     const nextItems = validateItems(input, options.content);
     if (!Number.isFinite(index))
@@ -3955,6 +3997,7 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
       pointers: new Map(),
       box: measure(viewport),
       suppressClickUntil: 0,
+      paged: false,
       flying: true,
       watchedScale: 1,
       sharpScale: 1,
@@ -4095,13 +4138,17 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
       if (!motion || session !== s || !win) return;
       const left = viewport.scrollLeft;
       motion.still = left === motion.left ? motion.still + 1 : 0;
+      if (!Number.isNaN(motion.left) && left !== motion.left)
+        motion.moved = true;
       motion.left = left;
       if ((motion.still >= 3 && isSettled(s)) || motion.still >= 30) {
         s.motion = undefined;
         clearStands(s);
         trimSlides(s);
         syncAnimating(s);
-        emit("settle", s);
+        const moved = motion.moved || s.paged;
+        s.paged = false;
+        if (moved) emit("settle", s);
         return;
       }
       motion.frame = win.requestAnimationFrame(watch);
@@ -4114,6 +4161,7 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
           frame: win.requestAnimationFrame(watch),
           left: Number.NaN,
           still: 0,
+          moved: false,
         };
         syncAnimating(s);
       },
@@ -4300,13 +4348,20 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
 
   function setItems(input: readonly LightboxItem[], index?: number) {
     if (destroyed) throw new Error("This lightbox has been destroyed.");
-    const nextItems = validateItems(input, options.content);
+    const nextItems = input.length ? validateItems(input, options.content) : [];
     if (index !== undefined && !Number.isFinite(index))
       throw new TypeError("Image index must be finite.");
     const s = session;
-    if (!s || state.isClosing) {
+    if (!s) {
       items = nextItems;
       sources = [...input];
+      publish({ count: items.length, index: lastIndex() });
+      return;
+    }
+    if (state.isClosing || !nextItems.length) {
+      listAfterClose = { items: nextItems, sources: [...input] };
+      if (!state.isClosing) void close();
+      if (!state.isClosing && session === s) listAfterClose = undefined;
       return;
     }
     finishFade(s, true);
@@ -4392,7 +4447,8 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
     });
     publish({ index: target, count: items.length });
     update(s);
-    if (changed) emit("change", s);
+    if (!kept) arrived(s, target);
+    else if (changed) emit("change", s);
   }
 
   const controller: Lightbox = {

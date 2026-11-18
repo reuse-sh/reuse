@@ -28,7 +28,7 @@ These are the rules the code keeps. An adaptation on any framework keeps them to
 - **Let a slideshow yield.** A slideshow waits while the photo is zoomed, the mouse is over the controls, the tab is hidden or a slot's menu is open, and goes on with the time it had left.
 - **Play only the current slide.** Video, audio and embeds are optional modules. Leaving a slide pauses its player, close pauses them all at once, and over a player the pointer belongs to the player.
 - **Trust no page by default.** Items read from markup are untrusted. An embed plays only a known provider, every frame from another origin is sandboxed, and Download offers only web, blob and raster data files and never navigates the tab away.
-- **Survive every interruption.** Opening, closing, swiping, zooming, resizing, appending or destroying at any moment leaves no dialog, timer, hidden tile, scroll lock or extra history entry behind.
+- **Survive every interruption.** Opening, closing, swiping, zooming, resizing, appending or destroying at any moment, or a callback that throws during open, leaves no dialog, timer, hidden tile, scroll lock or extra history entry behind.
 
 <!-- principles:end -->
 

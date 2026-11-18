@@ -209,7 +209,7 @@ export const libraries: Library[] = [
       ],
       [
         "Survive every interruption",
-        "Opening, closing, swiping, zooming, resizing, appending or destroying at any moment leaves no dialog, timer, hidden tile, scroll lock or extra history entry behind.",
+        "Opening, closing, swiping, zooming, resizing, appending or destroying at any moment, or a callback that throws during open, leaves no dialog, timer, hidden tile, scroll lock or extra history entry behind.",
         "packages/lightbox/src/session.model.test.ts",
       ],
     ],
@@ -244,7 +244,7 @@ export const libraries: Library[] = [
       ],
       [
         "append(items), setItems(items, index?)",
-        "Adds images at the end or replaces the list while the viewer is open, without moving the current image.",
+        "Adds images at the end or replaces the list while the viewer is open, without moving the current image. An empty list closes the viewer.",
       ],
       [
         "setOptions({ loop }), getSlide(index)",

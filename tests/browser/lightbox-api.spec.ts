@@ -269,6 +269,43 @@ test("a change listener that pages again sees each photo once", async ({
   expect(seen).toEqual({ seen: [1, 4], index: 4, offset: 0 });
 });
 
+test("settle comes once per move, not after opening at a later photo or during the close flight", async ({
+  page,
+}) => {
+  await mount(page, "", ["lightbox/base.css", "lightbox/theme.css"]);
+  const frames = (count: number) =>
+    page.evaluate(async (total) => {
+      for (let frame = 0; frame < total; frame++)
+        await new Promise(requestAnimationFrame);
+    }, count);
+  await page.evaluate(async (sources) => {
+    const { createLightbox } = await import("/modules/lightbox/index.js");
+    const lightbox = createLightbox({ history: false });
+    const settled: string[] = [];
+    lightbox.on("settle", (event) =>
+      settled.push(
+        `${event.index}${lightbox.getState().isClosing ? " closing" : ""}`,
+      ),
+    );
+    Object.assign(window, { lightbox, settled });
+    lightbox.open(
+      sources.map((src) => ({ src, width: 1200, height: 800 })),
+      2,
+    );
+  }, [0, 1, 2, 3, 4].map(photo));
+  const settled = () =>
+    page.evaluate(() => (window as Window & { settled: string[] }).settled);
+  await expect(page.locator("dialog")).toHaveAttribute("data-phase", "open");
+  await frames(20);
+  expect(await settled()).toEqual([]);
+  await page.evaluate(() => (window as Window).lightbox.next());
+  await expect.poll(settled).toEqual(["3"]);
+  await frames(20);
+  await page.evaluate(() => (window as Window).lightbox.close());
+  await frames(5);
+  expect(await settled()).toEqual(["3"]);
+});
+
 test("with two photos in a loop, previous moves the strip backward", async ({
   page,
 }) => {

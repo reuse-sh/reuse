@@ -74,10 +74,10 @@ LightboxSlot: (context: { lightbox: Lightbox; document: Document }) => { node: N
 
 LightboxEventName: "open" | "opened" | "change" | "settle" | "beforeclose" | "closed".
 
-LightboxEvent: { type, index, slide: HTMLElement | null, defaultPrevented, preventDefault() }. open runs in open(), opened once the flight ends, change when the index changes, settle once paging stops, beforeclose synchronously before the close flight is measured, and closed once the dialog is removed, also when open() replaces an open viewer. close() and closed wait until the history entry is gone, so a navigation right after them stays. preventDefault in beforeclose keeps the dialog open; other events ignore it.
+LightboxEvent: { type, index, slide: HTMLElement | null, defaultPrevented, preventDefault() }. open runs in open(), opened once the flight ends, change when the index changes or another item takes the current index, settle once after each move of the strip stops and not after the instant jump to the photo open() starts at, beforeclose synchronously before the close flight is measured, and closed once the dialog is removed, also when open() replaces an open viewer. close() and closed wait until the history entry is gone, so a navigation right after them stays. preventDefault in beforeclose keeps the dialog open; other events ignore it.
 
 Lightbox methods:
-- open(items: readonly LightboxItem[], index?: number): void
+- open(items: readonly LightboxItem[], index?: number): void; an error thrown by a slot, renderContent or getOrigin during open() removes the dialog, the scroll lock and the history entry, and open() rethrows it
 - close(): Promise<void>, resolves once the dialog is removed
 - next(), prev(), goTo(index: number). A goTo or a thumbnail click to a photo more than one away pages in like the next photo: the target arrives beside the photo on screen, from the side its thumbnail is on, with the usual paging motion, and the photos between never show. A second jump during the move keeps the arriving photo where it is and brings the new one beside it. A looping strip pages the same way. Reduced motion lands at once.
 - zoomTo(scale: number, focus?: Point), scale clamped between the current photo's minimum (1, or the whole-height scale of a tall photo) and its maximum; toggleZoom(focus?: Point), from scale 1 to the tap zoom around focus, and from any other scale back to 1 around focus
@@ -85,7 +85,7 @@ Lightbox methods:
 - subscribe(listener: (state: LightboxState) => void): () => void, the settled changes onChange reports
 - on(type: LightboxEventName, listener: (event: LightboxEvent) => void): () => void
 - append(items: readonly LightboxItem[]): void, adds images at the end without moving the current one
-- setItems(items: readonly LightboxItem[], index?: number): void, replaces the list; the current image stays when the list still holds it, matched by object and then by src, otherwise index or the nearest image left is shown
+- setItems(items: readonly LightboxItem[], index?: number): void, replaces the list; the current image stays when the list still holds it, matched by object and then by src, otherwise index or the nearest image left is shown, with a change event and the slide's announcement. An empty list closes the viewer with the usual close, beforeclose included. A list passed during the close flight waits until the dialog is removed, so the flight and the focus go to the photo on screen, and then sets count and clamps index; while closed, setItems sets them at once
 - setOptions(options: Pick<LightboxOptions, "loop">): void
 - getSlide(index: number): HTMLElement | null
 - destroy(): void, idempotent, restores the page scroll, the hidden thumbnail and every style and listener it touched
