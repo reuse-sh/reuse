@@ -479,6 +479,27 @@ test("a 200ms stall right after open() does not cut the open flight short", asyn
   expect(flight).toBeGreaterThan(380);
 });
 
+test("a 600ms stall right after open(), longer than the flight, still flies", async ({
+  page,
+}) => {
+  await tilePage(page, `<div style="padding:100px">${tile(0)}</div>`);
+  const flight = await page.evaluate(
+    () =>
+      new Promise<number>((resolve) => {
+        const win = window as Window & { items: unknown[] };
+        win.lightbox.open(win.items, 0);
+        const until = performance.now() + 600;
+        while (performance.now() < until);
+        const stalled = performance.now();
+        const stop = win.lightbox.on("opened", () => {
+          stop();
+          resolve(performance.now() - stalled);
+        });
+      }),
+  );
+  expect(flight).toBeGreaterThan(380);
+});
+
 test("an easing list in --re-lightbox-ease falls back to the default curve and still flies", async ({
   page,
 }) => {

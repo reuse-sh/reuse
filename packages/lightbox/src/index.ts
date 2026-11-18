@@ -1339,11 +1339,17 @@ export function createLightbox<Item extends LightboxItem = LightboxItem>(
       };
       // A timeline that has not advanced by the deadline still lands the last keyframe. It is
       // written directly, since WebKit commits the first keyframe of an animation that never got a frame.
-      // The deadline counts from the animation's start, so a busy main thread does not cut it short.
+      // The deadline counts from the animation's start, so a busy main thread does not cut it short,
+      // and waits while a visible document has yet to start it.
       let elapsed = -1;
       const deadline = () => {
         const time = Number(animation.currentTime);
         if (
+          animation.pending &&
+          node.ownerDocument.visibilityState === "visible"
+        )
+          timer = setTimeout(deadline, duration + 80);
+        else if (
           animation.startTime === null ||
           !(time > elapsed) ||
           time >= duration
