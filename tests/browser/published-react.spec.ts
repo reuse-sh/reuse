@@ -420,9 +420,7 @@ window.__unmount = () => root.unmount();`,
   expect(
     await page.evaluate(() => {
       const { __counts, __lightbox } = window as unknown as App;
-      return [...__counts.handles.owner].map(
-        (handle) => handle === __lightbox,
-      );
+      return [...__counts.handles.owner].map((handle) => handle === __lightbox);
     }),
   ).toEqual([true]);
   await page.evaluate(() => (window as unknown as App).__unmount());

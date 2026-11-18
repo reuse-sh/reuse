@@ -421,7 +421,8 @@ test("Download names a file after the Content-Disposition it can read, else its 
   await openFiles(page, ["/files/7", "/files/8", "/files/My%20Photo.jpg"]);
   const dispositions: Record<string, string> = {
     "/files/7": 'attachment; filename="Sunset at sea.jpg"',
-    "/files/8": "attachment; filename=fallback.jpg; filename*=UTF-8''%D1%84%D0%BE%D1%82%D0%BE.jpg",
+    "/files/8":
+      "attachment; filename=fallback.jpg; filename*=UTF-8''%D1%84%D0%BE%D1%82%D0%BE.jpg",
   };
   await page.route("http://reuse.test/files/**", (route) => {
     const disposition = dispositions[new URL(route.request().url()).pathname];

@@ -55,7 +55,10 @@ type LightboxInternals = {
   shows(type: string): boolean;
   destroyed(): boolean;
   /** Runs open() with options that fill what the lightbox's own options leave unset, until that viewer closes. */
-  openWith(options: Partial<LightboxOptions<never>> | undefined, open: () => void): void;
+  openWith(
+    options: Partial<LightboxOptions<never>> | undefined,
+    open: () => void,
+  ): void;
 };
 
 function internalsOf(lightbox: unknown) {
@@ -4899,7 +4902,9 @@ function dispositionName(header: string | null) {
     try {
       return decodeURIComponent(extended[1]);
     } catch {}
-  const plain = /filename\s*=\s*(?:"((?:\\.|[^"\\])*)"|([^;\s]+))/i.exec(header);
+  const plain = /filename\s*=\s*(?:"((?:\\.|[^"\\])*)"|([^;\s]+))/i.exec(
+    header,
+  );
   return plain?.[1]?.replace(/\\(.)/g, "$1") || plain?.[2] || undefined;
 }
 

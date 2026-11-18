@@ -557,13 +557,18 @@ describe("lightbox lifecycle", () => {
     const { signal } = stop;
     const add = signal.addEventListener.bind(signal);
     const remove = signal.removeEventListener.bind(signal);
-    signal.addEventListener = (type, listener, options) => {
-      added.add(listener);
-      add(type, listener, options);
+    type Args = [
+      string,
+      EventListenerOrEventListenerObject,
+      (boolean | AddEventListenerOptions)?,
+    ];
+    signal.addEventListener = (...args: Args) => {
+      added.add(args[1]);
+      add(...args);
     };
-    signal.removeEventListener = (type, listener, options) => {
-      added.delete(listener);
-      remove(type, listener, options);
+    signal.removeEventListener = (...args: Args) => {
+      added.delete(args[1]);
+      remove(...args);
     };
     const controller = create({ history: false });
     controller.subscribe(() => {}, { signal });
@@ -1750,7 +1755,10 @@ describe("lightbox public API", () => {
     const controller = create({ history: false });
     bindLightboxGallery(root, controller);
     const click = (element: Element) => {
-      const event = new MouseEvent("click", { bubbles: true, cancelable: true });
+      const event = new MouseEvent("click", {
+        bubbles: true,
+        cancelable: true,
+      });
       element.dispatchEvent(event);
       return event.defaultPrevented;
     };
@@ -1771,15 +1779,15 @@ describe("lightbox public API", () => {
     root.innerHTML = `<a href="/0.jpg"><img src="/0.jpg"></a>`;
     document.body.append(root);
     expect(() =>
-      bindLightboxGallery(
-        root,
-        { history: false } as unknown as Parameters<
-          typeof bindLightboxGallery
-        >[1],
-      ),
+      bindLightboxGallery(root, { history: false } as unknown as Parameters<
+        typeof bindLightboxGallery
+      >[1]),
     ).toThrow(TypeError);
     const click = () => {
-      const event = new MouseEvent("click", { bubbles: true, cancelable: true });
+      const event = new MouseEvent("click", {
+        bubbles: true,
+        cancelable: true,
+      });
       root.querySelector("img")?.dispatchEvent(event);
       return event.defaultPrevented;
     };
@@ -1822,7 +1830,9 @@ describe("lightbox public API", () => {
       seen.push([
         controller.getState().canPrev,
         Boolean(dialog().querySelector(".re-lightbox-thumbnails")),
-        dialog().querySelector(".re-lightbox-close")?.getAttribute("aria-label"),
+        dialog()
+          .querySelector(".re-lightbox-close")
+          ?.getAttribute("aria-label"),
         dialog().querySelector(".re-lightbox-next")?.getAttribute("aria-label"),
       ]);
       await controller.close();
