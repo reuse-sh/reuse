@@ -56,6 +56,7 @@
   transition: background-color var(--re-lightbox-background-duration, 0ms) ease;
 }
 .re-lightbox-button {
+  box-sizing: border-box;
   width: var(--re-lightbox-button-size);
   height: var(--re-lightbox-button-size);
   padding: var(--re-lightbox-button-padding);

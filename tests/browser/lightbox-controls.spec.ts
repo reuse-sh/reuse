@@ -1399,3 +1399,21 @@ test("on a plain page the theme sets a sans-serif font, so the counter is not th
     ),
   ).toBe("Courier");
 });
+
+test("on a plain page the download link is the same 44 by 44px as the buttons", async ({
+  page,
+}) => {
+  await openFiles(page, ["https://cdn.test/photo.jpg"]);
+  const sizes = await page.evaluate(() =>
+    [".re-lightbox-download", ".re-lightbox-close"].map((selector) => {
+      const { width, height } = (
+        document.querySelector(selector) as Element
+      ).getBoundingClientRect();
+      return { width, height };
+    }),
+  );
+  expect(sizes).toEqual([
+    { width: 44, height: 44 },
+    { width: 44, height: 44 },
+  ]);
+});
