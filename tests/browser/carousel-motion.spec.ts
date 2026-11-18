@@ -74,6 +74,49 @@ test.describe("carousel spring", { tag: "@desktop" }, () => {
     expect(time).toBeLessThanOrEqual(550);
   });
 
+  test("a mouse flick on a full-width strip covers 90% of the way to the next slide within 250ms, like next()", async ({
+    page,
+  }) => {
+    await setup(
+      page,
+      `<div id="strip" style="width:100vw;--re-carousel-gap:0px">${slideRow(6, 1440)}</div>`,
+    );
+    const width = await page.evaluate(() => innerWidth);
+    await page.evaluate(() => {
+      const strip = document.getElementById("strip") as HTMLElement;
+      const record = { released: 0, samples: [] as [number, number][] };
+      addEventListener(
+        "pointerup",
+        () => {
+          record.released = performance.now();
+          const tick = () => {
+            record.samples.push([
+              performance.now() - record.released,
+              strip.scrollLeft,
+            ]);
+            requestAnimationFrame(tick);
+          };
+          tick();
+        },
+        { capture: true, once: true },
+      );
+      Object.assign(window, { record });
+    });
+    await swipe(page, { x: 1100, y: 100 }, { x: 700, y: 100 }, { speed: 2 });
+    await framesUntilIdle(page, scrollLeft);
+    const samples = await page.evaluate(
+      () =>
+        (window as unknown as { record: { samples: [number, number][] } })
+          .record.samples,
+    );
+    expect(samples.at(-1)?.[1]).toBe(width);
+    const start = samples[0][1];
+    const reached = samples.find(
+      ([, left]) => left - start >= 0.9 * (width - start),
+    );
+    expect(reached?.[0]).toBeLessThanOrEqual(250);
+  });
+
   test("three next() presses within 200ms reach the fourth slide without stopping or turning back", async ({
     page,
   }) => {

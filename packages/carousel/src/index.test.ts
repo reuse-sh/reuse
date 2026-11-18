@@ -316,7 +316,7 @@ describe("native carousel", () => {
     expect(viewport.style.scrollSnapType).toBe("");
   });
 
-  it("glides a released flick on with its momentum to the snap point nearest where it would stop", () => {
+  it("settles a released flick on a snapped strip like next(), at the snap point nearest where it would stop", () => {
     const { viewport, scrollTo } = fixture([100, 100, 100, 100, 100, 100]);
     const carousel = createCarousel(viewport);
     cleanups.push(carousel.destroy);
@@ -334,6 +334,8 @@ describe("native carousel", () => {
     vi.advanceTimersByTime(16);
     expect(viewport.scrollLeft).toBeGreaterThan(65);
     expect(viewport.scrollLeft).toBeLessThan(90);
+    vi.advanceTimersByTime(224);
+    expect(viewport.scrollLeft).toBeGreaterThan(385);
     vi.advanceTimersByTime(2000);
     expect(viewport.scrollLeft).toBe(400);
     expect(viewport.style.scrollSnapType).toBe("");

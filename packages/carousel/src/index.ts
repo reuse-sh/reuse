@@ -1090,7 +1090,6 @@ export function createCarousel(
     direction?: 1 | -1,
     releaseSpeed?: number,
     reference = pendingPosition ?? position(),
-    flick = false,
   ) {
     if (
       destroyed ||
@@ -1112,7 +1111,7 @@ export function createCarousel(
     let target = targetAt(next, reference);
     if (span && direction === 1 && target <= reference + 0.5) target += span;
     if (span && direction === -1 && target >= reference - 0.5) target -= span;
-    travel(next, target, behavior, releaseSpeed, flick);
+    travel(next, target, behavior, releaseSpeed);
   }
 
   function travel(
@@ -1120,7 +1119,7 @@ export function createCarousel(
     destination: number,
     behavior: ScrollBehavior,
     releaseSpeed?: number,
-    flick = false,
+    glideFree = false,
   ) {
     const motion =
       releaseSpeed === undefined ? options.moveMotion : options.releaseMotion;
@@ -1150,7 +1149,7 @@ export function createCarousel(
       startSpring(
         target,
         releaseSpeed ?? 0,
-        flick ? 2 / GLIDE : settleRate,
+        glideFree ? 2 / GLIDE : settleRate,
         settleRate,
       );
     } else {
@@ -1536,12 +1535,10 @@ export function createCarousel(
     } else if (moved && snap && Math.abs(velocity) >= FLICK_VELOCITY) {
       const end = targetAt(projected, stop);
       const blocked = firstStop(current, end, direction);
-      if (blocked >= 0)
-        goTo(blocked, "smooth", direction, speed, current, true);
+      if (blocked >= 0) goTo(blocked, "smooth", direction, speed, current);
       else if ((end - current) * direction > 1)
-        goTo(projected, "smooth", undefined, speed, stop, true);
-      else
-        goTo(indexAhead(direction), "smooth", direction, speed, current, true);
+        goTo(projected, "smooth", undefined, speed, stop);
+      else goTo(indexAhead(direction), "smooth", direction, speed, current);
     } else if (moved && snap)
       goTo(nearestIndex(current), "smooth", undefined, speed, current);
     else if (moved || snap || stretch) settle();

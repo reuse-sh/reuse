@@ -425,7 +425,8 @@ export const libraries: Library[] = [
       ],
       [
         "Drag like a trackpad",
-        "A released mouse drag keeps its speed and glides to the slide nearest where it would stop, or to the stop itself when the strip does not snap there, never past a slide that asks to stop. Past either end it stretches and springs back.",
+        "A released mouse drag goes to the slide nearest where its speed would carry it, never past a slide that asks to stop, and a flick on a snapped strip settles there as fast as next(). A strip that does not snap there, with scroll-snap-type none or proximity away from a snap point, glides on with the drag's own momentum to the stop itself. Past either end it stretches and springs back.",
+        "tests/browser/carousel-motion.spec.ts",
       ],
       [
         "Keep the slide it was sent to",
@@ -504,7 +505,7 @@ export const libraries: Library[] = [
       ],
       [
         "releaseDuration",
-        "How long the spring takes to settle a slow release or a stretched end, in milliseconds. 260 by default. A flick glides on with its own momentum.",
+        "How long the spring takes to settle a release or a stretched end on a snapped strip, flicks included, in milliseconds. 260 by default. A free glide, with scroll-snap-type none or proximity away from a snap point, carries the drag's own momentum instead.",
       ],
       [
         "next(), prev(), goTo(index, behavior?)",
