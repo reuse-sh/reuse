@@ -221,7 +221,7 @@ export const libraries: Library[] = [
     api: [
       [
         "createLightbox(options?)",
-        "Creates a viewer. Options include controls, thumbnails, caption, slideshow, content, autoplayMedia, loop, history, strings, slots, imageClick, doubleTapZoom, autoHide, maxZoom, protect, className and icons, read again at every open. The space around the photo is --re-lightbox-padding, 32px by default.",
+        "Creates a viewer. Options include controls, thumbnails, caption, slideshow, content, autoplayMedia, loop, history, strings, slots, imageClick, doubleTapZoom, autoHide, maxZoom, protect, className and icons, copied at creation and changed with setOptions. The space around the photo is --re-lightbox-padding, 32px by default.",
       ],
       [
         "bindLightboxGallery(root, options?)",
@@ -256,8 +256,8 @@ export const libraries: Library[] = [
         "Adds images at the end or replaces the list while the viewer is open, without moving the current image. An empty list closes the viewer.",
       ],
       [
-        "setOptions({ loop }), getSlide(index)",
-        "Turns the loop on or off while open, and returns the element of a slide.",
+        "setOptions(options), getSlide(index)",
+        "Changes any option but container for the next open, and loop and strings at once, and returns the element of a slide. createLightbox copies its options, so changing the object you passed does nothing.",
       ],
       ["destroy()", "Removes listeners and restores the page."],
     ],

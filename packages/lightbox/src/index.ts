@@ -299,7 +299,8 @@ export interface Lightbox<Item extends LightboxItem = LightboxItem> {
   append(items: readonly Item[]): void;
   /** Keeps the current image when the new list still has it, otherwise shows index or the nearest image left. */
   setItems(items: readonly Item[], index?: number): void;
-  setOptions(options: Pick<LightboxOptions, "loop">): void;
+  /** Takes effect at the next open; loop and strings also change an open viewer at once. */
+  setOptions(options: Partial<Omit<LightboxOptions<Item>, "container">>): void;
   getSlide(index: number): HTMLElement | null;
   destroy(): void;
 }
@@ -790,7 +791,9 @@ function midpoint(points: Point[]): Point {
 export function createLightbox<Item extends LightboxItem = LightboxItem>(
   options: LightboxOptions<Item> = {},
 ): Lightbox<Item> {
-  let settings: LightboxOptions<Item> = { ...options };
+  // The caller's object is copied once, so changing it later changes nothing; setOptions does.
+  const current: LightboxOptions<Item> = { ...options };
+  let settings: LightboxOptions<Item> = { ...current };
   let preload = 1;
   let padding = PADDING;
   let autoHide: number | false = 2500;
@@ -830,7 +833,7 @@ export function createLightbox<Item extends LightboxItem = LightboxItem>(
   let notifiedState = state;
 
   function configure() {
-    settings = { ...options };
+    settings = { ...current };
     preload = clamp(Math.floor(settings.preload ?? 1), 0, 2);
     autoHide =
       settings.autoHide === false
@@ -3776,6 +3779,42 @@ export function createLightbox<Item extends LightboxItem = LightboxItem>(
         .addEventListener("change", () => placeThumbs(s), { signal });
   }
 
+  // New strings reach every label at once; the live region keeps its last announcement.
+  function relabel(s: Session) {
+    const strings = { ...defaultStrings, ...settings.strings };
+    s.strings = strings;
+    const doc = s.dialog.ownerDocument;
+    const name = (selector: string, label: string) =>
+      s.stage.querySelector(selector)?.setAttribute("aria-label", label);
+    s.dialog.setAttribute("aria-label", strings.dialog);
+    s.viewport.setAttribute("aria-label", strings.dialog);
+    name(".re-lightbox-close", strings.close);
+    name(".re-lightbox-prev", strings.previous);
+    name(".re-lightbox-next", strings.next);
+    name(".re-lightbox-download", strings.download);
+    name(
+      ".re-lightbox-fullscreen",
+      doc.fullscreenElement === s.stage
+        ? strings.fullscreenExit
+        : strings.fullscreenEnter,
+    );
+    name(
+      ".re-lightbox-slideshow",
+      s.slideshow ? strings.slideshowStop : strings.slideshowStart,
+    );
+    s.thumbStrip?.setAttribute("aria-label", strings.thumbnails);
+    for (const [index, thumb] of s.thumbs.entries())
+      thumb.setAttribute("aria-label", strings.thumbnail(index, items.length));
+    for (const node of s.stage.querySelectorAll(".re-lightbox-loading"))
+      node.setAttribute("aria-label", strings.loading);
+    for (const node of s.stage.querySelectorAll(".re-lightbox-error p"))
+      node.textContent = strings.error;
+    for (const node of s.stage.querySelectorAll(".re-lightbox-retry"))
+      node.textContent = strings.retry;
+    s.marked = undefined;
+    update(s);
+  }
+
   function mountSlots(
     s: Session,
     places: Record<LightboxSlotName, (node: Node) => void>,
@@ -3816,7 +3855,7 @@ export function createLightbox<Item extends LightboxItem = LightboxItem>(
 
   function openSession(input: readonly Item[], index: number) {
     if (destroyed) throw new Error("This lightbox has been destroyed.");
-    const nextItems = validateItems(input, options.content);
+    const nextItems = validateItems(input, current.content);
     if (!Number.isFinite(index))
       throw new TypeError("Image index must be finite.");
     configure();
@@ -4510,7 +4549,9 @@ export function createLightbox<Item extends LightboxItem = LightboxItem>(
 
   function setItems(input: readonly Item[], index?: number) {
     if (destroyed) throw new Error("This lightbox has been destroyed.");
-    const nextItems = input.length ? validateItems(input, options.content) : [];
+    const nextItems = input.length
+      ? validateItems(input, (session ? settings : current).content)
+      : [];
     if (index !== undefined && !Number.isFinite(index))
       throw new TypeError("Image index must be finite.");
     const s = session;
@@ -4645,10 +4686,17 @@ export function createLightbox<Item extends LightboxItem = LightboxItem>(
     append: (input) => setItems([...sources, ...input]),
     setItems,
     setOptions: (next) => {
-      if (!("loop" in next)) return;
+      for (const key of Object.keys(next) as (keyof typeof next)[])
+        if ((key as string) !== "container")
+          Object.assign(current, { [key]: next[key] });
+      const s = session;
+      if ("strings" in next) {
+        settings.strings = next.strings;
+        if (s) relabel(s);
+      }
+      if (!("loop" in next) || Boolean(next.loop) === loop) return;
       loop = Boolean(next.loop);
       publish({});
-      const s = session;
       if (!s || state.isClosing) return;
       const looped = s.carousel.getState().isLooping;
       quietly(() => {
@@ -4779,12 +4827,15 @@ export function bindLightboxGallery(
     items?: (root: HTMLElement) => readonly LightboxItem[];
   } = {},
 ) {
+  // Without a container the dialog goes to the body the page has at each open; a root in another
+  // document, such as a frame, takes that document's body.
   const controller = createLightbox({
     ...options,
-    // Read at each open, so a page that swaps its body still gets the dialog in the live one.
-    get container() {
-      return options.container ?? root.ownerDocument.body;
-    },
+    container:
+      options.container ??
+      (typeof document !== "undefined" && root.ownerDocument === document
+        ? undefined
+        : root.ownerDocument.body),
   });
   const click = (event: MouseEvent) => {
     if (

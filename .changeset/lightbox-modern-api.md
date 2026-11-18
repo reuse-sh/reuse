@@ -19,3 +19,4 @@ Migration:
 - `on(type, listener, { signal })` is typed by `LightboxEventMap`. Only `beforeclose` is a `LightboxCancelableEvent` with `preventDefault()` and `defaultPrevented`; the other events no longer carry them.
 - `LightboxState` gains `item` (the object you passed, not a copy), `canPrev`, `canNext` and `isPlaying`, and every field is `readonly`. The controller gains `play()` and `pause()` for the slideshow.
 - `createLightbox<Item>()` takes your item type, so `open()`, `setItems()`, `state.item`, `renderContent` and slots use it. `LightboxState`, `LightboxOptions`, `LightboxSlot` and `Lightbox` take the same parameter, `LightboxItem` by default.
+- `createLightbox` copies its options. Changing the object you passed no longer reaches the next open; call `setOptions()`, which now takes every option but `container`. Options apply at the next open, and `loop` and `strings` also change an open viewer at once.

@@ -27,7 +27,7 @@ LightboxOptions:
 - slots?: Partial<Record<LightboxSlotName, LightboxSlot>>
 - protect?: boolean, default false; turns off the photo's context menu, its long-press callout and the copy key (see The photo as a file)
 
-Every option except loop is read again at each open. loop is read when the controller is created and changed by setOptions, also while the viewer is open.
+createLightbox copies the options object, so changing that object later changes nothing. setOptions merges new values into the copy, and every option takes effect at the next open, except loop and strings, which also change an open viewer at once: loop as below, strings by relabeling the dialog, the controls, the thumbnails, the slides, the counter and a failed slide's message. The live region keeps its last announcement until the photo changes.
 
 Large galleries. Every item has an empty slide in the strip for native scroll snap; an image and renderContent mount only within preload of the current photo and in slides on screen while the strip moves. The viewer reads the size of one slide and places slide k at k × that width, so a frame of paging costs the same with 1000 photos as with 10, and a change of photo rewrites the state of the two slides and thumbnails it concerns. Thumbnails load with loading="lazy", and only the active one is measured.
 
@@ -83,7 +83,7 @@ Lightbox methods:
 Both stop when the returned function runs or the signal aborts, and an already aborted signal adds nothing. The same listener added twice is one listener.
 - append(items: readonly LightboxItem[]): void, adds images at the end without moving the current one
 - setItems(items: readonly LightboxItem[], index?: number): void, replaces the list; the current image stays when the list still holds it, matched by object and then by src, otherwise index or the nearest image left is shown, with a change event and the slide's announcement. An empty list closes the viewer with the usual close, beforeclose included. A list passed during the close flight waits until the dialog is removed, so the flight and the focus go to the photo on screen, and then sets count and clamps index; while closed, setItems sets them at once
-- setOptions(options: Pick<LightboxOptions, "loop">): void
+- setOptions(options: Partial<Omit<LightboxOptions<Item>, "container">>): void, replaces the given keys, a nested object such as strings or controls as a whole; container is fixed at creation
 - getSlide(index: number): HTMLElement | null
 - destroy(): void, idempotent, restores the page scroll, the hidden thumbnail and every style and listener it touched
 

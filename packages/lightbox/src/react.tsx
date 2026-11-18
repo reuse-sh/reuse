@@ -30,19 +30,19 @@ export function useLightbox(options: LightboxOptions = {}): LightboxHandle {
     chrome: "shown",
   });
   const handle = useMemo<LightboxController>(() => {
-    const optionsAtOpen: LightboxOptions = {};
     const ensure = () => {
-      for (const key of Object.keys(optionsAtOpen))
-        delete optionsAtOpen[key as keyof LightboxOptions];
-      Object.assign(optionsAtOpen, optionsRef.current);
       if (!controller.current) {
-        controller.current = createLightbox(optionsAtOpen);
+        controller.current = createLightbox(optionsRef.current);
         controller.current.subscribe(setState);
       }
       return controller.current;
     };
     return {
-      open: (items, index) => ensure().open(items, index),
+      open: (items, index) => {
+        const lightbox = ensure();
+        lightbox.setOptions(optionsRef.current);
+        lightbox.open(items, index);
+      },
       close: () => controller.current?.close() ?? Promise.resolve(),
       next: () => controller.current?.next(),
       prev: () => controller.current?.prev(),

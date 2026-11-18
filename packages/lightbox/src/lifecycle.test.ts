@@ -495,6 +495,33 @@ describe("lightbox lifecycle", () => {
     expect(flags().canNext).toBe(true);
   });
 
+  it("copies its options, applies setOptions at the next open, and strings at once", async () => {
+    const options: Parameters<typeof createLightbox>[0] = { history: false };
+    const controller = createLightbox(options);
+    controllers.push(controller);
+    options.thumbnails = "bottom";
+    controller.open(gallery);
+    const strip = () => dialog().querySelector(".re-lightbox-thumbnails");
+    const label = (selector: string) =>
+      dialog().querySelector(selector)?.getAttribute("aria-label");
+    expect(strip()).toBeNull();
+    controller.setOptions({
+      thumbnails: "bottom",
+      strings: { dialog: "Galerie", close: "Schließen", next: "Weiter" },
+    });
+    expect(strip()).toBeNull();
+    expect([
+      dialog().getAttribute("aria-label"),
+      label(".re-lightbox-close"),
+      label(".re-lightbox-next"),
+      label(".re-lightbox-prev"),
+    ]).toEqual(["Galerie", "Schließen", "Weiter", "Previous image"]);
+    await controller.close();
+    controller.open(gallery);
+    expect(strip()).not.toBeNull();
+    expect(label(".re-lightbox-close")).toBe("Schließen");
+  });
+
   it("stops a subscription and a listener when their signal aborts, and only beforeclose can cancel", () => {
     const stop = new AbortController();
     const states: number[] = [];
