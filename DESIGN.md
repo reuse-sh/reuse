@@ -44,7 +44,7 @@ Moving highlights follow Poise: they appear with a scale from 0.97 to 1, slide i
 
 ## Media
 
-Demonstration media are generated marble textures in apps/site/public/images/marble-*.svg, written by scripts/generate-marble.mjs. They carry no third-party image license.
+Demonstration media are generated marble textures. scripts/generate-marble.mjs writes them as apps/site/public/images/marble-*.svg, and scripts/rasterize-marble.mjs renders each one to WebP at 1.5 times its size, named by its pixel size. Pages and examples show the WebP files, because the blurred SVGs repaint on every frame a photo moves. They carry no third-party image license.
 
 ## Verification
 

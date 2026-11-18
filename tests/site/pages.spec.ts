@@ -1,9 +1,6 @@
-import { fileURLToPath } from "node:url";
 import { type BrowserContext, expect, test } from "@playwright/test";
+import { serveExampleImages } from "./images";
 
-const publicDir = fileURLToPath(
-  new URL("../../apps/site/public", import.meta.url),
-);
 const viewports = [
   { width: 320, height: 640 },
   { width: 1280, height: 800 },
@@ -15,16 +12,17 @@ async function problems(context: BrowserContext, path: string) {
   await page.route("https://cdn.visitors.now/v.js", (route) =>
     route.fulfill({ contentType: "application/javascript", body: "" }),
   );
-  await page.route("https://reuse.sh/images/**", (route) =>
-    route.fulfill({
-      path: `${publicDir}${new URL(route.request().url()).pathname}`,
-    }),
-  );
+  await serveExampleImages(page);
   const found: string[] = [];
   page.on("console", (message) => {
     if (message.type() === "error") found.push(`console: ${message.text()}`);
   });
   page.on("pageerror", (error) => found.push(`page error: ${error.message}`));
+  // The blurred marble SVGs repaint on every frame a photo moves; pages show the WebP renders.
+  page.on("request", (request) => {
+    if (/\/images\/marble-[^/]*\.svg$/.test(new URL(request.url()).pathname))
+      found.push(`vector photo: ${request.url()}`);
+  });
   page.on("response", (response) => {
     if (response.status() >= 400)
       found.push(`HTTP ${response.status()}: ${response.url()}`);

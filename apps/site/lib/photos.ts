@@ -23,26 +23,26 @@ const marble = [
 
 export const photos = marble.map(([id, caption, alt]) => ({
   id,
-  src: `/images/marble-${id}.svg`,
+  src: `/images/marble-${id}.webp`,
   alt,
   caption,
-  width: 1600,
-  height: 1200,
+  width: 2400,
+  height: 1800,
 }));
 
 const prints = [
-  ["lake", 1600, 900, "Coral sky", "Coral, sand and blue"],
-  ["night", 800, 1200, "Blue hour", "Blue, lilac and gold"],
-  ["mountains", 1500, 1000, "Mint and ember", "Mint, blue and orange"],
-  ["coast", 1200, 1200, "Lilac bloom", "Lilac, rose and sea green"],
-  ["woods", 2100, 900, "Amber", "A wide crop in orange, yellow and blue"],
-  ["forest", 900, 1200, "Sand and fern", "Sand, green and violet"],
-  ["dune", 1600, 1200, "Sea glass", "Sea green, blue and pink"],
-  ["meadow", 1500, 1000, "Dusk", "Periwinkle, peach and green"],
-  ["mountains", 900, 1200, "Ember study", "A narrow crop of Mint and ember"],
-  ["coast", 1600, 900, "Lilac shore", "Lilac, rose and sea green"],
-  ["night", 1600, 1200, "Gold edge", "Blue, lilac and gold"],
-  ["woods", 1200, 1200, "Amber square", "Orange, yellow and blue"],
+  ["lake", 2400, 1350, "Coral sky", "Coral, sand and blue"],
+  ["night", 1200, 1800, "Blue hour", "Blue, lilac and gold"],
+  ["mountains", 2250, 1500, "Mint and ember", "Mint, blue and orange"],
+  ["coast", 1800, 1800, "Lilac bloom", "Lilac, rose and sea green"],
+  ["woods", 3150, 1350, "Amber", "A wide crop in orange, yellow and blue"],
+  ["forest", 1350, 1800, "Sand and fern", "Sand, green and violet"],
+  ["dune", 2400, 1800, "Sea glass", "Sea green, blue and pink"],
+  ["meadow", 2250, 1500, "Dusk", "Periwinkle, peach and green"],
+  ["mountains", 1350, 1800, "Ember study", "A narrow crop of Mint and ember"],
+  ["coast", 2400, 1350, "Lilac shore", "Lilac, rose and sea green"],
+  ["night", 2400, 1800, "Gold edge", "Blue, lilac and gold"],
+  ["woods", 1800, 1800, "Amber square", "Orange, yellow and blue"],
 ] as const;
 
 /** Marble photos in mixed proportions, for layouts that keep each picture's ratio. */
@@ -52,7 +52,7 @@ export const galleryPhotos = prints.map(([id, width, height, title, note]) => {
   if (!photo) throw new Error(`No marble photo "${id}".`);
   return {
     id: `${id}-${size}`,
-    src: size === "1600x1200" ? photo.src : `/images/marble-${id}-${size}.svg`,
+    src: size === "2400x1800" ? photo.src : `/images/marble-${id}-${size}.webp`,
     alt: photo.alt,
     title,
     note,

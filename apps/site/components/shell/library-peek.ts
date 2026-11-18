@@ -46,7 +46,7 @@ function target<T extends HTMLElement>(node: T, name: string) {
 function img(index: number, size?: string) {
   const image = document.createElement("img");
   const photo = photos[index % photos.length];
-  image.src = size ? photo.src.replace(".svg", `-${size}.svg`) : photo.src;
+  image.src = size ? photo.src.replace(".webp", `-${size}.webp`) : photo.src;
   image.alt = "";
   image.decoding = "async";
   image.draggable = false;
@@ -174,7 +174,7 @@ function carousel(): Scene {
   const viewport = el(
     "div",
     "pk-car-track",
-    ...order.map((i) => el("div", "pk-car-slide", img(i, "1500x1000"))),
+    ...order.map((i) => el("div", "pk-car-slide", img(i, "2250x1500"))),
   );
   const dots = order.map(() => el("i"));
   const prev = target(el("button", "pk-car-arrow", arrow("left", 13)), "prev");
@@ -230,8 +230,8 @@ function annotations(): Scene {
   const base = {
     src: photos[2].src,
     alt: "",
-    width: 1600,
-    height: 1200,
+    width: 2400,
+    height: 1800,
   };
   let marks: Annotation[] = [];
   let image: ReturnType<typeof createAnnotatedImage> | undefined;
@@ -352,14 +352,14 @@ function resizable(
 
 function justified(): Scene {
   const sizes = [
-    "1600x900",
-    "900x1200",
-    "1500x1000",
-    "1200x1200",
-    "2100x900",
-    "800x1200",
-    "1500x1000",
-    "1600x900",
+    "2400x1350",
+    "1350x1800",
+    "2250x1500",
+    "1800x1800",
+    "3150x1350",
+    "1200x1800",
+    "2250x1500",
+    "2400x1350",
   ];
   const box = el(
     "div",
@@ -397,7 +397,7 @@ function masonry(): Scene {
     "div",
     "pk-mas",
     ...heights.map((height, i) => {
-      const card = el("span", "pk-mas-card", img(i + 2, "900x1200"));
+      const card = el("span", "pk-mas-card", img(i + 2, "1350x1800"));
       card.style.height = `${height}px`;
       return card;
     }),
@@ -746,7 +746,7 @@ function shadows(): Scene {
     el(
       "span",
       "pk-sh-card re-shadow-ring-sm",
-      img(5, "1500x1000"),
+      img(5, "2250x1500"),
       el("span", "pk-sh-lines", el("i"), el("i")),
     ),
     "card",
@@ -790,7 +790,7 @@ function gradients(): Scene {
   const photo = el(
     "div",
     "pk-gr-photo",
-    img(4, "1500x1000"),
+    img(4, "2250x1500"),
     scrim(false),
     scrim(true),
     el("span", "pk-gr-tag", "Linear"),
@@ -855,9 +855,9 @@ function demoStage(): Scene {
       el(
         "span",
         "pk-ds-body",
-        img(0, "1200x1200"),
-        img(3, "1200x1200"),
-        img(6, "1200x1200"),
+        img(0, "1800x1800"),
+        img(3, "1800x1800"),
+        img(6, "1800x1800"),
       ),
     ),
     el("div", "pk-ds-pop re-shadow-ring-lg", link),

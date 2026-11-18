@@ -10,49 +10,49 @@ const photos = [
     id: "mountains",
     caption: "Mint and ember",
     alt: "A soft marble texture in mint, blue and orange",
-    src: "https://reuse.sh/images/marble-mountains.svg",
-    width: 1600,
-    height: 1200,
+    src: "https://reuse.sh/images/marble-mountains.webp",
+    width: 2400,
+    height: 1800,
   },
   {
     id: "night",
     caption: "Blue hour",
     alt: "A soft marble texture in blue, lilac and gold",
-    src: "https://reuse.sh/images/marble-night.svg",
-    width: 1600,
-    height: 1200,
+    src: "https://reuse.sh/images/marble-night.webp",
+    width: 2400,
+    height: 1800,
   },
   {
     id: "lake",
     caption: "Coral sky",
     alt: "A soft marble texture in coral, sand and blue",
-    src: "https://reuse.sh/images/marble-lake.svg",
-    width: 1600,
-    height: 1200,
+    src: "https://reuse.sh/images/marble-lake.webp",
+    width: 2400,
+    height: 1800,
   },
   {
     id: "woods",
     caption: "Amber",
     alt: "A soft marble texture in orange, yellow and blue",
-    src: "https://reuse.sh/images/marble-woods.svg",
-    width: 1600,
-    height: 1200,
+    src: "https://reuse.sh/images/marble-woods.webp",
+    width: 2400,
+    height: 1800,
   },
   {
     id: "forest",
     caption: "Sand and fern",
     alt: "A soft marble texture in sand, green and violet",
-    src: "https://reuse.sh/images/marble-forest.svg",
-    width: 1600,
-    height: 1200,
+    src: "https://reuse.sh/images/marble-forest.webp",
+    width: 2400,
+    height: 1800,
   },
   {
     id: "coast",
     caption: "Lilac bloom",
     alt: "A soft marble texture in lilac, rose and sea green",
-    src: "https://reuse.sh/images/marble-coast.svg",
-    width: 1600,
-    height: 1200,
+    src: "https://reuse.sh/images/marble-coast.webp",
+    width: 2400,
+    height: 1800,
   },
 ];
 export function Example() {
@@ -107,8 +107,8 @@ export function Example() {
                 <img
                   src={photo.src}
                   alt={photo.alt}
-                  width={1600}
-                  height={1200}
+                  width={2400}
+                  height={1800}
                   draggable={false}
                 />
               </a>

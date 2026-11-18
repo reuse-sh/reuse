@@ -69,8 +69,8 @@ export function Example() {
                 <img
                   src={photo.src}
                   alt={photo.alt}
-                  width={1600}
-                  height={1200}
+                  width={2400}
+                  height={1800}
                   draggable={false}
                 />
               </figure>

@@ -16,49 +16,49 @@ const photos = [
     id: "lake",
     caption: "Coral sky",
     alt: "A soft marble texture in coral, sand and blue",
-    src: "https://reuse.sh/images/marble-lake.svg",
+    src: "https://reuse.sh/images/marble-lake.webp",
   },
   {
     id: "mountains",
     caption: "Mint and ember",
     alt: "A soft marble texture in mint, blue and orange",
-    src: "https://reuse.sh/images/marble-mountains.svg",
+    src: "https://reuse.sh/images/marble-mountains.webp",
   },
   {
     id: "coast",
     caption: "Lilac bloom",
     alt: "A soft marble texture in lilac, rose and sea green",
-    src: "https://reuse.sh/images/marble-coast.svg",
+    src: "https://reuse.sh/images/marble-coast.webp",
   },
   {
     id: "forest",
     caption: "Sand and fern",
     alt: "A soft marble texture in sand, green and violet",
-    src: "https://reuse.sh/images/marble-forest.svg",
+    src: "https://reuse.sh/images/marble-forest.webp",
   },
   {
     id: "night",
     caption: "Blue hour",
     alt: "A soft marble texture in blue, lilac and gold",
-    src: "https://reuse.sh/images/marble-night.svg",
+    src: "https://reuse.sh/images/marble-night.webp",
   },
   {
     id: "woods",
     caption: "Amber",
     alt: "A soft marble texture in orange, yellow and blue",
-    src: "https://reuse.sh/images/marble-woods.svg",
+    src: "https://reuse.sh/images/marble-woods.webp",
   },
   {
     id: "dune",
     caption: "Sea glass",
     alt: "A soft marble texture in sea green, blue and pink",
-    src: "https://reuse.sh/images/marble-dune.svg",
+    src: "https://reuse.sh/images/marble-dune.webp",
   },
   {
     id: "meadow",
     caption: "Dusk",
     alt: "A soft marble texture in periwinkle, peach and green",
-    src: "https://reuse.sh/images/marble-meadow.svg",
+    src: "https://reuse.sh/images/marble-meadow.webp",
   },
 ];
 function Choice<T extends string>({
@@ -175,8 +175,8 @@ export function Example() {
               className="block aspect-4/3 h-auto w-full rounded-lg object-cover"
               src={photo.src}
               alt={photo.alt}
-              width={1600}
-              height={1200}
+              width={2400}
+              height={1800}
               draggable={false}
             />
             <figcaption className="mt-2 text-label text-subtle-foreground">

@@ -80,10 +80,10 @@ export function Example() {
         {/* biome-ignore lint/performance/noImgElement: this standalone recipe uses a native image. */}
         <img
           className="block aspect-landscape h-auto w-full object-cover"
-          src="https://reuse.sh/images/marble-forest.svg"
+          src="https://reuse.sh/images/marble-forest.webp"
           alt="A soft marble texture in sand, green and violet"
-          width={1600}
-          height={1200}
+          width={2400}
+          height={1800}
         />
         <figcaption
           className={cn(

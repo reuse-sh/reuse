@@ -112,7 +112,7 @@ export function LightboxLaunch({
                 void open(index);
               }}
             >
-              {/* biome-ignore lint/performance/noImgElement: marble SVGs are served as is; the lightbox reads the rendered image as its origin. */}
+              {/* biome-ignore lint/performance/noImgElement: marble photos are served as is; the lightbox reads the rendered image as its origin. */}
               <img
                 src={item.src}
                 alt={item.alt}

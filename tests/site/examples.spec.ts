@@ -3,8 +3,10 @@ import { lightboxStyles } from "../../apps/site/components/docs/lightbox-styles"
 import originalGeometry from "./fixtures/demo-geometry.json" with {
   type: "json",
 };
+import { serveExampleImages } from "./images";
 
 test.use({ viewport: { width: 1280, height: 800 } });
+test.beforeEach(({ context }) => serveExampleImages(context));
 const preview = '[data-slot="example-preview"]';
 const chooser = '[data-slot="docs-sidebar"] .re-framework';
 

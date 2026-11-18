@@ -90,7 +90,7 @@ function slides() {
   return photos
     .map(
       (photo) =>
-        `<figure class="cc-slide" data-carousel-slide><img src="${attr(photo.src)}" alt="${attr(photo.alt)}" width="1600" height="1200" draggable="false"></figure>`,
+        `<figure class="cc-slide" data-carousel-slide><img src="${attr(photo.src)}" alt="${attr(photo.alt)}" width="2400" height="1800" draggable="false"></figure>`,
     )
     .join("");
 }

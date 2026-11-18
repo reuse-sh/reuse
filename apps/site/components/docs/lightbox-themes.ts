@@ -244,7 +244,7 @@ const lightbox = createLightbox({
 function previewItems(preset?: Preset) {
   return photos.map((photo, index) => {
     const src = preset?.square
-      ? `/images/marble-${photo.id}-1200x1200.svg`
+      ? `/images/marble-${photo.id}-1800x1800.webp`
       : photo.src;
     return {
       src,
@@ -252,8 +252,8 @@ function previewItems(preset?: Preset) {
       thumbnailSrc: src,
       alt: photo.alt,
       caption: photo.caption,
-      width: preset?.square ? 1200 : photo.width,
-      height: preset?.square ? 1200 : photo.height,
+      width: preset?.square ? 1800 : photo.width,
+      height: preset?.square ? 1800 : photo.height,
       ...preset?.extra?.(index),
     };
   });

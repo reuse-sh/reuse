@@ -5,7 +5,7 @@ import { Stage, type StageAct } from "@reuse-sh/stage/react";
 import { type FormEvent, useState } from "react";
 import "./scene.css";
 
-const image = (id: string) => `https://reuse.sh/images/marble-${id}.svg`;
+const image = (id: string) => `https://reuse.sh/images/marble-${id}.webp`;
 const team = [
   { name: "Mara Lind", src: image("mountains") },
   { name: "Jonas Weber", src: image("coast") },
@@ -80,7 +80,7 @@ export function Example() {
         <div className="sd-board">
           {["lake", "dune", "woods", "meadow"].map((id) => (
             // biome-ignore lint/performance/noImgElement: standalone examples use native images.
-            <img key={id} src={image(id)} alt="" width={1600} height={1200} />
+            <img key={id} src={image(id)} alt="" width={2400} height={1800} />
           ))}
         </div>
         <form

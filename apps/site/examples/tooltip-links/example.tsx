@@ -13,22 +13,22 @@ function escapeHtml(value: string) {
 }
 const photos = [
   {
-    src: "https://reuse.sh/images/marble-lake.svg",
+    src: "https://reuse.sh/images/marble-lake.webp",
     alt: "A soft marble texture in coral, sand and blue",
-    width: 1600,
-    height: 1200,
+    width: 2400,
+    height: 1800,
   },
   {
-    src: "https://reuse.sh/images/marble-mountains.svg",
+    src: "https://reuse.sh/images/marble-mountains.webp",
     alt: "A soft marble texture in mint, blue and orange",
-    width: 1600,
-    height: 1200,
+    width: 2400,
+    height: 1800,
   },
   {
-    src: "https://reuse.sh/images/marble-coast.svg",
+    src: "https://reuse.sh/images/marble-coast.webp",
     alt: "A soft marble texture in lilac, rose and sea green",
-    width: 1600,
-    height: 1200,
+    width: 2400,
+    height: 1800,
   },
 ];
 
@@ -100,7 +100,7 @@ export function TooltipLinks() {
         <Template
           key={id}
           id={`tt-print-${id}`}
-          html={`<span class="grid grid-cols-3 gap-3 w-72 max-w-full text-label leading-4.5 [&>img]:w-21 [&>img]:h-21 [&>img]:rounded-control [&>img]:object-cover"><img src="${escapeHtml(photo.src)}" alt="" width="1600" height="1200"><span class="col-span-2 grid content-start gap-0.5 pt-0.5 pr-1.5 [&>b]:font-semibold [&>span]:text-muted-foreground [&>small]:mt-0.5 [&>small]:text-caption [&>small]:text-subtle-foreground"><b>${escapeHtml(name)}</b><span>${escapeHtml(text)}</span><small>prints.example.com</small></span></span>`}
+          html={`<span class="grid grid-cols-3 gap-3 w-72 max-w-full text-label leading-4.5 [&>img]:w-21 [&>img]:h-21 [&>img]:rounded-control [&>img]:object-cover"><img src="${escapeHtml(photo.src)}" alt="" width="2400" height="1800"><span class="col-span-2 grid content-start gap-0.5 pt-0.5 pr-1.5 [&>b]:font-semibold [&>span]:text-muted-foreground [&>small]:mt-0.5 [&>small]:text-caption [&>small]:text-subtle-foreground"><b>${escapeHtml(name)}</b><span>${escapeHtml(text)}</span><small>prints.example.com</small></span></span>`}
         />
       ))}
     </>
