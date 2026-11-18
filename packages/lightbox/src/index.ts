@@ -2439,6 +2439,19 @@ export function createLightbox<Item extends LightboxItem = LightboxItem>(
     s.roving = index;
   }
 
+  function overThumbnails(s: Session, x: number, y: number) {
+    const first = s.thumbs[0]?.getBoundingClientRect();
+    const last = s.thumbs.at(-1)?.getBoundingClientRect();
+    const strip = s.thumbStrip?.getBoundingClientRect();
+    if (!first || !last || !strip || !strip.width) return false;
+    return (
+      x >= Math.max(strip.left, Math.min(first.left, last.left)) &&
+      x <= Math.min(strip.right, Math.max(first.right, last.right)) &&
+      y >= Math.max(strip.top, Math.min(first.top, last.top)) &&
+      y <= Math.min(strip.bottom, Math.max(first.bottom, last.bottom))
+    );
+  }
+
   // The bottom strip is a carousel that centers the thumbnail; the side column has no carousel
   // axis, so it scrolls the same way natively.
   function centerThumb(s: Session) {
@@ -3390,6 +3403,7 @@ export function createLightbox<Item extends LightboxItem = LightboxItem>(
         clearTimeout(s.tapTimer);
         s.tapTimer = undefined;
         s.lastTap = undefined;
+        if (!onPhoto && overThumbnails(s, current.x, current.y)) return;
         const doubleTap =
           settings.imageClick !== "close" &&
           settings.doubleTapZoom !== false &&
@@ -3498,7 +3512,7 @@ export function createLightbox<Item extends LightboxItem = LightboxItem>(
             event.clientY >= box.top &&
             event.clientY <= box.bottom);
         if (!onPhoto) {
-          void close();
+          if (!overThumbnails(s, event.clientX, event.clientY)) void close();
           return;
         }
         if (settings.imageClick === "close") void close();

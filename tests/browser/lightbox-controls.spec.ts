@@ -1446,3 +1446,19 @@ test("the photo fits beside the thumbnails: above the bottom strip and before th
   await open(page, { thumbnails: "side" });
   expect((await edges()).side).toBeGreaterThanOrEqual(0);
 });
+
+test("a click in the gap between two thumbnails keeps the viewer open", {
+  tag: "@desktop",
+}, async ({ page }) => {
+  await open(page, { thumbnails: "bottom" }, { count: 8 });
+  await page.waitForTimeout(500);
+  const gap = await page.evaluate(() => {
+    const [a, b] = [
+      ...document.querySelectorAll(".re-lightbox-thumbnails button"),
+    ].map((thumb) => thumb.getBoundingClientRect());
+    return { x: (a.right + b.left) / 2, y: a.top + a.height / 2 };
+  });
+  await page.mouse.click(gap.x, gap.y);
+  await page.waitForTimeout(400);
+  expect((await lightbox(page)).isOpen).toBe(true);
+});
