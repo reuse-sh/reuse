@@ -4972,10 +4972,13 @@ function markupOptions(root: HTMLElement) {
   return options as Partial<LightboxOptions>;
 }
 
+const DEFAULT_TRIGGERS =
+  "a[href]:not([download]):is(:has(img), [data-lightbox-type], [data-lightbox-src]), button, img:not(a[download] img)";
+
 export interface LightboxGalleryOptions<
   Item extends LightboxItem = LightboxItem,
 > {
-  /** The triggers inside root, "a[href], button, img" by default; a trigger inside another counts as the outer one. */
+  /** The triggers inside root; by default buttons, images and links that hold an img or carry data-lightbox-type or data-lightbox-src, never a[download]. A trigger inside another counts as the outer one. */
   selector?: string;
   /** The item a trigger opens, lightboxItemFromElement by default; null leaves the trigger's click to the page. */
   item?: (trigger: HTMLElement) => Item | null;
@@ -5004,7 +5007,7 @@ export function bindLightboxGallery<Item extends LightboxItem = LightboxItem>(
         ),
       ),
     );
-  const selector = options.selector ?? "a[href], button, img";
+  const selector = options.selector ?? DEFAULT_TRIGGERS;
   const read =
     options.item ??
     (lightboxItemFromElement as (trigger: HTMLElement) => Item | null);

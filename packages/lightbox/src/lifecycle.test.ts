@@ -1738,6 +1738,34 @@ describe("lightbox public API", () => {
       }).toThrow(/data-lightbox-options on div#prints/);
   });
 
+  it("takes a link as a trigger only for an image or lightbox data, and never a download link", () => {
+    const root = document.createElement("div");
+    root.innerHTML = `<figure>
+      <a href="/full-0.jpg"><img src="/tile-0.jpg" alt="Tile"></a>
+      <figcaption><a href="/full-0.jpg" download>Download full size</a> <a href="/full-0.jpg">Full size</a></figcaption>
+    </figure>
+    <a href="/full-1.jpg" download><img src="/tile-1.jpg" alt="Saved"></a>
+    <a href="/clip.html" data-lightbox-src="/full-2.jpg">Third</a>`;
+    document.body.append(root);
+    const controller = create({ history: false });
+    bindLightboxGallery(root, controller);
+    const click = (element: Element) => {
+      const event = new MouseEvent("click", { bubbles: true, cancelable: true });
+      element.dispatchEvent(event);
+      return event.defaultPrevented;
+    };
+    const [, download, text, saved] = root.querySelectorAll("a");
+    expect([
+      click(download),
+      click(text),
+      click(saved.querySelector("img") as HTMLImageElement),
+    ]).toEqual([false, false, false]);
+    expect(document.querySelector("dialog")).toBeNull();
+    expect(click(root.querySelector("img") as HTMLImageElement)).toBe(true);
+    expect(controller.getState()).toMatchObject({ index: 0, count: 2 });
+    expect(controller.getState().item?.src).toBe("/full-0.jpg");
+  });
+
   it("refuses a second argument that is no lightbox, and leaves clicks to the page once the lightbox is destroyed", () => {
     const root = document.createElement("div");
     root.innerHTML = `<a href="/0.jpg"><img src="/0.jpg"></a>`;
