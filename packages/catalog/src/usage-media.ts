@@ -615,7 +615,7 @@ const gallery = bindLightboxGallery(document.querySelector("#gallery"), { imageC
         blocks: [
           {
             kind: "prose",
-            text: "Each slide opens the viewer at its own index. connectCarousel moves the strip to the photo the viewer settles on and holds its autoplay while the viewer is open, so the close flies back into a tile that is already in view. getOrigin gives the tile for each index.",
+            text: "Each slide opens the viewer at its own index. connectCarousel moves the strip to the photo the viewer settles on and holds its autoplay while the viewer is open, so the close flies back into a tile that is already in view. Each item's origin is a function that returns its tile.",
           },
           {
             kind: "code",
@@ -636,7 +636,8 @@ const photos = [
 
 export function PhotoStrip() {
   const images = useRef<(HTMLImageElement | null)[]>([]);
-  const lightbox = useLightbox({ getOrigin: (index) => images.current[index] ?? null });
+  const lightbox = useLightbox();
+  const items = photos.map((photo, index) => ({ ...photo, origin: () => images.current[index] ?? null }));
   const viewer = useRef(lightbox);
   viewer.current = lightbox;
   const { ref, carousel } = useCarousel();
@@ -645,7 +646,7 @@ export function PhotoStrip() {
   }, [carousel]);
   return <div ref={ref} className="re-carousel" aria-label="Photos">
     {photos.map((photo, index) => (
-      <button key={photo.src} type="button" className="re-carousel__slide basis-1/2" onClick={() => lightbox.open(photos, index)}>
+      <button key={photo.src} type="button" className="re-carousel__slide basis-1/2" onClick={() => lightbox.open(items, index)}>
         <img ref={(image) => { images.current[index] = image; }} src={photo.src} alt={photo.alt} width={photo.width} height={photo.height} />
       </button>
     ))}
@@ -783,7 +784,7 @@ carousel.destroy();`,
         blocks: [
           {
             kind: "prose",
-            text: "One viewer opens every photo in the conversation as one sequence. An album shows its first four photos and puts the count of the rest on the fourth tile. getOrigin returns that tile for each photo it stands for, so a close on a photo without a tile shrinks into it.",
+            text: "One viewer opens every photo in the conversation as one sequence. An album shows its first four photos and puts the count of the rest on the fourth tile. Each photo's origin is a function that returns that tile for every photo it stands for, so a close on a photo without a tile shrinks into it.",
           },
           {
             kind: "code",
@@ -801,7 +802,8 @@ const shown = 4;
 export function Conversation({ messages }: { messages: Message[] }) {
   const photos = messages.flatMap((message) => message.photos);
   const tiles = useRef<(HTMLButtonElement | null)[]>([]);
-  const lightbox = useLightbox({ getOrigin: (index) => tiles.current[index] ?? null });
+  const lightbox = useLightbox();
+  const items = photos.map((photo, index) => ({ ...photo, origin: () => tiles.current[index] ?? null }));
   let start = 0;
   return <div>{messages.map((message) => {
     const first = start;
@@ -814,7 +816,7 @@ export function Conversation({ messages }: { messages: Message[] }) {
           <button key={photo.src} type="button" className="relative" ref={(tile) => {
             const last = index === shown - 1 ? message.photos.length : index + 1;
             for (let at = index; at < last; at++) tiles.current[first + at] = tile;
-          }} onClick={() => lightbox.open(photos, first + index)}>
+          }} onClick={() => lightbox.open(items, first + index)}>
             <img src={photo.src} alt={photo.alt} width="160" height="160" />
             {index === shown - 1 && hidden > 0 ? <span className="absolute inset-0 grid place-items-center">+{hidden}</span> : null}
           </button>
@@ -908,8 +910,8 @@ const conversation = document.querySelector("#conversation");
 const links = [...conversation.querySelectorAll("a[href]")];
 let tile = null;
 const tiles = links.map((link) => (tile = link.hidden ? tile : link));
-const items = links.map((link) => ({ src: link.href, alt: link.querySelector("img").alt }));
-const lightbox = createLightbox({ getOrigin: (index) => tiles[index] });
+const items = links.map((link, index) => ({ src: link.href, alt: link.querySelector("img").alt, origin: tiles[index] }));
+const lightbox = createLightbox();
 const onClick = (event) => {
   const link = event.target.closest("a[href]");
   if (!link || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;

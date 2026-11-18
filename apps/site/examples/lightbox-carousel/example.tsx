@@ -19,10 +19,11 @@ const items = photos.map((photo) => ({
 
 export function Example() {
   const images = useRef<(HTMLImageElement | null)[]>([]);
-  const viewer = useLightbox({
-    thumbnails: "bottom",
-    getOrigin: (index) => images.current[index] ?? null,
-  });
+  const viewer = useLightbox({ thumbnails: "bottom" });
+  const opened = items.map((item, index) => ({
+    ...item,
+    origin: () => images.current[index] ?? null,
+  }));
   const lightbox = useRef(viewer);
   lightbox.current = viewer;
   const { ref, carousel } = useCarousel({ loop: false });
@@ -72,7 +73,7 @@ export function Example() {
             type="button"
             className="re-carousel__slide grid gap-2 rounded-lg text-start text-foreground cursor-zoom-in focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
             data-carousel-slide
-            onClick={() => viewer.open(items, index)}
+            onClick={() => viewer.open(opened, index)}
           >
             {/* biome-ignore lint/performance/noImgElement: standalone examples use native images. */}
             <img

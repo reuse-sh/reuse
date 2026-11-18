@@ -1130,17 +1130,14 @@ describe("lightbox public API", () => {
     document.body.append(opener, first, second, swapped, picked);
     opener.focus();
     let tile = second;
-    const controller = create({
-      history: false,
-      getOrigin: (index) => (index === 2 ? picked : null),
-    });
+    const controller = create({ history: false });
     controller.on("beforeclose", () => {
       tile = swapped;
     });
     const items = [
       { ...gallery[0], origin: first },
       { ...gallery[1], origin: () => tile },
-      gallery[2],
+      { ...gallery[2], origin: () => picked },
       gallery[3],
     ];
     controller.open(items, 1);
@@ -1366,17 +1363,17 @@ describe("lightbox public API", () => {
     expect(() => controller.open([])).toThrow(TypeError);
   });
 
-  it("leaves no dialog, scroll lock or open state when a slot, renderContent or getOrigin throws in open()", () => {
+  it("leaves no dialog, scroll lock or open state when a slot, renderContent or an origin throws in open()", () => {
     const fail = (): never => {
       throw new Error("Broken");
     };
-    for (const options of [
-      { slots: { toolbarEnd: fail } },
-      { renderContent: fail },
-      { getOrigin: fail },
-    ]) {
+    for (const [options, items] of [
+      [{ slots: { toolbarEnd: fail } }, gallery],
+      [{ renderContent: fail }, gallery],
+      [{}, gallery.map((item) => ({ ...item, origin: fail }))],
+    ] as const) {
       const controller = create({ history: false, ...options });
-      expect(() => controller.open(gallery, 1)).toThrow("Broken");
+      expect(() => controller.open(items, 1)).toThrow("Broken");
       expect(document.querySelector("dialog")).toBeNull();
       expect(document.body.style.overflow).toBe("");
       expect(controller.getState()).toMatchObject({

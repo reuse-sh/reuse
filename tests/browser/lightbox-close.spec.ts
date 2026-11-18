@@ -605,17 +605,14 @@ test("a photo behind the +3 tile of a seven-photo album lands in that tile with 
     const shown = [...album.querySelectorAll("img")];
     const more = document.getElementById("more") as HTMLElement;
     const sources = [...shown.map((image) => image.src)];
-    const lightbox = createLightbox({
-      history: false,
-      autoHide: false,
-      getOrigin: (index) => shown[index] ?? more,
-    });
+    const lightbox = createLightbox({ history: false, autoHide: false });
     const items = Array.from({ length: 7 }, (_, index) => ({
       src:
         sources[index] ??
         `data:image/svg+xml,${encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="800"><rect width="1200" height="800" fill="hsl(${index * 47} 60% 55%)"/></svg>`)}`,
       width: 1200,
       height: 800,
+      origin: () => shown[index] ?? more,
     }));
     Object.assign(window, { lightbox, items, tiles: [more] });
   });

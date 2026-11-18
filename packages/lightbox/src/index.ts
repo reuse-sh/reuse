@@ -238,7 +238,6 @@ export interface LightboxOptions {
   history?: boolean;
   strings?: Partial<LightboxStrings>;
   slots?: Partial<Record<LightboxSlotName, LightboxSlot>>;
-  getOrigin?: (index: number) => HTMLElement | null;
   protect?: boolean;
   /** Reports discrete actions, completed pointer gestures, and wheel input after 150ms idle. */
   onChange?: (state: LightboxState) => void;
@@ -1061,7 +1060,7 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
   }
 
   function originOf(index: number) {
-    return resolveOrigin(settings.getOrigin?.(index) ?? items[index]?.origin);
+    return resolveOrigin(items[index]?.origin);
   }
 
   function rendered(element: HTMLElement) {

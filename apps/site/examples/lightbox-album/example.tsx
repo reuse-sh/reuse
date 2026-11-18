@@ -45,10 +45,11 @@ const items = sequence.map((photo) => ({
 
 export function Example() {
   const tiles = useRef<(HTMLButtonElement | null)[]>([]);
-  const viewer = useLightbox({
-    thumbnails: "bottom",
-    getOrigin: (index) => tiles.current[index] ?? null,
-  });
+  const viewer = useLightbox({ thumbnails: "bottom" });
+  const opened = items.map((item, index) => ({
+    ...item,
+    origin: () => tiles.current[index] ?? null,
+  }));
   let first = 0;
   return (
     <div className="flex w-full min-w-0 flex-col gap-1.5 overflow-hidden rounded-2xl bg-card p-4 shadow-panel max-sm:px-3">
@@ -82,7 +83,7 @@ export function Example() {
                   ? `Open ${photo.title} and ${hidden} more`
                   : `Open ${photo.title}`
               }
-              onClick={() => viewer.open(items, index)}
+              onClick={() => viewer.open(opened, index)}
             >
               {/* biome-ignore lint/performance/noImgElement: standalone examples use native images. */}
               <img
