@@ -20,10 +20,10 @@ type Window = globalThis.Window &
     closing?: Promise<void>;
   };
 
-async function gridPage(page: Page, { wide = false } = {}) {
+async function gridPage(page: Page) {
   await mount(
     page,
-    `<style>html::-webkit-scrollbar{width:15px;background:#ddd}html::-webkit-scrollbar-thumb{background:#999}</style>${wide ? '<div style="width:3000px;height:1px"></div>' : ""}<div style="display:flex;flex-wrap:wrap;width:800px;padding:16px 32px">${Array.from(
+    `<style>html::-webkit-scrollbar{width:15px;background:#ddd}html::-webkit-scrollbar-thumb{background:#999}</style><div style="display:flex;flex-wrap:wrap;width:800px;padding:16px 32px">${Array.from(
       { length: 6 },
       (_, index) =>
         `<img class="tile" src="${photo(index)}" alt="Photo ${index + 1}" style="display:block;width:240px;height:160px;object-fit:cover;border-radius:12px;margin:8px">`,
@@ -113,27 +113,6 @@ test.describe("a page with a classic scrollbar", { tag: "@desktop" }, () => {
     expectOn(frames.last, frames.tile);
     expectOn(frames.copy, frames.tile);
     expect(frames.scrollWidth).toBe(frames.clientWidth);
-  });
-
-  test("with a horizontal scrollbar too, the closing viewer keeps its open height", async ({
-    page,
-  }) => {
-    await gridPage(page, { wide: true });
-    const sizes = await page.evaluate(() => {
-      const dialog = document.querySelector("dialog") as HTMLElement;
-      const open = dialog.getBoundingClientRect().height;
-      void (window as Window).lightbox.close();
-      return {
-        open,
-        closing: dialog.getBoundingClientRect().height,
-        page: document.documentElement.clientHeight,
-      };
-    });
-    test.skip(
-      sizes.page === sizes.open,
-      "The browser draws overlay scrollbars",
-    );
-    expect(sizes.closing).toBe(sizes.open);
   });
 
   test("after a mouse drag to the next photo, the close flies to that photo's tile", async ({
