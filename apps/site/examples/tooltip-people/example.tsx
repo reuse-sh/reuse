@@ -14,22 +14,22 @@ function escapeHtml(value: string) {
 }
 const photos = [
   {
-    src: "https://reuse.sh/images/marble-lake.svg",
+    src: "/images/marble-lake.webp",
     alt: "A soft marble texture in coral, sand and blue",
-    width: 1600,
-    height: 1200,
+    width: 2400,
+    height: 1800,
   },
   {
-    src: "https://reuse.sh/images/marble-mountains.svg",
+    src: "/images/marble-mountains.webp",
     alt: "A soft marble texture in mint, blue and orange",
-    width: 1600,
-    height: 1200,
+    width: 2400,
+    height: 1800,
   },
   {
-    src: "https://reuse.sh/images/marble-coast.svg",
+    src: "/images/marble-coast.webp",
     alt: "A soft marble texture in lilac, rose and sea green",
-    width: 1600,
-    height: 1200,
+    width: 2400,
+    height: 1800,
   },
 ];
 

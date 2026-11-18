@@ -6,14 +6,17 @@ import Cancel01Icon from "@hugeicons/core-free-icons/Cancel01Icon";
 import CarouselHorizontal02Icon from "@hugeicons/core-free-icons/CarouselHorizontal02Icon";
 import ClipboardCopyIcon from "@hugeicons/core-free-icons/ClipboardCopyIcon";
 import CodeIcon from "@hugeicons/core-free-icons/CodeIcon";
+import CollapseIcon from "@hugeicons/core-free-icons/CollapseIcon";
 import ComputerTerminal01Icon from "@hugeicons/core-free-icons/ComputerTerminal01Icon";
 import Copy01Icon from "@hugeicons/core-free-icons/Copy01Icon";
 import Cursor01Icon from "@hugeicons/core-free-icons/Cursor01Icon";
 import CursorInWindowIcon from "@hugeicons/core-free-icons/CursorInWindowIcon";
 import DashboardSquare02Icon from "@hugeicons/core-free-icons/DashboardSquare02Icon";
 import Delete02Icon from "@hugeicons/core-free-icons/Delete02Icon";
+import Download04Icon from "@hugeicons/core-free-icons/Download04Icon";
 import Edit02Icon from "@hugeicons/core-free-icons/Edit02Icon";
 import FavouriteIcon from "@hugeicons/core-free-icons/FavouriteIcon";
+import FullScreenIcon from "@hugeicons/core-free-icons/FullScreenIcon";
 import GithubIcon from "@hugeicons/core-free-icons/GithubIcon";
 import Image02Icon from "@hugeicons/core-free-icons/Image02Icon";
 import InformationCircleIcon from "@hugeicons/core-free-icons/InformationCircleIcon";
@@ -29,6 +32,7 @@ import SquareDashedMousePointerIcon from "@hugeicons/core-free-icons/SquareDashe
 import Tick02Icon from "@hugeicons/core-free-icons/Tick02Icon";
 import UserGroupIcon from "@hugeicons/core-free-icons/UserGroupIcon";
 import ZoomInAreaIcon from "@hugeicons/core-free-icons/ZoomInAreaIcon";
+import ZoomOutAreaIcon from "@hugeicons/core-free-icons/ZoomOutAreaIcon";
 import { HugeiconsIcon } from "@hugeicons/react";
 import {
   ArrowIcon,
@@ -64,6 +68,7 @@ export const iconData = {
   js: JavaScriptIcon,
   react: ReactIcon,
   heart: FavouriteIcon,
+  info: InformationCircleIcon,
   share: Share08Icon,
   trash: Delete02Icon,
   cursor: Cursor01Icon,
@@ -130,4 +135,8 @@ export const lightboxIcons = {
   previous: () => nativeArrow("left"),
   next: () => nativeArrow("right"),
   zoom: () => nativeIcon(ZoomInAreaIcon),
+  zoomOut: () => nativeIcon(ZoomOutAreaIcon),
+  fullscreen: () => nativeIcon(FullScreenIcon),
+  fullscreenExit: () => nativeIcon(CollapseIcon),
+  download: () => nativeIcon(Download04Icon),
 };

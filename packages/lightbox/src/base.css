@@ -54,6 +54,8 @@
   grid-template: 100% / 100%;
   width: 100%;
   height: 100%;
+  box-sizing: border-box;
+  padding: var(--re-lightbox-thumbnails-room, 0px);
   place-items: center;
   scroll-snap-align: start;
   scroll-snap-stop: always;
@@ -278,6 +280,11 @@
   translate: 0 -50%;
 }
 :is(.re-lightbox-prev, .re-lightbox-next):dir(rtl) > * {
+  scale: -1 1;
+}
+.re-lightbox-arrow-icon:dir(rtl):not(
+  :is(.re-lightbox-prev, .re-lightbox-next) *
+) {
   scale: -1 1;
 }
 .re-lightbox[data-thumbnails="bottom"] .re-lightbox-thumbnails {

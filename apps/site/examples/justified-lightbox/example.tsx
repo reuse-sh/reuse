@@ -2,11 +2,12 @@
 import { JustifiedGallery } from "@reuse-sh/gallery/react";
 import { useLightbox } from "@reuse-sh/lightbox/react";
 import type { CSSProperties } from "react";
+import { lightboxIcons } from "@/components/icons";
 import { galleryPhotos } from "@/lib/photos";
 import "./rows.css";
 
 export function Example() {
-  const viewer = useLightbox({ thumbnails: "bottom" });
+  const viewer = useLightbox({ icons: lightboxIcons, thumbnails: "bottom" });
   return (
     <JustifiedGallery className="re-jg-rows w-full" aria-label="Prints">
       {galleryPhotos.map((photo, index) => (
@@ -16,16 +17,17 @@ export function Example() {
           className="rounded-frame cursor-zoom-in focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
           style={{ "--re-ratio": photo.width / photo.height } as CSSProperties}
           onClick={(event) => {
-            const origin = event.currentTarget.querySelector("img");
+            const tiles =
+              event.currentTarget.parentElement?.querySelectorAll("img");
             viewer.open(
-              galleryPhotos.map((item) => ({
+              galleryPhotos.map((item, at) => ({
                 src: item.src,
                 alt: item.alt,
                 caption: item.title,
                 width: item.width,
                 height: item.height,
                 thumbnailSrc: item.src,
-                origin: item.id === photo.id ? origin : null,
+                origin: tiles?.[at] ?? null,
               })),
               index,
             );

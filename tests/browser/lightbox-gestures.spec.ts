@@ -513,3 +513,100 @@ test.describe("lightbox dismiss and taps", { tag: "@touch" }, () => {
     expect((await state(page)).isClosing).toBe(true);
   });
 });
+
+test.describe("lightbox paging during a held mouse drag", {
+  tag: "@desktop",
+}, () => {
+  async function holdDrag(page: Page) {
+    await open(page);
+    await page.waitForTimeout(500);
+    const from = await photoCenter(page);
+    await page.mouse.move(from.x, from.y);
+    await page.mouse.down();
+    for (let step = 1; step <= 10; step++) {
+      await page.mouse.move(from.x - step * 22, from.y);
+      await page.waitForTimeout(16);
+    }
+    await page.waitForTimeout(100);
+    return from;
+  }
+  const settled = (page: Page) =>
+    page.evaluate(() => {
+      const viewport = document.querySelector(
+        ".re-lightbox-viewport",
+      ) as HTMLElement;
+      return {
+        index: (window as Window).lightbox.getState().index,
+        page: Math.abs(viewport.scrollLeft) / viewport.clientWidth,
+      };
+    });
+
+  for (const [name, act] of [
+    ["End", (page: Page) => page.keyboard.press("End")],
+    ["ArrowRight", (page: Page) => page.keyboard.press("ArrowRight")],
+    [
+      "goTo(3)",
+      (page: Page) =>
+        page.evaluate(() =>
+          (
+            window as unknown as { lightbox: { goTo(index: number): void } }
+          ).lightbox.goTo(3),
+        ),
+    ],
+    [
+      "next()",
+      (page: Page) =>
+        page.evaluate(() =>
+          (window as unknown as { lightbox: { next(): void } }).lightbox.next(),
+        ),
+    ],
+  ] as const)
+    test(`${name} goes straight to the new photo and the release leaves it there`, async ({
+      page,
+    }) => {
+      const from = await holdDrag(page);
+      const frames = page.evaluate(
+        () =>
+          new Promise<number[]>((resolve) => {
+            const viewport = document.querySelector(
+              ".re-lightbox-viewport",
+            ) as HTMLElement;
+            const values = [viewport.scrollLeft];
+            const start = performance.now();
+            const tick = () => {
+              values.push(viewport.scrollLeft);
+              if (performance.now() - start < 700) requestAnimationFrame(tick);
+              else resolve(values);
+            };
+            requestAnimationFrame(tick);
+          }),
+      );
+      await act(page);
+      const values = await frames;
+      expect(
+        values.filter((value, at) => at && value < values[at - 1] - 1),
+      ).toEqual([]);
+      await page.mouse.move(from.x - 260, from.y);
+      await page.mouse.up();
+      const target = { End: 5, ArrowRight: 1, "goTo(3)": 3, "next()": 1 }[name];
+      await expect
+        .poll(() => settled(page))
+        .toEqual({ index: target, page: target });
+    });
+
+  test("End while the mouse is pressed on the photo but has not moved is kept by the drag that follows", async ({
+    page,
+  }) => {
+    await open(page);
+    await page.waitForTimeout(500);
+    const from = await photoCenter(page);
+    await page.mouse.move(from.x, from.y);
+    await page.mouse.down();
+    await page.keyboard.press("End");
+    await expect.poll(() => settled(page)).toEqual({ index: 5, page: 5 });
+    await page.mouse.move(from.x - 20, from.y, { steps: 4 });
+    expect((await settled(page)).page).toBeGreaterThanOrEqual(5);
+    await page.mouse.up();
+    await expect.poll(() => settled(page)).toEqual({ index: 5, page: 5 });
+  });
+});

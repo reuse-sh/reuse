@@ -187,6 +187,7 @@
     box-sizing: border-box;
   }
   html {
+    --re-lightbox-font: var(--font-sans);
     scroll-padding-top: 4.5rem;
     font-synthesis: none;
     -webkit-font-smoothing: antialiased;

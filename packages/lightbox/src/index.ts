@@ -25,6 +25,7 @@ import {
   zoomAround,
   zoomLimits,
 } from "./geometry.js";
+import { type BuiltInIcon, showIcon } from "./icons.js";
 import {
   fileWidth,
   formatOf,
@@ -124,6 +125,8 @@ export type LightboxSlotName =
 export type LightboxSlot<Item extends LightboxItem = LightboxItem> = (context: {
   lightbox: Lightbox<Item>;
   document: Document;
+  /** The icon a built-in control shows: yours from the icons option, else the package's. */
+  icon: (name: LightboxIcon) => Node;
 }) => {
   node: Node;
   update?: (state: LightboxState<Item>) => void;
@@ -149,14 +152,36 @@ const defaultControls: Record<LightboxControl, boolean> = {
   slideshow: false,
 };
 
+const builtInIcons: Record<LightboxIcon, BuiltInIcon> = {
+  close: "close",
+  previous: "previous",
+  next: "next",
+  zoom: "zoomIn",
+  zoomOut: "zoomOut",
+  fullscreen: "fullscreenEnter",
+  fullscreenExit: "fullscreenExit",
+  download: "download",
+  slideshow: "play",
+  slideshowPause: "pause",
+};
+
+const firstStateIcon: Partial<Record<LightboxIcon, LightboxIcon>> = {
+  zoomOut: "zoom",
+  fullscreenExit: "fullscreen",
+  slideshowPause: "slideshow",
+};
+
 export type LightboxIcon =
   | "close"
   | "previous"
   | "next"
   | "zoom"
+  | "zoomOut"
   | "fullscreen"
+  | "fullscreenExit"
   | "download"
-  | "slideshow";
+  | "slideshow"
+  | "slideshowPause";
 
 export interface LightboxEvent {
   readonly type: LightboxEventName;
@@ -437,6 +462,7 @@ type Session = {
   makeThumbs: (strings: LightboxStrings) => void;
   pointers: Map<number, Point>;
   box: Rect;
+  inset: { left: number; right: number; bottom: number };
   gesture?: {
     start: Point;
     zoom: Zoom;
@@ -1074,7 +1100,7 @@ export function createLightbox<Item extends LightboxItem = LightboxItem>(
       "aria-label",
       on ? s.strings.slideshowStop : s.strings.slideshowStart,
     );
-    if (!settings.icons?.slideshow) button.textContent = on ? "❚❚" : "▶";
+    showStateIcon(button, "slideshow", "slideshowPause", on);
   }
 
   // A CSS easing list passes CSS.supports but makes animate() throw, so the check asks the same parser animate() uses.
@@ -1163,6 +1189,30 @@ export function createLightbox<Item extends LightboxItem = LightboxItem>(
     }
   }
 
+  const shownIcons = new WeakMap<Element, LightboxIcon>();
+
+  function showControlIcon(button: Element, name: LightboxIcon) {
+    if (shownIcons.get(button) === name) return;
+    shownIcons.set(button, name);
+    const own = settings.icons?.[name]?.();
+    if (own) button.replaceChildren(own);
+    else showIcon(button, builtInIcons[name]);
+  }
+
+  // A given first icon stays in the second state unless the second one is given too.
+  function showStateIcon(
+    button: Element,
+    first: LightboxIcon,
+    second: LightboxIcon,
+    on: boolean,
+  ) {
+    const icons = settings.icons;
+    showControlIcon(
+      button,
+      on && (icons?.[second] || !icons?.[first]) ? second : first,
+    );
+  }
+
   function lastIndex() {
     return clamp(state.index, 0, Math.max(0, items.length - 1));
   }
@@ -1182,18 +1232,36 @@ export function createLightbox<Item extends LightboxItem = LightboxItem>(
     return rect.width > 0 && rect.height > 0 ? rect : undefined;
   }
 
-  function measure(viewport: HTMLElement, paddingProbe: HTMLElement): Rect {
-    const rect = viewport.getBoundingClientRect();
-    const win = viewport.ownerDocument.defaultView;
+  function measure(s: Session) {
+    const rect = s.viewport.getBoundingClientRect();
+    const win = s.viewport.ownerDocument.defaultView;
     const space = Number.parseFloat(
-      win?.getComputedStyle(paddingProbe).paddingLeft ?? "",
+      win?.getComputedStyle(s.paddingProbe).paddingLeft ?? "",
     );
     padding = Number.isFinite(space) ? Math.max(0, space) : PADDING;
-    return {
-      left: rect.left,
+    const width = rect.width || win?.innerWidth || 1;
+    const height = rect.height || win?.innerHeight || 1;
+    const strip = s.thumbStrip?.getBoundingClientRect();
+    const layout =
+      strip?.width && strip.height ? s.dialog.dataset.thumbnails : undefined;
+    const rtl = s.viewport.matches(":dir(rtl)");
+    const inset = { left: 0, right: 0, bottom: 0 };
+    if (strip && layout === "bottom")
+      inset.bottom = Math.max(0, rect.bottom - strip.top);
+    else if (strip && layout === "side" && rtl)
+      inset.left = Math.max(0, strip.right - rect.left);
+    else if (strip && layout === "side")
+      inset.right = Math.max(0, rect.right - strip.left);
+    s.inset = inset;
+    s.viewport.style.setProperty(
+      "--re-lightbox-thumbnails-room",
+      `0px ${inset.right}px ${inset.bottom}px ${inset.left}px`,
+    );
+    s.box = {
+      left: rect.left + inset.left,
       top: rect.top,
-      width: rect.width || win?.innerWidth || 1,
-      height: rect.height || win?.innerHeight || 1,
+      width: width - inset.left - inset.right,
+      height: height - inset.bottom,
     };
   }
 
@@ -1313,8 +1381,7 @@ export function createLightbox<Item extends LightboxItem = LightboxItem>(
       out ? s.strings.zoomOut : s.strings.zoomIn,
     );
     zoomButton?.setAttribute("aria-pressed", String(state.zoom.scale > 1));
-    if (zoomButton && !settings.icons?.zoom)
-      zoomButton.textContent = out ? "−" : "+";
+    if (zoomButton) showStateIcon(zoomButton, "zoom", "zoomOut", out);
     s.dialog.dataset.zoomed = String(state.zoom.scale > 1);
     s.dialog.dataset.zoom = out ? "out" : "in";
     if (s.watchedScale !== state.zoom.scale) {
@@ -1512,7 +1579,7 @@ export function createLightbox<Item extends LightboxItem = LightboxItem>(
     origin: HTMLElement,
     rect: DOMRect,
     size: Size,
-    box: DOMRect,
+    box: Rect,
   ) {
     const doc = s.dialog.ownerDocument;
     const src = image.currentSrc || image.src;
@@ -1573,18 +1640,18 @@ export function createLightbox<Item extends LightboxItem = LightboxItem>(
     const box = s.viewport.getBoundingClientRect();
     let slide = s.slides[state.index]?.getBoundingClientRect();
     const shift = slide ? slide.left - box.left : 0;
-    if (
-      closing &&
-      Math.abs(shift) > 1 &&
-      !s.pointers.size &&
-      !s.carousel.getState().isDragging
-    ) {
-      quietly(() => s.carousel.goTo(state.index, "instant"));
+    // Disabling ends a held mouse drag and a touch fling, and keeps the strip still while it flies.
+    if (closing) quietly(() => s.carousel.setEnabled(false));
+    if (closing && Math.abs(shift) > 1) {
+      quietly(() => {
+        s.carousel.setEnabled(true);
+        s.carousel.goTo(state.index, "instant");
+        s.carousel.setEnabled(false);
+      });
       slide = s.slides[state.index]?.getBoundingClientRect();
       if (slide && Math.abs(slide.left - box.left) <= 1)
         live.transform = `translate(${shift}px, 0px) ${live.transform}`;
     }
-    const viewport = view(s);
     const size = fit(state.index, s);
     const duration = flightDuration(s, closing);
     const ease = s.timing.ease;
@@ -1649,8 +1716,14 @@ export function createLightbox<Item extends LightboxItem = LightboxItem>(
         ? crop.top
         : (rect.height - crop.height) / 2;
     const scale = crop.width / size.width;
-    const x = rect.left + left + crop.width / 2 - box.left - viewport.width / 2;
-    const y = rect.top + top + crop.height / 2 - box.top - viewport.height / 2;
+    const room = {
+      left: box.left + s.inset.left,
+      top: box.top,
+      width: box.width - s.inset.left - s.inset.right,
+      height: box.height - s.inset.bottom,
+    };
+    const x = rect.left + left + crop.width / 2 - room.left - room.width / 2;
+    const y = rect.top + top + crop.height / 2 - room.top - room.height / 2;
     const radius = corners(origin, rect, win)
       .map((corner) => `${corner / scale}px`)
       .join(" ");
@@ -1668,7 +1741,7 @@ export function createLightbox<Item extends LightboxItem = LightboxItem>(
       return animate(s, entry.frame, [clipped, expanded], duration, ease);
     const made =
       landing && duration > 0
-        ? landingCopy(s, entry.image, origin, rect, size, box)
+        ? landingCopy(s, entry.image, origin, rect, size, room)
         : undefined;
     if (!made) return animate(s, entry.frame, [live, clipped], duration, ease);
     const { holder, copy } = made;
@@ -1764,7 +1837,7 @@ export function createLightbox<Item extends LightboxItem = LightboxItem>(
     const before = state.zoom;
     const from = fit(state.index, s);
     const resting = s.rest !== undefined && sameZoom(before, s.rest);
-    s.box = measure(s.viewport, s.paddingProbe);
+    measure(s);
     s.pinned = undefined;
     s.thumbCenters = undefined;
     if (resting) updateState({ zoom: restZoom(s, state.index) });
@@ -2224,6 +2297,7 @@ export function createLightbox<Item extends LightboxItem = LightboxItem>(
   function activeChanged(s: Session, index: number, report = true) {
     if (session !== s || state.index === index || state.isClosing) return;
     cancelAnimations(s);
+    s.backdrop.style.opacity = "";
     const old = s.loaded.get(state.index);
     if (old) {
       old.frame.style.transform = "";
@@ -2388,6 +2462,19 @@ export function createLightbox<Item extends LightboxItem = LightboxItem>(
     if (s.thumbs[s.roving]) s.thumbs[s.roving].tabIndex = -1;
     if (s.thumbs[index]) s.thumbs[index].tabIndex = 0;
     s.roving = index;
+  }
+
+  function overThumbnails(s: Session, x: number, y: number) {
+    const first = s.thumbs[0]?.getBoundingClientRect();
+    const last = s.thumbs.at(-1)?.getBoundingClientRect();
+    const strip = s.thumbStrip?.getBoundingClientRect();
+    if (!first || !last || !strip?.width) return false;
+    return (
+      x >= Math.max(strip.left, Math.min(first.left, last.left)) &&
+      x <= Math.min(strip.right, Math.max(first.right, last.right)) &&
+      y >= Math.max(strip.top, Math.min(first.top, last.top)) &&
+      y <= Math.min(strip.bottom, Math.max(first.bottom, last.bottom))
+    );
   }
 
   // The bottom strip is a carousel that centers the thumbnail; the side column has no carousel
@@ -3164,7 +3251,7 @@ export function createLightbox<Item extends LightboxItem = LightboxItem>(
           publish({});
         }
         interruptImageMotion(s);
-        if (!s.pointers.size) s.box = measure(s.viewport, s.paddingProbe);
+        if (!s.pointers.size) measure(s);
         s.pointers.set(event.pointerId, point(event));
         resetGesture();
         if (s.gesture) {
@@ -3340,6 +3427,7 @@ export function createLightbox<Item extends LightboxItem = LightboxItem>(
         clearTimeout(s.tapTimer);
         s.tapTimer = undefined;
         s.lastTap = undefined;
+        if (!onPhoto && overThumbnails(s, current.x, current.y)) return;
         const doubleTap =
           settings.imageClick !== "close" &&
           settings.doubleTapZoom !== false &&
@@ -3448,7 +3536,7 @@ export function createLightbox<Item extends LightboxItem = LightboxItem>(
             event.clientY >= box.top &&
             event.clientY <= box.bottom);
         if (!onPhoto) {
-          void close();
+          if (!overThumbnails(s, event.clientX, event.clientY)) void close();
           return;
         }
         if (settings.imageClick === "close") void close();
@@ -3532,7 +3620,7 @@ export function createLightbox<Item extends LightboxItem = LightboxItem>(
         )
           return;
         freezeZoom(s);
-        s.box = measure(s.viewport, s.paddingProbe);
+        measure(s);
         s.safariScale = state.zoom.scale;
       },
       { signal },
@@ -3727,6 +3815,13 @@ export function createLightbox<Item extends LightboxItem = LightboxItem>(
           "aria-label",
           full ? s.strings.fullscreenExit : s.strings.fullscreenEnter,
         );
+        if (s.fullscreenButton)
+          showStateIcon(
+            s.fullscreenButton,
+            "fullscreen",
+            "fullscreenExit",
+            full,
+          );
         if (full) s.dialog.dataset.fullscreen = "";
         else delete s.dialog.dataset.fullscreen;
       },
@@ -3910,7 +4005,28 @@ export function createLightbox<Item extends LightboxItem = LightboxItem>(
     for (const name of Object.keys(places) as LightboxSlotName[]) {
       const slot = settings.slots?.[name];
       if (!slot) continue;
-      const instance = slot({ lightbox: controller, document: doc });
+      const instance = slot({
+        lightbox: controller,
+        document: doc,
+        icon: (name) => {
+          const own =
+            settings.icons?.[name]?.() ??
+            (firstStateIcon[name]
+              ? settings.icons?.[firstStateIcon[name]]?.()
+              : undefined);
+          if (own) {
+            if (
+              (name === "previous" || name === "next") &&
+              own instanceof Element
+            )
+              own.classList.add("re-lightbox-arrow-icon");
+            return own;
+          }
+          const holder = doc.createElement("span");
+          showIcon(holder, builtInIcons[name]);
+          return holder.firstElementChild as Node;
+        },
+      });
       places[name](instance.node);
       s.slots.push(instance as ReturnType<LightboxSlot>);
       instance.update?.(state);
@@ -4013,7 +4129,6 @@ export function createLightbox<Item extends LightboxItem = LightboxItem>(
       tag: K,
       name: LightboxIcon,
       label: string,
-      text: string,
       action: (() => void) | undefined,
       parent: HTMLElement,
     ) => {
@@ -4021,9 +4136,7 @@ export function createLightbox<Item extends LightboxItem = LightboxItem>(
       if (tag === "button") element.setAttribute("type", "button");
       element.className = `re-lightbox-button re-lightbox-${name === "previous" ? "prev" : name}`;
       element.setAttribute("aria-label", label);
-      const icon = settings.icons?.[name]?.();
-      if (icon) element.append(icon);
-      else element.textContent = text;
+      showControlIcon(element, name);
       if (action)
         element.addEventListener("click", action, { signal: abort.signal });
       parent.append(element);
@@ -4038,21 +4151,13 @@ export function createLightbox<Item extends LightboxItem = LightboxItem>(
       toolbarStart.append(counter);
     }
     const zoomButton = control("zoom")
-      ? button(
-          "button",
-          "zoom",
-          strings.zoomIn,
-          "+",
-          () => toggleZoom(),
-          toolbarEnd,
-        )
+      ? button("button", "zoom", strings.zoomIn, () => toggleZoom(), toolbarEnd)
       : undefined;
     const slideshowButton = control("slideshow")
       ? button(
           "button",
           "slideshow",
           strings.slideshowStart,
-          "▶",
           () => toggleSlideshow(s),
           toolbarEnd,
         )
@@ -4063,7 +4168,6 @@ export function createLightbox<Item extends LightboxItem = LightboxItem>(
             "button",
             "fullscreen",
             strings.fullscreenEnter,
-            "⤢",
             () => {
               if (doc.fullscreenElement === stage)
                 void doc.exitFullscreen().catch(() => {});
@@ -4073,7 +4177,7 @@ export function createLightbox<Item extends LightboxItem = LightboxItem>(
           )
         : undefined;
     const download = control("download")
-      ? button("a", "download", strings.download, "↓", undefined, toolbarEnd)
+      ? button("a", "download", strings.download, undefined, toolbarEnd)
       : undefined;
     download?.setAttribute("download", "");
     download?.setAttribute("rel", "noopener");
@@ -4168,28 +4272,14 @@ export function createLightbox<Item extends LightboxItem = LightboxItem>(
       { signal: abort.signal },
     );
     const closeButton = control("close")
-      ? button(
-          "button",
-          "close",
-          strings.close,
-          "×",
-          () => void close(),
-          toolbarEnd,
-        )
+      ? button("button", "close", strings.close, () => void close(), toolbarEnd)
       : undefined;
     if (closeButton) closeButton.autofocus = true;
     const prev = control("arrows")
-      ? button(
-          "button",
-          "previous",
-          strings.previous,
-          "‹",
-          () => step(-1),
-          stage,
-        )
+      ? button("button", "previous", strings.previous, () => step(-1), stage)
       : undefined;
     const next = control("arrows")
-      ? button("button", "next", strings.next, "›", () => step(1), stage)
+      ? button("button", "next", strings.next, () => step(1), stage)
       : undefined;
     const footer = doc.createElement("div");
     footer.className = "re-lightbox-footer";
@@ -4316,7 +4406,8 @@ export function createLightbox<Item extends LightboxItem = LightboxItem>(
       makeThumbs,
       pointers: new Map(),
       paddingProbe,
-      box: measure(viewport, paddingProbe),
+      box: { left: 0, top: 0, width: 1, height: 1 },
+      inset: { left: 0, right: 0, bottom: 0 },
       suppressClickUntil: 0,
       paged: false,
       flying: true,
@@ -4326,6 +4417,7 @@ export function createLightbox<Item extends LightboxItem = LightboxItem>(
         settings.autoplayMedia !== false &&
         (doc.defaultView?.navigator.userActivation?.isActive ?? true),
     };
+    measure(s);
     session = s;
     if (doc.defaultView) enterHistory(doc.defaultView);
     publish({
@@ -4346,7 +4438,7 @@ export function createLightbox<Item extends LightboxItem = LightboxItem>(
       aside: (node) => s.aside?.append(node),
     });
     placeThumbs(s);
-    s.box = measure(viewport, paddingProbe);
+    measure(s);
     update(s);
     s.carousel.goTo(state.index, "instant");
     dialog.addEventListener(
@@ -4572,17 +4664,25 @@ export function createLightbox<Item extends LightboxItem = LightboxItem>(
     return closeSession(false);
   }
 
-  function pinToPage(s: Session) {
+  // The stage keeps its open size, so a page scrollbar that returns does not reflow the viewer,
+  // and the dialog clips it to the page's new client size, which WebKit's dialog box lags behind.
+  function pinToPage(s: Session, open: DOMRect) {
     const win = s.dialog.ownerDocument.defaultView;
     if (!win) return;
-    const box = s.dialog.getBoundingClientRect();
+    const root = s.dialog.ownerDocument.documentElement;
+    Object.assign(s.stage.style, {
+      right: "auto",
+      bottom: "auto",
+      width: `${open.width}px`,
+      height: `${open.height}px`,
+    });
     Object.assign(s.dialog.style, {
       position: "absolute",
       inset: "auto",
-      top: `${box.top + win.scrollY}px`,
-      left: `${box.left + win.scrollX}px`,
-      width: `${box.width}px`,
-      height: `${box.height}px`,
+      top: `${open.top + win.scrollY}px`,
+      left: `${open.left + win.scrollX}px`,
+      width: `${Math.min(open.width, root.clientWidth)}px`,
+      height: `${Math.min(open.height, root.clientHeight)}px`,
     });
   }
 
@@ -4651,8 +4751,9 @@ export function createLightbox<Item extends LightboxItem = LightboxItem>(
     for (const entry of s.loaded.values()) entry.media?.mounted?.pause?.();
     s.dialog.style.removeProperty("--re-lightbox-chrome-opacity");
     setPhase(s, "closing");
+    const open = s.dialog.getBoundingClientRect();
     s.restoreScroll();
-    pinToPage(s);
+    pinToPage(s, open);
     releasePage(s);
     let closing: Promise<void> | undefined;
     closing = (async () => {

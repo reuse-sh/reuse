@@ -194,9 +194,10 @@ export function ProductGallery() {
     <a key={item.src} href={item.src} onClick={(event) => {
       if (event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
       event.preventDefault();
+      const tiles = event.currentTarget.parentElement?.querySelectorAll("img");
       lightbox.open(items.map((entry, position) => ({
         ...entry,
-        origin: position === index ? event.currentTarget.querySelector("img") : null,
+        origin: tiles?.[position] ?? null,
       })), index);
     }}>
       <img src={item.thumbnailSrc} alt={item.alt} width="320" height="240" />
@@ -1648,6 +1649,148 @@ const carousel = createCarousel(document.querySelector("#prints"), { align: "sta
       },
     ],
   },
+  "carousel/examples/press-to-grab": {
+    react: [
+      {
+        title: "Package styles",
+        blocks: [
+          {
+            kind: "prose",
+            text: "Import the package stylesheet once in your main CSS. The components layer lets Tailwind utilities adapt its presentation.",
+          },
+          {
+            kind: "code",
+            id: "carousel-examples-press-to-grab-package-styles",
+            language: "css",
+            code: '@import "@reuse-sh/carousel/styles.css" layer(components);',
+            role: "setup",
+          },
+        ],
+      },
+      {
+        title: "Usage",
+        blocks: [
+          {
+            kind: "prose",
+            text: "Set --re-carousel-press-scale on the strip. While a mouse drags it, every slide scales to that value over --re-carousel-press-duration (300ms) and returns after the release. Without the property the slides keep their size.",
+          },
+          {
+            kind: "code",
+            id: "carousel-examples-press-to-grab-react",
+            language: "tsx",
+            code: `"use client";
+
+import { Carousel } from "@reuse-sh/carousel/react";
+
+export function PrintStrip() {
+  return <Carousel className="[--re-carousel-press-scale:0.96]" tabIndex={0} aria-label="Prints">
+    <a className="re-carousel__slide basis-1/2" href="/prints/blue"><img className="w-full" src="/images/blue.jpg" alt="Blue print" width="640" height="480" /></a>
+    <a className="re-carousel__slide basis-1/2" href="/prints/sand"><img className="w-full" src="/images/sand.jpg" alt="Sand print" width="640" height="480" /></a>
+    <a className="re-carousel__slide basis-1/2" href="/prints/ink"><img className="w-full" src="/images/ink.jpg" alt="Ink print" width="640" height="480" /></a>
+  </Carousel>;
+}`,
+            role: "usage",
+          },
+        ],
+      },
+      {
+        title: "Integration",
+        blocks: [
+          {
+            kind: "prose",
+            text: "Touch and trackpads scroll natively and leave the slides at their size. A drag never clicks the link under it, and an ordinary click still opens it. Under reduced motion the slides take the scale at once.",
+          },
+        ],
+      },
+    ],
+    html: [
+      {
+        title: "Usage",
+        blocks: [
+          {
+            kind: "prose",
+            text: "Set --re-carousel-press-scale on the strip. While a mouse drags it, every slide scales to that value over --re-carousel-press-duration (300ms) and returns after the release. Without the property the slides keep their size.",
+          },
+          {
+            kind: "code",
+            id: "carousel-examples-press-to-grab-markup",
+            language: "html",
+            code: `<div id="prints" class="re-carousel" tabindex="0" aria-label="Prints">
+  <a class="re-carousel__slide" href="/prints/blue"><img src="/images/blue.jpg" alt="Blue print" width="640" height="480" /></a>
+  <a class="re-carousel__slide" href="/prints/sand"><img src="/images/sand.jpg" alt="Sand print" width="640" height="480" /></a>
+  <a class="re-carousel__slide" href="/prints/ink"><img src="/images/ink.jpg" alt="Ink print" width="640" height="480" /></a>
+</div>`,
+            role: "usage",
+          },
+        ],
+      },
+      {
+        title: "Styles",
+        blocks: [
+          {
+            kind: "prose",
+            text: "Import the package stylesheet once, then set the press scale on this strip only.",
+          },
+          {
+            kind: "code",
+            id: "carousel-examples-press-to-grab-css",
+            language: "css",
+            code: `@import "@reuse-sh/carousel/styles.css";
+
+#prints {
+  --re-carousel-slide-width: 45%;
+  --re-carousel-press-scale: 0.96;
+}
+#prints img { display: block; width: 100%; height: auto; }`,
+            role: "usage",
+          },
+        ],
+      },
+      {
+        title: "Initialize",
+        blocks: [
+          {
+            kind: "prose",
+            text: "Run this after the markup exists. Keep the returned controller for the lifetime of this content.",
+          },
+          {
+            kind: "code",
+            id: "carousel-examples-press-to-grab-initialize",
+            language: "javascript",
+            code: `import { createCarousel } from "@reuse-sh/carousel";
+
+const carousel = createCarousel(document.querySelector("#prints"), { loop: false });`,
+            role: "setup",
+          },
+        ],
+      },
+      {
+        title: "Integration",
+        blocks: [
+          {
+            kind: "prose",
+            text: "Touch and trackpads scroll natively and leave the slides at their size. A drag never clicks the link under it, and an ordinary click still opens it. Under reduced motion the slides take the scale at once.",
+          },
+        ],
+      },
+      {
+        title: "Cleanup",
+        blocks: [
+          {
+            kind: "prose",
+            text: "Run this when the view is removed, before mounting another controller on the same element.",
+          },
+          {
+            kind: "code",
+            id: "carousel-examples-press-to-grab-cleanup",
+            language: "javascript",
+            code: "carousel.destroy();",
+            role: "cleanup",
+          },
+        ],
+      },
+    ],
+  },
   "carousel/guides/controls": {
     react: [
       {
@@ -2156,7 +2299,7 @@ const gallery = createJustifiedGallery(document.querySelector("#prints"), { last
         blocks: [
           {
             kind: "prose",
-            text: "Make each item a button around its image. A press opens the whole set in gallery order, and the pressed image is the origin the viewer grows out of and returns to.",
+            text: "Make each item a button around its image. A press opens the whole set in gallery order. Each image is the origin of its own photo, so the viewer grows out of the pressed image and a close returns to the tile of the photo on screen.",
           },
           {
             kind: "code",
@@ -2181,8 +2324,8 @@ export function PrintRows() {
       <button key={print.src} type="button" className="cursor-zoom-in"
         style={{ "--re-ratio": print.width / print.height } as CSSProperties}
         onClick={(event) => {
-          const origin = event.currentTarget.querySelector("img");
-          lightbox.open(prints.map((item) => ({ ...item, origin: item === print ? origin : null })), index);
+          const tiles = event.currentTarget.parentElement?.querySelectorAll("img");
+          lightbox.open(prints.map((item, at) => ({ ...item, origin: tiles?.[at] ?? null })), index);
         }}>
         <img className="re-justified-media" src={print.src} alt={print.alt} width={print.width} height={print.height} />
       </button>

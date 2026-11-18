@@ -462,3 +462,104 @@ test("an item type of your own comes back as state.item, the object passed in", 
     canNext: false,
   });
 });
+
+test("a slot draws the built-in icons, or the ones the icons option gives", async ({
+  page,
+}) => {
+  await mount(page, "", ["lightbox/base.css", "lightbox/theme.css"]);
+  const icons = await page.evaluate(async () => {
+    const { createLightbox } = await import("/modules/lightbox/index.js");
+    const drawn: string[] = [];
+    const lightbox = createLightbox({
+      history: false,
+      icons: {
+        next: () => document.createTextNode("Next!"),
+        slideshowPause: () => document.createTextNode("Pause!"),
+      },
+      slots: {
+        toolbarEnd: ({ icon }) => {
+          const node = document.createElement("span");
+          for (const name of [
+            "previous",
+            "next",
+            "zoomOut",
+            "fullscreenExit",
+            "slideshowPause",
+          ] as const) {
+            const shown = icon(name);
+            drawn.push(
+              shown instanceof SVGElement
+                ? String(shown.querySelector("path")?.getAttribute("d"))
+                : String(shown.textContent),
+            );
+            node.append(shown);
+          }
+          return { node };
+        },
+      },
+    });
+    lightbox.open([
+      {
+        src: "data:image/gif;base64,R0lGODlhAQABAAAAACw=",
+        width: 10,
+        height: 10,
+      },
+    ]);
+    return drawn;
+  });
+  expect(icons).toEqual([
+    "m15 6-6 6 6 6",
+    "Next!",
+    "M18 11a7 7 0 1 1-14 0 7 7 0 0 1 14 0m-2 5 4 4M8 11h6",
+    "M9 4v5H4m11-5v5h5m0 6h-5v5m-6 0v-5H4",
+    "Pause!",
+  ]);
+});
+
+test("a slot's icon() keeps a given first-state icon and points given arrows the reading way", async ({
+  page,
+}) => {
+  await mount(page, "", ["lightbox/base.css", "lightbox/theme.css"]);
+  await page.evaluate(() => {
+    document.documentElement.dir = "rtl";
+  });
+  const drawn = await page.evaluate(async () => {
+    const { createLightbox } = await import("/modules/lightbox/index.js");
+    const svg = (label: string) => {
+      const node = document.createElementNS(
+        "http://www.w3.org/2000/svg",
+        "svg",
+      );
+      node.dataset.own = label;
+      return node;
+    };
+    let zoomOut: Node | undefined;
+    let previous: Node | undefined;
+    const lightbox = createLightbox({
+      history: false,
+      icons: { zoom: () => svg("zoom"), previous: () => svg("previous") },
+      slots: {
+        footer: ({ icon }) => {
+          zoomOut = icon("zoomOut");
+          previous = icon("previous");
+          const node = document.createElement("div");
+          node.append(previous);
+          return { node };
+        },
+      },
+    });
+    lightbox.open([
+      {
+        src: "data:image/gif;base64,R0lGODlhAQABAAAAACw=",
+        width: 10,
+        height: 10,
+      },
+    ]);
+    await new Promise((resolve) => requestAnimationFrame(resolve));
+    return {
+      zoomOut: (zoomOut as SVGElement).dataset.own,
+      previousScale: getComputedStyle(previous as Element).scale,
+    };
+  });
+  expect(drawn).toEqual({ zoomOut: "zoom", previousScale: "-1 1" });
+});

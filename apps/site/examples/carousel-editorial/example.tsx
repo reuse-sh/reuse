@@ -3,55 +3,56 @@ import { useCarousel, useCarouselState } from "@reuse-sh/carousel/react";
 import "./controls.css";
 import { useLightbox } from "@reuse-sh/lightbox/react";
 import type { CSSProperties } from "react";
+import { lightboxIcons } from "@/components/icons";
 
 const photos = [
   {
     id: "night",
     caption: "Blue hour",
     alt: "A soft marble texture in blue, lilac and gold",
-    src: "https://reuse.sh/images/marble-night.svg",
-    width: 1600,
-    height: 1200,
+    src: "/images/marble-night.webp",
+    width: 2400,
+    height: 1800,
   },
   {
     id: "mountains",
     caption: "Mint and ember",
     alt: "A soft marble texture in mint, blue and orange",
-    src: "https://reuse.sh/images/marble-mountains.svg",
-    width: 1600,
-    height: 1200,
+    src: "/images/marble-mountains.webp",
+    width: 2400,
+    height: 1800,
   },
   {
     id: "lake",
     caption: "Coral sky",
     alt: "A soft marble texture in coral, sand and blue",
-    src: "https://reuse.sh/images/marble-lake.svg",
-    width: 1600,
-    height: 1200,
+    src: "/images/marble-lake.webp",
+    width: 2400,
+    height: 1800,
   },
   {
     id: "forest",
     caption: "Sand and fern",
     alt: "A soft marble texture in sand, green and violet",
-    src: "https://reuse.sh/images/marble-forest.svg",
-    width: 1600,
-    height: 1200,
+    src: "/images/marble-forest.webp",
+    width: 2400,
+    height: 1800,
   },
   {
     id: "woods",
     caption: "Amber",
     alt: "A soft marble texture in orange, yellow and blue",
-    src: "https://reuse.sh/images/marble-woods.svg",
-    width: 1600,
-    height: 1200,
+    src: "/images/marble-woods.webp",
+    width: 2400,
+    height: 1800,
   },
   {
     id: "coast",
     caption: "Lilac bloom",
     alt: "A soft marble texture in lilac, rose and sea green",
-    src: "https://reuse.sh/images/marble-coast.svg",
-    width: 1600,
-    height: 1200,
+    src: "/images/marble-coast.webp",
+    width: 2400,
+    height: 1800,
   },
 ];
 export function Example() {
@@ -61,7 +62,7 @@ export function Example() {
     canPrev,
     canNext,
   }));
-  const viewer = useLightbox({ thumbnails: "bottom" });
+  const viewer = useLightbox({ icons: lightboxIcons, thumbnails: "bottom" });
   return (
     <section className="w-full min-w-0 grid gap-6">
       <article>
@@ -101,14 +102,14 @@ export function Example() {
                   )
                     return;
                   event.preventDefault();
+                  const tiles = event.currentTarget
+                    .closest(".re-carousel")
+                    ?.querySelectorAll("img");
                   viewer.open(
-                    photos.map((item) => ({
+                    photos.map((item, at) => ({
                       ...item,
                       thumbnailSrc: item.src,
-                      origin:
-                        item.id === photo.id
-                          ? event.currentTarget.querySelector("img")
-                          : null,
+                      origin: tiles?.[at] ?? null,
                     })),
                     index,
                   );
@@ -118,8 +119,8 @@ export function Example() {
                 <img
                   src={photo.src}
                   alt={photo.alt}
-                  width={1600}
-                  height={1200}
+                  width={2400}
+                  height={1800}
                   draggable={false}
                 />
               </a>

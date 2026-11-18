@@ -491,7 +491,9 @@ test("the fullscreen button toggles the viewer's stage, and leaving fullscreen k
 }) => {
   await open(page, { controls: { fullscreen: true } });
   const button = page.locator(".re-lightbox-fullscreen");
+  const icon = () => button.locator("path").getAttribute("d");
   await expect(button).toHaveAttribute("aria-label", "Enter full screen");
+  const enter = await icon();
   await button.click();
   await expect
     .poll(() =>
@@ -499,8 +501,10 @@ test("the fullscreen button toggles the viewer's stage, and leaving fullscreen k
     )
     .toBe("re-lightbox-stage");
   await expect(button).toHaveAttribute("aria-label", "Exit full screen");
+  expect(await icon()).not.toBe(enter);
   await page.evaluate(() => document.exitFullscreen());
   await expect(button).toHaveAttribute("aria-label", "Enter full screen");
+  expect(await icon()).toBe(enter);
   expect(await lightbox(page)).toMatchObject({ isOpen: true });
 });
 
@@ -514,6 +518,50 @@ test("without the Fullscreen API there is no fullscreen button", async ({
   );
   await open(page, { controls: { fullscreen: true } });
   await expect(page.locator(".re-lightbox-fullscreen")).toHaveCount(0);
+});
+
+test("in RTL a slot's built-in arrows are mirrored once, and the built-in buttons' too", async ({
+  page,
+}) => {
+  await mount(page, "", ["lightbox/base.css", "lightbox/theme.css"]);
+  const scales = await page.evaluate(async () => {
+    const { createLightbox } = await import("/modules/lightbox/index.js");
+    const read = () =>
+      [
+        ".re-lightbox-footer .slot-arrow svg",
+        ".re-lightbox-footer .slot-arrow",
+        ".re-lightbox-prev svg",
+        ".re-lightbox-prev",
+      ].map(
+        (selector) =>
+          getComputedStyle(document.querySelector(selector) as Element).scale,
+      );
+    createLightbox({
+      history: false,
+      slots: {
+        footer: ({ document, icon }) => {
+          const node = document.createElement("span");
+          node.className = "slot-arrow";
+          node.append(icon("previous"));
+          return { node };
+        },
+      },
+    }).open(
+      Array.from({ length: 3 }, () => ({
+        src: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='1200' height='800'/%3E",
+        width: 1200,
+        height: 800,
+      })),
+      1,
+    );
+    const ltr = read();
+    document.documentElement.dir = "rtl";
+    return { ltr, rtl: read() };
+  });
+  expect(scales).toEqual({
+    ltr: ["none", "none", "none", "none"],
+    rtl: ["-1 1", "none", "-1 1", "none"],
+  });
 });
 
 test("in RTL previous sits on the right and next on the left, each icon mirrored", async ({
@@ -1237,13 +1285,12 @@ test("theme.css takes its font sizes, blur and control timings from --re-lightbo
   await open(page, { thumbnails: "bottom" }, { captions: true });
   await page.addStyleTag({
     content:
-      ".re-lightbox{--re-lightbox-glyph-size:30px;--re-lightbox-font-size:15px;--re-lightbox-counter-font-size:11px;--re-lightbox-blur:4px;--re-lightbox-control-duration:120ms;--re-lightbox-ring-duration:60ms}",
+      ".re-lightbox{--re-lightbox-font-size:15px;--re-lightbox-counter-font-size:11px;--re-lightbox-blur:4px;--re-lightbox-control-duration:120ms;--re-lightbox-ring-duration:60ms}",
   });
   const styles = await page.evaluate(() => {
     const css = (selector: string) =>
       getComputedStyle(document.querySelector(selector) as Element);
     return {
-      glyph: css(".re-lightbox-close").fontSize,
       blur: css(".re-lightbox-counter").backdropFilter,
       rotate: css(".re-lightbox-close").transitionDuration,
       counter: css(".re-lightbox-counter").fontSize,
@@ -1253,7 +1300,6 @@ test("theme.css takes its font sizes, blur and control timings from --re-lightbo
     };
   });
   expect(styles).toEqual({
-    glyph: "30px",
     blur: "blur(4px)",
     rotate: "0.12s",
     counter: "11px",
@@ -1304,4 +1350,216 @@ test("the photos theme is white with the controls and fades to black over 300ms 
   expect(midway).not.toBe("rgb(255, 255, 255)");
   expect(midway).not.toBe("rgb(0, 0, 0)");
   await expect.poll(color).toBe("rgb(0, 0, 0)");
+});
+
+test("without icons every built-in button, a hidden one too, shows an SVG icon and no text, and zoom and slideshow swap theirs", async ({
+  page,
+}) => {
+  await open(page, {
+    controls: { fullscreen: true, download: true, slideshow: true },
+  });
+  const icons = () =>
+    page.evaluate(() =>
+      [...document.querySelectorAll<HTMLElement>(".re-lightbox-button")].map(
+        (button) => ({
+          name: button.className.replace("re-lightbox-button ", ""),
+          svg: button.querySelector("svg")?.innerHTML ?? null,
+          text: button.textContent,
+        }),
+      ),
+    );
+  const before = await icons();
+  expect(before.map(({ name }) => name).sort()).toEqual([
+    "re-lightbox-close",
+    "re-lightbox-download",
+    "re-lightbox-fullscreen",
+    "re-lightbox-next",
+    "re-lightbox-prev",
+    "re-lightbox-slideshow",
+    "re-lightbox-zoom",
+  ]);
+  for (const icon of before) {
+    expect(icon.svg, icon.name).toBeTruthy();
+    expect(icon.text, icon.name).toBe("");
+  }
+  const svg = (name: string, list: typeof before) =>
+    list.find((icon) => icon.name === `re-lightbox-${name}`)?.svg;
+  await page.click(".re-lightbox-zoom");
+  await page.click(".re-lightbox-slideshow");
+  const after = await icons();
+  expect(svg("zoom", after)).not.toBe(svg("zoom", before));
+  expect(svg("slideshow", after)).not.toBe(svg("slideshow", before));
+});
+
+test("an icon given for one key replaces only that button's built-in icon", async ({
+  page,
+}) => {
+  await mount(page, "", ["lightbox/base.css", "lightbox/theme.css"]);
+  await page.evaluate(async () => {
+    const { createLightbox } = await import("/modules/lightbox/index.js");
+    const lightbox = createLightbox({
+      history: false,
+      icons: {
+        close: () => {
+          const mark = document.createElement("i");
+          mark.className = "own-close";
+          return mark;
+        },
+      },
+    });
+    lightbox.open([
+      {
+        src: `data:image/svg+xml,${encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="800"/>')}`,
+        width: 1200,
+        height: 800,
+      },
+    ]);
+  });
+  await expect(page.locator(".re-lightbox-close .own-close")).toHaveCount(1);
+  await expect(page.locator(".re-lightbox-close svg")).toHaveCount(0);
+  await expect(page.locator(".re-lightbox-zoom svg")).toHaveCount(1);
+});
+
+test("zoom, slideshow and fullscreen show the second-state icon the icons option gives, else keep a given first icon", async ({
+  page,
+}) => {
+  await mount(page, "", ["lightbox/base.css", "lightbox/theme.css"]);
+  await page.evaluate(async () => {
+    const { createLightbox } = await import("/modules/lightbox/index.js");
+    const mark = (name: string) => () => {
+      const element = document.createElement("i");
+      element.className = name;
+      return element;
+    };
+    createLightbox({
+      history: false,
+      controls: { fullscreen: true, slideshow: true },
+      icons: {
+        zoom: mark("own-zoom"),
+        zoomOut: mark("own-zoom-out"),
+        slideshow: mark("own-play"),
+        fullscreenExit: mark("own-exit"),
+      },
+    }).open(
+      Array.from({ length: 3 }, () => ({
+        src: `data:image/svg+xml,${encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="800"/>')}`,
+        width: 1200,
+        height: 800,
+      })),
+    );
+  });
+  const shown = (name: string) =>
+    page.evaluate(
+      (selector) =>
+        [...(document.querySelector(selector)?.children ?? [])].map((child) =>
+          child.getAttribute("class"),
+        ),
+      `.re-lightbox-${name}`,
+    );
+  const fullscreenPath = () =>
+    page.locator(".re-lightbox-fullscreen path").getAttribute("d");
+  expect(await shown("zoom")).toEqual(["own-zoom"]);
+  expect(await shown("slideshow")).toEqual(["own-play"]);
+  const enter = await fullscreenPath();
+  await page.click(".re-lightbox-zoom");
+  await expect.poll(() => shown("zoom")).toEqual(["own-zoom-out"]);
+  await page.click(".re-lightbox-zoom");
+  await expect.poll(() => shown("zoom")).toEqual(["own-zoom"]);
+  await page.click(".re-lightbox-slideshow");
+  await expect(page.locator(".re-lightbox-slideshow")).toHaveAttribute(
+    "aria-label",
+    "Stop slideshow",
+  );
+  expect(await shown("slideshow")).toEqual(["own-play"]);
+  await page.click(".re-lightbox-fullscreen");
+  await expect.poll(() => shown("fullscreen")).toEqual(["own-exit"]);
+  await page.evaluate(() => document.exitFullscreen());
+  await expect.poll(fullscreenPath).toBe(enter);
+});
+
+test("on a plain page the theme sets a sans-serif font, so the counter is not the browser's serif default", async ({
+  page,
+}) => {
+  await open(page, {});
+  const font = await page.evaluate(
+    () =>
+      getComputedStyle(
+        document.querySelector(".re-lightbox-counter") as Element,
+      ).fontFamily,
+  );
+  expect(font).toMatch(/^system-ui,.*, sans-serif$/);
+  await page.addStyleTag({
+    content: ".re-lightbox{--re-lightbox-font:Courier}",
+  });
+  expect(
+    await page.evaluate(
+      () =>
+        getComputedStyle(
+          document.querySelector(".re-lightbox-counter") as Element,
+        ).fontFamily,
+    ),
+  ).toBe("Courier");
+});
+
+test("on a plain page the download link is the same 44 by 44px as the buttons", async ({
+  page,
+}) => {
+  await openFiles(page, ["https://cdn.test/photo.jpg"]);
+  const sizes = await page.evaluate(() =>
+    [".re-lightbox-download", ".re-lightbox-close"].map((selector) => {
+      const { width, height } = (
+        document.querySelector(selector) as Element
+      ).getBoundingClientRect();
+      return { width, height };
+    }),
+  );
+  expect(sizes).toEqual([
+    { width: 44, height: 44 },
+    { width: 44, height: 44 },
+  ]);
+});
+
+test("the photo fits beside the thumbnails: above the bottom strip and before the side column, also after a resize", async ({
+  page,
+}) => {
+  const edges = () =>
+    page.evaluate(() => {
+      const frame = document
+        .querySelector(
+          '.re-lightbox-slide[aria-hidden="false"] .re-lightbox-frame',
+        )
+        ?.getBoundingClientRect();
+      const strip = document
+        .querySelector(".re-lightbox-thumbnails")
+        ?.getBoundingClientRect();
+      return {
+        bottom: (strip?.top ?? 0) - (frame?.bottom ?? 0),
+        side: (strip?.left ?? 0) - (frame?.right ?? 0),
+      };
+    });
+  await open(page, { thumbnails: "bottom" });
+  expect((await edges()).bottom).toBeGreaterThanOrEqual(0);
+  await page.setViewportSize({ width: 1000, height: 600 });
+  await expect
+    .poll(async () => (await edges()).bottom)
+    .toBeGreaterThanOrEqual(0);
+  await page.setViewportSize({ width: 1000, height: 700 });
+  await open(page, { thumbnails: "side" });
+  expect((await edges()).side).toBeGreaterThanOrEqual(0);
+});
+
+test("a click in the gap between two thumbnails keeps the viewer open", {
+  tag: "@desktop",
+}, async ({ page }) => {
+  await open(page, { thumbnails: "bottom" }, { count: 8 });
+  await page.waitForTimeout(500);
+  const gap = await page.evaluate(() => {
+    const [a, b] = [
+      ...document.querySelectorAll(".re-lightbox-thumbnails button"),
+    ].map((thumb) => thumb.getBoundingClientRect());
+    return { x: (a.right + b.left) / 2, y: a.top + a.height / 2 };
+  });
+  await page.mouse.click(gap.x, gap.y);
+  await page.waitForTimeout(400);
+  expect((await lightbox(page)).isOpen).toBe(true);
 });

@@ -143,3 +143,19 @@ test("general agent prompts stay independent of the documentation platform", asy
     expect(value).not.toContain("Use HTML, CSS and JavaScript.");
   }
 });
+
+test("no lightbox theme or preset snippet imports a file the page does not show", async ({
+  page,
+}) => {
+  await page.goto("/lightbox/themes");
+  const snippets = await page
+    .locator("main pre")
+    .evaluateAll((blocks) => blocks.map((block) => block.textContent ?? ""));
+  expect(snippets.join("\n")).toContain("createLightbox");
+  const relative = snippets.flatMap((code) =>
+    [...code.matchAll(/(?:from|import)\s*["'](\.[^"']*)["']/g)].map(
+      (match) => match[1],
+    ),
+  );
+  expect(relative).toEqual([]);
+});

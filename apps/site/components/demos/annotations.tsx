@@ -20,8 +20,8 @@ export function AnnotationsDemo() {
       <AnnotatedImage
         src={photos[0].src}
         alt={`${photos[0].alt}, with three annotations`}
-        width={1600}
-        height={1200}
+        width={2400}
+        height={1800}
         annotations={initial}
       />
     </div>

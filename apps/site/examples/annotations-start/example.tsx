@@ -6,51 +6,51 @@ import { AnnotatedImage } from "@reuse-sh/annotations/react";
 const photos = [
   {
     id: "lake",
-    src: "https://reuse.sh/images/marble-lake.svg",
+    src: "/images/marble-lake.webp",
     caption: "Coral sky",
     alt: "A soft marble texture in coral, sand and blue",
-    width: 1600,
-    height: 1200,
+    width: 2400,
+    height: 1800,
   },
   {
     id: "mountains",
-    src: "https://reuse.sh/images/marble-mountains.svg",
+    src: "/images/marble-mountains.webp",
     caption: "Mint and ember",
     alt: "A soft marble texture in mint, blue and orange",
-    width: 1600,
-    height: 1200,
+    width: 2400,
+    height: 1800,
   },
   {
     id: "coast",
-    src: "https://reuse.sh/images/marble-coast.svg",
+    src: "/images/marble-coast.webp",
     caption: "Lilac bloom",
     alt: "A soft marble texture in lilac, rose and sea green",
-    width: 1600,
-    height: 1200,
+    width: 2400,
+    height: 1800,
   },
   {
     id: "forest",
-    src: "https://reuse.sh/images/marble-forest.svg",
+    src: "/images/marble-forest.webp",
     caption: "Sand and fern",
     alt: "A soft marble texture in sand, green and violet",
-    width: 1600,
-    height: 1200,
+    width: 2400,
+    height: 1800,
   },
   {
     id: "night",
-    src: "https://reuse.sh/images/marble-night.svg",
+    src: "/images/marble-night.webp",
     caption: "Blue hour",
     alt: "A soft marble texture in blue, lilac and gold",
-    width: 1600,
-    height: 1200,
+    width: 2400,
+    height: 1800,
   },
   {
     id: "woods",
-    src: "https://reuse.sh/images/marble-woods.svg",
+    src: "/images/marble-woods.webp",
     caption: "Amber",
     alt: "A soft marble texture in orange, yellow and blue",
-    width: 1600,
-    height: 1200,
+    width: 2400,
+    height: 1800,
   },
 ];
 
@@ -71,8 +71,8 @@ export function Example() {
         className="re-annot"
         src={photos[0].src}
         alt={`${photos[0].alt}, with three annotations`}
-        width={1600}
-        height={1200}
+        width={2400}
+        height={1800}
         annotations={initial}
       />
     </div>

@@ -555,3 +555,58 @@ test("next() during a held mouse drag across the seam of a looped strip moves on
   ).toEqual([]);
   expect(values.at(-1)).toBe(0);
 });
+
+test("an arrow key while the mouse is pressed but has not moved is kept by the drag that follows", {
+  tag: "@desktop",
+}, async ({ page }) => {
+  await setup(page);
+  await page.focus("#strip");
+  await page.mouse.move(400, 100);
+  await page.mouse.down();
+  await page.keyboard.press("ArrowRight");
+  expect((await framesUntilIdle(page, scrollLeft)).at(-1)).toBe(300);
+  await page.mouse.move(380, 100, { steps: 4 });
+  expect(await page.evaluate(scrollLeft)).toBeGreaterThanOrEqual(300);
+  // Holding still lets the release settle instead of flicking on.
+  await page.waitForTimeout(100);
+  await page.mouse.up();
+  expect((await framesUntilIdle(page, scrollLeft)).at(-1)).toBe(300);
+  expect(
+    await page.evaluate(
+      () =>
+        (
+          window as unknown as { carousel: { getState(): { index: number } } }
+        ).carousel.getState().index,
+    ),
+  ).toBe(1);
+});
+
+test("a click on a control inside a slide works after a drag a key ended off the strip", async ({
+  page,
+}) => {
+  await mount(
+    page,
+    `<div id="strip" style="width:600px;--re-carousel-gap:0px">${Array.from(
+      { length: 6 },
+      (_, index) =>
+        `<label data-carousel-slide style="flex:0 0 300px;height:200px;display:block;background:hsl(${index * 50} 60% 60%)"><input type="checkbox" id="box${index}"></label>`,
+    ).join("")}</div><div style="height:300px"></div>`,
+    ["carousel/styles.css"],
+  );
+  await page.evaluate(async () => {
+    const { createCarousel } = await import("/modules/carousel/index.js");
+    createCarousel(document.getElementById("strip") as HTMLElement);
+  });
+  await page.focus("#strip");
+  await page.mouse.move(500, 100);
+  await page.mouse.down();
+  await page.mouse.move(440, 100, { steps: 8 });
+  await page.keyboard.press("ArrowRight");
+  await page.mouse.move(440, 400, { steps: 4 });
+  await page.mouse.up();
+  await framesUntilIdle(page, scrollLeft);
+  const box = await page.locator("#strip input").nth(1).boundingBox();
+  if (!box) throw new Error("The second checkbox has no box.");
+  await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2);
+  expect(await page.locator("#strip input").nth(1).isChecked()).toBe(true);
+});

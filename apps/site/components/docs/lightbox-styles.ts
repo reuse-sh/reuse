@@ -30,7 +30,7 @@ export const lightboxStyles: Record<string, LightboxStyle> = {
   minimal: style("None", "None", false, "None", "Light", false, false),
   classic: style("Sides", "Corner", false, "Below", "Light", false, true),
   filmstrip: style("Sides", "None", true, "None", "Light", false, true),
-  panel: style("Sides", "Corner", false, "Panel", "Light", false, false),
+  panel: style("Sides", "None", false, "Panel", "Light", false, false),
   immersive: style("Sides", "Corner", false, "Below", "Dark", true, false),
   toolbar: style("Toolbar", "Toolbar", false, "Below", "Light", false, true),
 };
@@ -342,15 +342,13 @@ export function lightboxChrome(options: LightboxStyle) {
       options.counter === "Toolbar" && "counter",
       options.arrows === "Toolbar" && "next",
     ].filter(Boolean);
-    slots.push(`    footer: ({ lightbox, document }) => {
-      const button = (name, label, text, action) => {
+    slots.push(`    footer: ({ lightbox, document, icon }) => {
+      const button = (name, label, action) => {
         const element = document.createElement("button");
         element.type = "button";
         element.className = "re-lightbox-button";
         element.setAttribute("aria-label", label);
-        const icon = icons[name]?.();
-        if (icon) element.append(icon);
-        else element.textContent = text;
+        element.append(icon(name));
         element.addEventListener("click", action);
         return element;
       };
@@ -360,8 +358,8 @@ export function lightboxChrome(options: LightboxStyle) {
       bar.setAttribute("aria-label", "Photo controls");${
         options.arrows === "Toolbar"
           ? `
-      const prev = button("previous", "Previous image", "‹", () => lightbox.prev());
-      const next = button("next", "Next image", "›", () => lightbox.next());`
+      const prev = button("previous", "Previous image", () => lightbox.prev());
+      const next = button("next", "Next image", () => lightbox.next());`
           : ""
       }${
         options.counter === "Toolbar"
@@ -376,7 +374,7 @@ export function lightboxChrome(options: LightboxStyle) {
       const divider = document.createElement("span");
       divider.className = "re-lightbox-style-toolbar-divider";
       divider.setAttribute("aria-hidden", "true");
-      const zoom = button("zoom", "Zoom in", "+", () => lightbox.toggleZoom());
+      const zoom = button("zoom", "Zoom in", () => lightbox.toggleZoom());
       bar.append(divider, zoom);`
           : ""
       }
@@ -385,8 +383,8 @@ export function lightboxChrome(options: LightboxStyle) {
         update: (state) => {${
           options.arrows === "Toolbar"
             ? `
-          prev.disabled = state.index === 0;
-          next.disabled = state.index === state.count - 1;`
+          prev.disabled = !state.canPrev;
+          next.disabled = !state.canNext;`
             : ""
         }${
           options.counter === "Toolbar"
@@ -397,9 +395,10 @@ export function lightboxChrome(options: LightboxStyle) {
           options.zoomButton
             ? `
           const zoomed = state.zoom.scale > 1;
+          if (zoom.getAttribute("aria-pressed") !== String(zoomed))
+            zoom.replaceChildren(icon(zoomed ? "zoomOut" : "zoom"));
           zoom.setAttribute("aria-label", zoomed ? "Zoom out" : "Zoom in");
-          zoom.setAttribute("aria-pressed", String(zoomed));
-          if (!icons.zoom) zoom.textContent = zoomed ? "−" : "+";`
+          zoom.setAttribute("aria-pressed", String(zoomed));`
             : ""
         }
         },

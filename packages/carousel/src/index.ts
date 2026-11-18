@@ -1813,8 +1813,10 @@ export function createCarousel(
     const delta = input.clientX - pointer.x;
     if (!pointer.moved && Math.abs(delta) < 5) return;
     if (!pointer.moved) {
-      if (taken) {
-        interruptTake();
+      // A driver or a move from code that started during the press moved the strip, so the drag starts from there.
+      if (taken || pendingIndex !== undefined) {
+        if (taken) interruptTake();
+        else interrupt(false);
         if (!pointer) return;
         pointer.position = position() + (rtl ? -delta : delta);
       }
@@ -1980,6 +1982,7 @@ export function createCarousel(
   listen(viewport, "pointerdown", (event) => {
     const input = event as PointerEvent;
     const target = input.target as HTMLElement;
+    suppressClick = false;
     if (taken && input.pointerType !== "mouse") {
       grabbedTouch = input.pointerId;
       interrupt(false);
