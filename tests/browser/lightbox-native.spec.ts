@@ -615,6 +615,7 @@ test.describe("lightbox documents", () => {
   for (const from of [
     "frame",
     "parent bind",
+    "parent bind without a container",
     "parent bind with items that name no origin",
     "parent container",
   ] as const)
@@ -647,6 +648,10 @@ test.describe("lightbox documents", () => {
           } = await import("/modules/lightbox/index.js");
           const doc = (document.querySelector("iframe") as HTMLIFrameElement)
             .contentDocument as Document;
+          if (from === "parent bind without a container") {
+            bindLightboxGallery(doc.body, createLightbox());
+            return;
+          }
           const lightbox = createLightbox({ container: doc.body });
           if (from === "parent bind") {
             bindLightboxGallery(doc.body, lightbox);

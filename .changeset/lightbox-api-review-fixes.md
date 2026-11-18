@@ -13,3 +13,5 @@
 A gallery's `data-lightbox-options` apply only while a photo from that gallery is open, so two galleries can share one lightbox with different options, and the lightbox's own options return on close. Markup strings fill the text strings the lightbox's own `strings` leave unset.
 
 `--re-lightbox-padding` accepts any length, such as `2rem`, `calc()` or `clamp()`, instead of reading only the number at its start.
+
+A lightbox without `container` opens in the document of the photo's tile, so a gallery inside a same-origin frame, bound from the parent page, opens in the frame.

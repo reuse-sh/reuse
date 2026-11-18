@@ -3928,6 +3928,9 @@ export function createLightbox<Item extends LightboxItem = LightboxItem>(
     const layer = galleryOptions;
     const doc =
       current.container?.ownerDocument ??
+      resolveOrigin(
+        nextItems[clamp(Math.floor(index), 0, nextItems.length - 1)].origin,
+      )?.ownerDocument ??
       (typeof document === "undefined" ? undefined : document);
     if (!doc?.body)
       throw new Error("Opening a lightbox needs a browser document.");
