@@ -1281,19 +1281,46 @@ describe("one motion and strip state", () => {
 describe("one state for every control", () => {
   const eight = () => fixture(Array(8).fill(100), 300);
 
-  it("counts the distinct stops next() reaches as pages", () => {
-    for (const [group, pages] of [
-      [1, 6],
-      [3, 3],
-      ["page", 3],
+  it("counts the distinct stops next() reaches as pages and lists where each starts", () => {
+    for (const [group, starts] of [
+      [1, [0, 1, 2, 3, 4, 5]],
+      [3, [0, 3, 6]],
+      ["page", [0, 3, 5]],
     ] as const) {
       const { viewport } = eight();
       const carousel = createCarousel(viewport, { group });
       cleanups.push(carousel.destroy);
-      expect(carousel.getState()).toMatchObject({ count: 8, pageCount: pages });
+      const { pages } = carousel.getState();
+      expect(carousel.getState()).toMatchObject({
+        count: 8,
+        pageCount: starts.length,
+      });
+      expect(pages).toEqual(starts);
       carousel.goTo(7, "instant");
-      expect(carousel.getState().pageIndex).toBe(pages - 1);
+      expect(carousel.getState().pageIndex).toBe(starts.length - 1);
+      expect(carousel.getState().pages).toBe(pages);
     }
+  });
+
+  it("reports the visitor's pause apart from the holds", () => {
+    const { viewport } = eight();
+    const carousel = createCarousel(viewport, { autoplay: 1000 });
+    cleanups.push(carousel.destroy);
+    const read = () => {
+      const { isPaused, isPlaying } = carousel.getState();
+      return { isPaused, isPlaying };
+    };
+    expect(read()).toEqual({ isPaused: false, isPlaying: true });
+    carousel.hold("app", true);
+    expect(read()).toEqual({ isPaused: false, isPlaying: false });
+    carousel.pause();
+    expect(read()).toEqual({ isPaused: true, isPlaying: false });
+    carousel.hold("app", false);
+    expect(read()).toEqual({ isPaused: true, isPlaying: false });
+    carousel.play();
+    expect(read()).toEqual({ isPaused: false, isPlaying: true });
+    carousel.setOptions({ autoplay: undefined });
+    expect(read()).toEqual({ isPaused: true, isPlaying: false });
   });
 
   it("lists the slides at least half in view and publishes the list only when it changes", () => {
