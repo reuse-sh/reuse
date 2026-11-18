@@ -3763,7 +3763,10 @@ export function createLightbox<Item extends LightboxItem = LightboxItem>(
         if (to === undefined) return;
         event.preventDefault();
         s.stripInput = false;
-        const index = clamp(to, 0, s.thumbs.length - 1);
+        const count = s.thumbs.length;
+        const index = looping()
+          ? (to + count) % count
+          : clamp(to, 0, count - 1);
         rove(s, index);
         goTo(index);
         s.thumbs[index].focus({ preventScroll: true });

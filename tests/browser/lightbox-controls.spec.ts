@@ -990,6 +990,27 @@ test("the strip is one tab stop: Tab reaches the active thumbnail, and arrows, H
   expect(await focused()).toBe("Show image 1");
 });
 
+test("with loop on, the strip's arrows wrap from the last thumbnail to the first and back", async ({
+  page,
+}) => {
+  await open(page, { thumbnails: "bottom", loop: true }, { count: 6 });
+  const focused = () =>
+    page.evaluate(() => document.activeElement?.getAttribute("aria-label"));
+  for (let i = 0; i < 8 && (await focused()) !== "Show image 1"; i++)
+    await page.keyboard.press("Tab");
+  expect(await focused()).toBe("Show image 1");
+  for (const [key, index] of [
+    ["ArrowLeft", 5],
+    ["ArrowRight", 0],
+    ["End", 5],
+    ["ArrowRight", 0],
+  ] as const) {
+    await page.keyboard.press(key);
+    await expect.poll(async () => (await lightbox(page)).index).toBe(index);
+    expect(await focused()).toBe(`Show image ${index + 1}`);
+  }
+});
+
 test("a mouse drag on the strip reports and announces the photo once, when the strip settles, and leaves the tab stop on it", {
   tag: "@desktop",
 }, async ({ page, browserName }) => {
