@@ -3,7 +3,7 @@ import { framesUntilIdle, mount, swipe } from "./harness";
 
 type Strip = {
   next(): void;
-  goTo(index: number): void;
+  goTo(index: number, behavior?: ScrollBehavior): void;
   getState(): { index: number };
 };
 
@@ -724,4 +724,42 @@ test.describe("carousel drag listeners", () => {
     );
     expect(added).toEqual([]);
   });
+});
+
+test.describe("carousel touch settle", { tag: "@touch" }, () => {
+  for (const delay of [0, 50, 150])
+    test(`a resize ${delay}ms after a fling, with an instant goTo, still rests on a slide with snapping back`, async ({
+      page,
+      browserName,
+    }) => {
+      test.skip(browserName === "webkit", "needs native touch scrolling");
+      await setup(
+        page,
+        `<div id="strip" style="width:360px;--re-carousel-gap:0px">${Array.from(
+          { length: 8 },
+          (_, index) =>
+            `<div data-carousel-slide style="flex:0 0 100%;height:200px;background:hsl(${index * 50} 60% 60%)">${index}</div>`,
+        ).join("")}</div>`,
+      );
+      await swipe(page, { x: 300, y: 100 }, { x: 140, y: 100 }, { speed: 2 });
+      await page.evaluate((wait) => {
+        const strip = document.getElementById("strip") as HTMLElement;
+        const { carousel } = window as unknown as {
+          carousel: Strip & { refresh(): void };
+        };
+        setTimeout(() => {
+          strip.style.width = "300px";
+          carousel.refresh();
+          carousel.goTo(carousel.getState().index, "instant");
+        }, wait);
+      }, delay);
+      await page.waitForTimeout(delay);
+      await framesUntilIdle(page, scrollLeft, 400);
+      const rest = await page.evaluate(() => {
+        const strip = document.getElementById("strip") as HTMLElement;
+        return { left: strip.scrollLeft, snap: strip.style.scrollSnapType };
+      });
+      expect(rest.left % 300).toBe(0);
+      expect(rest.snap).toBe("");
+    });
 });

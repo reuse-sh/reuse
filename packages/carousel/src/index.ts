@@ -991,9 +991,11 @@ export function createCarousel(
     stopping = false;
     if (pointer || spring || taken || fingers || grabbedTouch !== undefined)
       return;
+    // A touch fling outlives an instant move, so only a native smooth scroll still heads for pendingPosition.
     if (
       pendingPosition !== undefined &&
-      Math.abs(position() - pendingPosition) > 1
+      Math.abs(position() - pendingPosition) > 1 &&
+      (smoothTarget !== undefined || deferredSmooth !== undefined)
     )
       return;
     clearTimeout(settleTimer);
