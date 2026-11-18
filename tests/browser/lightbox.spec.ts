@@ -318,3 +318,43 @@ test("a resize during the opening flight still ends with an opaque photo and bac
   );
   expect(opacity).toEqual(["1", "1"]);
 });
+
+for (const [name, act] of [
+  ["next()", "next"],
+  ["ArrowRight", "ArrowRight"],
+  ["End", "End"],
+] as const)
+  test(`${name} during the opening flight ends with an opaque backdrop`, async ({
+    page,
+  }) => {
+    await mount(page, "", ["lightbox/base.css", "lightbox/theme.css"]);
+    await page.addStyleTag({
+      content: ".re-lightbox{--re-lightbox-open-duration:1000ms}",
+    });
+    await page.evaluate(
+      async (sources) => {
+        const { createLightbox } = await import("/modules/lightbox/index.js");
+        const lightbox = createLightbox({ history: false });
+        Object.assign(window, { lightbox });
+        lightbox.open(
+          sources.map((src) => ({ src, width: 1200, height: 800 })),
+        );
+      },
+      Array.from({ length: 4 }, (_, index) => photo(index)),
+    );
+    await page.waitForTimeout(300);
+    if (act === "next")
+      await page.evaluate(() =>
+        (window as unknown as { lightbox: { next(): void } }).lightbox.next(),
+      );
+    else await page.keyboard.press(act);
+    await page.waitForFunction(() => document.getAnimations().length === 0);
+    expect(
+      await page.evaluate(
+        () =>
+          getComputedStyle(
+            document.querySelector(".re-lightbox-backdrop") as Element,
+          ).opacity,
+      ),
+    ).toBe("1");
+  });

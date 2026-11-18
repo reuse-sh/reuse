@@ -2255,6 +2255,7 @@ export function createLightbox<Item extends LightboxItem = LightboxItem>(
   function activeChanged(s: Session, index: number, report = true) {
     if (session !== s || state.index === index || state.isClosing) return;
     cancelAnimations(s);
+    s.backdrop.style.opacity = "";
     const old = s.loaded.get(state.index);
     if (old) {
       old.frame.style.transform = "";
