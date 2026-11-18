@@ -3231,14 +3231,14 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
       drag: true,
       loop: looping(),
       strings: { carouselRole: strings.carouselRole },
-      onChange: (value) => {
-        if (
-          !syncingCarousel &&
-          session?.viewport === viewport &&
-          session.resizeFrame === undefined
-        )
-          activeChanged(session, value.index);
-      },
+    });
+    carousel.subscribe((value) => {
+      if (
+        !syncingCarousel &&
+        session?.viewport === viewport &&
+        session.resizeFrame === undefined
+      )
+        activeChanged(session, value.index);
     });
     internalsOf(carousel)?.silence();
     return carousel;

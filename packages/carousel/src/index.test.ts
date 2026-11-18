@@ -1493,6 +1493,67 @@ describe("one state for every control", () => {
     ]);
   });
 
+  it("calls on() listeners with the state of each event and stops them on unsubscribe or abort", () => {
+    const { viewport } = fixture();
+    const carousel = createCarousel(viewport, { autoplay: 5000 });
+    cleanups.push(carousel.destroy);
+    const seen: string[] = [];
+    const controller = new AbortController();
+    for (const type of ["change", "settle", "play", "pause"] as const)
+      carousel.on(
+        type,
+        ({ state }) => seen.push(`${type} ${state.index} ${state.isPlaying}`),
+        { signal: controller.signal },
+      );
+    const stop = carousel.on("change", ({ state }) =>
+      seen.push(`stopped ${state.index}`),
+    );
+    const states: number[] = [];
+    carousel.subscribe((state) => states.push(state.index), {
+      signal: controller.signal,
+    });
+    carousel.next();
+    vi.advanceTimersByTime(1000);
+    carousel.pause();
+    stop();
+    carousel.play();
+    carousel.next();
+    controller.abort();
+    carousel.goTo(0, "instant");
+    expect(seen).toEqual([
+      "change 1 true",
+      "stopped 1",
+      "settle 1 true",
+      "pause 1 false",
+      "play 1 true",
+      "change 2 true",
+    ]);
+    expect(states.at(-1)).toBe(2);
+    const late: number[] = [];
+    carousel.subscribe((state) => late.push(state.index), {
+      signal: controller.signal,
+    });
+    carousel.on("change", ({ state }) => late.push(state.index), {
+      signal: controller.signal,
+    });
+    carousel.next();
+    expect(late).toEqual([]);
+  });
+
+  it("delivers a listener added twice twice and removes each with its own unsubscribe", () => {
+    const { viewport } = fixture();
+    const carousel = createCarousel(viewport);
+    cleanups.push(carousel.destroy);
+    const seen: number[] = [];
+    const listener = (state: { index: number }) => seen.push(state.index);
+    const first = carousel.subscribe(listener);
+    carousel.subscribe(listener);
+    carousel.goTo(1, "instant");
+    first();
+    carousel.goTo(2, "instant");
+    expect(seen).toEqual([1, 1, 2]);
+  });
+
   it("reports every change in order when a change handler moves the carousel again", () => {
     for (const [react, expected, playing] of [
       [

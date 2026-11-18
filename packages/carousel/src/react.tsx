@@ -37,8 +37,6 @@ export function useCarousel(options: CarouselOptions = {}) {
   const [viewport, setViewport] = useState<HTMLElement | null>(null);
   const [carousel, setCarousel] = useState<CarouselController | null>(null);
   const [state, setState] = useState<CarouselState>(emptyState);
-  const onChange = useRef(options.onChange);
-  onChange.current = options.onChange;
   const latest = useRef(options);
   latest.current = options;
   const {
@@ -68,14 +66,14 @@ export function useCarousel(options: CarouselOptions = {}) {
       moveMotion,
       wheel,
       strings: initial.strings,
-      onChange: (next) => {
-        setState(next);
-        onChange.current?.(next);
-      },
     });
+    const unsubscribe = instance.subscribe(setState);
     setCarousel(instance);
     setState(instance.getState());
-    return () => instance.destroy();
+    return () => {
+      unsubscribe();
+      instance.destroy();
+    };
   }, [viewport, slides, releaseMotion, releaseDuration, moveMotion, wheel]);
   useEffect(() => {
     carousel?.setOptions({ autoplay, loop, group, align, drag });

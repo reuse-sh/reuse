@@ -16,7 +16,6 @@ CarouselOptions:
 - moveMotion?: "spring" | "native", default spring. next, prev, goTo, the arrow keys, Home and End travel on the same critically damped spring as a released drag, settling in 500ms. A move during a move redirects the spring, keeps its speed and counts from its target. The spring crosses the loop seam. native keeps the browser smooth scroll. goTo(index, "instant") and reduced motion jump.
 - wheel?: "vertical", off by default. A vertical mouse wheel (line or page deltaMode, or |deltaY| >= 50 per event) moves one slide per notch and lets the page scroll once the strip cannot move that way; trackpads stay native.
 - strings?: Partial<CarouselStrings>, the slide labels and announcements
-- onChange?: (state: CarouselState) => void
 
 CarouselState: index, count, progress, canPrev, canNext, isPlaying, isDragging, isLooping, isPaused, pageCount, pageIndex, pages, visible, autoplayProgress, seamSlides. index is zero-based; progress is 0..1. isLooping is true only while the slides can cover the viewport and the loop actually repeats them. isPaused is the visitor's own pause: true after pause() until play() while an autoplay interval is set, and false while there is none; hover, focus, a drag, hold() and the other waits never set it, they only turn isPlaying off. pageCount is the number of distinct stops next() reaches from the first slide (fewer than count with group N or "page", or when the last slides share the end position), pages lists the index of the slide each of those stops starts at, in order, replaced only when it changes, and pageIndex is the last page whose position is at or before the active slide's. visible lists the slides at least half inside the viewport, in index order, measured during scrolling and replaced only when it changes. autoplayProgress is the part of the autoplay wait that has passed, 0..1 in whole percents. seamSlides lists, while the loop repeats, the first slides that start within one viewport width of the first slide and the last slides that end within one viewport width of the last slide's end, which are the slides seen while the strip crosses the loop seam; it is empty otherwise. getState returns a stable snapshot until something actually changes.
 
@@ -26,7 +25,9 @@ Carousel methods:
 - next(), prev()
 - goTo(index: number, behavior?: ScrollBehavior), defaults smooth except reduced motion
 - getState(): CarouselState
-- subscribe(listener: (state: CarouselState) => void): () => void
+- subscribe(listener: (state: CarouselState) => void, options?: { signal?: AbortSignal }): () => void, calls the listener with every new state; a listener that moves the strip publishes again, and the listeners after it read the newest state
+- on(type: K, listener: (event: CarouselEventMap[K]) => void, options?: { signal?: AbortSignal }): () => void for K extends keyof CarouselEventMap, where CarouselEventMap maps change, settle, play and pause to { state: CarouselState }; each fires right before the DOM event of the same name
+Both return a function that removes the listener; aborting the signal removes it too, and an aborted signal or a destroyed carousel adds nothing. Each call adds its own listener, so the same function added twice runs twice and each unsubscribe removes one.
 - refresh(): void, remeasure dynamic content while retaining the active element where possible
 - setEnabled(enabled: boolean): void, temporarily suspend user scrolling and dragging, used for lightbox zoom
 - play(), pause(), hold(reason: string, isHeld: boolean)
@@ -36,7 +37,7 @@ Carousel methods:
 
 Autoplay waits for its interval, then moves on; on the last slide of a strip that does not loop it returns to the first slide the same way. Hover, keyboard focus (the element focus lands on inside the strip, also inside a shadow root, matches :focus-visible, so the focus a mouse click or a script gives after a click does not count; checked on focusin and again on keyup, since Chromium and WebKit make a clicked element's focus visible once a key is pressed and Firefox does not), a drag, a hidden page, a strip less than half visible, reduced motion and hold() pause it and keep what is left of the wait. Any change of index starts the wait again. pause() by the visitor outlasts every hold(): releasing the holds does not resume it. --re-carousel-autoplay-progress on the viewport carries the passed part of the wait, written every frame while autoplay plays and left in place while it pauses.
 
-DOM events on the viewport, bubbling, with the state in detail: re-carousel:change when index changes, re-carousel:settle when a move comes to rest, re-carousel:play and re-carousel:pause when isPlaying changes.
+Events, through on() and as DOM events on the viewport (bubbling, the state in detail, for markup and code that holds no controller): change (re-carousel:change) when index changes, settle (re-carousel:settle) when a move comes to rest, play and pause (re-carousel:play, re-carousel:pause) when isPlaying changes.
 
 A goTo while the strip does not overflow (a hidden tab, display: none, images not loaded) only sets the index; the first refresh that finds overflow scrolls to that slide at once. A later goTo replaces it.
 

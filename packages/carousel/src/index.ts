@@ -27,7 +27,6 @@ export interface CarouselOptions {
   moveMotion?: "spring" | "native";
   wheel?: "vertical";
   strings?: Partial<CarouselStrings>;
-  onChange?: (state: CarouselState) => void;
 }
 
 export interface CarouselState {
@@ -48,6 +47,21 @@ export interface CarouselState {
   readonly seamSlides: readonly number[];
 }
 
+export interface CarouselEvent {
+  readonly state: CarouselState;
+}
+
+export interface CarouselEventMap {
+  change: CarouselEvent;
+  settle: CarouselEvent;
+  play: CarouselEvent;
+  pause: CarouselEvent;
+}
+
+export interface CarouselListenerOptions {
+  signal?: AbortSignal;
+}
+
 export interface CarouselHandle {
   setPosition(px: number): void;
   release(): void;
@@ -58,7 +72,15 @@ export interface Carousel {
   prev(): void;
   goTo(index: number, behavior?: ScrollBehavior): void;
   getState(): CarouselState;
-  subscribe(listener: (state: CarouselState) => void): () => void;
+  subscribe(
+    listener: (state: CarouselState) => void,
+    options?: CarouselListenerOptions,
+  ): () => void;
+  on<K extends keyof CarouselEventMap>(
+    type: K,
+    listener: (event: CarouselEventMap[K]) => void,
+    options?: CarouselListenerOptions,
+  ): () => void;
   refresh(): void;
   setEnabled(enabled: boolean): void;
   play(): void;
@@ -252,7 +274,10 @@ export function createCarousel(
     onInterrupt?: () => void;
   } | null = null;
   let stops: boolean[] = [];
-  const listeners = new Set<(state: CarouselState) => void>();
+  const listeners = new Set<{
+    type?: string;
+    listener: (value: never) => void;
+  }>();
   const holds = new Set<string>();
   const internalHolds = new Set<string>();
   const cleanup: (() => void)[] = [];
@@ -522,7 +547,33 @@ export function createCarousel(
     return shown;
   }
 
+  function attach(
+    type: string | undefined,
+    listener: (value: never) => void,
+    { signal }: CarouselListenerOptions = {},
+  ) {
+    if (destroyed || signal?.aborted) return () => {};
+    const entry = { type, listener };
+    const off = () => {
+      listeners.delete(entry);
+      signal?.removeEventListener("abort", off);
+    };
+    listeners.add(entry);
+    signal?.addEventListener("abort", off);
+    return off;
+  }
+
+  // A listener that moves the strip publishes again, so later listeners read the newest state.
+  function call(type?: string, detail?: CarouselState) {
+    for (const entry of listeners)
+      if (entry.type === type)
+        (entry.listener as (value: unknown) => void)(
+          type ? { state: detail } : state,
+        );
+  }
+
   function emit(type: string, detail: CarouselState) {
+    call(type, detail);
     viewport.dispatchEvent(
       new window.CustomEvent(`re-carousel:${type}`, {
         bubbles: true,
@@ -585,8 +636,7 @@ export function createCarousel(
       return;
     }
     state = Object.freeze(next);
-    options.onChange?.(state);
-    for (const listener of listeners) listener(state);
+    call();
     const from = emitted;
     const to = state;
     emitted = to;
@@ -1384,11 +1434,8 @@ export function createCarousel(
     prev: () => announced(() => step(-1)),
     goTo: (index, behavior) => goTo(index, behavior),
     getState: () => state,
-    subscribe(listener) {
-      if (destroyed) return () => {};
-      listeners.add(listener);
-      return () => listeners.delete(listener);
-    },
+    subscribe: (listener, options) => attach(undefined, listener, options),
+    on: (type, listener, options) => attach(type, listener, options),
     refresh,
     setEnabled(value) {
       if (destroyed || value === enabled) return;

@@ -446,7 +446,7 @@ export const libraries: Library[] = [
     api: [
       [
         "createCarousel(viewport, options?)",
-        "Binds a scroll-snap strip. Options: slides, align, loop, drag, group, autoplay, moveMotion, releaseMotion, releaseDuration, wheel, strings, onChange.",
+        "Binds a scroll-snap strip. Options: slides, align, loop, drag, group, autoplay, moveMotion, releaseMotion, releaseDuration, wheel, strings.",
       ],
       [
         "setOptions(options)",
@@ -471,6 +471,10 @@ export const libraries: Library[] = [
       [
         "getState(), subscribe(listener)",
         "Index, count, progress, pageCount, pageIndex, pages (the slide each page starts at), the visible slides, autoplayProgress, seamSlides, canPrev, canNext, whether it is playing, dragging or looping, and isPaused, the visitor's own pause of autoplay, false without autoplay, which holds and hover leave alone.",
+      ],
+      [
+        "subscribe(listener, { signal }), on(type, listener, { signal })",
+        "subscribe calls the listener with every new state. on listens for change, settle, play or pause and passes { state }. Both return a function that removes the listener, and aborting the signal removes it too.",
       ],
       [
         "take(owner, { onInterrupt })",
@@ -522,7 +526,7 @@ export const libraries: Library[] = [
       "Autoplay pauses for hover, keyboard focus (:focus-visible), dragging, hidden pages, strips less than half in view and reduced motion, and picks up the rest of its wait when it resumes. --re-carousel-autoplay-progress on the viewport fills from 0 to 1 over the wait, every frame.",
       'For a page without a bundler or an import map, such as a theme or a plugin, load @reuse-sh/carousel/browser/carousel.js with <script type="module">. It is one minified ES module with a source map and no imports. The controls entry is controls.js in the same folder, also with no imports.',
       "bindCarouselControls(root, carousel, { strings, dotsWindow }) from @reuse-sh/carousel/controls wires your own markup: [data-carousel-prev], [data-carousel-next], [data-carousel-dots], [data-carousel-counter], [data-carousel-play] and [data-carousel-progress], also outside root with data-carousel-controls set to the viewport id. It reads pages, pageIndex, isPaused and autoplayProgress from the one state, and the function it returns removes every listener and element it added.",
-      "The strings option supplies every label and announcement, such as goTo(index, count) and slide(index, count), with English defaults. The viewport dispatches re-carousel:change, re-carousel:settle, re-carousel:play and re-carousel:pause with the state in detail.",
+      "The strings option supplies every label and announcement, such as goTo(index, count) and slide(index, count), with English defaults. carousel.on(type, listener, { signal }) reports change, settle, play and pause with { state }, and the viewport dispatches the same events as re-carousel:change, re-carousel:settle, re-carousel:play and re-carousel:pause with the state in detail, for markup and scripts that hold no controller.",
       "A div or span viewport without a role becomes a region described by strings.carouselRole, and div or span slides without one become groups described by strings.slideRole and labeled from strings.slide, such as 3 of 8. next(), prev(), the arrows, dots and keys announce the slide they reach; autoplay and swipes stay quiet.",
       "A goTo while the strip cannot scroll yet, such as in a hidden tab or before its images load, waits for the first refresh that finds overflow and lands there at once.",
       "connectThumbnails(main, thumbnails) keeps the active thumbnail in view and centered, marks it with aria-current and moves the main strip when a thumbnail is clicked.",
