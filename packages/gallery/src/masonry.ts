@@ -1,4 +1,5 @@
 import { placeLanes } from "./lanes.js";
+import { observeLayout } from "./observe.js";
 import { claim, unclaim } from "./owners.js";
 import { resolveTolerance } from "./tolerance.js";
 
@@ -265,11 +266,10 @@ export function createMasonry(container: HTMLElement): Masonry {
     mutation?.takeRecords();
   };
 
-  // Placed on the next frame rather than inside the observer: placing changes
-  // the container's height, which the observer would report again in the same
-  // frame. Items that change size in one frame share one placement. A picture's
-  // load schedules from its own task, so the placement lands before the frame
-  // that would show the taller item paints.
+  // A width change places in its own frame; an item that changes size places
+  // on the next frame, where items that change in one frame share one
+  // placement. A picture's load schedules from its own task, so the placement
+  // lands before the frame that would show the taller item paints.
   const schedule = () => {
     if (frame) return;
     frame = view.requestAnimationFrame(() => {
@@ -277,9 +277,13 @@ export function createMasonry(container: HTMLElement): Masonry {
       place();
     });
   };
-  const resize = view.ResizeObserver
-    ? new view.ResizeObserver(schedule)
-    : undefined;
+  const resize = observeLayout(
+    view,
+    container,
+    () => container.clientWidth,
+    place,
+    schedule,
+  );
   // Hiding, showing or re-spanning an item changes its size, which the resize
   // observer reports; only items coming and going need watching here.
   const mutation = view.MutationObserver
@@ -291,7 +295,6 @@ export function createMasonry(container: HTMLElement): Masonry {
   };
 
   place();
-  resize?.observe(container);
   mutation?.observe(container, { childList: true });
   container.addEventListener("load", onLoad, true);
   container.addEventListener("loadedmetadata", onLoad, true);
