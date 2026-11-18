@@ -1,6 +1,10 @@
 import type { CarouselStrings } from "./index.js";
 
 // Each entry spells the key itself: a shared runtime module would become a third file in the browser build.
+/**
+ * Not public API. The hooks the controls binder and the lightbox use to drive a carousel.
+ * It may change in any release, including a patch.
+ */
 export interface CarouselInternals {
   readonly viewport: HTMLElement;
   readonly strings: CarouselStrings;

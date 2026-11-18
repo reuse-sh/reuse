@@ -16,3 +16,4 @@ Breaking changes (0.x, so a minor release):
 - `useCarousel` returns `{ ref, carousel }` without `state`. Replace `const { ref, carousel, state } = useCarousel(options)` with `const { ref, carousel } = useCarousel(options)` and `const index = useCarouselState(carousel, (state) => state.index)` for each part of the state a component shows.
 - The `onReady` prop of `<Carousel>` is removed. Use `useCarousel` where the controller is needed.
 - `bindCarouselControls` no longer takes `strings`. Pass them to `createCarousel` (or `data-carousel-options`), the one source for the strip and its controls.
+- `CarouselInternals` is no longer exported from `@reuse-sh/carousel`. It moved to the types-only `@reuse-sh/carousel/internal`, which is not public API and may change in any release.

@@ -1,7 +1,5 @@
 import type { CarouselInternals } from "./internal.js";
 
-export type { CarouselInternals } from "./internal.js";
-
 export interface CarouselStrings {
   previous: string;
   next: string;

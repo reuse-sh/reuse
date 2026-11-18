@@ -1,8 +1,5 @@
-import {
-  type Carousel,
-  type CarouselInternals,
-  createCarousel,
-} from "@reuse-sh/carousel";
+import { type Carousel, createCarousel } from "@reuse-sh/carousel";
+import type { CarouselInternals } from "@reuse-sh/carousel/internal";
 import { createThinkingDots } from "@reuse-sh/loaders";
 import {
   type ChromeInput,

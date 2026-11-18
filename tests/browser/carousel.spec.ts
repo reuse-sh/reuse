@@ -1,6 +1,9 @@
 import { expect, type Page, test } from "@playwright/test";
 import { framesUntilIdle, mount } from "./harness";
 
+// @ts-expect-error CarouselInternals lives in @reuse-sh/carousel/internal, not in the public entry point.
+type _PublicInternals = import("/modules/carousel/index.js").CarouselInternals;
+
 const slides = Array.from(
   { length: 6 },
   (_, index) =>
