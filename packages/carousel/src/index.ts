@@ -9,6 +9,8 @@ export interface CarouselStrings {
   play: string;
   pause: string;
   progress: string;
+  carouselRole: string;
+  slideRole: string;
 }
 
 export interface CarouselOptions {
@@ -163,6 +165,8 @@ const defaultStrings: CarouselStrings = {
   play: "Play slideshow",
   pause: "Pause slideshow",
   progress: "Slide position",
+  carouselRole: "carousel",
+  slideRole: "slide",
 };
 
 function validate(options: CarouselOptions) {
@@ -1275,7 +1279,7 @@ export function createCarousel(
       if (!roled.has(slide)) {
         if (!generic(slide)) return;
         slide.setAttribute("role", "group");
-        slide.setAttribute("aria-roledescription", "slide");
+        slide.setAttribute("aria-roledescription", strings.slideRole);
         roled.set(slide, !slide.hasAttribute("aria-label"));
       }
       if (roled.get(slide))
@@ -1644,7 +1648,7 @@ export function createCarousel(
   if (initialTabIndex === null) viewport.tabIndex = 0;
   if (ownsRole) {
     viewport.setAttribute("role", "region");
-    viewport.setAttribute("aria-roledescription", "carousel");
+    viewport.setAttribute("aria-roledescription", strings.carouselRole);
   }
   viewport.after(live);
   listen(viewport, "scroll", () => {

@@ -58,6 +58,7 @@ export interface LightboxStrings {
   loading: string;
   error: string;
   retry: string;
+  carouselRole: string;
 }
 
 const defaultStrings: LightboxStrings = {
@@ -79,6 +80,7 @@ const defaultStrings: LightboxStrings = {
   loading: "Loading",
   error: "Image could not be loaded.",
   retry: "Try again",
+  carouselRole: "carousel",
 };
 
 export type LightboxSlotName =
@@ -3219,10 +3221,11 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
     );
   }
 
-  function connect(viewport: HTMLDivElement) {
+  function connect(viewport: HTMLDivElement, strings: LightboxStrings) {
     const carousel = createCarousel(viewport, {
       drag: true,
       loop: looping(),
+      strings: { carouselRole: strings.carouselRole },
       onChange: (value) => {
         if (
           !syncingCarousel &&
@@ -3243,7 +3246,7 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
     const syncing = syncingCarousel;
     syncingCarousel = true;
     s.carousel.destroy();
-    s.carousel = connect(s.viewport);
+    s.carousel = connect(s.viewport, s.strings);
     s.carouselLoops = looping();
     s.carousel.goTo(index, "instant");
     syncingCarousel = syncing;
@@ -3746,7 +3749,7 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
       backdrop,
       slides,
       loaded: new Map(),
-      carousel: connect(viewport),
+      carousel: connect(viewport, strings),
       carouselLoops: looping(),
       heading: 1,
       strings,

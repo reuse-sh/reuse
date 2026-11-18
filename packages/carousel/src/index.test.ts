@@ -1553,6 +1553,17 @@ describe("one state for every control", () => {
     expect(slides[2].getAttribute("aria-label")).toBe("3 of 8");
     expect(slides[2].getAttribute("aria-roledescription")).toBe("slide");
     expect(slides[7].hasAttribute("aria-label")).toBe(false);
+    const german = fixture([100, 100], 100);
+    const localized = createCarousel(german.viewport, {
+      strings: { carouselRole: "Karussell", slideRole: "Folie" },
+    });
+    expect(
+      [german.viewport, ...german.slides].map((element) =>
+        element.getAttribute("aria-roledescription"),
+      ),
+    ).toEqual(["Karussell", "Folie", "Folie"]);
+    localized.destroy();
+    german.viewport.remove();
     vi.advanceTimersByTime(1100);
     expect(carousel.getState().index).toBe(1);
     const live = viewport.nextElementSibling as HTMLElement;
