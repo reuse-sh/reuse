@@ -320,6 +320,7 @@ export function createCarousel(
     strings: { ...markup.strings, ...initialOptions.strings },
   };
   validate(options);
+  const created = { ...options };
   const strings = { ...defaultStrings, ...options.strings };
 
   const initialTabIndex = viewport.getAttribute("tabindex");
@@ -1603,13 +1604,25 @@ export function createCarousel(
     setOptions(next) {
       if (destroyed) return;
       validate(next);
+      const resolved: CarouselOptions = {};
+      for (const name of liveOptions)
+        if (Object.hasOwn(next, name))
+          Object.assign(resolved, {
+            [name]:
+              next[name] === undefined
+                ? created[name]
+                : name === "strings"
+                  ? { ...created.strings, ...next.strings }
+                  : next[name],
+          });
       const changed = liveOptions.filter(
-        (name) => Object.hasOwn(next, name) && next[name] !== options[name],
+        (name) =>
+          Object.hasOwn(resolved, name) && resolved[name] !== options[name],
       );
       if (!changed.length) return;
       const hadAutoplay = options.autoplay !== undefined;
       for (const name of changed)
-        Object.assign(options, { [name]: next[name] });
+        Object.assign(options, { [name]: resolved[name] });
       if (changed.includes("autoplay")) {
         if (options.autoplay === undefined) {
           requestedPlaying = false;

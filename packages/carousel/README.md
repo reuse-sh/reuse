@@ -53,6 +53,8 @@ The server can print the options with the markup. `data-carousel-options` holds 
 </div>
 ```
 
+`setOptions` changes any option except `slides` in place. A key set to `undefined` returns to its value at creation, from code or markup, else the default, and `strings` merge over the creation strings. `useCarousel` compares strings field by field and function strings such as `goTo` by identity, so memoize them or define them outside the component; a new function on every render calls `setOptions` on every render.
+
 <!-- examples:start -->
 
 ## Usage

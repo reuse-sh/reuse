@@ -148,6 +148,17 @@ it("keeps options read from markup until the component changes them", async () =
     root.render(createElement(Marked, { options: { group: 1 } })),
   );
   expect(current?.getState().pageCount).toBe(4);
+  await act(() => root.render(createElement(Marked, { options: {} })));
+  expect(current?.getState().pageCount).toBe(3);
+  await act(() => root.unmount());
+});
+
+it("returns an option the component drops to the markup or the default", async () => {
+  vi.useFakeTimers();
+  const { root, render } = await mount({ autoplay: 1000, group: 2 });
+  expect(current?.getState()).toMatchObject({ isPlaying: true, pageCount: 3 });
+  await render({});
+  expect(current?.getState()).toMatchObject({ isPlaying: false, pageCount: 4 });
   await act(() => root.unmount());
 });
 
@@ -160,7 +171,10 @@ it("keeps markup options for keys the component leaves undefined", async () => {
     current = carousel;
     return createElement(
       "div",
-      { ref, "data-carousel-options": '{"slides":"[data-pick]","align":"center"}' },
+      {
+        ref,
+        "data-carousel-options": '{"slides":"[data-pick]","align":"center"}',
+      },
       [0, 1, 2, 3].map((index) =>
         createElement("div", {
           key: index,

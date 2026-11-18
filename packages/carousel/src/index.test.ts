@@ -2,7 +2,12 @@
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { bindCarouselControls } from "./controls.js";
-import { connectThumbnails, createCarousel, syncCarousels } from "./index.js";
+import {
+  type CarouselOptions,
+  connectThumbnails,
+  createCarousel,
+  syncCarousels,
+} from "./index.js";
 
 const cleanups: (() => void)[] = [];
 let motion: EventTarget & { matches: boolean };
@@ -1219,6 +1224,32 @@ describe("one motion and strip state", () => {
     expect(carousel.getState().index).toBe(0);
   });
 
+  it("merges new strings over the creation strings and restores creation values for undefined keys", () => {
+    const { viewport, slides } = fixture(Array(6).fill(100), 300);
+    viewport.dataset.carouselOptions = JSON.stringify({
+      group: 3,
+      strings: { slideRole: "Folie" },
+    });
+    const carousel = createCarousel(viewport, {
+      strings: { carouselRole: "Karussell" },
+    });
+    cleanups.push(carousel.destroy);
+    const roles = () => [
+      viewport.getAttribute("aria-roledescription"),
+      slides[0].getAttribute("aria-roledescription"),
+    ];
+    carousel.setOptions({ strings: { carouselRole: "Galerie" } });
+    expect(roles()).toEqual(["Galerie", "Folie"]);
+    carousel.setOptions({ strings: undefined });
+    expect(roles()).toEqual(["Karussell", "Folie"]);
+    carousel.setOptions({ group: 1, align: "center" });
+    expect(carousel.getState().pageCount).toBe(4);
+    expect(slides[1].style.scrollSnapAlign).toBe("center");
+    carousel.setOptions({ group: undefined, align: undefined });
+    expect(carousel.getState().pageCount).toBe(2);
+    expect(slides[3].style.scrollSnapAlign).toBe("start");
+  });
+
   it("marks static, edge and dragging state on the viewport and removes it on destroy", () => {
     const { viewport } = fixture();
     const carousel = createCarousel(viewport);
@@ -1426,8 +1457,9 @@ describe("one state for every control", () => {
 
   it("reports the visitor's pause apart from the holds", () => {
     const { viewport } = eight();
-    const carousel = createCarousel(viewport, { autoplay: 1000 });
+    const carousel = createCarousel(viewport);
     cleanups.push(carousel.destroy);
+    carousel.setOptions({ autoplay: 1000 });
     const read = () => {
       const { isPaused, isPlaying } = carousel.getState();
       return { isPaused, isPlaying };
@@ -2199,14 +2231,19 @@ describe("thumbnails", () => {
 });
 
 describe("controls binder", () => {
-  function bound(markup: string, widths = Array(8).fill(100), width = 300) {
+  function bound(
+    markup: string,
+    widths = Array(8).fill(100),
+    width = 300,
+    options: CarouselOptions = { autoplay: 5000 },
+  ) {
     const strip = fixture(widths, width);
     strip.viewport.id = "photos";
     const root = document.createElement("div");
     root.innerHTML = markup;
     strip.viewport.before(root);
     root.prepend(strip.viewport);
-    const carousel = createCarousel(strip.viewport, { autoplay: 5000 });
+    const carousel = createCarousel(strip.viewport, options);
     cleanups.push(carousel.destroy);
     return { ...strip, root, carousel };
   }
@@ -2384,7 +2421,13 @@ describe("controls binder", () => {
   });
 
   it("toggles play and pause with its label and pressed state", () => {
-    const { root, carousel } = bound("<button data-carousel-play></button>");
+    const { root, carousel } = bound(
+      "<button data-carousel-play></button>",
+      undefined,
+      undefined,
+      {},
+    );
+    carousel.setOptions({ autoplay: 5000 });
     const unbind = bindCarouselControls(root, carousel);
     const play = root.querySelector("[data-carousel-play]");
     expect(play?.getAttribute("aria-pressed")).toBe("true");

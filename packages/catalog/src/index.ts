@@ -460,7 +460,7 @@ export const libraries: Library[] = [
       ],
       [
         "setOptions(options)",
-        "Changes any option except slides without rebuilding the strip, such as autoplay, loop, group, align, drag, motion, wheel or strings. The active slide stays in place.",
+        "Changes any option except slides without rebuilding the strip, such as autoplay, loop, group, align, drag, motion, wheel or strings. The active slide stays in place. A key set to undefined returns to its value at creation, from code or markup, else the default. strings merge over the creation strings.",
       ],
       [
         "moveMotion",
@@ -509,7 +509,7 @@ export const libraries: Library[] = [
       ["destroy()", "Removes listeners and restores the viewport."],
       [
         "useCarousel(options), useCarouselState(carousel, selector)",
-        "From @reuse-sh/carousel/react. useCarousel returns { ref, carousel } and applies changed options with setOptions; a change of slides creates the carousel again. useCarouselState re-renders only when what the selector returns changes, compared field by field for an object, and selects from the empty state on the server and before the carousel exists.",
+        "From @reuse-sh/carousel/react. useCarousel returns { ref, carousel } and applies changed options with setOptions; a change of slides creates the carousel again, and an option it drops returns to the markup value or the default. It compares strings field by field and function strings such as goTo by identity, so memoize them or define them outside the component. useCarouselState re-renders only when what the selector returns changes, compared field by field for an object, and selects from the empty state on the server and before the carousel exists.",
       ],
       [
         "syncCarousels(...carousels)",
