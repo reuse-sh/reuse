@@ -279,11 +279,7 @@ export function lightboxThemePreview(id: string) {
   if (!(theme in lightboxThemes)) return null;
   const scope = `re-preview-${id}`;
   const file = readFileSync(
-    join(
-      process.cwd(),
-      "node_modules/@reuse-sh/lightbox/dist/themes",
-      `${theme}.css`,
-    ),
+    join(process.cwd(), "public/modules/lightbox/themes", `${theme}.css`),
     "utf8",
   );
   const css = [file, theme === "page" ? pageColors : "", preset?.css ?? ""]
