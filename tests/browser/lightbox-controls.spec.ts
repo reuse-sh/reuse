@@ -491,7 +491,9 @@ test("the fullscreen button toggles the viewer's stage, and leaving fullscreen k
 }) => {
   await open(page, { controls: { fullscreen: true } });
   const button = page.locator(".re-lightbox-fullscreen");
+  const icon = () => button.locator("path").getAttribute("d");
   await expect(button).toHaveAttribute("aria-label", "Enter full screen");
+  const enter = await icon();
   await button.click();
   await expect
     .poll(() =>
@@ -499,8 +501,10 @@ test("the fullscreen button toggles the viewer's stage, and leaving fullscreen k
     )
     .toBe("re-lightbox-stage");
   await expect(button).toHaveAttribute("aria-label", "Exit full screen");
+  expect(await icon()).not.toBe(enter);
   await page.evaluate(() => document.exitFullscreen());
   await expect(button).toHaveAttribute("aria-label", "Enter full screen");
+  expect(await icon()).toBe(enter);
   expect(await lightbox(page)).toMatchObject({ isOpen: true });
 });
 
@@ -1304,4 +1308,72 @@ test("the photos theme is white with the controls and fades to black over 300ms 
   expect(midway).not.toBe("rgb(255, 255, 255)");
   expect(midway).not.toBe("rgb(0, 0, 0)");
   await expect.poll(color).toBe("rgb(0, 0, 0)");
+});
+
+test("without icons every built-in button, a hidden one too, shows an SVG icon and no text, and zoom and slideshow swap theirs", async ({
+  page,
+}) => {
+  await open(page, {
+    controls: { fullscreen: true, download: true, slideshow: true },
+  });
+  const icons = () =>
+    page.evaluate(() =>
+      [...document.querySelectorAll<HTMLElement>(".re-lightbox-button")].map(
+        (button) => ({
+          name: button.className.replace("re-lightbox-button ", ""),
+          svg: button.querySelector("svg")?.innerHTML ?? null,
+          text: button.textContent,
+        }),
+      ),
+    );
+  const before = await icons();
+  expect(before.map(({ name }) => name).sort()).toEqual([
+    "re-lightbox-close",
+    "re-lightbox-download",
+    "re-lightbox-fullscreen",
+    "re-lightbox-next",
+    "re-lightbox-prev",
+    "re-lightbox-slideshow",
+    "re-lightbox-zoom",
+  ]);
+  for (const icon of before) {
+    expect(icon.svg, icon.name).toBeTruthy();
+    expect(icon.text, icon.name).toBe("");
+  }
+  const svg = (name: string, list: typeof before) =>
+    list.find((icon) => icon.name === `re-lightbox-${name}`)?.svg;
+  await page.click(".re-lightbox-zoom");
+  await page.click(".re-lightbox-slideshow");
+  const after = await icons();
+  expect(svg("zoom", after)).not.toBe(svg("zoom", before));
+  expect(svg("slideshow", after)).not.toBe(svg("slideshow", before));
+});
+
+test("an icon given for one key replaces only that button's built-in icon", async ({
+  page,
+}) => {
+  await mount(page, "", ["lightbox/base.css", "lightbox/theme.css"]);
+  await page.evaluate(async () => {
+    const { createLightbox } = await import("/modules/lightbox/index.js");
+    const lightbox = createLightbox({
+      history: false,
+      icons: {
+        close: () => {
+          const mark = document.createElement("i");
+          mark.className = "own-close";
+          return mark;
+        },
+      },
+    });
+    lightbox.open([
+      {
+        src: `data:image/svg+xml,${encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="800"/>')}`,
+        width: 1200,
+        height: 800,
+      },
+    ]);
+  });
+  await expect(page.locator(".re-lightbox-close .own-close")).toHaveCount(1);
+  await expect(page.locator(".re-lightbox-close svg")).toHaveCount(0);
+  await expect(page.locator(".re-lightbox-zoom svg")).toHaveCount(1);
 });

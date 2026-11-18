@@ -25,6 +25,7 @@ import {
   zoomAround,
   zoomLimits,
 } from "./geometry.js";
+import { type BuiltInIcon, showIcon } from "./icons.js";
 import {
   fileWidth,
   formatOf,
@@ -1074,7 +1075,7 @@ export function createLightbox<Item extends LightboxItem = LightboxItem>(
       "aria-label",
       on ? s.strings.slideshowStop : s.strings.slideshowStart,
     );
-    if (!settings.icons?.slideshow) button.textContent = on ? "❚❚" : "▶";
+    if (!settings.icons?.slideshow) showIcon(button, on ? "pause" : "play");
   }
 
   // A CSS easing list passes CSS.supports but makes animate() throw, so the check asks the same parser animate() uses.
@@ -1314,7 +1315,7 @@ export function createLightbox<Item extends LightboxItem = LightboxItem>(
     );
     zoomButton?.setAttribute("aria-pressed", String(state.zoom.scale > 1));
     if (zoomButton && !settings.icons?.zoom)
-      zoomButton.textContent = out ? "−" : "+";
+      showIcon(zoomButton, out ? "zoomOut" : "zoomIn");
     s.dialog.dataset.zoomed = String(state.zoom.scale > 1);
     s.dialog.dataset.zoom = out ? "out" : "in";
     if (s.watchedScale !== state.zoom.scale) {
@@ -3727,6 +3728,11 @@ export function createLightbox<Item extends LightboxItem = LightboxItem>(
           "aria-label",
           full ? s.strings.fullscreenExit : s.strings.fullscreenEnter,
         );
+        if (s.fullscreenButton && !settings.icons?.fullscreen)
+          showIcon(
+            s.fullscreenButton,
+            full ? "fullscreenExit" : "fullscreenEnter",
+          );
         if (full) s.dialog.dataset.fullscreen = "";
         else delete s.dialog.dataset.fullscreen;
       },
@@ -4013,7 +4019,7 @@ export function createLightbox<Item extends LightboxItem = LightboxItem>(
       tag: K,
       name: LightboxIcon,
       label: string,
-      text: string,
+      builtIn: BuiltInIcon,
       action: (() => void) | undefined,
       parent: HTMLElement,
     ) => {
@@ -4023,7 +4029,7 @@ export function createLightbox<Item extends LightboxItem = LightboxItem>(
       element.setAttribute("aria-label", label);
       const icon = settings.icons?.[name]?.();
       if (icon) element.append(icon);
-      else element.textContent = text;
+      else showIcon(element, builtIn);
       if (action)
         element.addEventListener("click", action, { signal: abort.signal });
       parent.append(element);
@@ -4042,7 +4048,7 @@ export function createLightbox<Item extends LightboxItem = LightboxItem>(
           "button",
           "zoom",
           strings.zoomIn,
-          "+",
+          "zoomIn",
           () => toggleZoom(),
           toolbarEnd,
         )
@@ -4052,7 +4058,7 @@ export function createLightbox<Item extends LightboxItem = LightboxItem>(
           "button",
           "slideshow",
           strings.slideshowStart,
-          "▶",
+          "play",
           () => toggleSlideshow(s),
           toolbarEnd,
         )
@@ -4063,7 +4069,7 @@ export function createLightbox<Item extends LightboxItem = LightboxItem>(
             "button",
             "fullscreen",
             strings.fullscreenEnter,
-            "⤢",
+            "fullscreenEnter",
             () => {
               if (doc.fullscreenElement === stage)
                 void doc.exitFullscreen().catch(() => {});
@@ -4073,7 +4079,14 @@ export function createLightbox<Item extends LightboxItem = LightboxItem>(
           )
         : undefined;
     const download = control("download")
-      ? button("a", "download", strings.download, "↓", undefined, toolbarEnd)
+      ? button(
+          "a",
+          "download",
+          strings.download,
+          "download",
+          undefined,
+          toolbarEnd,
+        )
       : undefined;
     download?.setAttribute("download", "");
     download?.setAttribute("rel", "noopener");
@@ -4172,7 +4185,7 @@ export function createLightbox<Item extends LightboxItem = LightboxItem>(
           "button",
           "close",
           strings.close,
-          "×",
+          "close",
           () => void close(),
           toolbarEnd,
         )
@@ -4183,13 +4196,13 @@ export function createLightbox<Item extends LightboxItem = LightboxItem>(
           "button",
           "previous",
           strings.previous,
-          "‹",
+          "previous",
           () => step(-1),
           stage,
         )
       : undefined;
     const next = control("arrows")
-      ? button("button", "next", strings.next, "›", () => step(1), stage)
+      ? button("button", "next", strings.next, "next", () => step(1), stage)
       : undefined;
     const footer = doc.createElement("div");
     footer.className = "re-lightbox-footer";

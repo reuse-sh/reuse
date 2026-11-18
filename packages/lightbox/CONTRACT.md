@@ -17,7 +17,7 @@ LightboxOptions:
 - slideshow?: { interval?: number }, ms between photos, default 4000
 - autoHide?: number | false, default 2500, ms of a still mouse before the controls hide; false keeps them up
 - className?: string, added to the dialog
-- icons?: Partial<Record<"close" | "previous" | "next" | "zoom" | "fullscreen" | "download" | "slideshow", () => Node>>; the previous arrow keeps the class re-lightbox-prev
+- icons?: Partial<Record<"close" | "previous" | "next" | "zoom" | "fullscreen" | "download" | "slideshow", () => Node>>; a key without one keeps the built-in SVG icon, which zoom, slideshow and fullscreen switch with their state; the previous arrow keeps the class re-lightbox-prev
 - renderContent?: (context: LightboxContentContext) => undefined | (() => void), an overlay above the image; the returned function runs when the slide unloads. Media slides do not call it
 - content?: readonly LightboxContent[], the modules for items with a type (see Media slides)
 - autoplayMedia?: boolean, default true; a player starts the first time its slide is current after the open flight, when open() ran inside a user action (navigator.userActivation.isActive, assumed where missing)
