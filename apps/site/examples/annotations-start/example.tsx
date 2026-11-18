@@ -6,7 +6,7 @@ import { AnnotatedImage } from "@reuse-sh/annotations/react";
 const photos = [
   {
     id: "lake",
-    src: "https://reuse.sh/images/marble-lake.webp",
+    src: "/images/marble-lake.webp",
     caption: "Coral sky",
     alt: "A soft marble texture in coral, sand and blue",
     width: 2400,
@@ -14,7 +14,7 @@ const photos = [
   },
   {
     id: "mountains",
-    src: "https://reuse.sh/images/marble-mountains.webp",
+    src: "/images/marble-mountains.webp",
     caption: "Mint and ember",
     alt: "A soft marble texture in mint, blue and orange",
     width: 2400,
@@ -22,7 +22,7 @@ const photos = [
   },
   {
     id: "coast",
-    src: "https://reuse.sh/images/marble-coast.webp",
+    src: "/images/marble-coast.webp",
     caption: "Lilac bloom",
     alt: "A soft marble texture in lilac, rose and sea green",
     width: 2400,
@@ -30,7 +30,7 @@ const photos = [
   },
   {
     id: "forest",
-    src: "https://reuse.sh/images/marble-forest.webp",
+    src: "/images/marble-forest.webp",
     caption: "Sand and fern",
     alt: "A soft marble texture in sand, green and violet",
     width: 2400,
@@ -38,7 +38,7 @@ const photos = [
   },
   {
     id: "night",
-    src: "https://reuse.sh/images/marble-night.webp",
+    src: "/images/marble-night.webp",
     caption: "Blue hour",
     alt: "A soft marble texture in blue, lilac and gold",
     width: 2400,
@@ -46,7 +46,7 @@ const photos = [
   },
   {
     id: "woods",
-    src: "https://reuse.sh/images/marble-woods.webp",
+    src: "/images/marble-woods.webp",
     caption: "Amber",
     alt: "A soft marble texture in orange, yellow and blue",
     width: 2400,

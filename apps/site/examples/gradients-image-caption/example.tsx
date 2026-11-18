@@ -80,7 +80,7 @@ export function Example() {
         {/* biome-ignore lint/performance/noImgElement: this standalone recipe uses a native image. */}
         <img
           className="block aspect-landscape h-auto w-full object-cover"
-          src="https://reuse.sh/images/marble-forest.webp"
+          src="/images/marble-forest.webp"
           alt="A soft marble texture in sand, green and violet"
           width={2400}
           height={1800}

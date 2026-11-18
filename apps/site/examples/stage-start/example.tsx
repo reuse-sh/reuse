@@ -5,7 +5,7 @@ import { Stage, type StageAct } from "@reuse-sh/stage/react";
 import { type FormEvent, useState } from "react";
 import "./scene.css";
 
-const image = (id: string) => `https://reuse.sh/images/marble-${id}.webp`;
+const image = (id: string) => `/images/marble-${id}.webp`;
 const team = [
   { name: "Mara Lind", src: image("mountains") },
   { name: "Jonas Weber", src: image("coast") },

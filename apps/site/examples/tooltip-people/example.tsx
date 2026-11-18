@@ -14,19 +14,19 @@ function escapeHtml(value: string) {
 }
 const photos = [
   {
-    src: "https://reuse.sh/images/marble-lake.webp",
+    src: "/images/marble-lake.webp",
     alt: "A soft marble texture in coral, sand and blue",
     width: 2400,
     height: 1800,
   },
   {
-    src: "https://reuse.sh/images/marble-mountains.webp",
+    src: "/images/marble-mountains.webp",
     alt: "A soft marble texture in mint, blue and orange",
     width: 2400,
     height: 1800,
   },
   {
-    src: "https://reuse.sh/images/marble-coast.webp",
+    src: "/images/marble-coast.webp",
     alt: "A soft marble texture in lilac, rose and sea green",
     width: 2400,
     height: 1800,
