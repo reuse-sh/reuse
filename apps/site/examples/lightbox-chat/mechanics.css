@@ -55,10 +55,10 @@
     @apply text-label leading-4.5 font-medium;
   }
   .re-person small {
-    @apply overflow-hidden text-caption leading-4.5 text-subtle-foreground whitespace-nowrap text-ellipsis;
+    @apply overflow-hidden text-caption leading-4.5 text-muted-foreground whitespace-nowrap text-ellipsis;
   }
   .re-person time {
-    @apply self-start mt-0.5 text-caption text-subtle-foreground;
+    @apply self-start mt-0.5 text-caption text-muted-foreground;
   }
   .re-thread-head > span:last-child {
     @apply grid leading-4.5;
