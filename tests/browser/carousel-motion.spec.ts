@@ -3,7 +3,7 @@ import { framesUntilIdle, mount, swipe } from "./harness";
 
 type Strip = {
   next(): void;
-  goTo(index: number): void;
+  goTo(index: number, behavior?: ScrollBehavior): void;
   getState(): { index: number };
 };
 
@@ -74,6 +74,49 @@ test.describe("carousel spring", { tag: "@desktop" }, () => {
     expect(time).toBeLessThanOrEqual(550);
   });
 
+  test("a mouse flick on a full-width strip covers 90% of the way to the next slide within 250ms, like next()", async ({
+    page,
+  }) => {
+    await setup(
+      page,
+      `<div id="strip" style="width:100vw;--re-carousel-gap:0px">${slideRow(6, 1440)}</div>`,
+    );
+    const width = await page.evaluate(() => innerWidth);
+    await page.evaluate(() => {
+      const strip = document.getElementById("strip") as HTMLElement;
+      const record = { released: 0, samples: [] as [number, number][] };
+      addEventListener(
+        "pointerup",
+        () => {
+          record.released = performance.now();
+          const tick = () => {
+            record.samples.push([
+              performance.now() - record.released,
+              strip.scrollLeft,
+            ]);
+            requestAnimationFrame(tick);
+          };
+          tick();
+        },
+        { capture: true, once: true },
+      );
+      Object.assign(window, { record });
+    });
+    await swipe(page, { x: 1100, y: 100 }, { x: 700, y: 100 }, { speed: 2 });
+    await framesUntilIdle(page, scrollLeft);
+    const samples = await page.evaluate(
+      () =>
+        (window as unknown as { record: { samples: [number, number][] } })
+          .record.samples,
+    );
+    expect(samples.at(-1)?.[1]).toBe(width);
+    const start = samples[0][1];
+    const reached = samples.find(
+      ([, left]) => left - start >= 0.9 * (width - start),
+    );
+    expect(reached?.[0]).toBeLessThanOrEqual(250);
+  });
+
   test("three next() presses within 200ms reach the fourth slide without stopping or turning back", async ({
     page,
   }) => {
@@ -101,6 +144,46 @@ test.describe("carousel spring", { tag: "@desktop" }, () => {
     await page.waitForTimeout(300);
     const values = await pressNext(page, [0]);
     expect(values.at(-1)?.left).toBe(900);
+  });
+
+  test("next() right after a horizontal wheel scroll keeps going forward to the slide it chose", async ({
+    page,
+  }) => {
+    await setup(
+      page,
+      `<div id="strip" style="width:600px;--re-carousel-gap:0px">${slideRow(20)}</div>`,
+    );
+    await page.mouse.move(300, 100);
+    for (let notch = 0; notch < 6; notch++) {
+      await page.mouse.wheel(60, 0);
+      await page.waitForTimeout(16);
+    }
+    const { from, target, values } = await page.evaluate(
+      () =>
+        new Promise<{ from: number; target: number; values: number[] }>(
+          (resolve) => {
+            const strip = document.getElementById("strip") as HTMLElement;
+            const { carousel } = window as unknown as { carousel: Strip };
+            const from = strip.scrollLeft;
+            carousel.next();
+            const target = carousel.getState().index * 300;
+            const values: number[] = [];
+            let changed = performance.now();
+            const tick = () => {
+              const now = performance.now();
+              if (strip.scrollLeft !== values.at(-1)) changed = now;
+              values.push(strip.scrollLeft);
+              if (now - changed > 400) resolve({ from, target, values });
+              else requestAnimationFrame(tick);
+            };
+            requestAnimationFrame(tick);
+          },
+        ),
+    );
+    expect(target).toBeGreaterThan(from);
+    expect(values.at(-1)).toBe(target);
+    const back = values.filter((value, at) => at && value < values[at - 1]);
+    expect(back).toEqual([]);
   });
 
   test("next() during a native smooth scroll takes over from it", async ({
@@ -641,4 +724,42 @@ test.describe("carousel drag listeners", () => {
     );
     expect(added).toEqual([]);
   });
+});
+
+test.describe("carousel touch settle", { tag: "@touch" }, () => {
+  for (const delay of [0, 50, 150])
+    test(`a resize ${delay}ms after a fling, with an instant goTo, still rests on a slide with snapping back`, async ({
+      page,
+      browserName,
+    }) => {
+      test.skip(browserName === "webkit", "needs native touch scrolling");
+      await setup(
+        page,
+        `<div id="strip" style="width:360px;--re-carousel-gap:0px">${Array.from(
+          { length: 8 },
+          (_, index) =>
+            `<div data-carousel-slide style="flex:0 0 100%;height:200px;background:hsl(${index * 50} 60% 60%)">${index}</div>`,
+        ).join("")}</div>`,
+      );
+      await swipe(page, { x: 300, y: 100 }, { x: 140, y: 100 }, { speed: 2 });
+      await page.evaluate((wait) => {
+        const strip = document.getElementById("strip") as HTMLElement;
+        const { carousel } = window as unknown as {
+          carousel: Strip & { refresh(): void };
+        };
+        setTimeout(() => {
+          strip.style.width = "300px";
+          carousel.refresh();
+          carousel.goTo(carousel.getState().index, "instant");
+        }, wait);
+      }, delay);
+      await page.waitForTimeout(delay);
+      await framesUntilIdle(page, scrollLeft, 400);
+      const rest = await page.evaluate(() => {
+        const strip = document.getElementById("strip") as HTMLElement;
+        return { left: strip.scrollLeft, snap: strip.style.scrollSnapType };
+      });
+      expect(rest.left % 300).toBe(0);
+      expect(rest.snap).toBe("");
+    });
 });

@@ -422,6 +422,8 @@ export function createCarousel(
     velocity: number;
     target: number;
     time: number;
+    started: number;
+    takeover: boolean;
     frequency: number;
     fresh: boolean;
   } | null = null;
@@ -560,9 +562,15 @@ export function createCarousel(
         : previousCursor;
   }
 
+  function wrap(offset: number) {
+    return ((offset % span) + span) % span;
+  }
+
+  // Browsers round scrollLeft, so the lap boundary sits midway between snap points, not on one.
   function loopPosition(current: number) {
-    const origin = targets[0] ?? span;
-    return origin + ((((current - origin) % span) + span) % span);
+    const first = targets[0] ?? span;
+    const origin = first - (first + span - (targets.at(-1) ?? first)) / 2;
+    return origin + wrap(current - origin);
   }
 
   function jumpLoop(target: number) {
@@ -701,12 +709,16 @@ export function createCarousel(
     viewport.toggleAttribute("data-re-at-start", !span && current < 1);
     viewport.toggleAttribute("data-re-at-end", !span && current > max - 1);
     const visible = visibleSlides(current);
+    // Browsers round scrollLeft, so a strip resting on the first slide can sit just below it.
+    const lap = span > 0 ? wrap(current - (targets[0] ?? span)) : 0;
     const next: CarouselState = {
       index,
       count: slides.length,
       progress:
         span > 0
-          ? (loopPosition(current) - (targets[0] ?? span)) / span
+          ? lap > span - 1
+            ? 0
+            : lap / span
           : max > 0
             ? current / max
             : 0,
@@ -905,11 +917,15 @@ export function createCarousel(
 
   function springFrame(now: number) {
     if (!spring) return;
-    // A native scroll can still run when a spring starts; the spring's first write ends it.
+    // Chrome's wheel animation and a touch fling keep scrolling after a spring's first
+    // write, so a spring started during one writes over it until new input arrives.
     if (spring.fresh) {
       spring.value = position() + stretch;
       spring.fresh = false;
-    } else if (Math.abs(position() - written) > 1) {
+    } else if (
+      Math.abs(position() - written) > 1 &&
+      (!spring.takeover || lastInput > spring.started)
+    ) {
       yieldToScroll();
       return;
     }
@@ -954,6 +970,11 @@ export function createCarousel(
       velocity: speed,
       target,
       time: moving?.time ?? window.performance.now(),
+      started: window.performance.now(),
+      takeover:
+        moving?.takeover ??
+        (window.performance.now() - lastScroll < INPUT_WINDOW &&
+          Math.abs(position() - written) > 1),
       fresh: moving?.fresh ?? true,
       frequency:
         speed * distance > 0
@@ -980,9 +1001,11 @@ export function createCarousel(
     stopping = false;
     if (pointer || spring || taken || fingers || grabbedTouch !== undefined)
       return;
+    // A touch fling outlives an instant move, so only a native smooth scroll still heads for pendingPosition.
     if (
       pendingPosition !== undefined &&
-      Math.abs(position() - pendingPosition) > 1
+      Math.abs(position() - pendingPosition) > 1 &&
+      (smoothTarget !== undefined || deferredSmooth !== undefined)
     )
       return;
     clearTimeout(settleTimer);
@@ -1089,9 +1112,12 @@ export function createCarousel(
     behavior: ScrollBehavior = "smooth",
     direction?: 1 | -1,
     releaseSpeed?: number,
-    reference = pendingPosition ?? position(),
-    flick = false,
+    from?: number,
   ) {
+    if (pointer?.moved && !destroyed && enabled) {
+      endDrag(false);
+      suppressClick = true;
+    }
     if (
       destroyed ||
       !enabled ||
@@ -1109,10 +1135,11 @@ export function createCarousel(
       publish(next);
       return;
     }
+    const reference = from ?? pendingPosition ?? position();
     let target = targetAt(next, reference);
     if (span && direction === 1 && target <= reference + 0.5) target += span;
     if (span && direction === -1 && target >= reference - 0.5) target -= span;
-    travel(next, target, behavior, releaseSpeed, flick);
+    travel(next, target, behavior, releaseSpeed);
   }
 
   function travel(
@@ -1120,7 +1147,7 @@ export function createCarousel(
     destination: number,
     behavior: ScrollBehavior,
     releaseSpeed?: number,
-    flick = false,
+    glideFree = false,
   ) {
     const motion =
       releaseSpeed === undefined ? options.moveMotion : options.releaseMotion;
@@ -1150,7 +1177,7 @@ export function createCarousel(
       startSpring(
         target,
         releaseSpeed ?? 0,
-        flick ? 2 / GLIDE : settleRate,
+        glideFree ? 2 / GLIDE : settleRate,
         settleRate,
       );
     } else {
@@ -1536,12 +1563,10 @@ export function createCarousel(
     } else if (moved && snap && Math.abs(velocity) >= FLICK_VELOCITY) {
       const end = targetAt(projected, stop);
       const blocked = firstStop(current, end, direction);
-      if (blocked >= 0)
-        goTo(blocked, "smooth", direction, speed, current, true);
+      if (blocked >= 0) goTo(blocked, "smooth", direction, speed, current);
       else if ((end - current) * direction > 1)
-        goTo(projected, "smooth", undefined, speed, stop, true);
-      else
-        goTo(indexAhead(direction), "smooth", direction, speed, current, true);
+        goTo(projected, "smooth", undefined, speed, stop);
+      else goTo(indexAhead(direction), "smooth", direction, speed, current);
     } else if (moved && snap)
       goTo(nearestIndex(current), "smooth", undefined, speed, current);
     else if (moved || snap || stretch) settle();
@@ -1840,7 +1865,8 @@ export function createCarousel(
       viewport,
       "click",
       (event) => {
-        if (!suppressClick) return;
+        // A drag ended by a move can leave its suppression unused, so a click from a key (detail 0) passes.
+        if (!suppressClick || (event as MouseEvent).detail === 0) return;
         suppressClick = false;
         event.preventDefault();
         event.stopPropagation();
@@ -1870,7 +1896,8 @@ export function createCarousel(
     if (pointer?.moved) recenterLoop();
     scrolling = true;
     unsettled = true;
-    lastScroll = window.performance.now();
+    if (Math.abs(position() - written) > 0.5)
+      lastScroll = window.performance.now();
     trackScroll();
     render();
     publish(pendingIndex ?? nearestIndex());

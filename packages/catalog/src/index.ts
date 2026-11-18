@@ -425,7 +425,8 @@ export const libraries: Library[] = [
       ],
       [
         "Drag like a trackpad",
-        "A released mouse drag keeps its speed and glides to the slide nearest where it would stop, or to the stop itself when the strip does not snap there, never past a slide that asks to stop. Past either end it stretches and springs back.",
+        "A released mouse drag goes to the slide nearest where its speed would carry it, never past a slide that asks to stop, and a flick on a snapped strip settles there as fast as next(). A strip that does not snap there, with scroll-snap-type none or proximity away from a snap point, glides on with the drag's own momentum to the stop itself. Past either end it stretches and springs back.",
+        "tests/browser/carousel-motion.spec.ts",
       ],
       [
         "Keep the slide it was sent to",
@@ -504,7 +505,7 @@ export const libraries: Library[] = [
       ],
       [
         "releaseDuration",
-        "How long the spring takes to settle a slow release or a stretched end, in milliseconds. 260 by default. A flick glides on with its own momentum.",
+        "How long the spring takes to settle a release or a stretched end on a snapped strip, flicks included, in milliseconds. 260 by default. A free glide, with scroll-snap-type none or proximity away from a snap point, carries the drag's own momentum instead.",
       ],
       [
         "next(), prev(), goTo(index, behavior?)",
@@ -566,7 +567,7 @@ export const libraries: Library[] = [
       'state.seamSlides lists the slides a looping strip shows while it crosses the seam: the first slides and the last slides that each fill one viewport width. When the server renders the strip, give the images in those slides loading="eager" and leave the rest lazy, so crossing the seam never shows an image that is still loading.',
       'To let the first and last slides of a centered strip reach the middle without a loop, set align: "center" and give the viewport padding-inline and scroll-padding-inline of half the difference between the viewport and a slide, such as #prints { --re-carousel-slide-width: 320px; padding-inline: calc(50% - 160px); scroll-padding-inline: calc(50% - 160px); } for a viewport as wide as its parent.',
       "The viewport carries data-re-dragging during a mouse drag, data-re-scrolling during a fast swipe or wheel scroll, data-re-static when nothing overflows, and data-re-at-start and data-re-at-end at the edges of a strip that does not loop. The package CSS turns off hover on the slides while data-re-scrolling is set. bindCarouselControls marks the prev, next and dots it binds with data-re-static while their strip is static, and the package CSS hides those, in place or in a data-carousel-controls group. The package CSS hides no control it did not bind: a page that writes its own arrows hides them with a rule on the viewport's attribute, such as .gallery:has(> [data-re-static]) .arrows { display: none }.",
-      "While a mouse drags the strip, the slides scale to --re-carousel-press-scale (0.96) over --re-carousel-press-duration (300ms). Set the scale to 1 to turn it off.",
+      "Set --re-carousel-press-scale, such as 0.96, and the slides shrink to it while a mouse drags the strip, over --re-carousel-press-duration (300ms). Without it the slides keep their size.",
       "scroll-snap-type on the viewport sets how a released drag ends: mandatory snaps, proximity snaps only near a snap point, and none glides to a stop.",
       "A mouse drag inside a nested strip that can scroll moves only that strip.",
       "Autoplay pauses for hover, keyboard focus (:focus-visible), dragging, hidden pages, strips less than half in view and reduced motion, and picks up the rest of its wait when it resumes. --re-carousel-autoplay-progress on the viewport fills from 0 to 1 over the wait, every frame.",

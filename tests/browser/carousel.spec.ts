@@ -376,6 +376,39 @@ test("quick thumbnail clicks while the strip still moves each pick their slide",
   ).toBe(true);
 });
 
+test("a click right after an instant goTo reaches the slide, since the strip is not moving", async ({
+  page,
+}) => {
+  await setup(page);
+  await page.mouse.move(300, 100);
+  const jumped = await page.evaluate(
+    () =>
+      new Promise<number>((resolve) => {
+        const strip = document.getElementById("strip") as HTMLElement;
+        strip.addEventListener("click", () =>
+          Object.assign(window, { clicked: true }),
+        );
+        (
+          window as unknown as {
+            carousel: { goTo(index: number, behavior: string): void };
+          }
+        ).carousel.goTo(3, "instant");
+        strip.addEventListener("scroll", () => resolve(performance.now()), {
+          once: true,
+        });
+      }),
+  );
+  await page.mouse.click(300, 100);
+  const elapsed = await page.evaluate(
+    (time) => performance.now() - time,
+    jumped,
+  );
+  expect(elapsed).toBeLessThan(100);
+  expect(
+    await page.evaluate(() => (window as { clicked?: boolean }).clicked),
+  ).toBe(true);
+});
+
 test("a strip whose slides take their width from the package stylesheet overflows from the start", async ({
   page,
 }) => {
@@ -398,4 +431,127 @@ test("a strip whose slides take their width from the package stylesheet overflow
     };
   });
   expect(state).toEqual({ static: false, canNext: true });
+});
+
+test("slides keep their size during a mouse drag unless the page sets a press scale", async ({
+  page,
+}) => {
+  await setup(page);
+  const pressed = async () => {
+    await page.mouse.move(400, 100);
+    await page.mouse.down();
+    await page.mouse.move(300, 100, { steps: 10 });
+    await page.waitForTimeout(400);
+    const scale = await page.evaluate(
+      () =>
+        getComputedStyle(
+          document.querySelector("#strip > [data-carousel-slide]") as Element,
+        ).scale,
+    );
+    await page.mouse.up();
+    await page.waitForTimeout(700);
+    return scale;
+  };
+  expect(await pressed()).toBe("none");
+  await page.evaluate(() =>
+    (document.getElementById("strip") as HTMLElement).style.setProperty(
+      "--re-carousel-press-scale",
+      "0.96",
+    ),
+  );
+  expect(await pressed()).toBe("0.96");
+});
+
+test("an arrow key during a held mouse drag pages on and the release keeps the page", async ({
+  page,
+}) => {
+  await setup(page);
+  await page.focus("#strip");
+  await page.mouse.move(400, 100);
+  await page.mouse.down();
+  await page.mouse.move(340, 100, { steps: 8 });
+  await page.keyboard.press("ArrowRight");
+  await page.mouse.move(380, 100, { steps: 4 });
+  await page.mouse.up();
+  const values = await framesUntilIdle(page, scrollLeft);
+  expect(values.at(-1)).toBe(300);
+  expect(
+    await page.evaluate(
+      () =>
+        (
+          window as unknown as { carousel: { getState(): { index: number } } }
+        ).carousel.getState().index,
+    ),
+  ).toBe(1);
+});
+
+for (const release of ["over the strip", "outside the strip"])
+  test(`an arrow key that ends a held mouse drag keeps the release ${release} from clicking, and the next click goes through`, {
+    tag: "@desktop",
+  }, async ({ page }) => {
+    await mount(
+      page,
+      `<div id="strip" style="width:600px;--re-carousel-gap:0px">${Array.from(
+        { length: 6 },
+        (_, index) =>
+          `<div data-carousel-slide style="flex:0 0 300px;height:200px"><button type="button" style="width:100%;height:100%">${index}</button></div>`,
+      ).join("")}</div>`,
+      ["carousel/styles.css"],
+    );
+    await page.evaluate(async () => {
+      const { createCarousel } = await import("/modules/carousel/index.js");
+      const strip = document.getElementById("strip") as HTMLElement;
+      const clicks: string[] = [];
+      window.addEventListener("click", (event) => {
+        const target = event.target as HTMLElement;
+        if (strip.contains(target)) clicks.push(target.textContent ?? "");
+      });
+      Object.assign(window, { carousel: createCarousel(strip), clicks });
+    });
+    const clicks = () =>
+      page.evaluate(() => (window as unknown as { clicks: string[] }).clicks);
+    await page.focus("#strip");
+    await page.mouse.move(400, 100);
+    await page.mouse.down();
+    await page.mouse.move(340, 100, { steps: 8 });
+    await page.keyboard.press("ArrowRight");
+    await framesUntilIdle(page, scrollLeft);
+    if (release === "outside the strip") await page.mouse.move(400, 400);
+    await page.mouse.up();
+    expect(await clicks()).toEqual([]);
+    await page.focus("#strip button >> nth=1");
+    await page.keyboard.press("Enter");
+    expect(await clicks()).toEqual(["1"]);
+  });
+
+test("next() during a held mouse drag across the seam of a looped strip moves one slide forward", {
+  tag: "@desktop",
+}, async ({ page }) => {
+  await mount(
+    page,
+    `<div id="strip" style="width:600px;--re-carousel-gap:0px">${slides}</div>`,
+    ["carousel/styles.css"],
+  );
+  await page.evaluate(async () => {
+    const { createCarousel } = await import("/modules/carousel/index.js");
+    const strip = document.getElementById("strip") as HTMLElement;
+    Object.assign(window, { carousel: createCarousel(strip, { loop: true }) });
+  });
+  await framesUntilIdle(page, scrollLeft);
+  const first =
+    "Math.round(document.querySelector('#strip > [data-carousel-slide]').getBoundingClientRect().left - document.getElementById('strip').getBoundingClientRect().left)";
+  await page.mouse.move(200, 100);
+  await page.mouse.down();
+  await page.mouse.move(500, 100, { steps: 10 });
+  expect(await page.evaluate(first)).toBe(300);
+  await page.evaluate(() =>
+    (window as unknown as { carousel: { next(): void } }).carousel.next(),
+  );
+  const values = await framesUntilIdle(page, first);
+  await page.mouse.up();
+  expect(values.filter((value) => value < -1 || value > 301)).toEqual([]);
+  expect(
+    values.filter((value, at) => at && value > values[at - 1] + 1),
+  ).toEqual([]);
+  expect(values.at(-1)).toBe(0);
 });
