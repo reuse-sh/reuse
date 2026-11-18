@@ -1241,13 +1241,12 @@ test("theme.css takes its font sizes, blur and control timings from --re-lightbo
   await open(page, { thumbnails: "bottom" }, { captions: true });
   await page.addStyleTag({
     content:
-      ".re-lightbox{--re-lightbox-glyph-size:30px;--re-lightbox-font-size:15px;--re-lightbox-counter-font-size:11px;--re-lightbox-blur:4px;--re-lightbox-control-duration:120ms;--re-lightbox-ring-duration:60ms}",
+      ".re-lightbox{--re-lightbox-font-size:15px;--re-lightbox-counter-font-size:11px;--re-lightbox-blur:4px;--re-lightbox-control-duration:120ms;--re-lightbox-ring-duration:60ms}",
   });
   const styles = await page.evaluate(() => {
     const css = (selector: string) =>
       getComputedStyle(document.querySelector(selector) as Element);
     return {
-      glyph: css(".re-lightbox-close").fontSize,
       blur: css(".re-lightbox-counter").backdropFilter,
       rotate: css(".re-lightbox-close").transitionDuration,
       counter: css(".re-lightbox-counter").fontSize,
@@ -1257,7 +1256,6 @@ test("theme.css takes its font sizes, blur and control timings from --re-lightbo
     };
   });
   expect(styles).toEqual({
-    glyph: "30px",
     blur: "blur(4px)",
     rotate: "0.12s",
     counter: "11px",
@@ -1376,4 +1374,28 @@ test("an icon given for one key replaces only that button's built-in icon", asyn
   await expect(page.locator(".re-lightbox-close .own-close")).toHaveCount(1);
   await expect(page.locator(".re-lightbox-close svg")).toHaveCount(0);
   await expect(page.locator(".re-lightbox-zoom svg")).toHaveCount(1);
+});
+
+test("on a plain page the theme sets a sans-serif font, so the counter is not the browser's serif default", async ({
+  page,
+}) => {
+  await open(page, {});
+  const font = await page.evaluate(
+    () =>
+      getComputedStyle(
+        document.querySelector(".re-lightbox-counter") as Element,
+      ).fontFamily,
+  );
+  expect(font).toMatch(/^system-ui,.*, sans-serif$/);
+  await page.addStyleTag({
+    content: ".re-lightbox{--re-lightbox-font:Courier}",
+  });
+  expect(
+    await page.evaluate(
+      () =>
+        getComputedStyle(
+          document.querySelector(".re-lightbox-counter") as Element,
+        ).fontFamily,
+    ),
+  ).toBe("Courier");
 });
