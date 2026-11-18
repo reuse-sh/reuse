@@ -1,4 +1,8 @@
-import { type Carousel, createCarousel } from "@reuse-sh/carousel";
+import {
+  type Carousel,
+  type CarouselInternals,
+  createCarousel,
+} from "@reuse-sh/carousel";
 import { createThinkingDots } from "@reuse-sh/loaders";
 import {
   type ChromeInput,
@@ -36,6 +40,12 @@ import {
 } from "./sources.js";
 
 const carouselInternals = Symbol.for("@reuse-sh/carousel internals");
+
+function internalsOf(carousel: Carousel) {
+  return (carousel as unknown as Record<symbol, CarouselInternals | undefined>)[
+    carouselInternals
+  ];
+}
 
 export type { Point, Rect, Size, Zoom } from "./geometry.js";
 
@@ -2324,12 +2334,7 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
   }
 
   function keepLaps(s: Session, slides: readonly HTMLElement[]) {
-    (
-      s.carousel as unknown as Record<
-        symbol,
-        { keepLaps(slides: readonly HTMLElement[]): void } | undefined
-      >
-    )[carouselInternals]?.keepLaps(slides);
+    internalsOf(s.carousel)?.keepLaps(slides);
   }
 
   function clearStands(s: Session) {
@@ -3235,9 +3240,7 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
           activeChanged(session, value.index);
       },
     });
-    (carousel as unknown as Record<symbol, { silence(): void } | undefined>)[
-      carouselInternals
-    ]?.silence();
+    internalsOf(carousel)?.silence();
     return carousel;
   }
 
@@ -3366,12 +3369,7 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
       s.footer.append(strip);
       strip.tabIndex = -1;
       s.thumbCarousel = createCarousel(strip, { drag: true, align: "center" });
-      const internals = (
-        s.thumbCarousel as unknown as Record<
-          symbol,
-          { silence(): void; passClicks(): void } | undefined
-        >
-      )[carouselInternals];
+      const internals = internalsOf(s.thumbCarousel);
       internals?.silence();
       internals?.passClicks();
     }
