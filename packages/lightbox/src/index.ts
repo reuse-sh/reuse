@@ -38,18 +38,27 @@ import {
 
 const carouselInternals = Symbol.for("@reuse-sh/carousel internals");
 
-function internalsOf(carousel: Carousel) {
+function carouselInternalsOf(carousel: Carousel) {
   return (carousel as unknown as Record<symbol, CarouselInternals | undefined>)[
     carouselInternals
   ];
 }
 
-// What bindLightboxGallery reads from a controller it did not create: whether a module plays a
-// type, and the options set so far, which markup options must not override.
-const internals = new WeakMap<
-  object,
-  { shows(type: string): boolean; options: LightboxOptions<never> }
->();
+// What bindLightboxGallery reads from a controller it did not create, under a key that another
+// copy of this package finds too: whether a module plays a type, and the options set so far,
+// which markup options must not override.
+const lightboxInternals = Symbol.for("@reuse-sh/lightbox internals");
+
+type LightboxInternals = {
+  shows(type: string): boolean;
+  options: LightboxOptions<never>;
+};
+
+function internalsOf(lightbox: unknown) {
+  return (lightbox as { [lightboxInternals]?: LightboxInternals } | null)?.[
+    lightboxInternals
+  ];
+}
 
 export type { Point, Rect, Size, Zoom } from "./geometry.js";
 
@@ -2626,7 +2635,7 @@ export function createLightbox<Item extends LightboxItem = LightboxItem>(
   }
 
   function keepLaps(s: Session, slides: readonly HTMLElement[]) {
-    internalsOf(s.carousel)?.keepLaps(slides);
+    carouselInternalsOf(s.carousel)?.keepLaps(slides);
   }
 
   function clearStands(s: Session) {
@@ -3542,7 +3551,7 @@ export function createLightbox<Item extends LightboxItem = LightboxItem>(
       )
         activeChanged(session, value.index);
     });
-    internalsOf(carousel)?.silence();
+    carouselInternalsOf(carousel)?.silence();
     return carousel;
   }
 
@@ -3663,7 +3672,7 @@ export function createLightbox<Item extends LightboxItem = LightboxItem>(
       s.footer.append(strip);
       strip.tabIndex = -1;
       s.thumbCarousel = createCarousel(strip, { drag: true, align: "center" });
-      const internals = internalsOf(s.thumbCarousel);
+      const internals = carouselInternalsOf(s.thumbCarousel);
       internals?.silence();
       internals?.passClicks();
     }
@@ -4793,11 +4802,12 @@ export function createLightbox<Item extends LightboxItem = LightboxItem>(
       handlers.clear();
     },
   };
-  internals.set(controller, {
+  const reach: LightboxInternals = {
     shows: (type) =>
       Boolean(current.content?.some((module) => module.type === type)),
     options: current as LightboxOptions<never>,
-  });
+  };
+  Object.defineProperty(controller, lightboxInternals, { value: reach });
   return controller;
 }
 
@@ -4978,7 +4988,7 @@ export function bindLightboxGallery<Item extends LightboxItem = LightboxItem>(
   options: LightboxGalleryOptions<Item> = {},
 ): () => void {
   const markup = markupOptions(root);
-  const set = internals.get(lightbox)?.options;
+  const set = internalsOf(lightbox)?.options;
   if (markup)
     lightbox.setOptions(
       Object.fromEntries(
@@ -5023,7 +5033,7 @@ export function bindLightboxGallery<Item extends LightboxItem = LightboxItem>(
     if (!trigger) return;
     const name = group(trigger);
     // A clicked trigger whose media type has no module is followed; others leave such items out.
-    const shows = internals.get(lightbox)?.shows;
+    const shows = internalsOf(lightbox)?.shows;
     const opened = triggers
       .filter((candidate) => group(candidate) === name)
       .map((candidate) => [candidate, read(candidate)] as const)

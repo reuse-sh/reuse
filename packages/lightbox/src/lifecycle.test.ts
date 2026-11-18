@@ -1738,6 +1738,23 @@ describe("lightbox public API", () => {
       }).toThrow(/data-lightbox-options on div#prints/);
   });
 
+  it("knows the modules of a lightbox made by another copy of the package", async () => {
+    const copy = (await import(
+      "./index.js?second-copy" as string
+    )) as typeof import("./index.js");
+    expect(copy.bindLightboxGallery).not.toBe(bindLightboxGallery);
+    const root = document.createElement("div");
+    root.innerHTML = `<a href="/0.jpg"><img src="/0.jpg"></a><a href="/clip.mp4" data-lightbox-type="video">Clip</a>`;
+    document.body.append(root);
+    const controller = create({ history: false });
+    copy.bindLightboxGallery(root, controller);
+    const clip = new MouseEvent("click", { bubbles: true, cancelable: true });
+    root.querySelectorAll("a")[1].dispatchEvent(clip);
+    expect(clip.defaultPrevented).toBe(false);
+    root.querySelector("img")?.click();
+    expect(controller.getState()).toMatchObject({ isOpen: true, count: 1 });
+  });
+
   it("opens what item(trigger) returns and leaves a trigger it returns null for to the page", () => {
     const root = document.createElement("div");
     root.innerHTML = `<a href="/0.jpg"><img src="/0.jpg"></a><a href="/1.jpg"><img src="/1.jpg"></a><a href="/2.jpg"><img src="/2.jpg"></a>`;
