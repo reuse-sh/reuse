@@ -126,7 +126,7 @@ const defaultControls: Record<LightboxControl, boolean> = {
 
 export type LightboxIcon =
   | "close"
-  | "prev"
+  | "previous"
   | "next"
   | "zoom"
   | "fullscreen"
@@ -192,7 +192,7 @@ export interface LightboxMountContext {
   index: number;
   /** Aborts when the slide unmounts. */
   signal: AbortSignal;
-  /** True when the player should start once it is current: the autoplay option and an open by a user action. */
+  /** True when the player should start once it is current: the autoplayMedia option and an open by a user action. */
   autoplay: boolean;
 }
 
@@ -233,7 +233,7 @@ export interface LightboxOptions {
   /** Content modules for items with a type, such as video() from @reuse-sh/lightbox/video. */
   content?: readonly LightboxContent[];
   /** Starts the current player once it shows, when the viewer opened from a user action; default true. */
-  autoplay?: boolean;
+  autoplayMedia?: boolean;
   loop?: boolean;
   history?: boolean;
   strings?: Partial<LightboxStrings>;
@@ -3815,7 +3815,7 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
     ) => {
       const element = doc.createElement(tag);
       if (tag === "button") element.setAttribute("type", "button");
-      element.className = `re-lightbox-button re-lightbox-${name}`;
+      element.className = `re-lightbox-button re-lightbox-${name === "previous" ? "prev" : name}`;
       element.setAttribute("aria-label", label);
       const icon = settings.icons?.[name]?.();
       if (icon) element.append(icon);
@@ -3956,7 +3956,14 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
       : undefined;
     if (closeButton) closeButton.autofocus = true;
     const prev = control("arrows")
-      ? button("button", "prev", strings.previous, "‹", () => step(-1), stage)
+      ? button(
+          "button",
+          "previous",
+          strings.previous,
+          "‹",
+          () => step(-1),
+          stage,
+        )
       : undefined;
     const next = control("arrows")
       ? button("button", "next", strings.next, "›", () => step(1), stage)
@@ -4086,7 +4093,7 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
       watchedScale: 1,
       sharpScale: 1,
       autoplay:
-        settings.autoplay !== false &&
+        settings.autoplayMedia !== false &&
         (doc.defaultView?.navigator.userActivation?.isActive ?? true),
     };
     session = s;

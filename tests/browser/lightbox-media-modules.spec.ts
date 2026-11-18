@@ -390,8 +390,8 @@ test("a slideshow holds on an embed until the visitor pages", async ({
   await expect.poll(() => changes(page)).toEqual([1, 2]);
 });
 
-test("with autoplay off the video waits for a press", async ({ page }) => {
-  await setup(page, "video", { autoplay: false });
+test("with autoplayMedia off the video waits for a press", async ({ page }) => {
+  await setup(page, "video", { autoplayMedia: false });
   await page.waitForTimeout(800);
   expect(
     await page.evaluate(() => document.querySelector("video")?.paused),

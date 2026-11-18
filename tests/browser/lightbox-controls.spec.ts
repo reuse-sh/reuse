@@ -419,7 +419,10 @@ test("in RTL previous sits on the right and next on the left, each icon mirrored
     const { createLightbox } = await import("/modules/lightbox/index.js");
     const icon = () =>
       document.createElementNS("http://www.w3.org/2000/svg", "svg");
-    createLightbox({ history: false, icons: { prev: icon, next: icon } }).open(
+    createLightbox({
+      history: false,
+      icons: { previous: icon, next: icon },
+    }).open(
       Array.from({ length: 3 }, () => ({
         src: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='1200' height='800'/%3E",
         width: 1200,

@@ -127,7 +127,7 @@ export function iconNode(name: keyof typeof iconData, size: number) {
 
 export const lightboxIcons = {
   close: () => nativeIcon(Cancel01Icon),
-  prev: () => nativeArrow("left"),
+  previous: () => nativeArrow("left"),
   next: () => nativeArrow("right"),
   zoom: () => nativeIcon(ZoomInAreaIcon),
 };
