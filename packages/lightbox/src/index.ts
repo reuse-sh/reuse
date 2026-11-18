@@ -125,6 +125,8 @@ export type LightboxSlotName =
 export type LightboxSlot<Item extends LightboxItem = LightboxItem> = (context: {
   lightbox: Lightbox<Item>;
   document: Document;
+  /** The icon a built-in control shows: yours from the icons option, else the package's. */
+  icon: (name: LightboxIcon) => Node;
 }) => {
   node: Node;
   update?: (state: LightboxState<Item>) => void;
@@ -148,6 +150,16 @@ const defaultControls: Record<LightboxControl, boolean> = {
   fullscreen: false,
   download: false,
   slideshow: false,
+};
+
+const builtInIcons: Record<LightboxIcon, BuiltInIcon> = {
+  close: "close",
+  previous: "previous",
+  next: "next",
+  zoom: "zoomIn",
+  fullscreen: "fullscreenEnter",
+  download: "download",
+  slideshow: "play",
 };
 
 export type LightboxIcon =
@@ -3953,7 +3965,17 @@ export function createLightbox<Item extends LightboxItem = LightboxItem>(
     for (const name of Object.keys(places) as LightboxSlotName[]) {
       const slot = settings.slots?.[name];
       if (!slot) continue;
-      const instance = slot({ lightbox: controller, document: doc });
+      const instance = slot({
+        lightbox: controller,
+        document: doc,
+        icon: (name) => {
+          const own = settings.icons?.[name]?.();
+          if (own) return own;
+          const holder = doc.createElement("span");
+          showIcon(holder, builtInIcons[name]);
+          return holder.firstElementChild as Node;
+        },
+      });
       places[name](instance.node);
       s.slots.push(instance as ReturnType<LightboxSlot>);
       instance.update?.(state);

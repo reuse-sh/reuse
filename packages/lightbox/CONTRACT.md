@@ -65,7 +65,7 @@ Slideshow. button.re-lightbox-slideshow starts and stops it; its label is string
 
 LightboxSlotName: "toolbarStart" | "toolbarEnd" | "footer" | "aside".
 
-LightboxSlot: (context: { lightbox: Lightbox; document: Document }) => { node: Node; update?: (state: LightboxState) => void; destroy?: () => void }. toolbarStart sits after the counter at the start of the top bar, toolbarEnd before the close button, footer between the caption and the bottom strip, aside in a side panel 320px wide that narrows the photo and moves under it below 720px; the dialog carries data-aside while the panel exists. Slot elements take the theme's button style through the re-lightbox-button class, follow the markup in the tab order and hide with the controls. update runs on every published state change and once after mounting; destroy runs once when the dialog closes.
+LightboxSlot: (context: { lightbox: Lightbox; document: Document; icon(name: LightboxIcon): Node }) => { node: Node; update?: (state: LightboxState) => void; destroy?: () => void }. toolbarStart sits after the counter at the start of the top bar, toolbarEnd before the close button, footer between the caption and the bottom strip, aside in a side panel 320px wide that narrows the photo and moves under it below 720px; the dialog carries data-aside while the panel exists. Slot elements take the theme's button style through the re-lightbox-button class, follow the markup in the tab order and hide with the controls. update runs on every published state change and once after mounting; destroy runs once when the dialog closes.
 
 LightboxEventMap: { open, opened, change, settle, closed: LightboxEvent; beforeclose: LightboxCancelableEvent }. LightboxEventName is keyof LightboxEventMap.
 

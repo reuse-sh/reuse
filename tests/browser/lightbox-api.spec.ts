@@ -462,3 +462,39 @@ test("an item type of your own comes back as state.item, the object passed in", 
     canNext: false,
   });
 });
+
+test("a slot draws the built-in icons, or the ones the icons option gives", async ({
+  page,
+}) => {
+  await mount(page, "", ["lightbox/base.css", "lightbox/theme.css"]);
+  const icons = await page.evaluate(async () => {
+    const { createLightbox } = await import("/modules/lightbox/index.js");
+    const drawn: string[] = [];
+    const lightbox = createLightbox({
+      history: false,
+      icons: { next: () => document.createTextNode("Next!") },
+      slots: {
+        toolbarEnd: ({ icon }) => {
+          const node = document.createElement("span");
+          for (const name of ["previous", "next"] as const) {
+            const shown = icon(name);
+            drawn.push(
+              shown instanceof SVGElement ? "svg" : String(shown.textContent),
+            );
+            node.append(shown);
+          }
+          return { node };
+        },
+      },
+    });
+    lightbox.open([
+      {
+        src: "data:image/gif;base64,R0lGODlhAQABAAAAACw=",
+        width: 10,
+        height: 10,
+      },
+    ]);
+    return drawn;
+  });
+  expect(icons).toEqual(["svg", "Next!"]);
+});
