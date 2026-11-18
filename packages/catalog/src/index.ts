@@ -702,7 +702,7 @@ export const libraries: Library[] = [
       ],
       [
         "A resize paints the new layout",
-        "A window resize lays out in its own frame, before it paints, so the old width's layout never shows. When your script changes the width, call refresh() in the same frame.",
+        "When the browser resizes the window, the layout for the new width lands in that frame, before it paints. When your script changes the width, call refresh() in the same frame. Any other size change lays out on the next frame.",
       ],
       ["Hidden keeps its layout", "Width 0 never lays out."],
       [
@@ -814,7 +814,7 @@ export const libraries: Library[] = [
       ["DOM order is reading order", "Items are never moved in the document."],
       [
         "A resize paints the new layout",
-        "A window resize lays out in its own frame, before it paints, so the old width's layout never shows. When your script changes the width, call refresh() in the same frame.",
+        "When the browser resizes the window, the layout for the new width lands in that frame, before it paints. When your script changes the width, call refresh() in the same frame. Any other size change lays out on the next frame.",
       ],
       ["Hidden keeps its layout", "Width 0 never lays out."],
       [

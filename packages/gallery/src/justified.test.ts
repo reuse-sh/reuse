@@ -105,18 +105,6 @@ describe("createJustifiedGallery", () => {
     expect(rows(container)).not.toEqual(initial);
   });
 
-  it("breaks rows again in the window's resize event, before the frame paints", () => {
-    const { container } = gallery([...shapes, ...shapes]);
-    createJustifiedGallery(container);
-    const initial = rows(container);
-    Object.defineProperty(container, "clientWidth", {
-      get: () => 1500,
-      configurable: true,
-    });
-    window.dispatchEvent(new Event("resize"));
-    expect(rows(container)).not.toEqual(initial);
-  });
-
   it("keeps its layout while hidden and after showing at the same width", async () => {
     const { container, resize } = gallery(shapes);
     createJustifiedGallery(container);

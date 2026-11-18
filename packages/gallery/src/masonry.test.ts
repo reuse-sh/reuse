@@ -100,23 +100,32 @@ describe("createMasonry", () => {
     expect(items()[2].style.marginTop).toBe("60px");
   });
 
-  it("places in the window's resize event, before the frame paints", () => {
+  it("leaves a resize event that page code dispatches to its observer", async () => {
     const { container, items, setWidth } = masonry([100, 50, 80, 30]);
-    const gallery = createMasonry(container);
+    createMasonry(container);
+    const before = placed(items());
     container.style.gridTemplateColumns = "100px 100px";
     setWidth(200);
     window.dispatchEvent(new Event("resize"));
+    expect(placed(items())).toEqual(before);
+    await resized(container);
     expect(placed(items())).toEqual([
       ["1 / span 1", "0px"],
       ["2 / span 1", "0px"],
       ["2 / span 1", "60px"],
       ["1 / span 1", "110px"],
     ]);
-    gallery.destroy();
-    container.style.gridTemplateColumns = "100px";
-    setWidth(100);
-    window.dispatchEvent(new Event("resize"));
-    expect(placed(items())).toEqual(items().map(() => ["", ""]));
+  });
+
+  it("stops listening for window resizes on destroy", () => {
+    const { container } = masonry([100, 50]);
+    const added = vi.spyOn(window, "addEventListener");
+    const removed = vi.spyOn(window, "removeEventListener");
+    createMasonry(container).destroy();
+    const resizes = (spy: typeof added) =>
+      spy.mock.calls.filter(([type]) => type === "resize").map(([, fn]) => fn);
+    expect(resizes(added)).toHaveLength(1);
+    expect(resizes(removed)).toEqual(resizes(added));
   });
 
   it("writes nothing while the container has no width", () => {

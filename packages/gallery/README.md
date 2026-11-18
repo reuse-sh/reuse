@@ -15,7 +15,7 @@ These are the rules the code keeps. An adaptation on any framework keeps them to
 - **The row height is the picture's.** A caption under a picture does not change breaks or picture height.
 - **Works before the script.** Server-rendered markup with ratios already lays out in rows.
 - **A resize keeps rows while they fit.** Breaks change only when a row leaves the height range, so a scrollbar appearing does not move pictures.
-- **A resize paints the new layout.** A window resize lays out in its own frame, before it paints, so the old width's layout never shows. When your script changes the width, call refresh() in the same frame.
+- **A resize paints the new layout.** When the browser resizes the window, the layout for the new width lands in that frame, before it paints. When your script changes the width, call refresh() in the same frame. Any other size change lays out on the next frame.
 - **Hidden keeps its layout.** Width 0 never lays out.
 - **Destroy puts back what it wrote.** Destroy disconnects its observers and restores every custom property, attribute and inline style it wrote.
 
@@ -25,7 +25,7 @@ These are the rules the code keeps. An adaptation on any framework keeps them to
 - **The fallback places like the platform.** Same CSS, same lanes and offsets as css-grid-3 §4.4, for spans that fit the columns.
 - **Columns and gaps are CSS.** One stylesheet drives both paths.
 - **DOM order is reading order.** Items are never moved in the document.
-- **A resize paints the new layout.** A window resize lays out in its own frame, before it paints, so the old width's layout never shows. When your script changes the width, call refresh() in the same frame.
+- **A resize paints the new layout.** When the browser resizes the window, the layout for the new width lands in that frame, before it paints. When your script changes the width, call refresh() in the same frame. Any other size change lays out on the next frame.
 - **Hidden keeps its layout.** Width 0 never lays out.
 - **Destroy puts back what it wrote.** Destroy disconnects its observers and restores every inline style and attribute it wrote.
 
