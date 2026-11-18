@@ -395,6 +395,40 @@ test("a photo behind the +3 tile of a seven-photo album lands in that tile with 
   ).toBe("");
 });
 
+test("a photo in a tile that rounds its clipping wrapper flies with the wrapper's corners", async ({
+  page,
+}) => {
+  await mount(
+    page,
+    `<a id="tile" href="${photo(0)}" style="display:block;width:300px;height:200px;margin:100px;overflow:hidden;border-radius:16px 16px 0 0"><img src="${photo(0)}" alt="Photo 1" style="display:block;width:300px;height:200px"></a>`,
+    styles,
+  );
+  await page.evaluate(async () => {
+    const { createLightbox } = await import("/modules/lightbox/index.js");
+    const image = document.querySelector("#tile img") as HTMLImageElement;
+    const lightbox = createLightbox({ history: false, autoHide: false });
+    Object.assign(window, { lightbox, tiles: [image] });
+    Object.assign(window, {
+      items: [{ src: image.src, width: 1200, height: 800, origin: image }],
+    });
+  });
+  const start = await page.evaluate(async () => {
+    const win = window as Window & { items: unknown[] };
+    win.lightbox.open(win.items, 0);
+    for (;;) {
+      const frame = document.querySelector<HTMLElement>(".re-lightbox-frame");
+      const [animation] = frame?.getAnimations() ?? [];
+      if (frame && animation) {
+        animation.pause();
+        animation.currentTime = 0;
+        return getComputedStyle(frame).clipPath;
+      }
+      await new Promise(requestAnimationFrame);
+    }
+  });
+  expect(start).toMatch(/round ([1-9][\d.]*)px \1px 0px( 0px)?\)$/);
+});
+
 // The page behind a modal dialog is inert and cannot be hit-tested, so read the screen.
 async function pixel(page: Page, x: number, y: number) {
   const shot = await page.screenshot({ clip: { x, y, width: 1, height: 1 } });
@@ -495,6 +529,39 @@ test("a wheel during the close flight scrolls the page", async ({ page }) => {
     await page.evaluate(() => document.querySelectorAll("dialog").length),
   ).toBe(1);
   await finishClose(page);
+});
+
+test("a wheel during an Escape close keeps the page where it scrolled after the history back", {
+  tag: "@desktop",
+}, async ({ page }) => {
+  await mount(
+    page,
+    `<div style="height:300px"></div>${tiles(1)}<div style="height:3000px"></div>`,
+    styles,
+  );
+  await page.addStyleTag({
+    content: ".re-lightbox{--re-lightbox-close-duration:600ms}",
+  });
+  await page.evaluate(async () => {
+    const { bindLightboxGallery } = await import("/modules/lightbox/index.js");
+    bindLightboxGallery(document.body, { autoHide: false });
+    scrollTo(0, 200);
+  });
+  await page.locator(".tile img").click();
+  await page.waitForTimeout(700);
+  expect(await page.evaluate(() => history.scrollRestoration)).toBe("auto");
+  await page.keyboard.press("Escape");
+  await page.mouse.move(640, 400);
+  for (let tick = 0; tick < 4; tick++) {
+    await page.mouse.wheel(0, 100);
+    await page.waitForTimeout(30);
+  }
+  await expect.poll(() => page.locator("dialog").count()).toBe(0);
+  const scrolled = await page.evaluate(() => scrollY);
+  expect(scrolled).toBeGreaterThan(400);
+  await page.waitForTimeout(300);
+  expect(await page.evaluate(() => scrollY)).toBe(scrolled);
+  expect(await page.evaluate(() => history.scrollRestoration)).toBe("auto");
 });
 
 test("the photo flies whole out of a strip that clips its tile", async ({

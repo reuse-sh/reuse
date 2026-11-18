@@ -293,7 +293,7 @@ test("the active thumbnail stays centered from the first photo to the fortieth",
   }
 });
 
-test("a click on thumbnail 38 fades there and the strip ends with 38 centered", async ({
+test("a click on thumbnail 38 pages there without a fade and the strip ends with 38 centered", async ({
   page,
 }) => {
   await open(page, { thumbnails: "bottom" }, { count: 40 });
@@ -312,8 +312,39 @@ test("a click on thumbnail 38 fades there and the strip ends with 38 centered", 
       }),
   );
   await page.getByRole("button", { name: "Show image 38" }).click();
-  expect(Math.min(...(await opacities))).toBeLessThan(0.5);
+  expect(Math.min(...(await opacities))).toBe(1);
   expect((await lightbox(page)).index).toBe(37);
+  await expect.poll(() => offCenter(page)).toBeLessThanOrEqual(2);
+});
+
+test("thumbnails clicked 60ms apart while the strip centers each one open every photo", {
+  tag: "@desktop",
+}, async ({ page }) => {
+  await open(page, { thumbnails: "bottom" }, { count: 8 });
+  const opened: number[] = [];
+  for (const index of [3, 1, 5, 2, 6]) {
+    const box = await page
+      .getByRole("button", { name: `Show image ${index + 1}` })
+      .boundingBox();
+    if (!box) throw new Error(`Thumbnail ${index + 1} has no box.`);
+    await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2);
+    opened.push((await lightbox(page)).index);
+    await page.waitForTimeout(60);
+  }
+  expect(opened).toEqual([3, 1, 5, 2, 6]);
+});
+
+test("a second click on a thumbnail while the strip centers it still ends with it centered", {
+  tag: "@desktop",
+}, async ({ page }) => {
+  await open(page, { thumbnails: "bottom" }, { count: 40 });
+  const thumb = page.getByRole("button", { name: "Show image 6" });
+  await thumb.click();
+  await page.waitForTimeout(80);
+  const box = await thumb.boundingBox();
+  if (!box) throw new Error("Thumbnail 6 has no box.");
+  await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2);
+  expect((await lightbox(page)).index).toBe(5);
   await expect.poll(() => offCenter(page)).toBeLessThanOrEqual(2);
 });
 

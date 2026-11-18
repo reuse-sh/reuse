@@ -9,7 +9,7 @@ An image viewer that opens from a thumbnail, including a cropped one, and return
 These are the rules the code keeps. An adaptation on any framework keeps them too.
 
 - **Page with native scroll snap.** Pages are a scroll-snap strip from the carousel, so touch and trackpads keep the system's momentum.
-- **Open from the thumbnail and return to it.** The image grows out of its cropped preview and shrinks back into the current photo's tile on close.
+- **Open from the thumbnail and return to it.** The image grows out of its cropped preview with the tile's rounded corners and shrinks back into the current photo's tile on close.
 - **Load only what is near.** Only the current and neighboring images load, the current one first, the neighbors not at all under Save-Data, and a long jump skips the pages in between.
 - **Zoom around the point you touch.** Pinch, wheel and double-tap zoom in around the pointer or fingers, and a tap, click or the zoom button zooms back out to the whole photo.
 - **Keep focus inside and give it back.** The viewer is a native modal dialog, and closing it returns focus to the current photo's tile, or else to the element that opened it.
@@ -17,7 +17,7 @@ These are the rules the code keeps. An adaptation on any framework keeps them to
 - **Behave like the platform's photo viewer.** Gestures, keys and timing match iOS Photos, macOS Photos and Google Photos unless a recorded decision says otherwise.
 - **Dismiss like a photos app.** A vertical swipe carries the photo, fades the backdrop and the controls with it, and closes past a distance or a speed. A cancelled pointer never closes.
 - **Let the photo lead.** Controls fade in after the photo starts moving and leave before it. They hide while zoomed and after a still pointer, never while hovered or focused.
-- **Return to what is on screen.** Close goes back to the current photo's tile, after bringing it into view in its own carousel, and fades in place when the tile cannot be seen or the strip is still moving. The page scrolls and takes clicks during the flight, focus moved there stays, and the tile's container does not cut the photo before it nears the tile.
+- **Return to what is on screen.** Close goes back to the current photo's tile, after bringing it into view in its own carousel, and fades in place when the tile cannot be seen or the strip is still moving. The page scrolls and takes clicks during the flight and stays where it was scrolled once the viewer is gone, focus moved there stays, and the tile's container does not cut the photo before it nears the tile.
 - **Fetch the pixels the screen shows.** Each image loads the source that fits the rendered size, a zoom asks for more, and the preview stays until the sharper file has decoded.
 - **Zoom to real pixels.** Zoom levels follow the image's own resolution. Panning stretches past the edge and glides on release.
 - **Never block a frame.** No layout read or framework render runs per pointer move, scroll or wheel event.
