@@ -286,7 +286,7 @@ type LoadedSlide = {
   natural?: number;
   status: "idle" | "loading" | "settled" | "failed";
   load: (priority: "high" | "low") => void;
-  /** The full file's swap, held until the open flight with the preview has landed. */
+  /** The full file's swap, held until the open flight has landed or the gesture on it ends. */
   commit?: () => void;
   cancel: () => void;
 };
@@ -1101,23 +1101,25 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
       : items[index].previewSrc;
   }
 
-  // Before the file arrives, the shown preview or the tile gives the proportions.
+  function filling(aspect: number, s: Session): Size {
+    const { width, height } = view(s);
+    return {
+      width: Math.max(width, height * aspect),
+      height: Math.max(height, width / aspect),
+    };
+  }
+
+  // Before the file arrives, the shown preview or the tile gives only the proportions, since its
+  // pixels are the tile's and not the file's; a player has no pixels to stop at. Both fill the screen.
   function imageSize(index: number, s: Session): Size {
     const item = items[index];
     if (item.width && item.height)
       return { width: item.width, height: item.height };
-    // A player has no pixels to stop at, so it fills the screen at its aspect.
-    if (item.type) {
-      const aspect = s.loaded.get(index)?.media?.mounted?.aspect || 16 / 9;
-      const { width, height } = view(s);
-      return {
-        width: Math.max(width, height * aspect),
-        height: Math.max(height, width / aspect),
-      };
-    }
+    if (item.type)
+      return filling(s.loaded.get(index)?.media?.mounted?.aspect || 16 / 9, s);
     for (const image of [s.loaded.get(index)?.image, tileImage(index)])
       if (image?.naturalWidth && image.naturalHeight)
-        return { width: image.naturalWidth, height: image.naturalHeight };
+        return filling(image.naturalWidth / image.naturalHeight, s);
     return view(s);
   }
 
@@ -1786,6 +1788,14 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
       mounted.resume?.();
   }
 
+  function swapHeld(s: Session) {
+    for (const entry of s.loaded.values()) {
+      const commit = entry.commit;
+      entry.commit = undefined;
+      commit?.();
+    }
+  }
+
   function unmountMedia(entry: LoadedSlide) {
     const media = entry.media;
     if (!media?.mounted) return;
@@ -1860,8 +1870,8 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
       const showSpinner = () => {
         if (alive && session === s) spinner = spin(s, frame);
       };
-      const fetcher = (url: string) =>
-        (doc.defaultView ?? globalThis).fetch(url);
+      const fetcher = (url: string, init?: RequestInit) =>
+        (doc.defaultView ?? globalThis).fetch(url, init);
       let shown = "";
       const display = (url: string) => {
         shown = url;
@@ -1893,7 +1903,7 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
               ? Math.round(item.height / ratio)
               : size
                 ? Math.round(size.width)
-                : width;
+                : (largestWidth(item.srcset) ?? width);
           if (!item.height) item.height = Math.round(item.width * ratio);
         }
         display(source.currentSrc || source.src);
@@ -1951,7 +1961,10 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
             (loader.currentSrc || loader.src) === source;
           const ready = (size?: Size) => {
             if (!current()) return;
-            if (s.flying && image.hasAttribute("src"))
+            const held =
+              s.flying ||
+              (s.pointers.size > 0 && s.loaded.get(state.index) === entry);
+            if (held && image.hasAttribute("src"))
               entry.commit = () => show(loader, width, size);
             else show(loader, width, size);
             settle("settled");
@@ -3038,6 +3051,11 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
       { signal, passive: false },
     );
     const release = (event: PointerEvent) => {
+      lift(event);
+      if (session === s && !s.flying && !state.isClosing && !s.pointers.size)
+        swapHeld(s);
+    };
+    const lift = (event: PointerEvent) => {
       if (!s.pointers.has(event.pointerId)) return;
       const gesture = s.gesture;
       const hadPinch = s.pointers.size > 1;
@@ -4171,11 +4189,7 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
     void flight(s, false).then(() => {
       if (session !== s || state.isClosing) return;
       s.flying = false;
-      for (const entry of s.loaded.values()) {
-        const commit = entry.commit;
-        entry.commit = undefined;
-        commit?.();
-      }
+      swapHeld(s);
       const current = s.loaded.get(state.index);
       if (current?.media?.mounted) current.media.mounted.resume?.();
       else if (current) mountMedia(s, state.index, current);
@@ -4477,6 +4491,10 @@ export function lightboxItemFromImage(
   const sameFile = resolve(src) === resolve(tile);
   const width = dimension(image.dataset.lightboxWidth);
   const height = dimension(image.dataset.lightboxHeight);
+  const file =
+    sameFile && image.naturalWidth && image.naturalHeight
+      ? fileWidth(image, image.srcset || undefined, base)
+      : undefined;
   const caption =
     image
       .closest("figure")
@@ -4506,8 +4524,10 @@ export function lightboxItemFromImage(
     srcset: image.dataset.lightboxSrcset || undefined,
     sizes: image.dataset.lightboxSizes || undefined,
     previewSrc: tile,
-    width: width ?? ((sameFile && image.naturalWidth) || undefined),
-    height: height ?? ((sameFile && image.naturalHeight) || undefined),
+    width: width ?? file,
+    height:
+      height ??
+      (file && Math.round((file * image.naturalHeight) / image.naturalWidth)),
     alt: image.alt,
     caption: caption || undefined,
     origin: image,

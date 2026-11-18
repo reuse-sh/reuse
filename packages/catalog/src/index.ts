@@ -159,7 +159,7 @@ export const libraries: Library[] = [
       ],
       [
         "Fetch the pixels the screen shows",
-        "Each image loads the source that fits the rendered size, a zoom asks for more, and the preview stays until the sharper file has decoded.",
+        "Each image loads the source that fits the rendered size, a zoom asks for more, and the preview stays until the sharper file has decoded and no finger holds the photo. A photo without a size fits the screen at its tile's proportions from the start.",
         "tests/browser/lightbox-images.spec.ts",
       ],
       [

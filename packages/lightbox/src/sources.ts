@@ -103,47 +103,54 @@ function formatOfType(type: string): MediaFormat {
   return subtype && ALPHA.test(subtype) ? "transparent" : "opaque";
 }
 
-const blobFormats = new Map<
+const lookedUp = new Map<
   string,
   { format?: MediaFormat; lookup: Promise<MediaFormat> }
 >();
 
-/** The format by the URL alone; undefined for a blob: URL until lookupFormat has read its type. */
+/** The format by the URL alone; undefined for a blob: URL or a path without an extension until lookupFormat has read its type. */
 export function formatOf(url: string, base: string): MediaFormat | undefined {
   if (/^data:/i.test(url)) return formatOfType(url.slice(5));
-  if (/^blob:/i.test(url)) return blobFormats.get(url)?.format;
+  const address = resolve(url, base);
+  if (/^blob:/i.test(url)) return lookedUp.get(address)?.format;
   let extension: string | undefined;
   try {
     extension = /\.([^./]+)$/.exec(new URL(url, base).pathname)?.[1];
   } catch {}
   const name = extension?.toLowerCase();
+  if (!name) return lookedUp.get(address)?.format;
   if (name === "svg") return "svg";
-  return name && ALPHA.test(name) ? "transparent" : "opaque";
+  return ALPHA.test(name) ? "transparent" : "opaque";
 }
 
-/** Reads a blob: URL's Blob type once per URL; other URLs resolve to formatOf. */
+/** Reads the type once per URL: a blob: URL's Blob type, else the Content-Type of a HEAD request. */
 export function lookupFormat(
   url: string,
   base: string,
-  fetcher: (url: string) => Promise<Response>,
+  fetcher: (url: string, init?: RequestInit) => Promise<Response>,
 ): Promise<MediaFormat> {
   const known = formatOf(url, base);
   if (known) return Promise.resolve(known);
-  const cached = blobFormats.get(url);
+  const address = resolve(url, base);
+  const cached = lookedUp.get(address);
   if (cached) return cached.lookup;
+  // A blob: URL answers only GET.
+  const type = /^blob:/i.test(url)
+    ? fetcher(url)
+        .then((response) => response.blob())
+        .then((blob) => blob.type)
+    : fetcher(url, { method: "HEAD" }).then(
+        (response) => response.headers.get("content-type") ?? "",
+      );
   const entry: { format?: MediaFormat; lookup: Promise<MediaFormat> } = {
-    lookup: fetcher(url)
-      .then((response) => response.blob())
-      .then(
-        (blob) => formatOfType(blob.type),
-        () => "opaque" as const,
-      )
+    lookup: type
+      .then(formatOfType, () => "opaque" as const)
       .then((format) => {
         entry.format = format;
         return format;
       }),
   };
-  blobFormats.set(url, entry);
+  lookedUp.set(address, entry);
   return entry.lookup;
 }
 
@@ -188,7 +195,7 @@ export function parseSvgSize(text: string, parser: DOMParser) {
 /** Fetches the SVG text, which works for same-origin, CORS, data: and blob: URLs. */
 export async function svgSize(
   url: string,
-  fetcher: (url: string) => Promise<Response>,
+  fetcher: (url: string, init?: RequestInit) => Promise<Response>,
   parser: DOMParser,
 ) {
   const response = await fetcher(url);
