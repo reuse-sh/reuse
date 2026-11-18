@@ -373,7 +373,13 @@ type Session = {
   /** The photo changed since the last settle. */
   paged: boolean;
   phase: "entering" | "opening" | "open" | "dragging" | "returning" | "closing";
-  timing: { open: number; close: number; ease: string };
+  timing: {
+    open: number;
+    close: number;
+    zoom: number;
+    fade: number;
+    ease: string;
+  };
   chrome: ChromeModel;
   chromeRoots: HTMLElement[];
   chromeTimer?: ReturnType<typeof setTimeout>;
@@ -1083,6 +1089,8 @@ export function createLightbox<Item extends LightboxItem = LightboxItem>(
     s.timing = {
       open: milliseconds(read("--re-lightbox-open-duration"), OPEN_DURATION),
       close: milliseconds(read("--re-lightbox-close-duration"), CLOSE_DURATION),
+      zoom: milliseconds(read("--re-lightbox-zoom-duration"), ZOOM_DURATION),
+      fade: milliseconds(read("--re-lightbox-fade-duration"), FADE_DURATION),
       ease: easing(
         read("--re-lightbox-ease").trim(),
         s.dialog.ownerDocument.defaultView,
@@ -1457,7 +1465,7 @@ export function createLightbox<Item extends LightboxItem = LightboxItem>(
   }
 
   function zoomDuration(s: Session) {
-    return prefersReducedMotion(s) ? 0 : ZOOM_DURATION;
+    return prefersReducedMotion(s) ? 0 : s.timing.zoom;
   }
 
   function flightDuration(s: Session, closing: boolean) {
@@ -2763,9 +2771,12 @@ export function createLightbox<Item extends LightboxItem = LightboxItem>(
         trimSlides(s);
       },
     };
-    const reduced = prefersReducedMotion(s);
-    const duration = FADE_DURATION;
-    if (reduced || typeof s.viewport.animate !== "function") {
+    const duration = s.timing.fade;
+    if (
+      prefersReducedMotion(s) ||
+      duration <= 0 ||
+      typeof s.viewport.animate !== "function"
+    ) {
       fade.jump();
       return;
     }
@@ -4258,7 +4269,13 @@ export function createLightbox<Item extends LightboxItem = LightboxItem>(
       previousFocus,
       restoreScroll,
       phase: "entering",
-      timing: { open: OPEN_DURATION, close: CLOSE_DURATION, ease: FLIGHT_EASE },
+      timing: {
+        open: OPEN_DURATION,
+        close: CLOSE_DURATION,
+        zoom: ZOOM_DURATION,
+        fade: FADE_DURATION,
+        ease: FLIGHT_EASE,
+      },
       chrome: initialChrome(false),
       chromeRoots: [toolbar, footer, ...(prev && next ? [prev, next] : [])],
       openingFocus: closeButton ?? viewport,

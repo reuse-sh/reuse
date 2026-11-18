@@ -15,3 +15,5 @@ A gallery's `data-lightbox-options` apply only while a photo from that gallery i
 `--re-lightbox-padding` accepts any length, such as `2rem`, `calc()` or `clamp()`, instead of reading only the number at its start.
 
 A lightbox without `container` opens in the document of the photo's tile, so a gallery inside a same-origin frame, bound from the parent page, opens in the frame.
+
+The zoom and the slide fade read `--re-lightbox-zoom-duration` and `--re-lightbox-fade-duration` (220ms and 240ms in theme.css); `0ms` makes them instant.

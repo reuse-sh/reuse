@@ -37,6 +37,8 @@
   --re-lightbox-aside-height: 40%;
   --re-lightbox-open-duration: 400ms;
   --re-lightbox-close-duration: 300ms;
+  --re-lightbox-zoom-duration: 220ms;
+  --re-lightbox-fade-duration: 240ms;
   --re-lightbox-ease: cubic-bezier(0.32, 0.72, 0, 1);
   --re-lightbox-control-duration: 300ms;
   --re-lightbox-ring-duration: 150ms;

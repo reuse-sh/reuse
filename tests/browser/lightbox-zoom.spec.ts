@@ -295,6 +295,30 @@ test.describe("lightbox zoom with a mouse, wheel and trackpad", {
     await expect.poll(async () => (await state(page)).index).toBe(2);
   });
 
+  test("--re-lightbox-zoom-duration: 0ms zooms at once", async ({ page }) => {
+    await page.addInitScript(() =>
+      document.addEventListener("DOMContentLoaded", () => {
+        const style = document.createElement("style");
+        style.textContent = ".re-lightbox{--re-lightbox-zoom-duration:0ms}";
+        document.head.append(style);
+      }),
+    );
+    await open(page, [[4000, 3000]]);
+    const result = await page.evaluate(() => {
+      const frame = document.querySelector(
+        '.re-lightbox-slide[aria-hidden="false"] .re-lightbox-frame',
+      ) as HTMLElement;
+      (window as Window).lightbox.zoomTo(3);
+      return [
+        frame
+          .getAnimations()
+          .filter((animation) => animation.playState === "running").length,
+        (window as Window).lightbox.getState().isAnimating,
+      ];
+    });
+    expect(result).toEqual([0, false]);
+  });
+
   test("a close during a zoom leaves no zoom motion running under the flight", async ({
     page,
   }) => {
