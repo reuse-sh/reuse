@@ -14,6 +14,7 @@ These are the rules the code keeps. An adaptation on any framework keeps them to
 - **Render without a browser.** The same document renders to HTML on the server, with no DOM needed.
 - **Leave storage to the host.** The editor reports every change through onChange, and your code decides where the document goes.
 - **Edit from the keyboard.** Marks can be created, selected, moved and deleted with keys, and one drag is one undo step.
+- **Edit the mark itself.** A selected area or line gets handles on its own corners and ends, with no second frame around it, and a drag redraws the mark as it moves.
 
 <!-- principles:end -->
 
