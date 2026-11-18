@@ -1,5 +1,5 @@
 "use client";
-import { useCarousel } from "@reuse-sh/carousel/react";
+import { useCarousel, useCarouselState } from "@reuse-sh/carousel/react";
 import "./controls.css";
 
 const photos = [
@@ -54,7 +54,11 @@ const photos = [
 ];
 const prices = ["$84", "$72", "$96", "$64", "$88", "$72"];
 export function Example() {
-  const { ref, carousel, state } = useCarousel({ loop: false, group: "page" });
+  const { ref, carousel } = useCarousel({ loop: false, group: "page" });
+  const state = useCarouselState(carousel, ({ canPrev, canNext }) => ({
+    canPrev,
+    canNext,
+  }));
   return (
     <section className="w-full min-w-0">
       <div className="mb-3.5 flex items-center">

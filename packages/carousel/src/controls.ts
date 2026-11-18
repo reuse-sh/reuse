@@ -1,4 +1,4 @@
-import type { Carousel, CarouselState, CarouselStrings } from "./index.js";
+import type { Carousel, CarouselState } from "./index.js";
 import type { CarouselInternals } from "./internal.js";
 
 const internalKey = Symbol.for("@reuse-sh/carousel internals");
@@ -15,7 +15,7 @@ let generated = 0;
 export function bindCarouselControls(
   root: HTMLElement,
   carousel: Carousel,
-  options: { strings?: Partial<CarouselStrings>; dotsWindow?: number } = {},
+  options: { dotsWindow?: number } = {},
 ): () => void {
   const strip = internalsOf(carousel);
   if (!strip)
@@ -28,8 +28,7 @@ export function bindCarouselControls(
     (!Number.isInteger(dotsWindow) || dotsWindow < 1)
   )
     throw new RangeError("Carousel dotsWindow must be a positive integer.");
-  const strings = { ...strip.strings, ...options.strings };
-  const { viewport } = strip;
+  const { viewport, strings } = strip;
   const document = viewport.ownerDocument;
   const cleanup: (() => void)[] = [];
   const renders: ((state: CarouselState) => void)[] = [];
@@ -120,17 +119,20 @@ export function bindCarouselControls(
         "data-re-static",
       );
       button.setAttribute("aria-controls", id);
-      if (!button.hasAttribute("aria-label") && !button.textContent?.trim())
-        button.setAttribute(
-          "aria-label",
-          direction < 0 ? strings.previous : strings.next,
-        );
+      const named =
+        !button.hasAttribute("aria-label") && !button.textContent?.trim();
       listen(button, "click", () =>
         direction < 0 ? carousel.prev() : carousel.next(),
       );
-      renders.push((state) =>
-        disable(button, !(direction < 0 ? state.canPrev : state.canNext)),
-      );
+      renders.push((state) => {
+        disable(button, !(direction < 0 ? state.canPrev : state.canNext));
+        if (named)
+          setAttribute(
+            button,
+            "aria-label",
+            direction < 0 ? strings.previous : strings.next,
+          );
+      });
     }
   }
 
@@ -152,10 +154,9 @@ export function bindCarouselControls(
     renders.push((state) => {
       if (!own.length && dots.length !== state.pageCount) {
         for (const dot of dots) dot.remove();
-        dots = Array.from({ length: state.pageCount }, (_, page) => {
+        dots = Array.from({ length: state.pageCount }, () => {
           const dot = document.createElement("button");
           dot.type = "button";
-          dot.setAttribute("aria-label", strings.goTo(page, state.pageCount));
           return dot;
         });
         container.append(...dots);
@@ -169,6 +170,8 @@ export function bindCarouselControls(
       start = Math.max(0, Math.min(start, dots.length - shown));
       const end = start + shown;
       dots.forEach((dot, page) => {
+        if (!own.length)
+          setAttribute(dot, "aria-label", strings.goTo(page, dots.length));
         if (page === active) setAttribute(dot, "aria-current", "true");
         else dot.removeAttribute("aria-current");
         if (dotsWindow === undefined) return;
@@ -259,7 +262,6 @@ export function bindCarouselControls(
       if (playing(carousel.getState())) carousel.pause();
       else carousel.play();
     });
-    cleanup.push(strip.onAutoplay(() => render(carousel.getState())));
     renders.push(render);
   }
 
@@ -279,8 +281,7 @@ export function bindCarouselControls(
     cleanup.push(() => bar.style.removeProperty("--re-carousel-progress"));
     bar.setAttribute("role", "slider");
     if (!bar.hasAttribute("tabindex")) bar.tabIndex = 0;
-    if (!bar.hasAttribute("aria-label"))
-      bar.setAttribute("aria-label", strings.progress);
+    const named = !bar.hasAttribute("aria-label");
     bar.setAttribute("aria-controls", id);
     bar.setAttribute("aria-valuemin", "1");
     let dragging: { id: number; page: number } | null = null;
@@ -346,6 +347,7 @@ export function bindCarouselControls(
       event.preventDefault();
     });
     renders.push((state) => {
+      if (named) setAttribute(bar, "aria-label", strings.progress);
       setAttribute(bar, "aria-valuemax", String(Math.max(1, state.pageCount)));
       setAttribute(bar, "aria-valuenow", String(state.pageIndex + 1));
       setAttribute(
@@ -369,10 +371,12 @@ export function bindCarouselControls(
     for (const update of renders) update(state);
   };
   const unsubscribe = carousel.subscribe(render);
+  const relabel = strip.onOptions(() => render(carousel.getState()));
   render(carousel.getState());
   return () => {
     statics.disconnect();
     unsubscribe();
+    relabel();
     for (const undo of cleanup.splice(0).reverse()) undo();
   };
 }

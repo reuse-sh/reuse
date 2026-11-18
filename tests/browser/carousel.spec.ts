@@ -1,6 +1,9 @@
 import { expect, type Page, test } from "@playwright/test";
 import { framesUntilIdle, mount } from "./harness";
 
+// @ts-expect-error CarouselInternals lives in @reuse-sh/carousel/internal, not in the public entry point.
+type _PublicInternals = import("/modules/carousel/index.js").CarouselInternals;
+
 const slides = Array.from(
   { length: 6 },
   (_, index) =>
@@ -130,7 +133,7 @@ test("a click during a smooth scroll travels on to a snap point instead of stopp
   ).toBe("");
 });
 
-test("creating a strip measures it once, and a resize or a new padding measures it again", async ({
+test("creating a strip measures it once, and a resize or a new padding in either box sizing measures it again", async ({
   page,
 }) => {
   await mount(
@@ -163,9 +166,25 @@ test("creating a strip measures it once, and a resize or a new padding measures 
     await frames(5);
     strip.style.paddingInline = "60px";
     await frames(5);
-    return { created, resized, padded: reads / 6 - created - resized };
+    const padded = reads / 6 - created - resized;
+    strip.style.boxSizing = "content-box";
+    await frames(5);
+    const before = reads / 6;
+    strip.style.paddingInline = "20px";
+    await frames(5);
+    return {
+      created,
+      resized,
+      padded,
+      paddedContentBox: reads / 6 - before,
+    };
   });
-  expect(refreshes).toEqual({ created: 1, resized: 1, padded: 1 });
+  expect(refreshes).toEqual({
+    created: 1,
+    resized: 1,
+    padded: 1,
+    paddedContentBox: 1,
+  });
 });
 
 test("a percentage scroll padding places the slide at the padded edge", async ({

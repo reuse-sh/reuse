@@ -2,7 +2,12 @@
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { bindCarouselControls } from "./controls.js";
-import { connectThumbnails, createCarousel, syncCarousels } from "./index.js";
+import {
+  type CarouselOptions,
+  connectThumbnails,
+  createCarousel,
+  syncCarousels,
+} from "./index.js";
 
 const cleanups: (() => void)[] = [];
 let motion: EventTarget & { matches: boolean };
@@ -995,6 +1000,90 @@ describe("native carousel", () => {
     expect(vi.getTimerCount()).toBe(0);
   });
 
+  it("reads options from data-carousel-options under the options passed in code", () => {
+    const { viewport, slides } = fixture(Array(6).fill(100), 300);
+    viewport.dataset.carouselOptions = JSON.stringify({
+      group: 3,
+      align: "center",
+      strings: { slideRole: "Folie", carouselRole: "Galerie" },
+    });
+    const carousel = createCarousel(viewport, {
+      group: 2,
+      strings: { carouselRole: "Karussell" },
+    });
+    cleanups.push(carousel.destroy);
+    expect(carousel.getState().pageCount).toBe(3);
+    expect(slides[1].style.scrollSnapAlign).toBe("none");
+    expect(slides[2].style.scrollSnapAlign).toBe("center");
+    expect(viewport.getAttribute("aria-roledescription")).toBe("Karussell");
+    expect(slides[0].getAttribute("aria-roledescription")).toBe("Folie");
+  });
+
+  it("names the element whose data-carousel-options is not an options object", () => {
+    for (const [markup, error] of [
+      ["{loop: true}", TypeError],
+      ["[true]", TypeError],
+      ["null", TypeError],
+      ['{"group": 0}', RangeError],
+    ] as const) {
+      const { viewport } = fixture();
+      viewport.id = "prints";
+      viewport.dataset.carouselOptions = markup;
+      expect(() => createCarousel(viewport)).toThrow(error);
+      if (error === TypeError)
+        expect(() => createCarousel(viewport)).toThrow(
+          /data-carousel-options on div#prints/,
+        );
+      expect(viewport.classList.contains("re-carousel")).toBe(false);
+      viewport.remove();
+    }
+  });
+
+  it("rejects a markup option of the wrong type before touching the DOM", () => {
+    for (const [markup, key] of [
+      ['{"strings": {"slide": "Slide"}}', "strings.slide"],
+      ['{"loop": "false"}', "loop"],
+      ['{"align": "end"}', "align"],
+      ['{"group": "3"}', "group"],
+      ['{"strings": {"next": 2}}', "strings.next"],
+      ['{"strings": {"close": "Close"}}', "strings.close"],
+      ['{"onChange": "go"}', "onChange"],
+    ] as const) {
+      const { viewport, slides } = fixture();
+      viewport.className = "prints strip";
+      viewport.dataset.carouselOptions = markup;
+      expect(() => createCarousel(viewport), markup).toThrow(TypeError);
+      expect(() => createCarousel(viewport), markup).toThrow(
+        `Carousel data-carousel-options on div.prints has an invalid "${key}"`,
+      );
+      expect(viewport.classList.contains("re-carousel")).toBe(false);
+      expect(viewport.hasAttribute("role")).toBe(false);
+      expect(slides[0].hasAttribute("aria-label")).toBe(false);
+      viewport.remove();
+    }
+  });
+
+  it("accepts markup options whose JSON types match the options", () => {
+    const { viewport, slides } = fixture(Array(4).fill(100), 200);
+    viewport.dataset.carouselOptions = JSON.stringify({
+      loop: false,
+      drag: false,
+      align: "center",
+      group: "page",
+      autoplay: 4000,
+      releaseMotion: "native",
+      releaseDuration: 300,
+      moveMotion: "spring",
+      wheel: "vertical",
+      slides: "[data-carousel-slide]",
+      strings: { next: "Weiter", slideRole: "Folie" },
+    });
+    const carousel = createCarousel(viewport);
+    cleanups.push(carousel.destroy);
+    expect(carousel.getState()).toMatchObject({ count: 4, isPlaying: true });
+    expect(slides[0].getAttribute("aria-roledescription")).toBe("Folie");
+  });
+
   it("handles empty and non-overflowing content and rejects invalid timers at the boundary", () => {
     const { viewport } = fixture([], 100);
     const carousel = createCarousel(viewport, { loop: true });
@@ -1095,6 +1184,84 @@ describe("one motion and strip state", () => {
     cleanups.push(native.destroy);
     expect(wheel(plain.viewport, { deltaY: 100 }).defaultPrevented).toBe(false);
     expect(native.getState().index).toBe(0);
+  });
+
+  it("applies motion, wheel and strings options without a rebuild", () => {
+    const { viewport, slides, scrollTo } = fixture();
+    const carousel = createCarousel(viewport);
+    cleanups.push(carousel.destroy);
+    carousel.setOptions({ moveMotion: "native" });
+    carousel.next();
+    expect(scrollTo).toHaveBeenLastCalledWith(
+      expect.objectContaining({ behavior: "smooth" }),
+    );
+    vi.advanceTimersByTime(1000);
+    carousel.setOptions({ wheel: "vertical" });
+    expect(wheel(viewport, { deltaY: 100 }).defaultPrevented).toBe(true);
+    expect(carousel.getState().index).toBe(2);
+    carousel.setOptions({ wheel: undefined });
+    carousel.goTo(0, "instant");
+    expect(wheel(viewport, { deltaY: 100 }).defaultPrevented).toBe(false);
+    expect(carousel.getState().index).toBe(0);
+    carousel.setOptions({
+      strings: {
+        carouselRole: "Karussell",
+        slide: (index, count) => `Foto ${index + 1}/${count}`,
+      },
+    });
+    expect(viewport.getAttribute("aria-roledescription")).toBe("Karussell");
+    expect(slides[1].getAttribute("aria-label")).toBe("Foto 2/3");
+    carousel.setOptions({ strings: undefined });
+    expect(viewport.getAttribute("aria-roledescription")).toBe("carousel");
+    expect(slides[1].getAttribute("aria-label")).toBe("2 of 3");
+    for (const invalid of [
+      { releaseMotion: "fast" },
+      { moveMotion: "fast" },
+      { releaseDuration: 0 },
+      { wheel: "horizontal" },
+    ])
+      expect(() => carousel.setOptions(invalid as never)).toThrow(RangeError);
+    expect(carousel.getState().index).toBe(0);
+  });
+
+  it("merges new strings over the current ones and restores markup values for undefined keys", () => {
+    const { viewport, slides } = fixture(Array(6).fill(100), 300);
+    viewport.dataset.carouselOptions = JSON.stringify({
+      group: 3,
+      strings: { slideRole: "Folie" },
+    });
+    const carousel = createCarousel(viewport, {
+      strings: { carouselRole: "Karussell" },
+    });
+    cleanups.push(carousel.destroy);
+    const roles = () => [
+      viewport.getAttribute("aria-roledescription"),
+      slides[0].getAttribute("aria-roledescription"),
+    ];
+    carousel.setOptions({ strings: { carouselRole: "Galerie" } });
+    expect(roles()).toEqual(["Galerie", "Folie"]);
+    carousel.setOptions({ strings: undefined });
+    expect(roles()).toEqual(["carousel", "Folie"]);
+    carousel.setOptions({
+      strings: { carouselRole: "Galerie", slideRole: "Bild", slide: undefined },
+    });
+    expect(roles()).toEqual(["Galerie", "Bild"]);
+    expect(slides[1].getAttribute("aria-label")).toBe("2 of 6");
+    carousel.setOptions({
+      strings: { carouselRole: undefined, slideRole: undefined },
+    });
+    expect(roles()).toEqual(["carousel", "Folie"]);
+    carousel.setOptions({ group: 1, align: "center" });
+    expect(carousel.getState().pageCount).toBe(4);
+    expect(slides[1].style.scrollSnapAlign).toBe("center");
+    carousel.setOptions({ group: undefined, align: undefined });
+    expect(carousel.getState().pageCount).toBe(2);
+    expect(slides[3].style.scrollSnapAlign).toBe("start");
+    const playing = fixture(Array(6).fill(100), 300);
+    const autoplay = createCarousel(playing.viewport, { autoplay: 1000 });
+    cleanups.push(autoplay.destroy);
+    autoplay.setOptions({ autoplay: undefined });
+    expect(autoplay.getState().isPlaying).toBe(false);
   });
 
   it("marks static, edge and dragging state on the viewport and removes it on destroy", () => {
@@ -1304,8 +1471,9 @@ describe("one state for every control", () => {
 
   it("reports the visitor's pause apart from the holds", () => {
     const { viewport } = eight();
-    const carousel = createCarousel(viewport, { autoplay: 1000 });
+    const carousel = createCarousel(viewport);
     cleanups.push(carousel.destroy);
+    carousel.setOptions({ autoplay: 1000 });
     const read = () => {
       const { isPaused, isPlaying } = carousel.getState();
       return { isPaused, isPlaying };
@@ -1493,6 +1661,133 @@ describe("one state for every control", () => {
     ]);
   });
 
+  it("calls on() listeners with the state of each event and stops them on unsubscribe or abort", () => {
+    const { viewport } = fixture();
+    const carousel = createCarousel(viewport, { autoplay: 5000 });
+    cleanups.push(carousel.destroy);
+    const seen: string[] = [];
+    const controller = new AbortController();
+    for (const type of ["change", "settle", "play", "pause"] as const)
+      carousel.on(
+        type,
+        ({ state }) => seen.push(`${type} ${state.index} ${state.isPlaying}`),
+        { signal: controller.signal },
+      );
+    const stop = carousel.on("change", ({ state }) =>
+      seen.push(`stopped ${state.index}`),
+    );
+    const states: number[] = [];
+    carousel.subscribe((state) => states.push(state.index), {
+      signal: controller.signal,
+    });
+    carousel.next();
+    vi.advanceTimersByTime(1000);
+    carousel.pause();
+    stop();
+    carousel.play();
+    carousel.next();
+    controller.abort();
+    carousel.goTo(0, "instant");
+    expect(seen).toEqual([
+      "change 1 true",
+      "stopped 1",
+      "settle 1 true",
+      "pause 1 false",
+      "play 1 true",
+      "change 2 true",
+    ]);
+    expect(states.at(-1)).toBe(2);
+    const late: number[] = [];
+    carousel.subscribe((state) => late.push(state.index), {
+      signal: controller.signal,
+    });
+    carousel.on("change", ({ state }) => late.push(state.index), {
+      signal: controller.signal,
+    });
+    carousel.next();
+    expect(late).toEqual([]);
+  });
+
+  it("removes its abort listeners from the callers' signals on destroy", () => {
+    const { viewport } = fixture();
+    const carousel = createCarousel(viewport);
+    const controller = new AbortController();
+    const signal = controller.signal;
+    const attached = new Set<unknown>();
+    const add = signal.addEventListener.bind(signal);
+    const remove = signal.removeEventListener.bind(signal);
+    signal.addEventListener = (
+      type: string,
+      listener: never,
+      options?: never,
+    ) => {
+      attached.add(listener);
+      add(type, listener, options);
+    };
+    signal.removeEventListener = (
+      type: string,
+      listener: never,
+      options?: never,
+    ) => {
+      attached.delete(listener);
+      remove(type, listener, options);
+    };
+    carousel.subscribe(() => {}, { signal });
+    carousel.on("change", () => {}, { signal });
+    expect(attached.size).toBe(2);
+    carousel.destroy();
+    expect(attached.size).toBe(0);
+  });
+
+  it("reports a throwing listener and keeps delivering to the rest and to later events", () => {
+    const { viewport } = fixture();
+    const carousel = createCarousel(viewport);
+    cleanups.push(carousel.destroy);
+    const reported: unknown[] = [];
+    vi.stubGlobal("reportError", (error: unknown) => reported.push(error));
+    const failure = new Error("listener failed");
+    let failed = false;
+    const seen: string[] = [];
+    carousel.on("change", () => {
+      if (failed) return;
+      failed = true;
+      throw failure;
+    });
+    carousel.subscribe(() => {
+      if (!failed) throw failure;
+    });
+    carousel.on("change", ({ state }) => seen.push(`on ${state.index}`));
+    carousel.subscribe((state) => seen.push(`subscribe ${state.index}`));
+    viewport.addEventListener("re-carousel:change", (event) =>
+      seen.push(`dom ${(event as CustomEvent).detail.index}`),
+    );
+    carousel.goTo(1, "instant");
+    carousel.goTo(2, "instant");
+    expect(reported).toEqual([failure, failure]);
+    expect(seen).toEqual([
+      "subscribe 1",
+      "on 1",
+      "dom 1",
+      "subscribe 2",
+      "on 2",
+      "dom 2",
+    ]);
+  });
+
+  it("delivers a listener added twice twice and removes each with its own unsubscribe", () => {
+    const { viewport } = fixture();
+    const carousel = createCarousel(viewport);
+    cleanups.push(carousel.destroy);
+    const seen: number[] = [];
+    const listener = (state: { index: number }) => seen.push(state.index);
+    const first = carousel.subscribe(listener);
+    carousel.subscribe(listener);
+    carousel.goTo(1, "instant");
+    first();
+    carousel.goTo(2, "instant");
+    expect(seen).toEqual([1, 1, 2]);
+  });
+
   it("reports every change in order when a change handler moves the carousel again", () => {
     for (const [react, expected, playing] of [
       [
@@ -1650,6 +1945,19 @@ describe("one state for every control", () => {
     });
     cleanups.push(carousel.destroy);
     expect(slides[0].getAttribute("aria-label")).toBe("Photo 1/3");
+  });
+
+  it("treats an undefined string passed to createCarousel as left out", () => {
+    const { viewport, slides } = fixture();
+    viewport.dataset.carouselOptions = JSON.stringify({
+      strings: { slideRole: "Folie" },
+    });
+    const carousel = createCarousel(viewport, {
+      strings: { slide: undefined, slideRole: undefined },
+    });
+    cleanups.push(carousel.destroy);
+    expect(slides[0].getAttribute("aria-label")).toBe("1 of 3");
+    expect(slides[0].getAttribute("aria-roledescription")).toBe("Folie");
   });
 });
 
@@ -1950,14 +2258,19 @@ describe("thumbnails", () => {
 });
 
 describe("controls binder", () => {
-  function bound(markup: string, widths = Array(8).fill(100), width = 300) {
+  function bound(
+    markup: string,
+    widths = Array(8).fill(100),
+    width = 300,
+    options: CarouselOptions = { autoplay: 5000 },
+  ) {
     const strip = fixture(widths, width);
     strip.viewport.id = "photos";
     const root = document.createElement("div");
     root.innerHTML = markup;
     strip.viewport.before(root);
     root.prepend(strip.viewport);
-    const carousel = createCarousel(strip.viewport, { autoplay: 5000 });
+    const carousel = createCarousel(strip.viewport, options);
     cleanups.push(carousel.destroy);
     return { ...strip, root, carousel };
   }
@@ -1994,6 +2307,51 @@ describe("controls binder", () => {
     );
     expect(prev?.hasAttribute("aria-label")).toBe(false);
     expect(prev?.hasAttribute("aria-controls")).toBe(false);
+  });
+
+  it("names its controls from the carousel's strings and renames them when the strings change", () => {
+    const { root, carousel } = bound(
+      '<button data-carousel-prev></button><button data-carousel-next>Next</button><div data-carousel-dots></div><button data-carousel-play></button><div data-carousel-progress aria-label="Scroll"></div><span data-carousel-counter></span>',
+    );
+    const unbind = bindCarouselControls(root, carousel);
+    const find = (selector: string) => root.querySelector(selector);
+    expect(find("[data-carousel-prev]")?.getAttribute("aria-label")).toBe(
+      "Previous slide",
+    );
+    carousel.setOptions({
+      strings: {
+        previous: "Zurück",
+        goTo: (index, count) => `Bild ${index + 1} von ${count}`,
+        pause: "Anhalten",
+        progress: "Position",
+        counter: (index, count) => `${index + 1} von ${count}`,
+      },
+    });
+    expect(find("[data-carousel-prev]")?.getAttribute("aria-label")).toBe(
+      "Zurück",
+    );
+    expect(find("[data-carousel-next]")?.hasAttribute("aria-label")).toBe(
+      false,
+    );
+    expect(
+      root
+        .querySelectorAll("[data-carousel-dots] button")[1]
+        ?.getAttribute("aria-label"),
+    ).toBe("Bild 2 von 6");
+    expect(find("[data-carousel-play]")?.getAttribute("aria-label")).toBe(
+      "Anhalten",
+    );
+    expect(find("[data-carousel-progress]")?.getAttribute("aria-label")).toBe(
+      "Scroll",
+    );
+    expect(find("[data-carousel-counter]")?.textContent).toBe("1 von 8");
+    unbind();
+    expect(find("[data-carousel-prev]")?.hasAttribute("aria-label")).toBe(
+      false,
+    );
+    expect(find("[data-carousel-progress]")?.getAttribute("aria-label")).toBe(
+      "Scroll",
+    );
   });
 
   it("leaves no listener on the root or a control after unbinding", () => {
@@ -2090,7 +2448,13 @@ describe("controls binder", () => {
   });
 
   it("toggles play and pause with its label and pressed state", () => {
-    const { root, carousel } = bound("<button data-carousel-play></button>");
+    const { root, carousel } = bound(
+      "<button data-carousel-play></button>",
+      undefined,
+      undefined,
+      {},
+    );
+    carousel.setOptions({ autoplay: 5000 });
     const unbind = bindCarouselControls(root, carousel);
     const play = root.querySelector("[data-carousel-play]");
     expect(play?.getAttribute("aria-pressed")).toBe("true");
@@ -2122,9 +2486,8 @@ describe("controls binder", () => {
 
   it("makes the progress bar a slider for the pointer and the keys", () => {
     const { root, carousel } = bound("<div data-carousel-progress></div>");
-    const unbind = bindCarouselControls(root, carousel, {
-      strings: { progress: "Position" },
-    });
+    carousel.setOptions({ strings: { progress: "Position" } });
+    const unbind = bindCarouselControls(root, carousel);
     const bar = root.querySelector<HTMLElement>("[data-carousel-progress]");
     if (!bar) throw new Error("No bar");
     bar.getBoundingClientRect = () => ({ left: 0, width: 100 }) as DOMRect;

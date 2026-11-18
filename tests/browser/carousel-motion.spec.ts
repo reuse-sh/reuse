@@ -327,17 +327,25 @@ test.describe("carousel state", { tag: "@desktop" }, () => {
     expect((await read()).changes).toEqual([]);
   });
 
-  test("a strip without overflow is static and its controls hide without code", async ({
+  test("a strip without overflow is static and the controls bound to it hide", async ({
     page,
   }) => {
     const controls = `<button data-carousel-prev>Previous</button><button data-carousel-next>Next</button><div data-carousel-dots>dots</div>`;
     await setup(
       page,
-      `<section><div id="strip" style="width:600px">${slideRow(2, 200)}</div>${controls}</section><section><div id="long" style="width:600px">${slideRow(4)}</div>${controls}</section>`,
+      `<section id="fits"><div id="strip" style="width:600px">${slideRow(2, 200)}</div>${controls}</section><section><div id="long" style="width:600px">${slideRow(4)}</div>${controls}</section>`,
     );
     await page.evaluate(async () => {
       const { createCarousel } = await import("/modules/carousel/index.js");
+      const { bindCarouselControls } = await import(
+        "/modules/carousel/controls.js"
+      );
       createCarousel(document.getElementById("long") as HTMLElement);
+      const { carousel } = window as unknown as { carousel: never };
+      bindCarouselControls(
+        document.getElementById("fits") as HTMLElement,
+        carousel,
+      );
     });
     const strip = page.locator("#strip");
     await expect(strip).toHaveAttribute("data-re-static", "");
@@ -356,32 +364,35 @@ test.describe("carousel state", { tag: "@desktop" }, () => {
     ).toBeVisible();
   });
 
-  test("a static strip leaves the controls of a strip that overflows beside it", async ({
+  test("the package CSS leaves the controls it did not bind, and the page's own rule hides them", async ({
     page,
   }) => {
     const next = `<button data-carousel-next>Next</button>`;
     await setup(
       page,
-      `<section id="shared"><div id="strip" style="width:600px">${slideRow(2, 200)}</div><div id="long" style="width:600px">${slideRow(4)}</div><div data-carousel-controls="long">${next}</div>${next}</section>
-      <section id="nested"><div id="small" style="width:600px">${slideRow(2, 200)}</div>${next}<div><div id="inner" style="width:600px">${slideRow(4)}</div>${next}</div></section>`,
+      `<section id="shared"><div id="strip" style="width:600px">${slideRow(2, 200)}</div>${next}<div><div><div id="wide" style="width:600px">${slideRow(4)}</div></div>${next}</div></section>`,
     );
     await page.evaluate(async () => {
       const { createCarousel } = await import("/modules/carousel/index.js");
-      for (const id of ["long", "small", "inner"])
-        createCarousel(document.getElementById(id) as HTMLElement);
+      createCarousel(document.getElementById("wide") as HTMLElement);
     });
-    await expect(page.locator("#small")).toHaveAttribute("data-re-static", "");
-    const shown = (selector: string) =>
+    await expect(page.locator("#strip")).toHaveAttribute("data-re-static", "");
+    await expect(page.locator("#wide")).not.toHaveAttribute("data-re-static");
+    const shown = () =>
       page
-        .locator(selector)
+        .locator("[data-carousel-next]")
         .evaluateAll((buttons) =>
           buttons.map((button) => getComputedStyle(button).display !== "none"),
         );
-    expect(await shown("#shared [data-carousel-next]")).toEqual([true, true]);
-    expect(await shown("#nested [data-carousel-next]")).toEqual([false, true]);
+    expect(await shown()).toEqual([true, true]);
+    await page.addStyleTag({
+      content:
+        "section:has(> [data-re-static]) > [data-carousel-next] { display: none; }",
+    });
+    expect(await shown()).toEqual([false, true]);
   });
 
-  test("a static strip hides its controls under a parent of a strip that overflows", async ({
+  test("a static strip hides the controls bound to it under a parent of a strip that overflows", async ({
     page,
   }) => {
     const prev = `<button data-carousel-prev>Previous</button>`;
@@ -392,8 +403,15 @@ test.describe("carousel state", { tag: "@desktop" }, () => {
     );
     await page.evaluate(async () => {
       const { createCarousel } = await import("/modules/carousel/index.js");
-      for (const id of ["hero", "fits", "inner"])
-        createCarousel(document.getElementById(id) as HTMLElement);
+      const { bindCarouselControls } = await import(
+        "/modules/carousel/controls.js"
+      );
+      for (const id of ["hero", "fits", "inner"]) {
+        const viewport = document.getElementById(id) as HTMLElement;
+        const carousel = createCarousel(viewport);
+        if (id !== "hero")
+          bindCarouselControls(viewport.parentElement as HTMLElement, carousel);
+      }
     });
     await expect(page.locator("#inner")).toHaveAttribute("data-re-static", "");
     await expect(page.locator("#fits")).toHaveAttribute("data-re-static", "");

@@ -40,6 +40,9 @@
     "./react": {
       "types": "./dist/react.d.ts",
       "import": "./dist/react.js"
+    },
+    "./internal": {
+      "types": "./dist/internal.d.ts"
     }
   },
   "scripts": {

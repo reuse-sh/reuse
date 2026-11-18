@@ -1,8 +1,5 @@
-import {
-  type Carousel,
-  type CarouselInternals,
-  createCarousel,
-} from "@reuse-sh/carousel";
+import { type Carousel, createCarousel } from "@reuse-sh/carousel";
+import type { CarouselInternals } from "@reuse-sh/carousel/internal";
 import { createThinkingDots } from "@reuse-sh/loaders";
 import {
   type ChromeInput,
@@ -3231,14 +3228,14 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
       drag: true,
       loop: looping(),
       strings: { carouselRole: strings.carouselRole },
-      onChange: (value) => {
-        if (
-          !syncingCarousel &&
-          session?.viewport === viewport &&
-          session.resizeFrame === undefined
-        )
-          activeChanged(session, value.index);
-      },
+    });
+    carousel.subscribe((value) => {
+      if (
+        !syncingCarousel &&
+        session?.viewport === viewport &&
+        session.resizeFrame === undefined
+      )
+        activeChanged(session, value.index);
     });
     internalsOf(carousel)?.silence();
     return carousel;

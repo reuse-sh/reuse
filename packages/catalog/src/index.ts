@@ -429,7 +429,7 @@ export const libraries: Library[] = [
       ],
       [
         "Publish one state",
-        "Index, pages, visible slides and autoplay progress come from one source that every control reads.",
+        "Index, pages, visible slides and autoplay progress come from one source that every control reads, and every label and announcement from the carousel's strings.",
         "tests/browser/carousel-controls.spec.ts",
       ],
       [
@@ -442,15 +442,25 @@ export const libraries: Library[] = [
         "A drag or a touch takes the position from a driver such as a marquee, and the strip snaps again once the driver lets go.",
         "tests/browser/carousel-effects.spec.ts",
       ],
+      [
+        "Let the markup carry the options",
+        "Options printed in data-carousel-options apply under the options from code, key by key, and an attribute that is not a JSON object, or a key whose JSON type does not match its option, stops with the element's name and the key before the DOM changes instead of a strip with defaults.",
+        "packages/carousel/src/index.test.ts",
+      ],
+      [
+        "Re-render only what reads the change",
+        "A React component re-renders for the part of the state it selects, so autoplay progress and scrolling leave a counter that shows the index alone, and a changed option reaches the same carousel instead of a new one.",
+        "packages/carousel/src/react.test.tsx",
+      ],
     ],
     api: [
       [
         "createCarousel(viewport, options?)",
-        "Binds a scroll-snap strip. Options: slides, align, loop, drag, group, autoplay, moveMotion, releaseMotion, releaseDuration, wheel, strings, onChange.",
+        "Binds a scroll-snap strip. Options: slides, align, loop, drag, group, autoplay, moveMotion, releaseMotion, releaseDuration, wheel, strings.",
       ],
       [
         "setOptions(options)",
-        "Changes autoplay, loop, group, align and drag without rebuilding the strip. The active slide stays in place.",
+        "Changes any option except slides without rebuilding the strip, such as autoplay, loop, group, align, drag, motion, wheel or strings. The active slide stays in place. A key set to undefined returns to its value from data-carousel-options, else the default. strings merge over the current strings key by key, and a string set to undefined returns the same way.",
       ],
       [
         "moveMotion",
@@ -471,6 +481,10 @@ export const libraries: Library[] = [
       [
         "getState(), subscribe(listener)",
         "Index, count, progress, pageCount, pageIndex, pages (the slide each page starts at), the visible slides, autoplayProgress, seamSlides, canPrev, canNext, whether it is playing, dragging or looping, and isPaused, the visitor's own pause of autoplay, false without autoplay, which holds and hover leave alone.",
+      ],
+      [
+        "subscribe(listener, { signal }), on(type, listener, { signal })",
+        "subscribe calls the listener with every new state. on listens for change, settle, play or pause and passes { state }. Both return a function that removes the listener, and aborting the signal removes it too.",
       ],
       [
         "take(owner, { onInterrupt })",
@@ -494,6 +508,10 @@ export const libraries: Library[] = [
       ],
       ["destroy()", "Removes listeners and restores the viewport."],
       [
+        "useCarousel(options), useCarouselState(carousel, selector)",
+        "From @reuse-sh/carousel/react. useCarousel returns { ref, carousel } and applies changed options with setOptions; a change of slides creates the carousel again, and an option it drops returns to the markup value or the default. It compares strings field by field and function strings such as goTo by identity, so memoize them or define them outside the component. useCarouselState re-renders only when what the selector returns changes, compared field by field for an object, and selects from the empty state on the server and before the carousel exists.",
+      ],
+      [
         "syncCarousels(...carousels)",
         "Keeps several carousels on the same index. Returns a function that stops it.",
       ],
@@ -515,14 +533,15 @@ export const libraries: Library[] = [
       'With group: 3 or group: "page", only the first slide of each group, and the slide a move was sent to, keeps scroll-snap-align, so touch and trackpad swipes move a group like the buttons. The others get scroll-snap-align: none, and destroy gives back their own value.',
       'state.seamSlides lists the slides a looping strip shows while it crosses the seam: the first slides and the last slides that each fill one viewport width. When the server renders the strip, give the images in those slides loading="eager" and leave the rest lazy, so crossing the seam never shows an image that is still loading.',
       'To let the first and last slides of a centered strip reach the middle without a loop, set align: "center" and give the viewport padding-inline and scroll-padding-inline of half the difference between the viewport and a slide, such as #prints { --re-carousel-slide-width: 320px; padding-inline: calc(50% - 160px); scroll-padding-inline: calc(50% - 160px); } for a viewport as wide as its parent.',
-      "The viewport carries data-re-dragging during a mouse drag, data-re-scrolling during a fast swipe or wheel scroll, data-re-static when nothing overflows, and data-re-at-start and data-re-at-end at the edges of a strip that does not loop. The package CSS turns off hover on the slides while data-re-scrolling is set and hides [data-carousel-prev], [data-carousel-next] and [data-carousel-dots] in a parent whose direct children include a static strip and no strip that overflows, but not inside a nearer element that holds a strip that overflows. bindCarouselControls marks the prev, next and dots it binds with data-re-static while their strip is static, so a data-carousel-controls group hides too.",
+      "The viewport carries data-re-dragging during a mouse drag, data-re-scrolling during a fast swipe or wheel scroll, data-re-static when nothing overflows, and data-re-at-start and data-re-at-end at the edges of a strip that does not loop. The package CSS turns off hover on the slides while data-re-scrolling is set. bindCarouselControls marks the prev, next and dots it binds with data-re-static while their strip is static, and the package CSS hides those, in place or in a data-carousel-controls group. The package CSS hides no control it did not bind: a page that writes its own arrows hides them with a rule on the viewport's attribute, such as .gallery:has(> [data-re-static]) .arrows { display: none }.",
       "While a mouse drags the strip, the slides scale to --re-carousel-press-scale (0.96) over --re-carousel-press-duration (300ms). Set the scale to 1 to turn it off.",
       "scroll-snap-type on the viewport sets how a released drag ends: mandatory snaps, proximity snaps only near a snap point, and none glides to a stop.",
       "A mouse drag inside a nested strip that can scroll moves only that strip.",
       "Autoplay pauses for hover, keyboard focus (:focus-visible), dragging, hidden pages, strips less than half in view and reduced motion, and picks up the rest of its wait when it resumes. --re-carousel-autoplay-progress on the viewport fills from 0 to 1 over the wait, every frame.",
       'For a page without a bundler or an import map, such as a theme or a plugin, load @reuse-sh/carousel/browser/carousel.js with <script type="module">. It is one minified ES module with a source map and no imports. The controls entry is controls.js in the same folder, also with no imports.',
-      "bindCarouselControls(root, carousel, { strings, dotsWindow }) from @reuse-sh/carousel/controls wires your own markup: [data-carousel-prev], [data-carousel-next], [data-carousel-dots], [data-carousel-counter], [data-carousel-play] and [data-carousel-progress], also outside root with data-carousel-controls set to the viewport id. It reads pages, pageIndex, isPaused and autoplayProgress from the one state, and the function it returns removes every listener and element it added.",
-      "The strings option supplies every label and announcement, such as goTo(index, count) and slide(index, count), with English defaults. The viewport dispatches re-carousel:change, re-carousel:settle, re-carousel:play and re-carousel:pause with the state in detail.",
+      'data-carousel-options on the viewport holds a JSON object of options, such as data-carousel-options=\'{"loop":true,"autoplay":5000}\', for a theme or a plugin that prints its settings with the markup. Options passed in code win key by key and strings merge. An attribute that is not a JSON object, an unknown key or a value of the wrong JSON type ("loop":"false", "align":"end") throws a TypeError that names the element and the key before the DOM changes. Strings that are functions, such as goTo and slide, come from code.',
+      "bindCarouselControls(root, carousel, { dotsWindow }) from @reuse-sh/carousel/controls wires your own markup: [data-carousel-prev], [data-carousel-next], [data-carousel-dots], [data-carousel-counter], [data-carousel-play] and [data-carousel-progress], also outside root with data-carousel-controls set to the viewport id. It reads pages, pageIndex, isPaused and autoplayProgress from the one state and its labels from the carousel's strings, so setOptions({ strings }) renames them, and the function it returns removes every listener and element it added.",
+      "The strings option supplies every label and announcement, such as goTo(index, count) and slide(index, count), with English defaults. carousel.on(type, listener, { signal }) reports change, settle, play and pause with { state }, and the viewport dispatches the same events as re-carousel:change, re-carousel:settle, re-carousel:play and re-carousel:pause with the state in detail, for markup and scripts that hold no controller.",
       "A div or span viewport without a role becomes a region described by strings.carouselRole, and div or span slides without one become groups described by strings.slideRole and labeled from strings.slide, such as 3 of 8. next(), prev(), the arrows, dots and keys announce the slide they reach; autoplay and swipes stay quiet.",
       "A goTo while the strip cannot scroll yet, such as in a hidden tab or before its images load, waits for the first refresh that finds overflow and lands there at once.",
       "connectThumbnails(main, thumbnails) keeps the active thumbnail in view and centered, marks it with aria-current and moves the main strip when a thumbnail is clicked.",
@@ -565,7 +584,7 @@ export const libraries: Library[] = [
       {
         path: "api",
         title: "API",
-        lead: "The browser module exports createCarousel. The React package adds useCarousel and a Carousel component.",
+        lead: "The browser module exports createCarousel. The React package adds useCarousel, useCarouselState and a Carousel component.",
       },
     ],
   },
