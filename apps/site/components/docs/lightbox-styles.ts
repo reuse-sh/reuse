@@ -30,7 +30,7 @@ export const lightboxStyles: Record<string, LightboxStyle> = {
   minimal: style("None", "None", false, "None", "Light", false, false),
   classic: style("Sides", "Corner", false, "Below", "Light", false, true),
   filmstrip: style("Sides", "None", true, "None", "Light", false, true),
-  panel: style("Sides", "Corner", false, "Panel", "Light", false, false),
+  panel: style("Sides", "None", false, "Panel", "Light", false, false),
   immersive: style("Sides", "Corner", false, "Below", "Dark", true, false),
   toolbar: style("Toolbar", "Toolbar", false, "Below", "Light", false, true),
 };

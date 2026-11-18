@@ -367,6 +367,28 @@ test("every control style shows an icon in each lightbox button", async ({
   }
 });
 
+test("the panel style shows the photo's position once", async ({ page }) => {
+  for (const width of [390, 1280]) {
+    await page.setViewportSize({ width, height: 844 });
+    await page.goto("/lightbox/controls/panel");
+    await page.locator('main a[href^="/images/marble"]').first().click();
+    await expect(page.locator(".re-lightbox-style-panel-place")).toBeVisible();
+    const positions = await page.locator("dialog[open] *").evaluateAll(
+      (elements) =>
+        elements.filter((element) => {
+          const position = (node: Element) =>
+            /^1\s*(\/|of)\s*8$/.test(node.textContent?.trim() ?? "");
+          return (
+            position(element) &&
+            element.checkVisibility() &&
+            ![...element.children].some(position)
+          );
+        }).length,
+    );
+    expect(positions, `${width}px`).toBe(1);
+  }
+});
+
 test("the footer lines up with the documentation column and the page bottom", async ({
   page,
 }) => {
