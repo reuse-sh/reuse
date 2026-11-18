@@ -1,3 +1,5 @@
+import { createServer, type Server } from "node:http";
+import type { AddressInfo } from "node:net";
 import { expect, type Page, test } from "@playwright/test";
 import { mount } from "./harness";
 
@@ -142,8 +144,8 @@ test("the controls sit in their corners in a fixed order", async ({ page }) => {
   );
 });
 
-async function openFiles(page: Page, files: string[]) {
-  await mount(page, "", ["lightbox/base.css", "lightbox/theme.css"]);
+async function openFiles(page: Page, files: string[], origin?: string) {
+  await mount(page, "", ["lightbox/base.css", "lightbox/theme.css"], origin);
   await page.evaluate(async (sources) => {
     const { createLightbox } = await import("/modules/lightbox/index.js");
     const blob = URL.createObjectURL(
@@ -363,7 +365,9 @@ test("Download saves a raster data file without leaving the page", async ({
   expect(page.url()).toBe("http://reuse.test/");
 });
 
-test("Download saves a same-origin file natively", async ({ page }) => {
+test("Download saves a same-origin file without leaving the page", async ({
+  page,
+}) => {
   await openFiles(page, ["/photo.jpg"]);
   await page.route("http://reuse.test/photo.jpg", (route) =>
     route.fulfill({ contentType: "image/jpeg", body: "photo" }),
@@ -378,6 +382,48 @@ test("Download saves a same-origin file natively", async ({ page }) => {
   ]);
   expect(file.suggestedFilename()).toBe("photo.jpg");
   expect(page.url()).toBe("http://reuse.test/");
+});
+
+test("Download keeps the tab when a same-origin file redirects to another origin", {
+  tag: "@desktop",
+}, async ({ page, browserName }) => {
+  // Playwright cannot fulfill a fetch with a redirect, so two real servers stand for the page and the other origin.
+  const listen = async (server: Server) => {
+    await new Promise<void>((resolve) =>
+      server.listen(0, "127.0.0.1", resolve),
+    );
+    return `http://127.0.0.1:${(server.address() as AddressInfo).port}`;
+  };
+  const files = createServer((_, response) =>
+    response
+      .writeHead(200, {
+        "content-type": "image/jpeg",
+        "access-control-allow-origin": "*",
+      })
+      .end("photo"),
+  );
+  const other = await listen(files);
+  const site = createServer((_, response) =>
+    response.writeHead(302, { location: `${other}/moved.jpg` }).end(),
+  );
+  const origin = await listen(site);
+  // Chromium asks before a page it takes for public reaches a loopback server.
+  if (browserName === "chromium")
+    await page.context().grantPermissions(["local-network-access"]);
+  try {
+    await openFiles(page, ["/moved.jpg"], origin);
+    await page.route(`${origin}/moved.jpg`, (route) => route.continue());
+    const [file] = await Promise.all([
+      page.waitForEvent("download"),
+      page.click(".re-lightbox-download"),
+    ]);
+    expect(file.suggestedFilename()).toBe("moved.jpg");
+    expect(page.url()).toBe(`${origin}/`);
+    expect(await lightbox(page)).toMatchObject({ isOpen: true });
+  } finally {
+    site.close();
+    files.close();
+  }
 });
 
 test("the fullscreen button toggles the viewer's stage, and leaving fullscreen keeps it open", async ({

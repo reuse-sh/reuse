@@ -3982,15 +3982,16 @@ export function createLightbox<Item extends LightboxItem = LightboxItem>(
       : undefined;
     download?.setAttribute("download", "");
     download?.setAttribute("rel", "noopener");
-    // Browsers ignore the download attribute across origins and navigate the tab instead,
-    // and block a popup opened after an await, so the fetch starts before the click.
+    // Browsers ignore the download attribute across origins, also after a same-origin URL
+    // redirects to another one, and navigate the tab instead, and block a popup opened after
+    // an await, so every web file is fetched before the click.
     let fetched:
       | { href: string; blob?: Blob; failed?: boolean; wanted?: boolean }
       | undefined;
     const native = () =>
       !download ||
-      download.origin === doc.location.origin ||
-      download.protocol === "data:";
+      download.protocol === "data:" ||
+      download.protocol === "blob:";
     const save = (blob: Blob, pathname: string) => {
       const link = doc.createElement("a");
       link.href = URL.createObjectURL(blob);
