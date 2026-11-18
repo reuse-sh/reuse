@@ -551,6 +551,28 @@ describe("lightbox lifecycle", () => {
     ]);
   });
 
+  it("takes its abort listeners off the callers' signals on destroy", () => {
+    const stop = new AbortController();
+    const added = new Set<unknown>();
+    const { signal } = stop;
+    const add = signal.addEventListener.bind(signal);
+    const remove = signal.removeEventListener.bind(signal);
+    signal.addEventListener = (type, listener, options) => {
+      added.add(listener);
+      add(type, listener, options);
+    };
+    signal.removeEventListener = (type, listener, options) => {
+      added.delete(listener);
+      remove(type, listener, options);
+    };
+    const controller = create({ history: false });
+    controller.subscribe(() => {}, { signal });
+    controller.on("change", () => {}, { signal });
+    expect(added.size).toBe(2);
+    controller.destroy();
+    expect(added.size).toBe(0);
+  });
+
   it("handles native cancel and repeated destroy without stale DOM", async () => {
     const controller = create();
     controller.open(gallery);

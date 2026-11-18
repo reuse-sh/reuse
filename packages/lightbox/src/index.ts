@@ -831,6 +831,7 @@ export function createLightbox<Item extends LightboxItem = LightboxItem>(
     chrome: "shown",
   };
   const listeners = new Set<(state: LightboxState<Item>) => void>();
+  const stops = new Set<() => void>();
   const handlers = new Map<
     LightboxEventName,
     Set<(event: LightboxCancelableEvent) => void>
@@ -4730,13 +4731,14 @@ export function createLightbox<Item extends LightboxItem = LightboxItem>(
     },
     getState: () => notifiedState,
     subscribe: (listener, { signal } = {}) =>
-      listen(listeners, listener, signal),
+      listen(listeners, listener, stops, signal),
     on: (type, listener, { signal } = {}) => {
       const set = handlers.get(type) ?? new Set();
       handlers.set(type, set);
       return listen(
         set,
         listener as (event: LightboxCancelableEvent) => void,
+        stops,
         signal,
       );
     },
@@ -4786,6 +4788,7 @@ export function createLightbox<Item extends LightboxItem = LightboxItem>(
       }
       win?.removeEventListener("popstate", onPopState);
       historyWindow = undefined;
+      for (const stop of [...stops]) stop();
       listeners.clear();
       handlers.clear();
     },
@@ -4798,13 +4801,20 @@ export function createLightbox<Item extends LightboxItem = LightboxItem>(
   return controller;
 }
 
-function listen<T>(set: Set<T>, listener: T, signal?: AbortSignal) {
+function listen<T>(
+  set: Set<T>,
+  listener: T,
+  stops: Set<() => void>,
+  signal?: AbortSignal,
+) {
   const stop = () => {
     set.delete(listener);
+    stops.delete(stop);
     signal?.removeEventListener("abort", stop);
   };
   if (signal?.aborted) return stop;
   set.add(listener);
+  stops.add(stop);
   signal?.addEventListener("abort", stop, { once: true });
   return stop;
 }
