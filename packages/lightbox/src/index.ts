@@ -360,6 +360,7 @@ type Session = {
   dialog: HTMLDialogElement;
   stage: HTMLDivElement;
   viewport: HTMLDivElement;
+  paddingProbe: HTMLDivElement;
   backdrop: HTMLDivElement;
   slides: HTMLDivElement[];
   loaded: Map<number, LoadedSlide>;
@@ -1165,13 +1166,11 @@ export function createLightbox<Item extends LightboxItem = LightboxItem>(
     return rect.width > 0 && rect.height > 0 ? rect : undefined;
   }
 
-  function measure(viewport: HTMLElement): Rect {
+  function measure(viewport: HTMLElement, paddingProbe: HTMLElement): Rect {
     const rect = viewport.getBoundingClientRect();
     const win = viewport.ownerDocument.defaultView;
     const space = Number.parseFloat(
-      win
-        ?.getComputedStyle(viewport)
-        .getPropertyValue("--re-lightbox-padding") ?? "",
+      win?.getComputedStyle(paddingProbe).paddingLeft ?? "",
     );
     padding = Number.isFinite(space) ? Math.max(0, space) : PADDING;
     return {
@@ -1749,7 +1748,7 @@ export function createLightbox<Item extends LightboxItem = LightboxItem>(
     const before = state.zoom;
     const from = fit(state.index, s);
     const resting = s.rest !== undefined && sameZoom(before, s.rest);
-    s.box = measure(s.viewport);
+    s.box = measure(s.viewport, s.paddingProbe);
     s.pinned = undefined;
     s.thumbCenters = undefined;
     if (resting) updateState({ zoom: restZoom(s, state.index) });
@@ -3146,7 +3145,7 @@ export function createLightbox<Item extends LightboxItem = LightboxItem>(
           publish({});
         }
         interruptImageMotion(s);
-        if (!s.pointers.size) s.box = measure(s.viewport);
+        if (!s.pointers.size) s.box = measure(s.viewport, s.paddingProbe);
         s.pointers.set(event.pointerId, point(event));
         resetGesture();
         if (s.gesture) {
@@ -3514,7 +3513,7 @@ export function createLightbox<Item extends LightboxItem = LightboxItem>(
         )
           return;
         freezeZoom(s);
-        s.box = measure(s.viewport);
+        s.box = measure(s.viewport, s.paddingProbe);
         s.safariScale = state.zoom.scale;
       },
       { signal },
@@ -3981,7 +3980,11 @@ export function createLightbox<Item extends LightboxItem = LightboxItem>(
     const toolbarEnd = doc.createElement("div");
     toolbarEnd.className = "re-lightbox-toolbar-end";
     toolbar.append(toolbarStart, toolbarEnd);
-    stage.append(backdrop, viewport, toolbar);
+    const paddingProbe = doc.createElement("div");
+    paddingProbe.setAttribute("aria-hidden", "true");
+    paddingProbe.style.cssText =
+      "position:absolute;left:0;top:0;width:0;height:0;visibility:hidden;pointer-events:none;padding-left:var(--re-lightbox-padding, 32px)";
+    stage.append(backdrop, viewport, toolbar, paddingProbe);
     const abort = new AbortController();
     const button = <K extends "button" | "a">(
       tag: K,
@@ -4271,7 +4274,8 @@ export function createLightbox<Item extends LightboxItem = LightboxItem>(
       makeSlide,
       makeThumbs,
       pointers: new Map(),
-      box: measure(viewport),
+      paddingProbe,
+      box: measure(viewport, paddingProbe),
       suppressClickUntil: 0,
       paged: false,
       flying: true,
@@ -4301,7 +4305,7 @@ export function createLightbox<Item extends LightboxItem = LightboxItem>(
       aside: (node) => s.aside?.append(node),
     });
     placeThumbs(s);
-    s.box = measure(viewport);
+    s.box = measure(viewport, paddingProbe);
     update(s);
     s.carousel.goTo(state.index, "instant");
     dialog.addEventListener(

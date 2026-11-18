@@ -416,6 +416,29 @@ test("--re-lightbox-padding sets the space around the fitted photo, 32px without
     .toBe(((1000 - 2 * 32) * 800) / 1200);
 });
 
+for (const [padding, height] of [
+  ["2rem", ((1000 - 2 * 32) * 800) / 1200],
+  ["calc(50px + 2rem)", 700 - 2 * 82],
+] as const)
+  test(`--re-lightbox-padding: ${padding} is read as the length it computes to`, async ({
+    page,
+  }) => {
+    await mount(page, "", ["lightbox/base.css", "lightbox/theme.css"]);
+    await page.addStyleTag({
+      content: `.re-lightbox{--re-lightbox-padding:${padding}}`,
+    });
+    await page.evaluate(async (src) => {
+      const { createLightbox } = await import("/modules/lightbox/index.js");
+      createLightbox({ history: false }).open([
+        { src, width: 1200, height: 800 },
+      ]);
+    }, photo(1));
+    await expect(page.locator("dialog")).toHaveAttribute("data-phase", "open");
+    expect(Math.round((await current(page).boundingBox())?.height ?? 0)).toBe(
+      height,
+    );
+  });
+
 test("an item type of your own comes back as state.item, the object passed in", async ({
   page,
 }) => {
