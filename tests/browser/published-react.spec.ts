@@ -392,3 +392,39 @@ hydrateRoot(document.getElementById("app"), <App Late={Late} />, {
     ),
   ).toEqual([]);
 });
+
+test("useLightbox keeps one lightbox through StrictMode and destroys it on unmount", async ({
+  page,
+}) => {
+  const client = await bundleApp(
+    `import { StrictMode } from "react";
+import { createRoot } from "react-dom/client";
+import { App } from "./lightbox-app.tsx";
+const root = createRoot(document.getElementById("app"));
+root.render(<StrictMode><App /></StrictMode>);
+window.__unmount = () => root.unmount();`,
+    "browser",
+  );
+  await mount(page, '<div id="app"></div>', [
+    "lightbox/base.css",
+    "lightbox/theme.css",
+  ]);
+  await page.addScriptTag({ type: "module", content: client });
+  await page.getByRole("button", { name: "Open" }).click();
+  await expect(page.locator("dialog")).toHaveAttribute("data-phase", "open");
+  type App = {
+    __counts: { handles: Record<string, Set<unknown>> };
+    __lightbox: unknown;
+    __unmount: () => void;
+  };
+  expect(
+    await page.evaluate(() => {
+      const { __counts, __lightbox } = window as unknown as App;
+      return [...__counts.handles.owner].map(
+        (handle) => handle === __lightbox,
+      );
+    }),
+  ).toEqual([true]);
+  await page.evaluate(() => (window as unknown as App).__unmount());
+  await expect(page.locator("dialog")).toHaveCount(0);
+});

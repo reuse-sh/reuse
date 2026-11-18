@@ -14,8 +14,9 @@ const destroyed = new WeakSet<object>();
 
 /**
  * A lightbox for the component's lifetime. It is the same object on every render and holds no
- * React state, so the component does not re-render on lightbox changes; it is destroyed on
- * unmount. Changed options reach it through setOptions after the render; container is read once.
+ * React state, so the component does not re-render on lightbox changes; it is destroyed in the
+ * task after unmount, so an effect that runs again at once, as under StrictMode, keeps it. Changed
+ * options reach it through setOptions after the render; container is read once.
  */
 export function useLightbox<Item extends LightboxItem = LightboxItem>(
   options: LightboxOptions<Item> = {},
@@ -23,6 +24,7 @@ export function useLightbox<Item extends LightboxItem = LightboxItem>(
   const [lightbox, setLightbox] = useState(() => createLightbox(options));
   const latest = useRef(options);
   const applied = useRef(options);
+  const pending = useRef<ReturnType<typeof setTimeout>>(undefined);
   useEffect(() => {
     latest.current = options;
     const changed: Partial<LightboxOptions<Item>> = {};
@@ -37,15 +39,18 @@ export function useLightbox<Item extends LightboxItem = LightboxItem>(
     if (Object.keys(changed).length) lightbox.setOptions(changed);
   });
   useEffect(() => {
-    // StrictMode runs the cleanup once before the real mount; that run replaces the lightbox.
+    clearTimeout(pending.current);
+    // A component shown again after its lightbox was destroyed, such as in Activity, gets a new one.
     if (destroyed.has(lightbox)) {
       applied.current = latest.current;
       setLightbox(createLightbox(latest.current));
       return;
     }
     return () => {
-      destroyed.add(lightbox);
-      lightbox.destroy();
+      pending.current = setTimeout(() => {
+        destroyed.add(lightbox);
+        lightbox.destroy();
+      });
     };
   }, [lightbox]);
   return lightbox;

@@ -21,3 +21,5 @@ The zoom and the slide fade read `--re-lightbox-zoom-duration` and `--re-lightbo
 Download saves a file under the name its `Content-Disposition` header gives when the page can read that header, and otherwise under the decoded last part of its path.
 
 `useLightboxState` renders the lightbox's state at creation on the server and while hydrating, so a Suspense boundary that hydrates after the lightbox opened no longer fails hydration.
+
+`useLightbox` keeps one lightbox through StrictMode's rehearsal unmount: it destroys the lightbox in the task after unmount, and an effect that runs again before then keeps it.
