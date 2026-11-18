@@ -1181,16 +1181,6 @@ export function createLightbox<Item extends LightboxItem = LightboxItem>(
     return clamp(state.index, 0, Math.max(0, items.length - 1));
   }
 
-  // The carousel ends a held drag only when it is disabled, and its release would page back.
-  // Its published isDragging lags a frame behind the pointer, its viewport attribute does not.
-  function endStripDrag(s: Session) {
-    if (!s.viewport.hasAttribute("data-re-dragging")) return;
-    quietly(() => {
-      s.carousel.setEnabled(false);
-      s.carousel.setEnabled(true);
-    });
-  }
-
   function wrap(index: number) {
     return ((index % items.length) + items.length) % items.length;
   }
@@ -2883,7 +2873,6 @@ export function createLightbox<Item extends LightboxItem = LightboxItem>(
     const s = session;
     if (!s || state.isClosing || !Number.isFinite(index)) return;
     finishFade(s, true);
-    endStripDrag(s);
     const target = clamp(Math.floor(index), 0, items.length - 1);
     const gap = Math.abs(target - state.index);
     const far =
@@ -4459,15 +4448,6 @@ export function createLightbox<Item extends LightboxItem = LightboxItem>(
         void reportClosed(leaveHistory());
       },
       { signal: abort.signal },
-    );
-    // The strip's own keys page it before the bubbling handler below sees them.
-    dialog.addEventListener(
-      "keydown",
-      (event) => {
-        if (/^(Home|End|ArrowLeft|ArrowRight)$/.test(event.key))
-          endStripDrag(s);
-      },
-      { capture: true, signal: abort.signal },
     );
     dialog.addEventListener(
       "keydown",

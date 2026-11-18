@@ -561,12 +561,31 @@ test.describe("lightbox paging during a held mouse drag", {
         ),
     ],
   ] as const)
-    test(`${name} ends the drag, so its release leaves the viewer on the new photo`, async ({
+    test(`${name} goes straight to the new photo and the release leaves it there`, async ({
       page,
     }) => {
       const from = await holdDrag(page);
+      const frames = page.evaluate(
+        () =>
+          new Promise<number[]>((resolve) => {
+            const viewport = document.querySelector(
+              ".re-lightbox-viewport",
+            ) as HTMLElement;
+            const values = [viewport.scrollLeft];
+            const start = performance.now();
+            const tick = () => {
+              values.push(viewport.scrollLeft);
+              if (performance.now() - start < 700) requestAnimationFrame(tick);
+              else resolve(values);
+            };
+            requestAnimationFrame(tick);
+          }),
+      );
       await act(page);
-      await page.waitForTimeout(100);
+      const values = await frames;
+      expect(
+        values.filter((value, at) => at && value < values[at - 1] - 1),
+      ).toEqual([]);
       await page.mouse.move(from.x - 260, from.y);
       await page.mouse.up();
       const target = { End: 5, ArrowRight: 1, "goTo(3)": 3, "next()": 1 }[name];
