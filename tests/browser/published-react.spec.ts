@@ -428,3 +428,72 @@ window.__unmount = () => root.unmount();`,
   await page.evaluate(() => (window as unknown as App).__unmount());
   await expect(page.locator("dialog")).toHaveCount(0);
 });
+
+test("useLightbox passes an equal inline strings object on without relabelling", async ({
+  page,
+}) => {
+  const input = resolve("apps/site/lightbox-equal-options.tsx");
+  const bundle = await rolldown({
+    input,
+    platform: "browser",
+    transform: {
+      jsx: { runtime: "automatic" },
+      define: { "process.env.NODE_ENV": '"production"' },
+    },
+    plugins: [
+      {
+        name: "lightbox-equal-options",
+        resolveId(id: string) {
+          if (id === input) return input;
+        },
+        load(id: string) {
+          if (id !== input) return;
+          return `import { useLightbox } from "@reuse-sh/lightbox/react";
+import { useState } from "react";
+import { createRoot } from "react-dom/client";
+import { flushSync } from "react-dom";
+const items = [0, 1].map((index) => ({ src: "data:image/gif;base64,R0lGODlhAQABAAAAACw=", width: 1200, height: 800, alt: "Photo " + index }));
+function App() {
+  const [renders, setRenders] = useState(0);
+  const lightbox = useLightbox({ history: false, autoHide: false, controls: { download: false }, strings: { close: "Shut" } });
+  window.__app = { rerender: () => flushSync(() => setRenders(renders + 1)) };
+  return <button type="button" data-renders={renders} onClick={() => lightbox.open(items, 0)}>Open</button>;
+}
+createRoot(document.getElementById("app")).render(<App />);`;
+        },
+      },
+    ],
+  });
+  const result = await bundle.generate({ format: "iife", name: "Equal" });
+  await bundle.close();
+  await mount(page, '<div id="app"></div>', [
+    "lightbox/base.css",
+    "lightbox/theme.css",
+  ]);
+  const output = result.output.find(
+    (output: { type: string }) => output.type === "chunk",
+  );
+  await page.addScriptTag({ content: output.code });
+  await page.getByRole("button", { name: "Open" }).click();
+  await expect(page.locator("dialog")).toHaveAttribute("data-phase", "open");
+  const relabelled = await page.evaluate(async () => {
+    const records: string[] = [];
+    const observer = new MutationObserver((list) => {
+      for (const record of list) records.push(record.attributeName ?? "");
+    });
+    observer.observe(document.querySelector("dialog") as HTMLElement, {
+      attributes: true,
+      attributeFilter: ["aria-label"],
+      subtree: true,
+    });
+    (window as unknown as { __app: { rerender(): void } }).__app.rerender();
+    await new Promise((resolve) => requestAnimationFrame(resolve));
+    observer.disconnect();
+    return records.length;
+  });
+  await expect(page.getByRole("button", { name: "Open" })).toHaveAttribute(
+    "data-renders",
+    "1",
+  );
+  expect(relabelled).toBe(0);
+});

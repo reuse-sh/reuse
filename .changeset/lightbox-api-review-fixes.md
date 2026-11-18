@@ -23,3 +23,5 @@ Download saves a file under the name its `Content-Disposition` header gives when
 `useLightboxState` renders the lightbox's state at creation on the server and while hydrating, so a Suspense boundary that hydrates after the lightbox opened no longer fails hydration.
 
 `useLightbox` keeps one lightbox through StrictMode's rehearsal unmount: it destroys the lightbox in the task after unmount, and an effect that runs again before then keeps it.
+
+`useLightbox` compares plain objects and arrays in its options by value and functions by identity, so a re-render with an equal inline `strings` or `controls` object no longer calls `setOptions` or relabels the open viewer.

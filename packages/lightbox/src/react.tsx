@@ -12,11 +12,35 @@ import {
 const lightboxInternals = Symbol.for("@reuse-sh/lightbox internals");
 const destroyed = new WeakSet<object>();
 
+function isPlain(value: unknown): value is Record<string, unknown> {
+  if (typeof value !== "object" || value === null) return false;
+  const prototype = Object.getPrototypeOf(value);
+  return prototype === Object.prototype || prototype === null;
+}
+
+// Plain objects and arrays compare by value, everything else, functions included, by identity.
+function same(a: unknown, b: unknown): boolean {
+  if (Object.is(a, b)) return true;
+  if (Array.isArray(a))
+    return (
+      Array.isArray(b) &&
+      a.length === b.length &&
+      a.every((value, index) => same(value, b[index]))
+    );
+  if (!isPlain(a) || !isPlain(b)) return false;
+  const keys = Object.keys(a);
+  return (
+    keys.length === Object.keys(b).length &&
+    keys.every((key) => Object.hasOwn(b, key) && same(a[key], b[key]))
+  );
+}
+
 /**
  * A lightbox for the component's lifetime. It is the same object on every render and holds no
  * React state, so the component does not re-render on lightbox changes; it is destroyed in the
- * task after unmount, so an effect that runs again at once, as under StrictMode, keeps it. Changed
- * options reach it through setOptions after the render; container is read once.
+ * task after unmount, so an effect that runs again at once, as under StrictMode, keeps it. An
+ * option that changes reaches it through setOptions after the render; plain objects and arrays
+ * compare by value and functions by identity. container is read once.
  */
 export function useLightbox<Item extends LightboxItem = LightboxItem>(
   options: LightboxOptions<Item> = {},
@@ -33,7 +57,7 @@ export function useLightbox<Item extends LightboxItem = LightboxItem>(
       ...Object.keys(applied.current),
     ]) as Set<keyof LightboxOptions<Item>>;
     for (const key of keys)
-      if (key !== "container" && !Object.is(options[key], applied.current[key]))
+      if (key !== "container" && !same(options[key], applied.current[key]))
         Object.assign(changed, { [key]: options[key] });
     applied.current = options;
     if (Object.keys(changed).length) lightbox.setOptions(changed);
