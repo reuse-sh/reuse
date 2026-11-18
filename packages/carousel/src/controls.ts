@@ -244,19 +244,22 @@ export function bindCarouselControls(
 
   for (const button of find("[data-carousel-play]")) {
     keep(button, "aria-label", "aria-pressed");
+    const playing = (state: CarouselState) =>
+      strip.autoplays() && !state.isPaused;
     const render = (state: CarouselState) => {
-      const playing = !state.isPaused;
-      setAttribute(button, "aria-pressed", String(playing));
+      const pressed = playing(state);
+      setAttribute(button, "aria-pressed", String(pressed));
       setAttribute(
         button,
         "aria-label",
-        playing ? strings.pause : strings.play,
+        pressed ? strings.pause : strings.play,
       );
     };
     listen(button, "click", () => {
-      if (carousel.getState().isPaused) carousel.play();
-      else carousel.pause();
+      if (playing(carousel.getState())) carousel.pause();
+      else carousel.play();
     });
+    cleanup.push(strip.onAutoplay(() => render(carousel.getState())));
     renders.push(render);
   }
 

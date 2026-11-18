@@ -24,7 +24,7 @@ const emptyState: CarouselState = Object.freeze({
   isPlaying: false,
   isDragging: false,
   isLooping: false,
-  isPaused: true,
+  isPaused: false,
   pageCount: 0,
   pageIndex: 0,
   pages: Object.freeze([]),

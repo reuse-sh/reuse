@@ -1319,8 +1319,22 @@ describe("one state for every control", () => {
     expect(read()).toEqual({ isPaused: true, isPlaying: false });
     carousel.play();
     expect(read()).toEqual({ isPaused: false, isPlaying: true });
+    carousel.pause();
     carousel.setOptions({ autoplay: undefined });
-    expect(read()).toEqual({ isPaused: true, isPlaying: false });
+    expect(read()).toEqual({ isPaused: false, isPlaying: false });
+    carousel.pause();
+    expect(read()).toEqual({ isPaused: false, isPlaying: false });
+    carousel.setOptions({ autoplay: 1000 });
+    expect(read()).toEqual({ isPaused: false, isPlaying: true });
+  });
+
+  it("reports no pause on a strip without autoplay", () => {
+    const { viewport } = eight();
+    const carousel = createCarousel(viewport);
+    cleanups.push(carousel.destroy);
+    expect(carousel.getState().isPaused).toBe(false);
+    carousel.next();
+    expect(carousel.getState().isPaused).toBe(false);
   });
 
   it("lists the slides at least half in view and publishes the list only when it changes", () => {
@@ -2099,6 +2113,9 @@ describe("controls binder", () => {
     expect(play?.getAttribute("aria-label")).toBe("Pause slideshow");
     carousel.setOptions({ autoplay: undefined });
     expect(play?.getAttribute("aria-pressed")).toBe("false");
+    expect(play?.getAttribute("aria-label")).toBe("Play slideshow");
+    carousel.setOptions({ autoplay: 1000 });
+    expect(play?.getAttribute("aria-pressed")).toBe("true");
     unbind();
     expect(play?.hasAttribute("aria-pressed")).toBe(false);
   });

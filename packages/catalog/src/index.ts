@@ -470,7 +470,7 @@ export const libraries: Library[] = [
       ],
       [
         "getState(), subscribe(listener)",
-        "Index, count, progress, pageCount, pageIndex, pages (the slide each page starts at), the visible slides, autoplayProgress, seamSlides, canPrev, canNext, whether it is playing, dragging or looping, and isPaused, the visitor's own pause, which holds and hover leave alone.",
+        "Index, count, progress, pageCount, pageIndex, pages (the slide each page starts at), the visible slides, autoplayProgress, seamSlides, canPrev, canNext, whether it is playing, dragging or looping, and isPaused, the visitor's own pause of autoplay, false without autoplay, which holds and hover leave alone.",
       ],
       [
         "take(owner, { onInterrupt })",

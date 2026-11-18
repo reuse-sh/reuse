@@ -265,6 +265,7 @@ export function createCarousel(
   let destroyed = false;
   let enabled = true;
   let requestedPlaying = options.autoplay !== undefined;
+  const autoplayListeners = new Set<() => void>();
   let timer: ReturnType<typeof setTimeout> | undefined;
   let settleTimer: ReturnType<typeof setTimeout> | undefined;
   let pendingIndex: number | undefined;
@@ -332,7 +333,7 @@ export function createCarousel(
     isPlaying: false,
     isDragging: false,
     isLooping: false,
-    isPaused: !requestedPlaying,
+    isPaused: false,
     pageCount: 0,
     pageIndex: 0,
     pages,
@@ -564,7 +565,7 @@ export function createCarousel(
       isPlaying: isPlaying(),
       isDragging: pointer?.moved ?? false,
       isLooping: span > 0,
-      isPaused: !requestedPlaying || options.autoplay === undefined,
+      isPaused: options.autoplay !== undefined && !requestedPlaying,
       pageCount: pages.length,
       pageIndex: pageOf(index),
       pages,
@@ -1474,6 +1475,8 @@ export function createCarousel(
         refresh();
       updateCursor();
       schedule();
+      if (changed.includes("autoplay"))
+        for (const listener of autoplayListeners) listener();
     },
     destroy() {
       if (destroyed) return;
@@ -1492,6 +1495,7 @@ export function createCarousel(
       intersection?.disconnect();
       for (const remove of cleanup) remove();
       listeners.clear();
+      autoplayListeners.clear();
       if (!hadClass) viewport.classList.remove("re-carousel");
       for (const name of stateAttributes) viewport.removeAttribute(name);
       viewport.style.removeProperty("--re-carousel-autoplay-progress");
@@ -1847,6 +1851,11 @@ export function createCarousel(
     align: () => options.align,
     goTo: (index, behavior, announce) =>
       announce ? announced(() => goTo(index, behavior)) : goTo(index, behavior),
+    autoplays: () => options.autoplay !== undefined,
+    onAutoplay: (listener) => {
+      autoplayListeners.add(listener);
+      return () => autoplayListeners.delete(listener);
+    },
     silence: () => {
       silent = true;
       live.remove();
