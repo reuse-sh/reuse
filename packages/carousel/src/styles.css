@@ -29,7 +29,7 @@
 }
 
 .re-carousel[data-re-dragging] > .re-carousel__slide {
-  scale: var(--re-carousel-press-scale, 0.96);
+  scale: var(--re-carousel-press-scale);
 }
 
 .re-carousel[data-re-scrolling] > .re-carousel__slide {

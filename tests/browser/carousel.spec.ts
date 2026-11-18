@@ -399,3 +399,32 @@ test("a strip whose slides take their width from the package stylesheet overflow
   });
   expect(state).toEqual({ static: false, canNext: true });
 });
+
+test("slides keep their size during a mouse drag unless the page sets a press scale", async ({
+  page,
+}) => {
+  await setup(page);
+  const pressed = async () => {
+    await page.mouse.move(400, 100);
+    await page.mouse.down();
+    await page.mouse.move(300, 100, { steps: 10 });
+    await page.waitForTimeout(400);
+    const scale = await page.evaluate(
+      () =>
+        getComputedStyle(
+          document.querySelector("#strip > [data-carousel-slide]") as Element,
+        ).scale,
+    );
+    await page.mouse.up();
+    await page.waitForTimeout(700);
+    return scale;
+  };
+  expect(await pressed()).toBe("none");
+  await page.evaluate(() =>
+    (document.getElementById("strip") as HTMLElement).style.setProperty(
+      "--re-carousel-press-scale",
+      "0.96",
+    ),
+  );
+  expect(await pressed()).toBe("0.96");
+});
