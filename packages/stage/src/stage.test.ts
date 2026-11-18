@@ -165,6 +165,24 @@ describe("stage", () => {
     ]);
   });
 
+  it("keeps the pressed look on the pressed control while the cursor drags off it", async () => {
+    const seen: boolean[] = [];
+    const { root } = mount('<span data-stage-target="grip"></span>', {
+      async script(act) {
+        await act.press("grip");
+        await act.move({ x: 150, y: 80 });
+        seen.push(grip.hasAttribute("data-stage-active"));
+        await act.release();
+        seen.push(grip.hasAttribute("data-stage-active"));
+        await act.wait(10_000);
+      },
+    });
+    const grip = root.querySelector("span") as HTMLElement;
+    rect(grip, 20, 20, 10, 10);
+    await tick(3000);
+    expect(seen).toEqual([true, false]);
+  });
+
   it("lands on a target that moves during the move", async () => {
     const { root } = mount('<b data-stage-target="goal"></b>', {
       async script(act) {

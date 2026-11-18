@@ -44,8 +44,8 @@ export function Example() {
   }
   return (
     <Stage
-      width={560}
-      height={290}
+      width={440}
+      height={260}
       label="A pointer opens the share menu, invites Lea by email, and her avatar joins the group."
       script={script}
       reset={reset}

@@ -6,7 +6,7 @@ import {
 import { createAvatar, createAvatarGroup } from "@reuse-sh/avatars";
 import { createCarousel } from "@reuse-sh/carousel";
 import { createJustifiedGallery, createMasonry } from "@reuse-sh/gallery";
-import { createFadeEdge, easingGradient } from "@reuse-sh/gradients";
+import { easingGradient } from "@reuse-sh/gradients";
 import {
   createCopyButton,
   createFloatingTooltip,
@@ -14,7 +14,12 @@ import {
   createMovingHighlight,
 } from "@reuse-sh/interactions";
 import { createThinkingDots } from "@reuse-sh/loaders";
-import { createStage, type StageAct, type StageOptions } from "@reuse-sh/stage";
+import {
+  createStage,
+  isStageEvent,
+  type StageAct,
+  type StageOptions,
+} from "@reuse-sh/stage";
 import { type MenuSlug, menuLibrary } from "../../lib/menu";
 import { photos } from "../../lib/photos";
 import { iconNode } from "../icons";
@@ -242,6 +247,8 @@ function annotations(): Scene {
       annotations: [],
       tool: "area",
       onChange: publish,
+      onPreview: (next) =>
+        image?.update({ ...base, annotations: next ?? marks }),
     });
   });
   const reset = () => {
@@ -296,7 +303,12 @@ function annotations(): Scene {
 }
 
 /** A box the cursor resizes by its right edge, so the layout inside it reflows. */
-function resizable(box: HTMLElement, wide: number, narrow: number) {
+function resizable(
+  box: HTMLElement,
+  wide: number,
+  narrow: number,
+  refresh: () => void,
+) {
   const grip = target(el("span", "pk-grip"), "grip");
   const root = el(
     "div",
@@ -305,8 +317,10 @@ function resizable(box: HTMLElement, wide: number, narrow: number) {
     grip,
   );
   let dragging = false;
-  const set = (width: number) =>
+  const set = (width: number) => {
     root.style.setProperty("--pk-box", `${Math.round(width)}px`);
+    refresh();
+  };
   grip.addEventListener("pointerdown", () => {
     dragging = true;
   });
@@ -358,8 +372,8 @@ function justified(): Scene {
       return image;
     }),
   );
-  const frame = resizable(box, 208, 128);
   let gallery: ReturnType<typeof createJustifiedGallery> | undefined;
+  const frame = resizable(box, 208, 128, () => gallery?.refresh());
   const ensure = once(() => {
     gallery = createJustifiedGallery(box, { maxRows: 3 });
   });
@@ -388,8 +402,8 @@ function masonry(): Scene {
       return card;
     }),
   );
-  const frame = resizable(box, 208, 128);
   let instance: ReturnType<typeof createMasonry> | undefined;
+  const frame = resizable(box, 208, 128, () => instance?.refresh());
   const ensure = once(() => {
     instance = createMasonry(box);
   });
@@ -444,7 +458,7 @@ function avatars(): Scene {
     return node;
   };
   const ensure = once(() => {
-    group.append(face(0), face(1), face(2));
+    group.append(face(2), face(1), face(0));
     controllers.push(createAvatarGroup(group, { overlap: 9, clearance: 2 }));
   });
   const leave = () => {
@@ -465,7 +479,7 @@ function avatars(): Scene {
       const node = face(3);
       node.classList.add("pk-av-join");
       guest = node;
-      await act.run(() => group.append(node));
+      await act.run(() => group.prepend(node));
       await act.wait(1400);
       await act.move({ x: 120, y: 120 });
       await act.wait(300);
@@ -498,14 +512,19 @@ function tooltip(): Scene {
         el("button", "pk-tip-btn", iconNode(icon, 16)),
         name,
       );
-      button.dataset.reTooltip = text;
+      button.dataset.tip = text;
       return button;
     }),
   );
   const root = el("div", "pk pk-tip", bar);
   let instance: ReturnType<typeof createFloatingTooltip> | undefined;
   const ensure = once(() => {
-    instance = createFloatingTooltip(bar, { delay: 60, className: "f-tip" });
+    instance = createFloatingTooltip(bar, {
+      selector: "[data-tip]",
+      content: (trigger) => trigger.dataset.tip ?? null,
+      delay: 60,
+      className: "f-tip",
+    });
   });
   return {
     root,
@@ -626,23 +645,18 @@ function copy(): Scene {
     window.clearTimeout(timer);
     button.setAttribute("data-state", "idle");
   };
+  const showCopiedWithoutClipboard = (event: MouseEvent) => {
+    if (!isStageEvent(event)) return;
+    event.stopPropagation();
+    idle();
+    button.setAttribute("data-state", "copied");
+    timer = window.setTimeout(idle, 1500);
+  };
   const ensure = once(() => {
     instance = createCopyButton(button, {
       text: "npm i @reuse-sh/interactions",
     });
-    // The scene shows the real button and its states, but a scripted click
-    // must not overwrite the visitor's clipboard.
-    row.addEventListener(
-      "click",
-      (event) => {
-        if (event.isTrusted) return;
-        event.stopPropagation();
-        idle();
-        button.setAttribute("data-state", "copied");
-        timer = window.setTimeout(idle, 1500);
-      },
-      true,
-    );
+    row.addEventListener("click", showCopiedWithoutClipboard, true);
   });
   return {
     root,
@@ -756,59 +770,63 @@ function shadows(): Scene {
 }
 
 function gradients(): Scene {
-  const topics = [
-    "All",
-    "Photos",
-    "Albums",
-    "People",
-    "Places",
-    "Shared",
-    "Favorites",
-    "Archive",
-  ];
-  const strip = target(
-    el("div", "pk-gr-strip", ...topics.map((topic) => el("span", "", topic))),
-    "strip",
-  );
-  const scrim = el("span", "pk-gr-scrim");
-  scrim.style.backgroundImage = easingGradient({
-    to: "rgb(0 0 0 / 0.55)",
-    easing: "ease-in-out-sine",
-    direction: "to bottom",
-  });
+  const scrim = (eased: boolean) => {
+    const layer = el("span", eased ? "pk-gr-scrim pk-gr-eased" : "pk-gr-scrim");
+    layer.style.backgroundImage = eased
+      ? easingGradient({
+          to: "rgb(0 0 0 / 0.8)",
+          easing: "ease-in-out-sine",
+          direction: "to bottom",
+        })
+      : "linear-gradient(to bottom, transparent, rgb(0 0 0 / 0.8))";
+    return layer;
+  };
+  const handle = target(el("span", "pk-gr-handle"), "split");
   const photo = el(
-    "span",
+    "div",
     "pk-gr-photo",
-    img(4, "2100x900"),
-    scrim,
+    img(4, "1500x1000"),
+    scrim(false),
+    scrim(true),
+    el("span", "pk-gr-tag", "Linear"),
+    el("span", "pk-gr-tag pk-gr-tag-eased", "Eased"),
     el("b", "", photos[4].caption),
+    el("span", "pk-gr-split", handle),
   );
-  const root = el("div", "pk pk-gr", photo, strip);
-  let fade: ReturnType<typeof createFadeEdge> | undefined;
-  const ensure = once(() => {
-    fade = createFadeEdge(strip, { size: 40, curve: "smooth", mode: "scroll" });
+  const root = el("div", "pk pk-gr", photo);
+  let dragging = false;
+  const split = (x: number) => photo.style.setProperty("--pk-split", `${x}px`);
+  handle.addEventListener("pointerdown", () => {
+    dragging = true;
   });
+  root.addEventListener("pointermove", (event) => {
+    if (!dragging) return;
+    const box = photo.getBoundingClientRect();
+    split(Math.min(box.width - 18, Math.max(18, event.clientX - box.left)));
+  });
+  root.addEventListener("pointerup", () => {
+    dragging = false;
+  });
+  const reset = () => {
+    dragging = false;
+    split(108);
+  };
   return {
     root,
     label:
-      "A row of tags scrolls, and its edges fade out smoothly instead of cutting off.",
-    rest: { x: 196, y: 130 },
-    reset() {
-      ensure();
-      strip.scrollLeft = 0;
-    },
+      "A divider slides across a photo's dark fade: a linear ramp shows a hard edge, the eased one does not.",
+    rest: { x: 168, y: 138 },
+    reset,
     async script(act) {
-      await act.move("strip");
-      await act.scroll(
-        "strip",
-        { left: strip.scrollWidth },
-        { duration: 1500 },
-      );
+      await act.press("split");
+      await act.move({ x: 46, y: 74 }, { duration: 900 });
       await act.wait(700);
-      await act.scroll("strip", { left: 0 }, { duration: 1300 });
-      await act.wait(500);
+      await act.move({ x: 196, y: 70 }, { duration: 1300 });
+      await act.wait(700);
+      await act.move({ x: 120, y: 74 }, { duration: 800 });
+      await act.release();
+      await act.wait(400);
     },
-    cleanup: () => fade?.destroy(),
   };
 }
 
@@ -817,37 +835,18 @@ function demoStage(): Scene {
     el("button", "pk-ds-share", iconNode("share", 12), "Share"),
     "share",
   );
+  const label = el("span", "", "Copy link");
   const link = target(
-    el(
-      "button",
-      "pk-ds-link",
-      iconNode("link", 12),
-      el("span", "", "Copy link"),
-    ),
+    el("button", "pk-ds-link", iconNode("link", 12), label),
     "link",
-  );
-  const pop = el(
-    "div",
-    "pk-ds-pop re-shadow-ring-lg",
-    el("b", "", "Share this board"),
-    el("small", "", "Anyone with the link can view"),
-    link,
   );
   const root = el(
     "div",
     "pk pk-ds",
     el(
       "div",
-      "pk-ds-window re-shadow-ring-sm",
-      el(
-        "span",
-        "pk-ds-bar",
-        el("i"),
-        el("i"),
-        el("i"),
-        el("span", "pk-ds-title", "Moodboard"),
-        share,
-      ),
+      "pk-ds-card re-shadow-ring-sm",
+      el("span", "pk-ds-bar", el("b", "", "Moodboard"), share),
       el(
         "span",
         "pk-ds-body",
@@ -855,10 +854,9 @@ function demoStage(): Scene {
         img(3, "1200x1200"),
         img(6, "1200x1200"),
       ),
-      pop,
     ),
+    el("div", "pk-ds-pop re-shadow-ring-lg", link),
   );
-  const label = link.querySelector("span") as HTMLElement;
   const reset = () => {
     root.removeAttribute("data-open");
     link.removeAttribute("data-done");
@@ -867,17 +865,18 @@ function demoStage(): Scene {
   return {
     root,
     label: "A scripted pointer opens a share menu and copies a link.",
-    rest: { x: 132, y: 136 },
+    rest: { x: 70, y: 132 },
     reset,
     async script(act) {
       await act.click("share");
       root.setAttribute("data-open", "");
-      await act.wait(500);
+      await act.wait(450);
       await act.click("link");
       link.setAttribute("data-done", "");
       label.textContent = "Link copied";
+      await act.move({ x: 120, y: 132 });
       await act.wait(1100);
-      await act.click({ x: 70, y: 112 });
+      await act.click("share");
       reset();
       await act.wait(400);
     },
@@ -930,7 +929,7 @@ export function createLibraryPeek() {
           scene.root,
           el(
             "p",
-            "flex items-baseline justify-between gap-2 px-1.5 pt-2 pb-1 text-caption",
+            "grid px-1.5 pt-2 pb-1 text-caption whitespace-nowrap",
             el("span", "font-medium", library.name),
             el(
               "code",

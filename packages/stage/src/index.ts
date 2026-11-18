@@ -171,6 +171,7 @@ export function createStage(root: HTMLElement, options: StageOptions): Stage {
   let position = { ...rest };
   let over: Element | null = null;
   let hovered: Element | null = null;
+  let active: Element | null = null;
   let pressed: Element | null = null;
 
   function draw() {
@@ -288,10 +289,8 @@ export function createStage(root: HTMLElement, options: StageOptions): Stage {
     const hover = target && scene.contains(target) ? target : null;
     if (hover !== hovered) {
       hovered?.removeAttribute("data-stage-hover");
-      hovered?.removeAttribute("data-stage-active");
       hovered = hover;
       hovered?.setAttribute("data-stage-hover", "");
-      if (pressed) hovered?.setAttribute("data-stage-active", "");
     }
   }
 
@@ -390,7 +389,8 @@ export function createStage(root: HTMLElement, options: StageOptions): Stage {
       const on = under();
       pressed = on;
       cursor.setAttribute("data-pressed", "");
-      hovered?.setAttribute("data-stage-active", "");
+      active = hovered;
+      active?.setAttribute("data-stage-active", "");
       ring.animate?.(
         [
           { opacity: 0.32, transform: "translate(-50%, -50%) scale(0.3)" },
@@ -409,7 +409,8 @@ export function createStage(root: HTMLElement, options: StageOptions): Stage {
       const up = under();
       pressed = null;
       cursor.removeAttribute("data-pressed");
-      hovered?.removeAttribute("data-stage-active");
+      active?.removeAttribute("data-stage-active");
+      active = null;
       emit("pointerup", up, { button: 0 });
       emit("mouseup", up, { button: 0 });
       let common: Element | null = down;
@@ -505,6 +506,8 @@ export function createStage(root: HTMLElement, options: StageOptions): Stage {
       pressed = null;
     }
     cursor.removeAttribute("data-pressed");
+    active?.removeAttribute("data-stage-active");
+    active = null;
     enter(null);
   }
 

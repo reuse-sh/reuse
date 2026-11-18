@@ -320,6 +320,12 @@
     align-items: center;
     justify-content: space-between;
   }
+  .f-peek-tip .pk-av-group {
+    flex-direction: row-reverse;
+  }
+  .f-peek-tip .pk-av-group > [data-re-avatar] + [data-re-avatar] {
+    margin-inline: 0 -9px;
+  }
   .f-peek-tip .pk-av-join {
     animation: pk-join 260ms var(--ease-ui);
   }
@@ -381,6 +387,7 @@
       0 1px 2px rgb(0 0 0 / 0.05);
   }
   .f-peek-tip .pk-hl-row {
+    border-radius: var(--radius-control);
     padding: 5px 9px;
     color: var(--muted-foreground);
     transition: color 150ms ease;
@@ -575,73 +582,86 @@
 
   /* Easing gradients */
   .f-peek-tip .pk-gr-photo {
+    --pk-split: 108px;
     position: absolute;
     top: 12px;
-    right: 14px;
-    left: 14px;
-    height: 62px;
+    left: 12px;
+    width: 216px;
+    height: 124px;
     overflow: hidden;
-    border-radius: 8px;
+    border-radius: 9px;
   }
   .f-peek-tip .pk-gr-scrim {
     position: absolute;
-    inset: 0;
+    inset: 34px 0 0;
+    clip-path: inset(0 calc(100% - var(--pk-split)) 0 0);
+  }
+  .f-peek-tip .pk-gr-scrim.pk-gr-eased {
+    clip-path: inset(0 0 0 var(--pk-split));
   }
   .f-peek-tip .pk-gr-photo b {
     position: absolute;
-    bottom: 7px;
-    left: 9px;
+    bottom: 9px;
+    left: 11px;
     color: var(--overlay-foreground);
     font-weight: 500;
   }
-  .f-peek-tip .pk-gr-strip {
+  .f-peek-tip .pk-gr-tag {
     position: absolute;
-    top: 92px;
-    right: 0;
-    left: 0;
-    display: flex;
-    gap: 6px;
-    padding-inline: 14px;
-    overflow-x: auto;
-    scrollbar-width: none;
+    top: 8px;
+    left: 8px;
+    padding: 1px 7px;
+    border-radius: 9px;
+    background: rgb(0 0 0 / 0.32);
+    color: var(--overlay-foreground);
+    font-size: 10px;
+    line-height: 16px;
   }
-  .f-peek-tip .pk-gr-strip span {
-    flex-shrink: 0;
-    padding: 5px 11px;
-    border-radius: 13px;
+  .f-peek-tip .pk-gr-tag-eased {
+    right: 8px;
+    left: auto;
+  }
+  .f-peek-tip .pk-gr-split {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: var(--pk-split);
+    width: 2px;
+    margin-left: -1px;
+    background: var(--overlay-foreground);
+    opacity: 0.9;
+  }
+  .f-peek-tip .pk-gr-handle {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
     background: var(--card);
-    box-shadow: 0 0 0 1px var(--border);
+    box-shadow: 0 1px 3px rgb(0 0 0 / 0.3);
+    translate: -50% -50%;
   }
 
   /* Demo stage */
-  .f-peek-tip .pk-ds-window {
+  .f-peek-tip .pk-ds-card {
     position: absolute;
-    top: 14px;
-    left: 18px;
-    width: 204px;
-    height: 134px;
-    overflow: hidden;
-    border-radius: 9px 9px 0 0;
+    top: 16px;
+    left: 26px;
+    width: 188px;
+    border-radius: 10px;
     background: var(--card);
   }
   .f-peek-tip .pk-ds-bar {
     display: flex;
     align-items: center;
-    gap: 4px;
-    height: 30px;
-    padding-inline: 9px 5px;
+    justify-content: space-between;
+    height: 34px;
+    padding-inline: 11px 6px;
     border-bottom: 1px solid var(--border);
   }
-  .f-peek-tip .pk-ds .pk-ds-bar i {
-    width: 7px;
-    height: 7px;
-    border-radius: 50%;
-    background: var(--selection);
-  }
-  .f-peek-tip .pk-ds-title {
-    flex: 1;
-    margin-left: 6px;
-    font-weight: 500;
+  .f-peek-tip .pk-ds-bar b {
+    font-weight: 600;
   }
   .f-peek-tip .pk-ds-share {
     height: 22px;
@@ -655,8 +675,8 @@
   .f-peek-tip .pk-ds-body {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
-    gap: 4px;
-    padding: 8px;
+    gap: 5px;
+    padding: 9px;
   }
   .f-peek-tip .pk .pk-ds-body img {
     aspect-ratio: 1;
@@ -664,18 +684,15 @@
   }
   .f-peek-tip .pk-ds-pop {
     position: absolute;
-    top: 34px;
-    right: 6px;
-    display: grid;
-    gap: 2px;
-    width: 140px;
-    padding: 10px;
+    top: 52px;
+    right: 20px;
+    padding: 5px;
     border-radius: 10px;
     background: var(--popover);
     opacity: 0;
     scale: 0.96;
     transform-origin: top right;
-    translate: 0 -2px;
+    translate: 0 -3px;
     transition:
       opacity 150ms ease,
       scale 200ms var(--ease-ui),
@@ -686,22 +703,15 @@
     scale: 1;
     translate: 0 0;
   }
-  .f-peek-tip .pk-ds-pop b {
-    font-weight: 600;
-  }
-  .f-peek-tip .pk-ds-pop small {
-    color: var(--subtle-foreground);
-    font-size: 10px;
-  }
   .f-peek-tip .pk-ds-link {
-    justify-content: flex-start;
-    gap: 5px;
-    height: 24px;
-    margin-top: 6px;
-    padding-inline: 8px;
-    border-radius: 6px;
-    background: var(--muted);
-    font-size: 11px;
+    gap: 6px;
+    height: 28px;
+    padding-inline: 10px;
+    border-radius: 7px;
+    font-size: 12px;
+  }
+  .f-peek-tip .pk-ds-link[data-stage-hover] {
+    background: var(--accent);
   }
   .f-peek-tip .pk-ds-link[data-done] {
     color: var(--success);

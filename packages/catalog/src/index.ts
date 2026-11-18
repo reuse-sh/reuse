@@ -1299,6 +1299,8 @@ export const libraries: Library[] = [
       "End a pass where it began. The cursor returns to rest on its own, and the scene should look like reset() left it.",
       "A scripted click runs the component's real handler. Stop it in the scene before it writes to the clipboard, navigates or opens a modal dialog.",
       "Components that capture the pointer with setPointerCapture cannot be dragged by the cursor. Drive them through their own API.",
+      "A page handler that delegates from document.body, such as a site-wide tooltip, sees the scene's events too. Give scene controls attributes the page does not delegate on, or skip isStageEvent there.",
+      "A layout your scene resizes from script, such as a gallery, lays out in that frame only when you call its refresh() right after the change.",
     ],
     pages: [
       { path: "", title: "Overview", lead: stageDescription },
