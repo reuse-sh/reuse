@@ -818,6 +818,27 @@ test("the side column keeps the ring at its middle, a wheel over it opens the ph
   expect((await ringBox(page))?.top).toBeCloseTo(before.top, 0);
 });
 
+test("a wheel over the bottom strip that scrolls in one step opens the photo under the ring", {
+  tag: "@desktop",
+}, async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await open(page, { thumbnails: "bottom" }, { count: 20 });
+  const strip = await page.locator(".re-lightbox-thumbnails").boundingBox();
+  if (!strip) throw new Error("No strip");
+  await page.mouse.move(strip.x + strip.width / 2, strip.y + strip.height / 2);
+  const scrolled = () =>
+    page.evaluate(
+      () => document.querySelector(".re-lightbox-thumbnails")?.scrollLeft ?? 0,
+    );
+  const start = await scrolled();
+  await page.mouse.wheel(52 * 4, 0);
+  await expect.poll(scrolled).toBeGreaterThan(start + 100);
+  await expect
+    .poll(async () => (await lightbox(page)).index)
+    .toBeGreaterThan(0);
+  await expect.poll(() => ringOnCurrent(page)).toBeLessThanOrEqual(1);
+});
+
 // rgb() reports 0-255 and color(srgb) reports 0-1, so both come back as 0-1.
 const channels = (color: string) => {
   const values = (color.match(/[\d.]+/g) ?? []).slice(0, 3).map(Number);

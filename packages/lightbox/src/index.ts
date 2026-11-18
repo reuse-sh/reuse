@@ -2391,18 +2391,18 @@ export function createLightbox<Item extends LightboxItem = LightboxItem>(
     trimSlides(s);
   }
 
-  function scrubNow(s: Session) {
+  function scrubNow(s: Session, ended = false) {
     const strip = s.thumbStrip;
     if (s.scrubFrame !== undefined)
       s.dialog.ownerDocument.defaultView?.cancelAnimationFrame(s.scrubFrame);
     s.scrubFrame = undefined;
-    if (strip && s.stripInput) scrubTo(s, thumbUnderRing(s, strip));
+    if (strip && (ended || s.stripInput)) scrubTo(s, thumbUnderRing(s, strip));
   }
 
   // The photo the strip landed on is reported once, and focus and the tab stop follow it.
   function endScrub(s: Session) {
     clearTimeout(s.scrubTimer);
-    if (s.scrubFrame !== undefined) scrubNow(s);
+    if (s.scrubFrame !== undefined) scrubNow(s, true);
     if (!s.scrubbing) return;
     s.scrubbing = false;
     if (session !== s) return;
@@ -3759,14 +3759,7 @@ export function createLightbox<Item extends LightboxItem = LightboxItem>(
     };
     strip.addEventListener("pointerdown", pressed, { signal });
     strip.addEventListener("wheel", pressed, { signal, passive: true });
-    strip.addEventListener(
-      "re-carousel:settle",
-      () => {
-        s.stripInput = false;
-        endScrub(s);
-      },
-      { signal },
-    );
+    strip.addEventListener("re-carousel:settle", () => endScrub(s), { signal });
     strip.addEventListener(
       "scroll",
       () => {
