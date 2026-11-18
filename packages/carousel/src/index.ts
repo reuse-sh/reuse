@@ -1790,6 +1790,9 @@ export function createCarousel(
     },
     passClicks: () => {
       catchesClicks = false;
+      return () => {
+        catchesClicks = true;
+      };
     },
     keepLaps: (kept) => {
       laps.clear();
@@ -1836,6 +1839,7 @@ export function connectThumbnails(
   if (!strip) throw new TypeError("connectThumbnails needs two carousels.");
   const align = strip.align();
   thumbnails.setOptions({ align: "center" });
+  const catchClicks = strip.passClicks();
   let shown = -1;
   let count = -1;
   const mark = () => {
@@ -1868,6 +1872,7 @@ export function connectThumbnails(
     unsubscribe();
     recount();
     strip.viewport.removeEventListener("click", choose);
+    catchClicks();
     shown = -1;
     mark();
     thumbnails.setOptions({ align });

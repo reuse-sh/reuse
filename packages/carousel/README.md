@@ -9,7 +9,7 @@ A carousel that keeps native touch and trackpad scrolling with CSS snap. It adds
 These are the rules the code keeps. An adaptation on any framework keeps them too.
 
 - **Let the browser scroll.** Touch and trackpads scroll natively with CSS scroll snap, and every move from code is a scroll too.
-- **Never let a drag click.** A mouse drag, or the mouse press that stops a moving strip, never opens the link under it. An ordinary click still works, and touch stays native.
+- **Never let a drag click.** A mouse drag, or the mouse press that stops a moving strip, never opens the link under it. A thumbnail strip from connectThumbnails lets that press click its thumbnail, like a pagination button. An ordinary click still works, and touch stays native.
 - **Drag like a trackpad.** A released mouse drag keeps its speed and glides to the slide nearest where it would stop, or to the stop itself when the strip does not snap there, never past a slide that asks to stop. Past either end it stretches and springs back.
 - **Keep the slide it was sent to.** When the last slides share one scroll position, the active index stays the slide that goTo, a dot or a lightbox chose.
 - **Repeat without clones.** The loop moves the original slides through a CSS variable, so ids, links, buttons and each slide's own transform stay as they are, and it turns on only when every slide has a width and the slides can cover the viewport.
