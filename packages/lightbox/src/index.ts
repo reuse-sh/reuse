@@ -262,9 +262,9 @@ export interface Lightbox {
   goTo(index: number): void;
   zoomTo(scale: number, focus?: Point): void;
   toggleZoom(focus?: Point): void;
-  /** Returns live geometry, including pointer and wheel samples before notification. */
+  /** The last state subscribers received; a gesture or a wheel shows up once it settles. */
   getState(): LightboxState;
-  /** Subscribes to the settled changes reported by onChange. */
+  /** Reports discrete actions, completed pointer gestures, and wheel input after 150ms idle. */
   subscribe(listener: (state: LightboxState) => void): () => void;
   on(
     type: LightboxEventName,
@@ -4574,7 +4574,7 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
     goTo,
     zoomTo,
     toggleZoom,
-    getState: () => state,
+    getState: () => notifiedState,
     subscribe: (listener) => {
       listeners.add(listener);
       return () => {

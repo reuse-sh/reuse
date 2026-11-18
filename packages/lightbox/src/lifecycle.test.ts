@@ -6,6 +6,7 @@ import {
   bindLightboxGallery,
   createLightbox,
   type Lightbox,
+  type LightboxState,
   lightboxItemFromImage,
 } from "./index.js";
 import { video } from "./video.js";
@@ -25,6 +26,18 @@ function create(options: Parameters<typeof createLightbox>[0] = {}) {
   const controller = createLightbox({ maxZoom: 4, ...options });
   controllers.push(controller);
   return controller;
+}
+
+// The zoom on screen, which a gesture or a wheel moves before the state reports it.
+function shownZoom() {
+  const frame = document.querySelector<HTMLElement>(
+    '.re-lightbox-slide[aria-hidden="false"] .re-lightbox-frame',
+  );
+  const [, x, y, scale] =
+    /translate\((\S+)px, (\S+)px\) scale\((\S+)\)/.exec(
+      frame?.style.transform ?? "",
+    ) ?? [];
+  return { scale: Number(scale), x: Number(x), y: Number(y) };
 }
 
 function dialog() {
@@ -367,7 +380,7 @@ describe("lightbox lifecycle", () => {
         cancelable: true,
       }),
     );
-    expect(controller.getState().zoom.scale).toBeCloseTo(3);
+    expect(shownZoom().scale).toBeCloseTo(3);
     for (const finish of finishes) finish();
     await Promise.resolve();
     expect(frame.style.transform).toBe("translate(0px, 0px) scale(3)");
@@ -535,6 +548,31 @@ describe("lightbox lifecycle", () => {
     expect(controller.getState().zoom.scale).toBe(1.5);
   });
 
+  it("returns the snapshot subscribe delivered, with wheel zoom once the wheel rests", () => {
+    vi.useFakeTimers();
+    const controller = create();
+    const seen: LightboxState[] = [];
+    controller.subscribe((state) => seen.push(state));
+    controller.open(gallery);
+    expect(controller.getState()).toBe(seen.at(-1));
+    dialog()
+      .querySelector(".re-lightbox-viewport")
+      ?.dispatchEvent(
+        new WheelEvent("wheel", {
+          ctrlKey: true,
+          deltaY: -100,
+          clientX: 512,
+          clientY: 384,
+          cancelable: true,
+        }),
+      );
+    expect(controller.getState().zoom.scale).toBe(1);
+    vi.advanceTimersByTime(150);
+    expect(controller.getState().zoom.scale).toBeCloseTo(Math.E);
+    expect(controller.getState()).toBe(seen.at(-1));
+    vi.useRealTimers();
+  });
+
   it("zooms on ctrl-wheel and pans on an ordinary wheel at zoom", () => {
     const controller = create();
     controller.open(gallery);
@@ -548,12 +586,11 @@ describe("lightbox lifecycle", () => {
     });
     viewport?.dispatchEvent(wheel);
     expect(wheel.defaultPrevented).toBe(true);
-    expect(controller.getState().zoom.scale).toBeCloseTo(Math.E);
+    expect(shownZoom().scale).toBeCloseTo(Math.E);
     viewport?.dispatchEvent(
       new WheelEvent("wheel", { deltaY: 60, deltaX: -20, cancelable: true }),
     );
-    expect(controller.getState().zoom.x).toBe(20);
-    expect(controller.getState().zoom.y).toBe(-60);
+    expect(shownZoom()).toMatchObject({ x: 20, y: -60 });
   });
 
   it("zooms on Safari's gesture events within the limits, except while a finger is down", () => {
@@ -568,9 +605,9 @@ describe("lightbox lifecycle", () => {
     };
     expect(gesture("gesturestart", 1).defaultPrevented).toBe(true);
     gesture("gesturechange", 2);
-    expect(controller.getState().zoom.scale).toBe(2);
+    expect(shownZoom().scale).toBe(2);
     gesture("gesturechange", 100);
-    expect(controller.getState().zoom.scale).toBeCloseTo(6.818);
+    expect(shownZoom().scale).toBeCloseTo(6.818);
     gesture("gestureend", 100);
     controller.zoomTo(1);
     const down = new MouseEvent("pointerdown", { bubbles: true, button: 0 });
@@ -581,7 +618,7 @@ describe("lightbox lifecycle", () => {
     viewport?.dispatchEvent(down);
     gesture("gesturestart", 1);
     gesture("gesturechange", 2);
-    expect(controller.getState().zoom.scale).toBe(1);
+    expect(shownZoom().scale).toBe(1);
   });
 
   it("cleans presenter resources when slides leave the bounded window", async () => {
@@ -794,7 +831,7 @@ describe("lightbox lifecycle", () => {
     pointer("pointerdown", 1, 400, 384);
     pointer("pointerdown", 2, 600, 384);
     pointer("pointermove", 2, 800, 384);
-    expect(controller.getState().zoom.scale).toBe(2);
+    expect(shownZoom().scale).toBe(2);
     pointer("pointercancel", 2, 800, 384);
     pointer("pointercancel", 1, 400, 384);
     expect(controller.getState().isOpen).toBe(true);
@@ -931,11 +968,7 @@ describe("lightbox lifecycle", () => {
       [572, 414],
     ]) {
       pointer("pointermove", x, y);
-      expect(controller.getState().zoom).toEqual({
-        scale: 2,
-        x: x - 512,
-        y: y - 384,
-      });
+      expect(controller.getState().zoom).toEqual(discrete[1]);
       expect(frame.style.transform).toBe(
         `translate(${x - 512}px, ${y - 384}px) scale(2)`,
       );
@@ -978,7 +1011,7 @@ describe("lightbox lifecycle", () => {
       vi.advanceTimersByTime(50);
       expect(observed).toEqual(discrete);
     }
-    expect(controller.getState().zoom).toEqual({ scale: 2, x: 60, y: -30 });
+    expect(controller.getState().zoom).toEqual(discrete[1]);
     expect(frame.style.transform).toBe("translate(60px, -30px) scale(2)");
     vi.advanceTimersByTime(100);
     expect(observed).toEqual([...discrete, { scale: 2, x: 60, y: -30 }]);
@@ -991,7 +1024,7 @@ describe("lightbox lifecycle", () => {
         cancelable: true,
       }),
     );
-    expect(controller.getState().zoom.scale).toBeCloseTo(3);
+    expect(shownZoom().scale).toBeCloseTo(3);
     expect(observed).toHaveLength(3);
     vi.advanceTimersByTime(150);
     expect(observed.at(-1)?.scale).toBeCloseTo(3);

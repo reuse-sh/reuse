@@ -14,3 +14,4 @@ Migration:
 - `icons.prev` is now `icons.previous`, matching `strings.previous`. The button keeps the class `re-lightbox-prev`.
 - `LightboxItem` is now `LightboxImageItem | LightboxMediaItem`. An image has no `type` and needs `src`, with optional `srcset` and `sizes`. A media item has `type`, an optional `src` and `html`. `item.video` and `item.embed` are gone: put the file or link in `src` and the poster in `previewSrc`.
 - `registerEmbed()` is gone, so two pages, or two widgets on one page, no longer share a global provider list. Pass `embed({ providers: [provider] })`; those providers are tried before YouTube and Vimeo.
+- `getState()` returns the last snapshot `subscribe()` delivered, the same object. A drag, a pinch or a wheel shows up once it settles; read the photo's position from the page if you need it mid-gesture.

@@ -77,7 +77,7 @@ Lightbox methods:
 - close(): Promise<void>, resolves once the dialog is removed
 - next(), prev(), goTo(index: number). A goTo or a thumbnail click to a photo more than one away pages in like the next photo: the target arrives beside the photo on screen, from the side its thumbnail is on, with the usual paging motion, and the photos between never show. A second jump during the move keeps the arriving photo where it is and brings the new one beside it. A looping strip pages the same way. Reduced motion lands at once.
 - zoomTo(scale: number, focus?: Point), scale clamped between the current photo's minimum (1, or the whole-height scale of a tall photo) and its maximum; toggleZoom(focus?: Point), from scale 1 to the tap zoom around focus, and from any other scale back to 1 around focus
-- getState(): LightboxState, live geometry including pointer and wheel samples before notification
+- getState(): LightboxState, the last snapshot subscribers received, the same object; a drag, a pinch or a wheel shows up once it settles, and the photo's live position stays internal
 - subscribe(listener: (state: LightboxState) => void): () => void, the settled changes onChange reports
 - on(type: LightboxEventName, listener: (event: LightboxEvent) => void): () => void
 - append(items: readonly LightboxItem[]): void, adds images at the end without moving the current one

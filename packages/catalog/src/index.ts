@@ -241,7 +241,7 @@ export const libraries: Library[] = [
       ],
       [
         "getState(), subscribe(listener)",
-        "Reads and listens to the index, zoom, open, animation and controls state.",
+        "Reads and listens to the index, zoom, open, animation and controls state. getState() returns the snapshot subscribers last received, so a gesture shows up once it settles.",
       ],
       [
         "on(type, listener)",
