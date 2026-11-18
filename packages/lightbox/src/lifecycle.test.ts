@@ -799,8 +799,10 @@ describe("lightbox lifecycle", () => {
     controller.zoomTo(1);
     pointer("pointerdown", 1, 512, 384);
     pointer("pointermove", 1, 512, 550);
+    const closed = new Promise((resolve) => controller.on("closed", resolve));
     pointer("pointerup", 1, 512, 550);
-    await controller.close();
+    expect(controller.getState().isClosing).toBe(true);
+    await closed;
     expect(controller.getState().isOpen).toBe(false);
   });
 

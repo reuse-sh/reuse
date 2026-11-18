@@ -174,6 +174,8 @@ export function lightboxSession(): World {
     checks: {
       "at most one dialog is open": () =>
         document.querySelectorAll("dialog").length <= 1,
+      "once closed no dialog is left": () =>
+        !settled() || document.querySelectorAll("dialog").length === 0,
       "once closed every tile is visible": () =>
         !settled() || tiles.every((tile) => tile.style.visibility === ""),
       "once closed the page scrolls": () =>
