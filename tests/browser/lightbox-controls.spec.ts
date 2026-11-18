@@ -327,7 +327,7 @@ test("Download opens a file whose fetch already failed as a plain link, so no po
     );
   await openFiles(page, ["https://cdn.test/photo.jpg"]);
   const failed = page.waitForEvent("requestfailed");
-  await page.focus(".re-lightbox-download");
+  await page.locator(".re-lightbox-download").dispatchEvent("pointerdown");
   await failed;
   await page.evaluate(() => {
     Object.assign(window, { prevented: [] as boolean[] });
@@ -351,6 +351,37 @@ test("Download opens a file whose fetch already failed as a plain link, so no po
     ),
   ).toEqual([false]);
   expect(page.url()).toBe("http://reuse.test/");
+});
+
+test("Tab past Download fetches nothing, and Enter on it starts the fetch", async ({
+  page,
+}) => {
+  const fetched: string[] = [];
+  await page.route("https://cdn.test/photo.jpg", (route) => {
+    if (route.request().resourceType() === "fetch")
+      fetched.push(route.request().url());
+    return route.fulfill({
+      contentType: "image/jpeg",
+      headers: { "access-control-allow-origin": "*" },
+      body: "photo",
+    });
+  });
+  await openFiles(page, ["https://cdn.test/photo.jpg"]);
+  const focused = () =>
+    page.evaluate(() => document.activeElement?.className ?? "");
+  for (let i = 0; i < 8 && !(await focused()).includes("download"); i++)
+    await page.keyboard.press("Tab");
+  expect(await focused()).toContain("re-lightbox-download");
+  await page.keyboard.press("Tab");
+  await page.waitForTimeout(300);
+  expect(fetched).toEqual([]);
+  await page.keyboard.press("Shift+Tab");
+  const [file] = await Promise.all([
+    page.waitForEvent("download"),
+    page.keyboard.press("Enter"),
+  ]);
+  expect(file.suggestedFilename()).toBe("photo.jpg");
+  expect(fetched).toEqual(["https://cdn.test/photo.jpg"]);
 });
 
 test("Download saves a raster data file without leaving the page", async ({

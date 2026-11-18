@@ -4027,7 +4027,13 @@ export function createLightbox<Item extends LightboxItem = LightboxItem>(
     download?.addEventListener("pointerdown", prefetch, {
       signal: abort.signal,
     });
-    download?.addEventListener("focus", prefetch, { signal: abort.signal });
+    download?.addEventListener(
+      "keydown",
+      (event) => {
+        if (event.key === "Enter" || event.key === " ") prefetch();
+      },
+      { signal: abort.signal },
+    );
     download?.addEventListener(
       "click",
       (event) => {
