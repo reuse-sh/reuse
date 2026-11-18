@@ -539,6 +539,43 @@ test("a photo at a URL without an extension costs no HEAD request", async ({
   expect(methods.filter((method) => method === "HEAD")).toEqual([]);
 });
 
+test("a raster at a URL without an extension replaces its preview after one GET", async ({
+  page,
+}) => {
+  await mount(page, "", ["lightbox/base.css", "lightbox/theme.css"]);
+  const png = Buffer.from(
+    await page.evaluate(() => {
+      const canvas = document.createElement("canvas");
+      canvas.width = 1200;
+      canvas.height = 800;
+      const context = canvas.getContext("2d");
+      if (context) context.fillStyle = "#5a8";
+      context?.fillRect(0, 0, 1200, 800);
+      return canvas.toDataURL("image/png").split(",")[1];
+    }),
+    "base64",
+  );
+  const methods: string[] = [];
+  await page.route("http://reuse.test/cdn/raster?w=1200", async (route) => {
+    methods.push(route.request().method());
+    if (route.request().method() === "HEAD")
+      await new Promise((resolve) => setTimeout(resolve, 3000));
+    return route.fulfill({ contentType: "image/png", body: png });
+  });
+  await create(page);
+  await open(page, [
+    {
+      src: "/cdn/raster?w=1200",
+      previewSrc:
+        "data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20width='120'%20height='80'/%3E",
+      width: 1200,
+      height: 800,
+    },
+  ]);
+  await expect.poll(() => shown(page), { timeout: 2000 }).toBe("/cdn/raster");
+  expect(methods).toEqual(["GET"]);
+});
+
 const photos = Array.from({ length: 8 }, (_, index) => ({
   src: `/img/photo-${index + 1}-1200x800.jpg`,
   width: 1200,
