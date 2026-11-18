@@ -1659,6 +1659,7 @@ export function createCarousel(
       window.cancelAnimationFrame(refreshFrame);
       stopSpring();
       observer?.disconnect();
+      borderObserver?.disconnect();
       mutation?.disconnect();
       intersection?.disconnect();
       for (const remove of cleanup) remove();
@@ -1702,19 +1703,23 @@ export function createCarousel(
     },
   };
 
+  const resized = (entries: ResizeObserverEntry[]) => {
+    if (
+      entries.some(
+        ({ target }) =>
+          measured.get(target) !==
+          (target === viewport
+            ? viewportBox(window.getComputedStyle(viewport))
+            : (target as HTMLElement).offsetWidth),
+      )
+    )
+      requestRefresh();
+  };
   const observer = window.ResizeObserver
-    ? new window.ResizeObserver((entries) => {
-        if (
-          entries.some(
-            ({ target }) =>
-              measured.get(target) !==
-              (target === viewport
-                ? viewportBox(window.getComputedStyle(viewport))
-                : (target as HTMLElement).offsetWidth),
-          )
-        )
-          requestRefresh();
-      })
+    ? new window.ResizeObserver(resized)
+    : undefined;
+  const borderObserver = window.ResizeObserver
+    ? new window.ResizeObserver(resized)
     : undefined;
   const mutation = window.MutationObserver
     ? new window.MutationObserver(() => {
@@ -1996,6 +2001,7 @@ export function createCarousel(
   for (const type of ["touchend", "touchcancel"])
     listen(window, type, countFingers, { passive: true });
   observer?.observe(viewport);
+  borderObserver?.observe(viewport, { box: "border-box" });
   refresh();
   mutation?.observe(viewport, { childList: true, subtree: true });
   intersection?.observe(viewport);
