@@ -320,6 +320,11 @@ type Session = {
   thumbCarousel?: Carousel;
   roving: number;
   centeredThumb: number;
+  /** A press or a wheel on the strip, until a click, a key, a settle, or a move to the current photo. */
+  stripInput: boolean;
+  /** The strip has changed the photo since that input; full files wait for it to settle. */
+  scrubbing: boolean;
+  scrubTimer?: ReturnType<typeof setTimeout>;
   aside?: HTMLDivElement;
   slideshow?: Slideshow;
   /** Reasons the slideshow waits, kept while it is off so a start honors them. */
@@ -1605,6 +1610,7 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
   // The current image loads first; the neighbors wait until it has decoded or failed, and
   // Save-Data keeps them at their previews.
   function startLoads(s: Session) {
+    if (s.scrubbing) return;
     const current = s.loaded.get(state.index);
     if (current?.status === "idle") current.load("high");
     if (current?.status === "loading") return;
@@ -2069,6 +2075,7 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
     if (!s.thumbStrip?.contains(s.dialog.ownerDocument.activeElement))
       rove(s, state.index);
     centerThumb(s);
+    ringThumb(s, true);
     applyZoom(s);
   }
 
@@ -2088,7 +2095,7 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
     const behavior =
       s.centeredThumb < 0 || prefersReducedMotion(s) ? "instant" : "smooth";
     s.centeredThumb = state.index;
-    ringThumb(s, behavior === "smooth");
+    s.stripInput = false;
     if (s.thumbCarousel) {
       s.thumbCarousel.goTo(state.index, behavior);
       return;
@@ -2099,20 +2106,81 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
     });
   }
 
-  // Offsets are the thumbnail's place in the strip's content, so the ring scrolls with it.
+  // The ring stands over the strip's center and takes the current thumbnail's size; the
+  // thumbnails scroll under it.
   function ringThumb(s: Session, glide: boolean) {
     const ring = s.thumbRing;
+    const strip = s.thumbStrip;
     const thumb = s.thumbs[state.index];
-    if (!ring) return;
+    if (!ring || !strip) return;
     ring.hidden = !thumb;
     if (!thumb) return;
-    if (!glide) ring.style.transition = "none";
-    ring.style.translate = `${thumb.offsetLeft}px ${thumb.offsetTop}px`;
+    const instant = !glide || !ring.style.width;
+    if (instant) ring.style.transition = "none";
+    const left = strip.offsetLeft + strip.clientLeft;
+    const top = strip.offsetTop + strip.clientTop;
+    if (s.dialog.dataset.thumbnails === "side") {
+      ring.style.left = `${left + thumb.offsetLeft}px`;
+      ring.style.top = `${top + strip.clientHeight / 2}px`;
+      ring.style.bottom = "";
+    } else {
+      const parent = ring.parentElement?.clientHeight ?? 0;
+      ring.style.left = `${left + strip.clientWidth / 2}px`;
+      ring.style.top = "";
+      ring.style.bottom = `${parent - top - thumb.offsetTop - thumb.offsetHeight}px`;
+    }
     ring.style.width = `${thumb.offsetWidth}px`;
     ring.style.height = `${thumb.offsetHeight}px`;
-    if (glide) return;
+    if (!instant) return;
     void ring.offsetWidth;
     ring.style.removeProperty("transition");
+  }
+
+  // A drag on the strip swaps the photo in place as each thumbnail reaches the ring, without
+  // paging, and the full files wait until the strip settles.
+  function scrubTo(s: Session, index: number) {
+    if (session !== s || state.isClosing || index === state.index) return;
+    s.scrubbing = true;
+    finishFade(s, true);
+    clearStands(s);
+    s.centeredThumb = index;
+    syncingCarousel = true;
+    activeChanged(s, index);
+    s.carousel.goTo(index, "instant");
+    syncingCarousel = false;
+    trimSlides(s);
+  }
+
+  function endScrub(s: Session) {
+    clearTimeout(s.scrubTimer);
+    if (!s.scrubbing) return;
+    s.scrubbing = false;
+    if (session === s) startLoads(s);
+  }
+
+  // Walks from the current thumbnail toward the ring, so a frame reads only the thumbnails the
+  // ring passes.
+  function thumbUnderRing(s: Session, strip: HTMLElement) {
+    const side = s.dialog.dataset.thumbnails === "side";
+    const box = strip.getBoundingClientRect();
+    const middle = side ? box.top + box.height / 2 : box.left + box.width / 2;
+    const away = (index: number) => {
+      const rect = s.thumbs[index]?.getBoundingClientRect();
+      if (!rect) return Number.POSITIVE_INFINITY;
+      return Math.abs(
+        (side ? rect.top + rect.height / 2 : rect.left + rect.width / 2) -
+          middle,
+      );
+    };
+    let index = state.index;
+    let distance = away(index);
+    for (const step of [1, -1]) {
+      while (away(index + step) < distance) {
+        index += step;
+        distance = away(index);
+      }
+    }
+    return index;
   }
 
   function teardown(s: Session) {
@@ -2122,6 +2190,7 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
     clearTimeout(s.sharpTimer);
     clearTimeout(s.chromeTimer);
     clearTimeout(s.tapTimer);
+    clearTimeout(s.scrubTimer);
     const win = s.dialog.ownerDocument.defaultView;
     if (s.motion) win?.cancelAnimationFrame(s.motion.frame);
     s.motion = undefined;
@@ -3283,6 +3352,7 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
     const layout = side ? "side" : "bottom";
     if (s.dialog.dataset.thumbnails === layout) return;
     s.dialog.dataset.thumbnails = layout;
+    endScrub(s);
     s.thumbCarousel?.destroy();
     s.thumbCarousel = undefined;
     s.chromeRoots = s.chromeRoots.filter((root) => root !== strip);
@@ -3302,8 +3372,10 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
       internals?.silence();
       internals?.passClicks();
     }
+    if (s.thumbRing) strip.after(s.thumbRing);
     s.centeredThumb = -1;
     centerThumb(s);
+    ringThumb(s, false);
   }
 
   function watchControls(s: Session) {
@@ -3390,6 +3462,7 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
         }[event.key];
         if (to === undefined) return;
         event.preventDefault();
+        s.stripInput = false;
         const index = clamp(to, 0, s.thumbs.length - 1);
         rove(s, index);
         s.thumbs[index].focus();
@@ -3407,6 +3480,29 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
           rove(s, state.index);
       },
       { signal },
+    );
+    const pressed = () => {
+      s.stripInput = true;
+    };
+    strip.addEventListener("pointerdown", pressed, { signal });
+    strip.addEventListener("wheel", pressed, { signal, passive: true });
+    strip.addEventListener(
+      "re-carousel:settle",
+      () => {
+        s.stripInput = false;
+        endScrub(s);
+      },
+      { signal },
+    );
+    strip.addEventListener(
+      "scroll",
+      () => {
+        if (!s.stripInput) return;
+        scrubTo(s, thumbUnderRing(s, strip));
+        clearTimeout(s.scrubTimer);
+        s.scrubTimer = setTimeout(() => endScrub(s), 180);
+      },
+      { signal, passive: true },
     );
     if (settings.thumbnails === "side")
       win
@@ -3603,7 +3699,6 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
           const thumb = doc.createElement("button");
           thumb.type = "button";
           thumb.tabIndex = -1;
-          thumb.dataset.carouselSlide = "";
           if (item.width && item.height)
             thumb.style.aspectRatio = `${item.width} / ${item.height}`;
           thumb.setAttribute("aria-label", strings.thumbnail(i, items.length));
@@ -3618,6 +3713,7 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
           thumb.addEventListener(
             "click",
             () => {
+              if (session) session.stripInput = false;
               if (i === state.index) session?.thumbCarousel?.goTo(i, "smooth");
               goTo(i);
             },
@@ -3628,7 +3724,6 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
           thumbs.push(thumb);
           return thumb;
         }),
-        ...(thumbRing ? [thumbRing] : []),
       );
     };
     makeThumbs();
@@ -3661,6 +3756,8 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
       thumbRing,
       roving: -1,
       centeredThumb: -1,
+      stripInput: false,
+      scrubbing: false,
       pauses: new Set(["phase"]),
       abort,
       animations: new Set(),

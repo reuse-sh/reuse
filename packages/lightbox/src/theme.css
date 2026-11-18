@@ -154,9 +154,8 @@
   outline: 2px solid var(--re-lightbox-foreground);
   outline-offset: 2px;
   transition:
-    translate 300ms var(--re-lightbox-ease),
-    width 300ms var(--re-lightbox-ease),
-    height 300ms var(--re-lightbox-ease);
+    width 150ms ease,
+    height 150ms ease;
 }
 @media (prefers-reduced-motion: reduce) {
   .re-lightbox-thumbnail-ring {

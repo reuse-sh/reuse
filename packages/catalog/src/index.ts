@@ -118,7 +118,7 @@ export const libraries: Library[] = [
       ],
       [
         "Load only what is near",
-        "Only the current and neighboring images load, the current one first, the neighbors not at all under Save-Data, and a long jump skips the pages in between.",
+        "Only the current and neighboring images load, the current one first, the neighbors not at all under Save-Data, and a long jump skips the pages in between. While the thumbnail strip is dragged, previews stand in until it stops.",
         "tests/browser/lightbox-images.spec.ts",
       ],
       [
@@ -338,7 +338,7 @@ export const libraries: Library[] = [
           {
             path: "controls/filmstrip",
             title: "Filmstrip",
-            lead: "Thumbnails along the bottom edge. The active one stays centered as you page.",
+            lead: "Thumbnails along the bottom edge. The ring in the middle marks the open photo, and dragging the strip pages through them.",
           },
           {
             path: "controls/panel",
