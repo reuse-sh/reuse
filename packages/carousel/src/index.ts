@@ -300,6 +300,7 @@ export function createCarousel(
   const listeners = new Set<{
     type?: string;
     listener: (value: never) => void;
+    off: () => void;
   }>();
   const holds = new Set<string>();
   const internalHolds = new Set<string>();
@@ -576,11 +577,11 @@ export function createCarousel(
     { signal }: CarouselListenerOptions = {},
   ) {
     if (destroyed || signal?.aborted) return () => {};
-    const entry = { type, listener };
     const off = () => {
       listeners.delete(entry);
       signal?.removeEventListener("abort", off);
     };
+    const entry = { type, listener, off };
     listeners.add(entry);
     signal?.addEventListener("abort", off);
     return off;
@@ -1595,7 +1596,7 @@ export function createCarousel(
       mutation?.disconnect();
       intersection?.disconnect();
       for (const remove of cleanup) remove();
-      listeners.clear();
+      for (const entry of listeners) entry.off();
       optionListeners.clear();
       if (!hadClass) viewport.classList.remove("re-carousel");
       for (const name of stateAttributes) viewport.removeAttribute(name);

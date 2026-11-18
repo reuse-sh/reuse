@@ -1617,6 +1617,37 @@ describe("one state for every control", () => {
     expect(late).toEqual([]);
   });
 
+  it("removes its abort listeners from the callers' signals on destroy", () => {
+    const { viewport } = fixture();
+    const carousel = createCarousel(viewport);
+    const controller = new AbortController();
+    const signal = controller.signal;
+    const attached = new Set<unknown>();
+    const add = signal.addEventListener.bind(signal);
+    const remove = signal.removeEventListener.bind(signal);
+    signal.addEventListener = (
+      type: string,
+      listener: never,
+      options?: never,
+    ) => {
+      attached.add(listener);
+      add(type, listener, options);
+    };
+    signal.removeEventListener = (
+      type: string,
+      listener: never,
+      options?: never,
+    ) => {
+      attached.delete(listener);
+      remove(type, listener, options);
+    };
+    carousel.subscribe(() => {}, { signal });
+    carousel.on("change", () => {}, { signal });
+    expect(attached.size).toBe(2);
+    carousel.destroy();
+    expect(attached.size).toBe(0);
+  });
+
   it("reports a throwing listener and keeps delivering to the rest and to later events", () => {
     const { viewport } = fixture();
     const carousel = createCarousel(viewport);
