@@ -105,6 +105,9 @@ export function createFloatingTooltip(
   let extraClasses: string[] = [];
   const reduced = view.matchMedia?.("(prefers-reduced-motion: reduce)");
   let trigger: HTMLElement | null = null;
+  let owner: number | undefined;
+  const foreign = (event: PointerEvent) =>
+    owner !== undefined && event.pointerId !== owner;
   let describedBy: string | null = null;
   let keyboard = false;
   let shown: Content | null = null;
@@ -291,6 +294,8 @@ export function createFloatingTooltip(
   };
   const resolveContent = (next: HTMLElement) => opts.content(next) ?? null;
   const change = (content: Content, wasOpen: boolean) => {
+    if (typeof content !== "string" && body.firstChild === content)
+      return false;
     if (shown !== null && sameContent(shown, content)) return false;
     const animated =
       wasOpen && !reduced?.matches && typeof popup.animate === "function";
@@ -343,6 +348,7 @@ export function createFloatingTooltip(
     popup.hidden = true;
     restoreDescription();
     trigger = null;
+    owner = undefined;
   };
   const open = (
     next: HTMLElement,
@@ -416,13 +422,16 @@ export function createFloatingTooltip(
       : null;
   const over = (event: PointerEvent) => {
     if (event.pointerType === "touch") return;
+    if (foreign(event) && !event.isTrusted) return;
     const next = find(event);
     if (!next || !root.contains(next)) return;
+    owner = event.pointerId;
     if (next === trigger) view.clearTimeout(closeTimer);
     else open(next, false, { x: event.clientX, y: event.clientY });
   };
   const move = (event: PointerEvent) => {
     if (event.pointerType === "touch" || keyboard || !trigger) return;
+    if (foreign(event)) return;
     point = { x: event.clientX, y: event.clientY };
     const previousX = target.x;
     position();
@@ -434,6 +443,7 @@ export function createFloatingTooltip(
     closeTimer = view.setTimeout(dismiss, opts.closeDelay);
   };
   const out = (event: PointerEvent) => {
+    if (foreign(event)) return;
     const related = event.relatedTarget;
     if (
       related instanceof view.Node &&

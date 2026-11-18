@@ -1230,6 +1230,10 @@ export const libraries: Library[] = [
         "Keyboard focus places it on the element, and Escape hides it.",
       ],
       [
+        "Follow one pointer",
+        "The pointer that opened it moves and closes it. A scripted pointer, such as a demo cursor, never moves, closes or takes over a tooltip the visitor's pointer opened. The visitor's pointer takes over by entering another trigger.",
+      ],
+      [
         "Treat touch as touch",
         "A touch is not hover, so touch input never opens it.",
       ],
@@ -1436,7 +1440,7 @@ export const libraries: Library[] = [
       ],
       [
         "Cancel on any doubt",
-        "Letting go early, leaving the button, blur, Escape or disabling the button cancels the hold.",
+        "Letting go early, leaving the button, blur, Escape or disabling the button cancels the hold. A release from another pointer does not.",
       ],
       [
         "Accept pointer and keys",
