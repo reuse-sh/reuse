@@ -320,7 +320,7 @@ export function createCarousel(
     strings: { ...markup.strings, ...initialOptions.strings },
   };
   validate(options);
-  const created = { ...options };
+  const created: CarouselOptions = { ...markup };
   const strings = { ...defaultStrings, ...options.strings };
 
   const initialTabIndex = viewport.getAttribute("tabindex");
@@ -1612,7 +1612,7 @@ export function createCarousel(
               next[name] === undefined
                 ? created[name]
                 : name === "strings"
-                  ? { ...created.strings, ...next.strings }
+                  ? { ...options.strings, ...next.strings }
                   : next[name],
           });
       const changed = liveOptions.filter(

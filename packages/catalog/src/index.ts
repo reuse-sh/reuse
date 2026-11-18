@@ -460,7 +460,7 @@ export const libraries: Library[] = [
       ],
       [
         "setOptions(options)",
-        "Changes any option except slides without rebuilding the strip, such as autoplay, loop, group, align, drag, motion, wheel or strings. The active slide stays in place. A key set to undefined returns to its value at creation, from code or markup, else the default. strings merge over the creation strings.",
+        "Changes any option except slides without rebuilding the strip, such as autoplay, loop, group, align, drag, motion, wheel or strings. The active slide stays in place. A key set to undefined returns to its value from data-carousel-options, else the default. strings merge over the current strings.",
       ],
       [
         "moveMotion",

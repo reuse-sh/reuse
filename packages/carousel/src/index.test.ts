@@ -1224,7 +1224,7 @@ describe("one motion and strip state", () => {
     expect(carousel.getState().index).toBe(0);
   });
 
-  it("merges new strings over the creation strings and restores creation values for undefined keys", () => {
+  it("merges new strings over the current ones and restores markup values for undefined keys", () => {
     const { viewport, slides } = fixture(Array(6).fill(100), 300);
     viewport.dataset.carouselOptions = JSON.stringify({
       group: 3,
@@ -1241,13 +1241,18 @@ describe("one motion and strip state", () => {
     carousel.setOptions({ strings: { carouselRole: "Galerie" } });
     expect(roles()).toEqual(["Galerie", "Folie"]);
     carousel.setOptions({ strings: undefined });
-    expect(roles()).toEqual(["Karussell", "Folie"]);
+    expect(roles()).toEqual(["carousel", "Folie"]);
     carousel.setOptions({ group: 1, align: "center" });
     expect(carousel.getState().pageCount).toBe(4);
     expect(slides[1].style.scrollSnapAlign).toBe("center");
     carousel.setOptions({ group: undefined, align: undefined });
     expect(carousel.getState().pageCount).toBe(2);
     expect(slides[3].style.scrollSnapAlign).toBe("start");
+    const playing = fixture(Array(6).fill(100), 300);
+    const autoplay = createCarousel(playing.viewport, { autoplay: 1000 });
+    cleanups.push(autoplay.destroy);
+    autoplay.setOptions({ autoplay: undefined });
+    expect(autoplay.getState().isPlaying).toBe(false);
   });
 
   it("marks static, edge and dragging state on the viewport and removes it on destroy", () => {
