@@ -700,6 +700,10 @@ export const libraries: Library[] = [
         "A resize keeps rows while they fit",
         "Breaks change only when a row leaves the height range, so a scrollbar appearing does not move pictures.",
       ],
+      [
+        "A resize paints the new layout",
+        "A window resize lays out in its own frame, before it paints, so the old width's layout never shows. When your script changes the width, call refresh() in the same frame.",
+      ],
       ["Hidden keeps its layout", "Width 0 never lays out."],
       [
         "Destroy puts back what it wrote",
@@ -808,6 +812,10 @@ export const libraries: Library[] = [
       ],
       ["Columns and gaps are CSS", "One stylesheet drives both paths."],
       ["DOM order is reading order", "Items are never moved in the document."],
+      [
+        "A resize paints the new layout",
+        "A window resize lays out in its own frame, before it paints, so the old width's layout never shows. When your script changes the width, call refresh() in the same frame.",
+      ],
       ["Hidden keeps its layout", "Width 0 never lays out."],
       [
         "Destroy puts back what it wrote",

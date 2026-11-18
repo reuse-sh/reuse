@@ -1,3 +1,4 @@
+import { observeLayout } from "./observe.js";
 import { claim, unclaim } from "./owners.js";
 import {
   breakRows,
@@ -358,10 +359,8 @@ export function createJustifiedGallery(
     mutation?.takeRecords();
   };
 
-  // Laid out on the next frame rather than inside the observer: the layout
-  // changes the container's height, which the observer would report again in
-  // the same frame. Until then the rows scale with the container. Pictures
-  // that load in one frame share one layout.
+  // A width change lays out in its own frame. Pictures that load in one frame
+  // share one layout on the next.
   let frame = 0;
   let loaded = false;
   const schedule = () => {
@@ -383,9 +382,15 @@ export function createJustifiedGallery(
       }
     });
   };
-  const resize = view.ResizeObserver
-    ? new view.ResizeObserver(schedule)
-    : undefined;
+  const resize = observeLayout(
+    view,
+    container,
+    () => readMetrics().width,
+    () => {
+      if (readMetrics().width > 0) layout(false);
+    },
+    schedule,
+  );
   // The container's style and class can change the row height or the gap.
   // Item style, class and hidden can show, hide or re-ratio an item; a
   // picture's size attributes and source can change its ratio at any depth.
@@ -411,7 +416,6 @@ export function createJustifiedGallery(
 
   if (!hadClass) container.classList.add("re-justified");
   layout(true);
-  resize?.observe(container);
   mutation?.observe(container, {
     childList: true,
     subtree: true,
