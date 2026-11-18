@@ -199,3 +199,122 @@ test("a drag past the end stretches the slides, keeps the scroll edge, and sprin
   });
   expect(settled).toEqual({ left: edge.left, translate: "", cursor: "grab" });
 });
+
+async function thumbnails(page: Page) {
+  const count = 12;
+  const views = Array.from(
+    { length: count },
+    (_, index) =>
+      `<div data-carousel-slide style="flex:0 0 300px;height:150px;background:hsl(${index * 30} 60% 60%)">${index}</div>`,
+  ).join("");
+  const thumbs = Array.from(
+    { length: count },
+    (_, index) =>
+      `<button type="button" class="thumb" aria-label="Show slide ${index + 1}" style="flex:none;width:68px;height:48px;padding:0;border:0;background:hsl(${index * 30} 60% 60%)">${index}</button>`,
+  ).join("");
+  await mount(
+    page,
+    `<div id="main" style="width:300px;--re-carousel-gap:0px">${views}</div>
+    <div id="thumbs" style="width:456px;display:flex;gap:8px;padding:4px;overflow-x:auto;--re-carousel-gap:8px;--re-carousel-slide-width:68px">${thumbs}</div>`,
+    ["carousel/styles.css"],
+  );
+  await page.evaluate(async () => {
+    const { connectThumbnails, createCarousel } = await import(
+      "/modules/carousel/index.js"
+    );
+    const main = createCarousel(
+      document.getElementById("main") as HTMLElement,
+      {
+        loop: false,
+      },
+    );
+    const strip = createCarousel(
+      document.getElementById("thumbs") as HTMLElement,
+      { slides: ".thumb" },
+    );
+    const disconnect = connectThumbnails(main, strip);
+    Object.assign(window, { main, strip, disconnect });
+  });
+}
+
+const mainIndex = (page: Page) =>
+  page.evaluate(
+    () =>
+      (
+        window as unknown as { main: { getState(): { index: number } } }
+      ).main.getState().index,
+  );
+
+async function thumbCenter(page: Page, index: number) {
+  return page.evaluate((target) => {
+    const thumb = document.querySelectorAll(".thumb")[target] as HTMLElement;
+    const box = thumb.getBoundingClientRect();
+    const x = box.left + box.width / 2;
+    const y = box.top + box.height / 2;
+    if (!thumb.contains(document.elementFromPoint(x, y)))
+      throw new Error(`Thumbnail ${target} is out of view.`);
+    return { x, y };
+  }, index);
+}
+
+const stripMoving = (page: Page) =>
+  page.evaluate(
+    () =>
+      new Promise<boolean>((resolve) => {
+        const strip = document.getElementById("thumbs") as HTMLElement;
+        const before = strip.scrollLeft;
+        requestAnimationFrame(() => resolve(strip.scrollLeft !== before));
+      }),
+  );
+
+test("quick thumbnail clicks while the strip still moves each pick their slide", async ({
+  page,
+}) => {
+  await thumbnails(page);
+  await page.waitForTimeout(150);
+  for (const [step, index] of [3, 4, 5, 2].entries()) {
+    if (step > 0) expect(await stripMoving(page)).toBe(true);
+    const { x, y } = await thumbCenter(page, index);
+    await page.mouse.click(x, y);
+    expect(await mainIndex(page)).toBe(index);
+    await page.waitForTimeout(60);
+  }
+  await framesUntilIdle(page, "document.getElementById('thumbs').scrollLeft");
+  const start = await thumbCenter(page, 4);
+  await page.mouse.move(start.x, start.y);
+  await page.mouse.down();
+  await page.mouse.move(start.x - 40, start.y, { steps: 5 });
+  await page.mouse.up();
+  expect(await mainIndex(page)).toBe(2);
+
+  await page.evaluate(() => {
+    const { disconnect, strip } = window as unknown as {
+      disconnect(): void;
+      strip: { goTo(index: number): void };
+    };
+    disconnect();
+    document.getElementById("thumbs")?.addEventListener("click", (event) =>
+      Object.assign(window, {
+        clicked: (event.target as Element).closest(".thumb") !== null,
+      }),
+    );
+    strip.goTo(11);
+  });
+  expect(await stripMoving(page)).toBe(true);
+  const late = await page.evaluate(() => {
+    const box = (
+      document.getElementById("thumbs") as HTMLElement
+    ).getBoundingClientRect();
+    return { x: box.left + box.width / 2, y: box.top + box.height / 2 };
+  });
+  await page.mouse.click(late.x, late.y);
+  expect(
+    await page.evaluate(() => (window as { clicked?: boolean }).clicked),
+  ).toBeUndefined();
+  await page.waitForTimeout(150);
+  await framesUntilIdle(page, "document.getElementById('thumbs').scrollLeft");
+  await page.mouse.click(late.x, late.y);
+  expect(
+    await page.evaluate(() => (window as { clicked?: boolean }).clicked),
+  ).toBe(true);
+});

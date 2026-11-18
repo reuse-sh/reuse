@@ -386,7 +386,8 @@ export const libraries: Library[] = [
       ],
       [
         "Never let a drag click",
-        "A mouse drag, or the mouse press that stops a moving strip, never opens the link under it. An ordinary click still works, and touch stays native.",
+        "A mouse drag, or the mouse press that stops a moving strip, never opens the link under it. A thumbnail strip from connectThumbnails lets that press click its thumbnail, like a pagination button. An ordinary click still works, and touch stays native.",
+        "tests/browser/carousel.spec.ts",
       ],
       [
         "Drag like a trackpad",

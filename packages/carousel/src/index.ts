@@ -304,6 +304,7 @@ export function createCarousel(
   let unsettled = false;
   // Screen readers announce changes to a live region already in the page, not one inserted with its text.
   let silent = false;
+  let catchesClicks = true;
   const live = document.createElement("div");
   live.setAttribute("aria-live", "polite");
   live.setAttribute("aria-atomic", "true");
@@ -1714,7 +1715,8 @@ export function createCarousel(
     readyDrag();
     if (!dragReady) return;
     const caught =
-      spring !== null || window.performance.now() - lastScroll < 100;
+      catchesClicks &&
+      (spring !== null || window.performance.now() - lastScroll < 100);
     interrupt(false);
     suppressClick = false;
     pointer = {
@@ -1775,6 +1777,12 @@ export function createCarousel(
       silent = true;
       live.remove();
     },
+    passClicks: () => {
+      catchesClicks = false;
+      return () => {
+        catchesClicks = true;
+      };
+    },
   };
   Object.defineProperty(controller, internalKey, { value: reach });
   return controller;
@@ -1811,6 +1819,7 @@ export function connectThumbnails(
   if (!strip) throw new TypeError("connectThumbnails needs two carousels.");
   const align = strip.align();
   thumbnails.setOptions({ align: "center" });
+  const catchClicks = strip.passClicks();
   let shown = -1;
   let count = -1;
   const mark = () => {
@@ -1843,6 +1852,7 @@ export function connectThumbnails(
     unsubscribe();
     recount();
     strip.viewport.removeEventListener("click", choose);
+    catchClicks();
     shown = -1;
     mark();
     thumbnails.setOptions({ align });
