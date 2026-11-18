@@ -529,7 +529,9 @@ test("a photo at a URL without an extension costs no HEAD request", async ({
     });
   });
   await create(page);
-  await open(page, [{ src: "/cdn/photo?w=1200", previewSrc: "/cdn/photo?w=1200" }]);
+  await open(page, [
+    { src: "/cdn/photo?w=1200", previewSrc: "/cdn/photo?w=1200" },
+  ]);
   const frame = page.locator(".re-lightbox-frame");
   await expect(frame).not.toHaveAttribute("data-loading");
   await expect(page.locator("dialog")).toHaveAttribute("data-phase", "open");

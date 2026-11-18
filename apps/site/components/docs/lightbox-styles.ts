@@ -47,6 +47,7 @@ const rules: readonly (readonly [(o: LightboxStyle) => boolean, string])[] = [
     always,
     `.re-lightbox-style {
   --re-lightbox-pad: 16px;
+  --re-lightbox-padding: 24px;
   --re-lightbox-inset: var(--re-lightbox-pad);
   --re-lightbox-gap: 8px;
   --re-lightbox-side: 0px;
@@ -275,7 +276,7 @@ const rules: readonly (readonly [(o: LightboxStyle) => boolean, string])[] = [
   [
     always,
     `@media (max-width: 559px) {
-  .re-lightbox-style { --re-lightbox-pad: 12px; }
+  .re-lightbox-style { --re-lightbox-pad: 12px; --re-lightbox-padding: 12px; }
 }`,
   ],
   [
@@ -446,8 +447,7 @@ export default (createLightbox, icons, getItems) =>
     className: "${LIGHTBOX_STYLE_CLASS}",
     icons,
     thumbnails: ${options.thumbnails ? '"bottom"' : "false"},${options.autoHide ? "\n    autoHide: 2000," : ""}
-    label: "Photos",
-    padding: window.innerWidth < 560 ? 12 : 24,${slots ? "\n    slots: chromeSlots(getItems, icons)," : ""}
+    strings: { dialog: "Photos" },${slots ? "\n    slots: chromeSlots(getItems, icons)," : ""}
   });
 `;
 }

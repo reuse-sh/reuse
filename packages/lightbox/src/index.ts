@@ -217,7 +217,6 @@ export interface LightboxContent {
 
 export interface LightboxOptions {
   container?: HTMLElement;
-  label?: string;
   imageClick?: "zoom" | "close" | "none";
   doubleTapZoom?: boolean;
   maxZoom?: number;
@@ -227,8 +226,6 @@ export interface LightboxOptions {
   thumbnails?: false | "bottom" | "side";
   caption?: "bottom" | "side";
   slideshow?: { interval?: number };
-  padding?: number;
-  duration?: number;
   autoHide?: number | false;
   className?: string;
   icons?: Partial<Record<LightboxIcon, () => Node>>;
@@ -666,6 +663,9 @@ function validateItems(
 const OPEN_DURATION = 400;
 const CLOSE_DURATION = 300;
 const REDUCED_DURATION = 150;
+const ZOOM_DURATION = 220;
+const FADE_DURATION = 240;
+const PADDING = 32;
 const FLIGHT_EASE = "cubic-bezier(0.32, 0.72, 0, 1)";
 const ZOOM_EASE = "cubic-bezier(.16,1,.3,1)";
 const DOUBLE_TAP_TIME = 300;
@@ -754,7 +754,7 @@ function midpoint(points: Point[]): Point {
 export function createLightbox(options: LightboxOptions = {}): Lightbox {
   let settings: LightboxOptions = { ...options };
   let preload = 1;
-  let padding = 32;
+  let padding = PADDING;
   let autoHide: number | false = 2500;
   let loop = Boolean(options.loop);
   let items: LightboxItem[] = [];
@@ -790,7 +790,6 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
   function configure() {
     settings = { ...options };
     preload = clamp(Math.floor(settings.preload ?? 1), 0, 2);
-    padding = Math.max(0, settings.padding ?? 32);
     autoHide =
       settings.autoHide === false
         ? false
@@ -986,17 +985,9 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
       s.dialog,
     );
     const read = (name: string) => style?.getPropertyValue(name) ?? "";
-    const fixed =
-      settings.duration === undefined
-        ? undefined
-        : Math.max(0, settings.duration);
     s.timing = {
-      open:
-        fixed ??
-        milliseconds(read("--re-lightbox-open-duration"), OPEN_DURATION),
-      close:
-        fixed ??
-        milliseconds(read("--re-lightbox-close-duration"), CLOSE_DURATION),
+      open: milliseconds(read("--re-lightbox-open-duration"), OPEN_DURATION),
+      close: milliseconds(read("--re-lightbox-close-duration"), CLOSE_DURATION),
       ease: easing(
         read("--re-lightbox-ease").trim(),
         s.dialog.ownerDocument.defaultView,
@@ -1083,6 +1074,12 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
   function measure(viewport: HTMLElement): Rect {
     const rect = viewport.getBoundingClientRect();
     const win = viewport.ownerDocument.defaultView;
+    const space = Number.parseFloat(
+      win
+        ?.getComputedStyle(viewport)
+        .getPropertyValue("--re-lightbox-padding") ?? "",
+    );
+    padding = Number.isFinite(space) ? Math.max(0, space) : PADDING;
     return {
       left: rect.left,
       top: rect.top,
@@ -1361,9 +1358,7 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
   }
 
   function zoomDuration(s: Session) {
-    return prefersReducedMotion(s)
-      ? 0
-      : Math.min(220, Math.max(0, settings.duration ?? 280));
+    return prefersReducedMotion(s) ? 0 : ZOOM_DURATION;
   }
 
   function flightDuration(s: Session, closing: boolean) {
@@ -2639,8 +2634,8 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
       },
     };
     const reduced = prefersReducedMotion(s);
-    const duration = Math.min(240, Math.max(0, settings.duration ?? 280));
-    if (reduced || duration <= 0 || typeof s.viewport.animate !== "function") {
+    const duration = FADE_DURATION;
+    if (reduced || typeof s.viewport.animate !== "function") {
       fade.jump();
       return;
     }
@@ -3777,7 +3772,7 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
     dialog.className = ["re-lightbox", settings.className]
       .filter(Boolean)
       .join(" ");
-    dialog.setAttribute("aria-label", settings.label || strings.dialog);
+    dialog.setAttribute("aria-label", strings.dialog);
     dialog.dataset.chrome = "shown";
     dialog.dataset.phase = "entering";
     if (settings.protect) dialog.dataset.protect = "";
@@ -3789,7 +3784,7 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
     const viewport = doc.createElement("div");
     viewport.className = "re-lightbox-viewport";
     viewport.tabIndex = 0;
-    viewport.setAttribute("aria-label", settings.label || strings.dialog);
+    viewport.setAttribute("aria-label", strings.dialog);
     const makeSlide = () => {
       const slide = doc.createElement("div");
       slide.className = "re-lightbox-slide";

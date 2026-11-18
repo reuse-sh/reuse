@@ -300,9 +300,12 @@ test("a resize during the opening flight still ends with an opaque photo and bac
   page,
 }) => {
   await mount(page, "", ["lightbox/base.css", "lightbox/theme.css"]);
+  await page.addStyleTag({
+    content: ".re-lightbox{--re-lightbox-open-duration:1000ms}",
+  });
   await page.evaluate(async (src) => {
     const { createLightbox } = await import("/modules/lightbox/index.js");
-    createLightbox({ duration: 1000 }).open([
+    createLightbox().open([
       { src, width: 1200, height: 800, alt: "Photo" },
     ]);
   }, photo(0));

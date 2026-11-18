@@ -20,7 +20,7 @@ let controllers: Lightbox[] = [];
 let reduced = false;
 
 function create(options: Parameters<typeof createLightbox>[0] = {}) {
-  const controller = createLightbox({ duration: 0, maxZoom: 4, ...options });
+  const controller = createLightbox({ maxZoom: 4, ...options });
   controllers.push(controller);
   return controller;
 }
@@ -293,7 +293,7 @@ describe("lightbox lifecycle", () => {
         };
       },
     });
-    const controller = create({ duration: 280 });
+    const controller = create();
     controller.open(gallery);
     controller.zoomTo(2);
     vi.advanceTimersByTime(1000);
@@ -318,7 +318,7 @@ describe("lightbox lifecycle", () => {
         };
       },
     });
-    const controller = create({ duration: 280 });
+    const controller = create();
     controller.open(gallery);
     vi.advanceTimersByTime(1000);
     const frame = dialog().querySelector<HTMLElement>(".re-lightbox-frame");
@@ -348,7 +348,7 @@ describe("lightbox lifecycle", () => {
         };
       },
     });
-    const controller = create({ duration: 280 });
+    const controller = create();
     controller.open(gallery);
     controller.zoomTo(2);
     const viewport = dialog().querySelector<HTMLElement>(
@@ -389,7 +389,7 @@ describe("lightbox lifecycle", () => {
         };
       },
     });
-    const controller = create({ duration: 280 });
+    const controller = create();
     controller.open(gallery);
     const closing = controller.close();
     const imageFrames = frames.filter((value) =>
@@ -421,7 +421,7 @@ describe("lightbox lifecycle", () => {
     });
     const trigger = document.createElement("button");
     document.body.append(trigger);
-    const controller = create({ duration: 280 });
+    const controller = create();
     controller.open([{ ...gallery[0], origin: trigger }]);
     expect(trigger.style.visibility).toBe("hidden");
     dialog().close();
@@ -626,7 +626,7 @@ describe("lightbox lifecycle", () => {
         return { finished, cancel() {}, commitStyles() {} };
       },
     });
-    const controller = create({ duration: 280 });
+    const controller = create();
     controller.open(gallery);
     await controller.close();
     expect(animated.length).toBeGreaterThan(0);
@@ -644,7 +644,7 @@ describe("lightbox lifecycle", () => {
     image.src = "https://example.test/gallery.jpg";
     root.append(image);
     document.body.append(root);
-    const controller = bindLightboxGallery(root, { duration: 0 });
+    const controller = bindLightboxGallery(root);
     controllers.push(controller);
     const href = window.location.href;
     image.click();
@@ -850,7 +850,7 @@ describe("lightbox lifecycle", () => {
         };
       },
     });
-    const controller = create({ duration: 280 });
+    const controller = create();
     controller.open(gallery);
     expect(active).toBe(2);
     const closing = controller.close();
@@ -1451,7 +1451,6 @@ describe("lightbox public API", () => {
     root.innerHTML = `<a href="/large.jpg"><img src="/small.jpg" alt=""></a>`;
     document.body.append(root);
     const controller = bindLightboxGallery(root, {
-      duration: 0,
       history: false,
     });
     controllers.push(controller);
@@ -1470,7 +1469,6 @@ describe("lightbox public API", () => {
       .join("");
     document.body.append(root);
     const controller = bindLightboxGallery(root, {
-      duration: 0,
       history: false,
     });
     controllers.push(controller);
@@ -1489,7 +1487,6 @@ describe("lightbox public API", () => {
     document.body.append(root);
     const [first, second] = root.querySelectorAll("img");
     const controller = bindLightboxGallery(root, {
-      duration: 0,
       history: false,
       items: () => [
         { src: "https://example.test/hidden.jpg" },

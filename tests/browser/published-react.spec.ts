@@ -117,7 +117,7 @@ const items = [0, 1, 2].map((index) => ({ src: "data:image/gif;base64,R0lGODlhAQ
 function App() {
   const [label, setLabel] = useState("First");
   const [loop, setLoop] = useState(false);
-  const lightbox = useLightbox({ label, loop, history: false, duration: 0 });
+  const lightbox = useLightbox({ strings: { dialog: label }, loop, history: false });
   window.__app = { lightbox, set: (next) => flushSync(() => { setLabel(next.label ?? label); setLoop(next.loop ?? loop); }) };
   return <button type="button" onClick={() => lightbox.open(items, 2)}>Open</button>;
 }

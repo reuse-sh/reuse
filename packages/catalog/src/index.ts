@@ -221,7 +221,7 @@ export const libraries: Library[] = [
     api: [
       [
         "createLightbox(options?)",
-        "Creates a viewer. Options include controls, thumbnails, caption, slideshow, content, autoplay, loop, history, strings, slots, imageClick, doubleTapZoom, autoHide, maxZoom, protect, padding, className and icons, read again at every open.",
+        "Creates a viewer. Options include controls, thumbnails, caption, slideshow, content, autoplay, loop, history, strings, slots, imageClick, doubleTapZoom, autoHide, maxZoom, protect, className and icons, read again at every open. The space around the photo is --re-lightbox-padding, 32px by default.",
       ],
       [
         "bindLightboxGallery(root, options?)",
