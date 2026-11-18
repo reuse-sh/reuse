@@ -406,7 +406,8 @@ export const libraries: Library[] = [
       ],
       [
         "Let autoplay wait for people",
-        "Autoplay pauses for hover, focus, dragging, hidden pages, strips less than half in view and reduced motion, keeps the rest of its wait, and stays paused after the visitor pauses it.",
+        "Autoplay pauses for hover, keyboard focus, dragging, hidden pages, strips less than half in view and reduced motion, keeps the rest of its wait, and stays paused after the visitor pauses it. Focus from a mouse click, or returned by a lightbox closed with a pointer, does not pause it.",
+        "tests/browser/carousel-controls.spec.ts",
       ],
       [
         "Keep keys local",
@@ -477,7 +478,7 @@ export const libraries: Library[] = [
       ],
       [
         "play(), pause()",
-        "Starts and stops autoplay. It also waits for hover, focus, drag, hidden tabs and a strip less than half in view on its own, and returns to the first slide after the last one.",
+        "Starts and stops autoplay. It also waits for hover, keyboard focus, drag, hidden tabs and a strip less than half in view on its own, and returns to the first slide after the last one.",
       ],
       [
         "setEnabled(enabled)",
@@ -518,7 +519,7 @@ export const libraries: Library[] = [
       "While a mouse drags the strip, the slides scale to --re-carousel-press-scale (0.96) over --re-carousel-press-duration (300ms). Set the scale to 1 to turn it off.",
       "scroll-snap-type on the viewport sets how a released drag ends: mandatory snaps, proximity snaps only near a snap point, and none glides to a stop.",
       "A mouse drag inside a nested strip that can scroll moves only that strip.",
-      "Autoplay pauses for hover, focus, dragging, hidden pages, strips less than half in view and reduced motion, and picks up the rest of its wait when it resumes. --re-carousel-autoplay-progress on the viewport fills from 0 to 1 over the wait, every frame.",
+      "Autoplay pauses for hover, keyboard focus (:focus-visible), dragging, hidden pages, strips less than half in view and reduced motion, and picks up the rest of its wait when it resumes. --re-carousel-autoplay-progress on the viewport fills from 0 to 1 over the wait, every frame.",
       'For a page without a bundler or an import map, such as a theme or a plugin, load @reuse-sh/carousel/browser/carousel.js with <script type="module">. It is one minified ES module with a source map and no imports. The controls entry is controls.js in the same folder, also with no imports.',
       "bindCarouselControls(root, carousel, { strings, dotsWindow }) from @reuse-sh/carousel/controls wires your own markup: [data-carousel-prev], [data-carousel-next], [data-carousel-dots], [data-carousel-counter], [data-carousel-play] and [data-carousel-progress], also outside root with data-carousel-controls set to the viewport id. It reads pageCount, pageIndex and autoplayProgress from the one state, and the function it returns removes every listener and element it added.",
       "The strings option supplies every label and announcement, such as goTo(index, count) and slide(index, count), with English defaults. The viewport dispatches re-carousel:change, re-carousel:settle, re-carousel:play and re-carousel:pause with the state in detail.",

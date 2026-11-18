@@ -181,6 +181,39 @@ test.describe("carousel controls", { tag: "@desktop" }, () => {
     ).toBe("0");
   });
 
+  test("autoplay pauses for keyboard focus, not for the focus a mouse click gives", async ({
+    page,
+  }) => {
+    await setup(page, { autoplay: 600 });
+    const state = () =>
+      page.evaluate(() => {
+        const { carousel } = window as unknown as {
+          carousel: { getState(): { index: number; isPlaying: boolean } };
+        };
+        return {
+          ...carousel.getState(),
+          focused: document.activeElement?.id,
+        };
+      });
+    await page.mouse.click(300, 75);
+    await page.mouse.move(700, 500);
+    expect(await state()).toMatchObject({ focused: "strip", isPlaying: true });
+    await expect
+      .poll(async () => (await state()).index, { timeout: 3000 })
+      .toBeGreaterThan(0);
+    await page.keyboard.press("ArrowRight");
+    const shown = await page
+      .locator("#strip")
+      .evaluate((strip) => strip.matches(":focus-visible"));
+    expect((await state()).isPlaying).toBe(!shown);
+    await page.mouse.click(700, 500);
+    await page.keyboard.press("Tab");
+    const held = await state();
+    expect(held).toMatchObject({ focused: "strip", isPlaying: false });
+    await page.waitForTimeout(1300);
+    expect((await state()).index).toBe(held.index);
+  });
+
   test("a goTo on a hidden strip lands once the strip shows", async ({
     page,
   }) => {

@@ -1721,7 +1721,17 @@ export function createCarousel(
   });
   listen(viewport, "pointerenter", () => internalHold("hover", true));
   listen(viewport, "pointerleave", () => internalHold("hover", false));
-  listen(viewport, "focusin", () => internalHold("focus", true));
+  const holdFocus = () =>
+    internalHold(
+      "focus",
+      Boolean(
+        document.activeElement &&
+          viewport.contains(document.activeElement) &&
+          document.activeElement.matches(":focus-visible"),
+      ),
+    );
+  listen(viewport, "focusin", holdFocus);
+  listen(viewport, "keyup", holdFocus);
   listen(viewport, "focusout", (event) => {
     const next = (event as FocusEvent).relatedTarget as Node | null;
     if (!next || !viewport.contains(next)) internalHold("focus", false);
