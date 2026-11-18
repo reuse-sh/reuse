@@ -542,6 +542,16 @@ describe("lightbox lifecycle", () => {
     expect(thumbs()).toEqual(["Bild 1 zeigen", "Bild 2 zeigen"]);
   });
 
+  it("renames the open strip's role when setOptions changes carouselRole", () => {
+    const controller = create({ history: false });
+    controller.open(gallery.slice(0, 2), 0);
+    controller.setOptions({ strings: { carouselRole: "Karussell" } });
+    expect(
+      [...dialog().querySelectorAll("[aria-roledescription]")].map((element) =>
+        element.getAttribute("aria-roledescription"),
+      ),
+    ).toEqual(["Karussell"]);
+  });
   it("stops a subscription and a listener when their signal aborts, and only beforeclose can cancel", () => {
     const stop = new AbortController();
     const states: number[] = [];

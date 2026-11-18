@@ -7,3 +7,5 @@ A popup opened by a sandboxed `iframe()` or `embed()` frame keeps the sandbox, s
 `append()` during the close flight adds to the list that waits for the close, after an earlier `append()` or `setItems()` in the same close, instead of dropping it.
 
 Thumbnails that `append()` and `setItems()` build on an open viewer take their labels from the strings `setOptions()` set last, not from the strings at open.
+
+`setOptions({ strings: { carouselRole } })` on an open viewer renames the photo strip's `aria-roledescription` at once.

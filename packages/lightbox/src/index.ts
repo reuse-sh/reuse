@@ -3872,6 +3872,7 @@ export function createLightbox<Item extends LightboxItem = LightboxItem>(
       s.stage.querySelector(selector)?.setAttribute("aria-label", label);
     s.dialog.setAttribute("aria-label", strings.dialog);
     s.viewport.setAttribute("aria-label", strings.dialog);
+    s.carousel.setOptions({ strings: { carouselRole: strings.carouselRole } });
     name(".re-lightbox-close", strings.close);
     name(".re-lightbox-prev", strings.previous);
     name(".re-lightbox-next", strings.next);
