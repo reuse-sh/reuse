@@ -36,8 +36,8 @@ async function browseTenPhotos(
   await page.waitForTimeout(500);
   const { width, height } = page.viewportSize() ?? { width: 0, height: 0 };
   const middle = { x: width / 2, y: height / 2 };
-  // A mouse drag that starts on the photo drags the file out, so the swipe runs in the band
-  // above the 800px tall photo, where the next photo never passes while the strip settles.
+  // The swipe runs in the band above the 800px tall photo, where the next photo never passes
+  // while the strip settles.
   const above = { x: middle.x, y: (height - 800) / 4 };
   for (let photo = 1; photo < count; photo++) {
     await swipe(

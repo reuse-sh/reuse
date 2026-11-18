@@ -86,12 +86,12 @@ async function center(page: Page) {
   return { x: box.x + box.width / 2, y: box.y + box.height / 2 };
 }
 
-async function mouseDrag(page: Page) {
+async function mouseDrag(page: Page, dx = 20) {
   const from = await center(page);
   await page.mouse.move(from.x, from.y);
   await page.mouse.down();
   for (let step = 1; step <= 10; step++)
-    await page.mouse.move(from.x + step * 20, from.y + step * 4);
+    await page.mouse.move(from.x + step * dx, from.y + step * 4);
   await page.mouse.up();
 }
 
@@ -110,8 +110,6 @@ async function zoom(page: Page, scale: number) {
     .toBe(scale);
 }
 
-// Chromium and Firefox start no file drag from a captured pointer, WebKit does and the lightbox prevents it.
-// Playwright's WebKit loses the next mousedown after a file drag, so the zoomed drag goes first.
 async function zoomedThenFitDrag(page: Page) {
   await zoom(page, 1.4);
   await mouseDrag(page);
@@ -130,13 +128,13 @@ async function zoomedThenFitDrag(page: Page) {
     }),
   ).toBe(true);
   await zoom(page, 1);
-  await mouseDrag(page);
-  const { dragstart } = await records(page);
-  expect(dragstart.at(-1)).toBe(false);
-  expect(dragstart.filter((prevented) => !prevented)).toHaveLength(1);
-  expect(
-    await page.evaluate(() => (window as Window).lightbox.getState().index),
-  ).toBe(0);
+  await mouseDrag(page, -40);
+  expect((await records(page)).dragstart).not.toContain(false);
+  await expect
+    .poll(() =>
+      page.evaluate(() => (window as Window).lightbox.getState().index),
+    )
+    .toBe(1);
 }
 
 // The test origin is not a secure context, so the page has neither ClipboardItem nor navigator.clipboard.
@@ -174,14 +172,14 @@ function stubClipboard(page: Page) {
 }
 
 test.describe("lightbox native photo handling", () => {
-  test("the photo is a draggable img with its source whose context menu stays the browser's", async ({
+  test("the photo is an img with its source whose context menu stays the browser's", async ({
     page,
   }) => {
     await open(page);
     await expect(photo(page)).toHaveAttribute("src", /^blob:/);
     expect(
       await photo(page).evaluate((image: HTMLImageElement) => image.draggable),
-    ).toBe(true);
+    ).toBe(false);
     const point = await center(page);
     await page.mouse.click(point.x, point.y, { button: "right" });
     expect((await records(page)).contextmenu).toEqual([false]);
@@ -216,7 +214,7 @@ test.describe("lightbox native photo handling", () => {
     expect(seen.dragstart.filter((prevented) => !prevented)).toEqual([]);
   });
 
-  test("a zoomed mouse drag on the photo pans, and one at fit starts the browser's file drag and does not page", async ({
+  test("a zoomed mouse drag on the photo pans, and one at fit pages", async ({
     page,
   }) => {
     await open(page);
@@ -378,7 +376,7 @@ test.describe("lightbox native photo handling", () => {
 test.describe("lightbox native drag across engines", {
   tag: "@desktop",
 }, () => {
-  test("a zoomed mouse drag on the photo pans with no file drag, and one at fit starts the file drag", async ({
+  test("a zoomed mouse drag on the photo pans with no file drag, and one at fit pages", async ({
     page,
   }) => {
     await open(page);

@@ -228,6 +228,7 @@ export function createCarousel(
     { translate: string; snap: string }
   >();
   const rendered = new Map<HTMLElement, string>();
+  const laps = new Map<HTMLElement, number>();
   const spacers: HTMLElement[] = [];
   const observedSlides = new Set<HTMLElement>();
   let span = 0;
@@ -304,6 +305,7 @@ export function createCarousel(
   let unsettled = false;
   // Screen readers announce changes to a live region already in the page, not one inserted with its text.
   let silent = false;
+  let catchesClicks = true;
   const live = document.createElement("div");
   live.setAttribute("aria-live", "polite");
   live.setAttribute("aria-atomic", "true");
@@ -344,13 +346,20 @@ export function createCarousel(
     return clamp(rtl ? -viewport.scrollLeft : viewport.scrollLeft, max);
   }
 
+  function lapOf(index: number, current: number) {
+    return span
+      ? Math.round(
+          (current + width / 2 - starts[index] - (widths[index] ?? 0) / 2) /
+            span,
+        )
+      : 0;
+  }
+
   function render() {
     const current = position() + stretch;
     slides.forEach((slide, index) => {
       const size = widths[index] ?? 0;
-      const cycle = span
-        ? Math.round((current + width / 2 - starts[index] - size / 2) / span)
-        : 0;
+      const cycle = laps.get(slide) ?? lapOf(index, current);
       const offset = size
         ? Math.round(
             ((aligned[index] + cycle * span - current) / size) * 1000,
@@ -423,6 +432,8 @@ export function createCarousel(
   }
 
   function jumpLoop(target: number) {
+    const turns = Math.round((target - position()) / span);
+    for (const [slide, lap] of laps) laps.set(slide, lap + turns);
     const snap = viewport.style.scrollSnapType;
     viewport.style.scrollSnapType = "none";
     scrollTo(target, "instant");
@@ -1093,6 +1104,7 @@ export function createCarousel(
       slide.removeAttribute("data-re-cycle");
     }
     rendered.clear();
+    laps.clear();
     stretch = 0;
     span = 0;
     slides = readSlides();
@@ -1714,7 +1726,8 @@ export function createCarousel(
     readyDrag();
     if (!dragReady) return;
     const caught =
-      spring !== null || window.performance.now() - lastScroll < 100;
+      catchesClicks &&
+      (spring !== null || window.performance.now() - lastScroll < 100);
     interrupt(false);
     suppressClick = false;
     pointer = {
@@ -1774,6 +1787,18 @@ export function createCarousel(
     silence: () => {
       silent = true;
       live.remove();
+    },
+    passClicks: () => {
+      catchesClicks = false;
+    },
+    keepLaps: (kept) => {
+      laps.clear();
+      const current = position() + stretch;
+      for (const slide of kept) {
+        const index = slides.indexOf(slide);
+        if (span && index >= 0) laps.set(slide, lapOf(index, current));
+      }
+      render();
     },
   };
   Object.defineProperty(controller, internalKey, { value: reach });

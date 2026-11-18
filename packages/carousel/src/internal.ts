@@ -15,4 +15,6 @@ export interface CarouselInternals {
   align(): "start" | "center" | undefined;
   goTo(index: number, behavior?: ScrollBehavior, announce?: boolean): void;
   silence(): void;
+  passClicks(): void;
+  keepLaps(slides: readonly HTMLElement[]): void;
 }

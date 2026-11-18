@@ -175,7 +175,7 @@ describe("lightbox lifecycle", () => {
     );
   });
 
-  it("stops a paging move under a touch on the photo, and leaves a mouse press on it to the file drag", () => {
+  it("stops a paging move under a touch on the photo, and leaves a mouse press on it to the strip's drag", () => {
     vi.useFakeTimers({
       toFake: ["requestAnimationFrame", "cancelAnimationFrame", "performance"],
     });
@@ -201,7 +201,7 @@ describe("lightbox lifecycle", () => {
       image.dispatchEvent(event);
     };
     press("mouse");
-    expect(image.hasAttribute("data-carousel-no-drag")).toBe(true);
+    expect(image.hasAttribute("data-carousel-no-drag")).toBe(false);
     window.dispatchEvent(new MouseEvent("pointerup", { button: 0 }));
     controller.next();
     vi.advanceTimersByTime(48);
@@ -214,7 +214,7 @@ describe("lightbox lifecycle", () => {
     expect(viewport.scrollLeft).toBe(held);
   });
 
-  it("jumps directly to distant images without traversing unloaded pages in either direction", () => {
+  it("jumps to the slot beside a distant image without traversing unloaded pages in either direction", () => {
     const controller = create();
     controller.open(gallery);
     const viewport = dialog().querySelector<HTMLElement>(
@@ -228,7 +228,7 @@ describe("lightbox lifecycle", () => {
       },
     });
     controller.goTo(5);
-    expect(viewport.scrollLeft).toBe(5120);
+    expect(viewport.scrollLeft).toBe(4096);
     expect(dialog().querySelector(".re-lightbox-counter")?.textContent).toBe(
       "6 / 6",
     );
@@ -240,7 +240,7 @@ describe("lightbox lifecycle", () => {
     controller.prev();
     viewport.scrollLeft = 4600;
     controller.goTo(0);
-    expect(viewport.scrollLeft).toBe(0);
+    expect(viewport.scrollLeft).toBe(1024);
     expect(controller.getState()).toMatchObject({
       index: 0,
       zoom: { scale: 1, x: 0, y: 0 },

@@ -21,9 +21,10 @@ async function open(
     captions = false,
     srcset = false,
     slots = false,
+    styles = [] as string[],
   } = {},
 ) {
-  await mount(page, "", ["lightbox/base.css", "lightbox/theme.css"]);
+  await mount(page, "", ["lightbox/base.css", "lightbox/theme.css", ...styles]);
   await page.evaluate(
     async ([extra, total, start, captioned, widths, slotted]) => {
       const { createLightbox } = await import("/modules/lightbox/index.js");
@@ -250,6 +251,37 @@ const offCenter = (page: Page) =>
     return Math.abs(b.left + b.width / 2 - (a.left + a.width / 2));
   });
 
+test("the carousel's own stylesheet on the page leaves the slides edge to edge and the thumbnails at 44px, 8px apart", async ({
+  page,
+}) => {
+  await open(
+    page,
+    { thumbnails: "bottom" },
+    { styles: ["carousel/styles.css"] },
+  );
+  const layout = await page.evaluate(() => {
+    const viewport = document.querySelector(
+      ".re-lightbox-viewport",
+    ) as HTMLElement;
+    const slides = viewport.querySelectorAll<HTMLElement>(".re-lightbox-slide");
+    const [first, second] = [
+      ...document.querySelectorAll(".re-lightbox-thumbnails button"),
+    ].map((thumb) => thumb.getBoundingClientRect());
+    return {
+      pitch: slides[1].offsetLeft - slides[0].offsetLeft,
+      width: viewport.clientWidth,
+      thumb: first.width,
+      gap: second.left - first.right,
+    };
+  });
+  expect(layout).toEqual({
+    pitch: layout.width,
+    width: layout.width,
+    thumb: 44,
+    gap: 8,
+  });
+});
+
 test("the active thumbnail stays centered from the first photo to the fortieth", async ({
   page,
 }) => {
@@ -261,7 +293,7 @@ test("the active thumbnail stays centered from the first photo to the fortieth",
   }
 });
 
-test("a click on thumbnail 38 fades there and the strip ends with 38 centered", async ({
+test("a click on thumbnail 38 pages there without a fade and the strip ends with 38 centered", async ({
   page,
 }) => {
   await open(page, { thumbnails: "bottom" }, { count: 40 });
@@ -280,8 +312,39 @@ test("a click on thumbnail 38 fades there and the strip ends with 38 centered", 
       }),
   );
   await page.getByRole("button", { name: "Show image 38" }).click();
-  expect(Math.min(...(await opacities))).toBeLessThan(0.5);
+  expect(Math.min(...(await opacities))).toBe(1);
   expect((await lightbox(page)).index).toBe(37);
+  await expect.poll(() => offCenter(page)).toBeLessThanOrEqual(2);
+});
+
+test("thumbnails clicked 60ms apart while the strip centers each one open every photo", {
+  tag: "@desktop",
+}, async ({ page }) => {
+  await open(page, { thumbnails: "bottom" }, { count: 8 });
+  const opened: number[] = [];
+  for (const index of [3, 1, 5, 2, 6]) {
+    const box = await page
+      .getByRole("button", { name: `Show image ${index + 1}` })
+      .boundingBox();
+    if (!box) throw new Error(`Thumbnail ${index + 1} has no box.`);
+    await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2);
+    opened.push((await lightbox(page)).index);
+    await page.waitForTimeout(60);
+  }
+  expect(opened).toEqual([3, 1, 5, 2, 6]);
+});
+
+test("a second click on a thumbnail while the strip centers it still ends with it centered", {
+  tag: "@desktop",
+}, async ({ page }) => {
+  await open(page, { thumbnails: "bottom" }, { count: 40 });
+  const thumb = page.getByRole("button", { name: "Show image 6" });
+  await thumb.click();
+  await page.waitForTimeout(80);
+  const box = await thumb.boundingBox();
+  if (!box) throw new Error("Thumbnail 6 has no box.");
+  await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2);
+  expect((await lightbox(page)).index).toBe(5);
   await expect.poll(() => offCenter(page)).toBeLessThanOrEqual(2);
 });
 
