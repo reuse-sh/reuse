@@ -141,6 +141,105 @@ test("the controls sit in their corners in a fixed order", async ({ page }) => {
   );
 });
 
+async function openFiles(page: Page, files: string[]) {
+  await mount(page, "", ["lightbox/base.css", "lightbox/theme.css"]);
+  await page.evaluate(async (sources) => {
+    const { createLightbox } = await import("/modules/lightbox/index.js");
+    const blob = URL.createObjectURL(
+      new Blob(["photo"], { type: "image/jpeg" }),
+    );
+    const lightbox = createLightbox({
+      history: false,
+      controls: { download: true },
+    });
+    Object.assign(window, { lightbox });
+    lightbox.open(
+      sources.map((src) => ({
+        src: src === "blob" ? blob : src,
+        width: 1200,
+        height: 800,
+      })),
+    );
+  }, files);
+  await page.waitForTimeout(500);
+}
+
+test("Download offers only web and blob files", async ({ page }) => {
+  const files = [
+    "javascript:alert(1)",
+    "JAVASCRIPT:alert(1)",
+    "\tjavascript:alert(1)",
+    "data:text/html,%3Cscript%3Ealert(1)%3C/script%3E",
+    "https://cdn.test/photo.jpg",
+    "blob",
+  ];
+  await openFiles(page, files);
+  const offered: boolean[] = [];
+  for (let index = 0; index < files.length; index++) {
+    await page.evaluate((i) => (window as Window).lightbox.goTo(i), index);
+    offered.push(await page.locator(".re-lightbox-download").isVisible());
+  }
+  expect(offered).toEqual([false, false, false, false, true, true]);
+});
+
+test("Download saves a file from another origin without leaving the page", async ({
+  page,
+}) => {
+  await page.route("https://cdn.test/photo.jpg", (route) =>
+    route.fulfill({
+      contentType: "image/jpeg",
+      headers: { "access-control-allow-origin": "*" },
+      body: "photo",
+    }),
+  );
+  await openFiles(page, ["https://cdn.test/photo.jpg"]);
+  const [file] = await Promise.all([
+    page.waitForEvent("download"),
+    page.click(".re-lightbox-download"),
+  ]);
+  expect(file.suggestedFilename()).toBe("photo.jpg");
+  expect(page.url()).toBe("http://reuse.test/");
+});
+
+test("Download opens a file another origin keeps from scripts in a new tab", async ({
+  page,
+}) => {
+  // Playwright answers a fulfilled cross-origin fetch with CORS headers, so a refused read is an aborted fetch.
+  await page
+    .context()
+    .route("https://cdn.test/photo.jpg", (route) =>
+      route.request().resourceType() === "fetch"
+        ? route.abort()
+        : route.fulfill({ contentType: "image/jpeg", body: "photo" }),
+    );
+  await openFiles(page, ["https://cdn.test/photo.jpg"]);
+  const [popup] = await Promise.all([
+    page.waitForEvent("popup"),
+    page.click(".re-lightbox-download"),
+  ]);
+  await popup.waitForLoadState();
+  expect(popup.url()).toBe("https://cdn.test/photo.jpg");
+  expect(await popup.evaluate(() => window.opener)).toBeNull();
+  expect(page.url()).toBe("http://reuse.test/");
+});
+
+test("Download saves a same-origin file natively", async ({ page }) => {
+  await openFiles(page, ["/photo.jpg"]);
+  await page.route("http://reuse.test/photo.jpg", (route) =>
+    route.fulfill({ contentType: "image/jpeg", body: "photo" }),
+  );
+  await expect(page.locator(".re-lightbox-download")).toHaveAttribute(
+    "download",
+    "",
+  );
+  const [file] = await Promise.all([
+    page.waitForEvent("download"),
+    page.click(".re-lightbox-download"),
+  ]);
+  expect(file.suggestedFilename()).toBe("photo.jpg");
+  expect(page.url()).toBe("http://reuse.test/");
+});
+
 test("the fullscreen button toggles the viewer's stage, and leaving fullscreen keeps it open", async ({
   page,
 }) => {

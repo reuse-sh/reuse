@@ -75,6 +75,11 @@ async function setup(
       };
       const kinds: Record<string, () => Promise<LightboxItem>> = {
         photo: async () => ({ src: image, width: 1200, height: 800 }),
+        web: async () => ({
+          src: "https://cdn.test/photo.svg",
+          width: 1200,
+          height: 800,
+        }),
         video: async () => ({
           type: "video",
           video: { src: await recorded() },
@@ -299,7 +304,13 @@ test("with autoplay off the video waits for a press", async ({ page }) => {
 });
 
 test("a media slide hides zoom and download", async ({ page }) => {
-  await setup(page, "photo,still", { controls: { download: true } });
+  await page.route("https://cdn.test/photo.svg", (route) =>
+    route.fulfill({
+      contentType: "image/svg+xml",
+      body: decodeURIComponent(photo(1).split(",")[1]),
+    }),
+  );
+  await setup(page, "web,still", { controls: { download: true } });
   await expect(page.locator(".re-lightbox-zoom")).toBeVisible();
   await expect(page.locator(".re-lightbox-download")).toBeVisible();
   await step(page, "next");

@@ -2054,14 +2054,16 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
       s.next.disabled = !looping() && state.index === items.length - 1;
     if (single) toggleSlideshow(s, false);
     if (s.download) {
-      s.download.hidden = Boolean(item.type);
       const href = largestSource(item.srcset, item.src ?? "");
-      let scheme = "";
+      let file = false;
       try {
-        scheme = new URL(href, s.dialog.ownerDocument.baseURI).protocol;
+        file = /^(https?|blob):$/.test(
+          new URL(href, s.dialog.ownerDocument.baseURI).protocol,
+        );
       } catch {}
-      if (scheme === "javascript:") s.download.removeAttribute("href");
-      else s.download.setAttribute("href", href);
+      s.download.hidden = Boolean(item.type) || !file;
+      if (file) s.download.setAttribute("href", href);
+      else s.download.removeAttribute("href");
     }
     const mark = (index: number, current: boolean) => {
       const slide = s.slides[index];
@@ -3650,6 +3652,40 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
       ? button("a", "download", strings.download, "↓", undefined, toolbarEnd)
       : undefined;
     download?.setAttribute("download", "");
+    // Browsers ignore the download attribute across origins and navigate the tab instead.
+    download?.addEventListener(
+      "click",
+      (event) => {
+        if (
+          download.origin === doc.location.origin ||
+          event.button ||
+          event.metaKey ||
+          event.ctrlKey ||
+          event.shiftKey ||
+          event.altKey
+        )
+          return;
+        event.preventDefault();
+        const { href, pathname } = download;
+        fetch(href)
+          .then((response) =>
+            response.ok ? response.blob() : Promise.reject(),
+          )
+          .then(
+            (blob) => {
+              const link = doc.createElement("a");
+              link.href = URL.createObjectURL(blob);
+              link.download = pathname.split("/").pop() ?? "";
+              link.click();
+              abort.signal.addEventListener("abort", () =>
+                URL.revokeObjectURL(link.href),
+              );
+            },
+            () => doc.defaultView?.open(href, "_blank", "noopener"),
+          );
+      },
+      { signal: abort.signal },
+    );
     const closeButton = control("close")
       ? button(
           "button",
