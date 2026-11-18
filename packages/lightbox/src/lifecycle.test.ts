@@ -536,7 +536,7 @@ describe("lightbox lifecycle", () => {
     });
     for (const type of ["change", "beforeclose"] as const)
       controller.on(type, (event) => {
-        cancelable[type] = "preventDefault" in event;
+        cancelable[type] = "cancelable" in event && event.cancelable;
       });
     controller.on("open", () => {}, { signal: AbortSignal.abort() });
     controller.open(gallery);
@@ -1471,6 +1471,39 @@ describe("lightbox public API", () => {
     expect(events).toEqual(["beforeclose", "closed"]);
     expect(controller.getState()).toMatchObject({ isOpen: false, count: 0 });
     expect(() => controller.open([])).toThrow(TypeError);
+  });
+
+  it("closes when setItems empties the list although beforeclose vetoes, and says that close cannot be cancelled", async () => {
+    const controller = create({ history: false });
+    const cancelable: boolean[] = [];
+    controller.on("beforeclose", (event) => {
+      cancelable.push(event.cancelable);
+      event.preventDefault();
+    });
+    controller.open(gallery, 1);
+    controller.setItems([]);
+    expect(controller.getState().isClosing).toBe(true);
+    await controller.close();
+    expect(document.querySelector("dialog")).toBeNull();
+    expect(cancelable).toEqual([false]);
+    expect(controller.getState()).toMatchObject({ isOpen: false, count: 0 });
+  });
+
+  it("closes when a beforeclose listener empties the list and then vetoes", async () => {
+    const controller = create({ history: false });
+    const cancelable: boolean[] = [];
+    controller.on("beforeclose", (event) => {
+      cancelable.push(event.cancelable);
+      controller.setItems([]);
+      event.preventDefault();
+    });
+    controller.open(gallery, 1);
+    void controller.close();
+    expect(controller.getState().isClosing).toBe(true);
+    await controller.close();
+    expect(document.querySelector("dialog")).toBeNull();
+    expect(cancelable).toEqual([true]);
+    expect(controller.getState()).toMatchObject({ isOpen: false, count: 0 });
   });
 
   it("leaves no dialog, scroll lock or open state when a slot, renderContent or an origin throws in open()", () => {

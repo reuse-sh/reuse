@@ -263,7 +263,7 @@ export const libraries: Library[] = [
       ],
       [
         "append(items), setItems(items, index?)",
-        "Adds images at the end or replaces the list while the viewer is open, without moving the current image. An empty list closes the viewer.",
+        "Adds images at the end or replaces the list while the viewer is open, without moving the current image. An empty list closes the viewer, and its beforeclose cannot be cancelled.",
       ],
       [
         "setOptions(options), getSlide(index)",

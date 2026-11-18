@@ -147,6 +147,8 @@ export interface LightboxEvent {
 }
 
 export interface LightboxCancelableEvent extends LightboxEvent {
+  /** False for the close an emptied list starts, which preventDefault() cannot stop. */
+  readonly cancelable: boolean;
   readonly defaultPrevented: boolean;
   /** Keeps the viewer open. */
   preventDefault(): void;
@@ -836,6 +838,7 @@ export function createLightbox<Item extends LightboxItem = LightboxItem>(
   const historyId = Math.random().toString(36).slice(2);
   let historyWindow: Window | undefined;
   let vetting = false;
+  let forcing = false;
 
   let notifiedState = state;
 
@@ -886,7 +889,7 @@ export function createLightbox<Item extends LightboxItem = LightboxItem>(
     for (const slot of session?.slots ?? []) slot.update?.(state);
   }
 
-  function emit(type: LightboxEventName, s: Session | null) {
+  function emit(type: LightboxEventName, s: Session | null, cancelable = true) {
     let prevented = false;
     const event: LightboxEvent = {
       type,
@@ -895,10 +898,11 @@ export function createLightbox<Item extends LightboxItem = LightboxItem>(
     };
     if (type === "beforeclose")
       Object.defineProperties(event, {
+        cancelable: { value: cancelable, enumerable: true },
         defaultPrevented: { get: () => prevented, enumerable: true },
         preventDefault: {
           value: () => {
-            prevented = true;
+            prevented = cancelable;
           },
         },
       });
@@ -4522,17 +4526,22 @@ export function createLightbox<Item extends LightboxItem = LightboxItem>(
     return landing.then(report);
   }
 
-  function closeSession(fromHistory: boolean): Promise<void> {
+  function closeSession(fromHistory: boolean, force = false): Promise<void> {
     const s = session;
     if (!s) return closePromise ?? Promise.resolve();
     if (closePromise) return closePromise;
-    if (vetting) return Promise.resolve();
+    if (vetting) {
+      forcing ||= force;
+      return Promise.resolve();
+    }
     vetting = true;
+    forcing = force;
     let prevented: boolean;
     try {
-      prevented = emit("beforeclose", s);
+      prevented = emit("beforeclose", s, !force) && !forcing;
     } finally {
       vetting = false;
+      forcing = false;
     }
     if (prevented) {
       if (fromHistory && historyWindow) pushHistory(historyWindow);
@@ -4594,8 +4603,9 @@ export function createLightbox<Item extends LightboxItem = LightboxItem>(
     }
     if (state.isClosing || !nextItems.length) {
       listAfterClose = { items: nextItems, sources: [...input] };
-      if (!state.isClosing) void close();
-      if (!state.isClosing && session === s) listAfterClose = undefined;
+      if (!state.isClosing) void closeSession(false, true);
+      if (!state.isClosing && !forcing && session === s)
+        listAfterClose = undefined;
       return;
     }
     finishFade(s, true);
