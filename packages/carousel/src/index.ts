@@ -231,6 +231,7 @@ export function createCarousel(
   const laps = new Map<HTMLElement, number>();
   const spacers: HTMLElement[] = [];
   const observedSlides = new Set<HTMLElement>();
+  const measured = new Map<Element, number>();
   let span = 0;
   let starts: number[] = [];
   let aligned: number[] = [];
@@ -1194,6 +1195,11 @@ export function createCarousel(
       );
     }
     width = viewportWidth;
+    measured.clear();
+    measured.set(viewport, viewportWidth);
+    slides.forEach((slide, index) => {
+      measured.set(slide, widths[index]);
+    });
     pages = measurePages();
     const seen = span
       ? slides
@@ -1510,7 +1516,18 @@ export function createCarousel(
   };
 
   const observer = window.ResizeObserver
-    ? new window.ResizeObserver(requestRefresh)
+    ? new window.ResizeObserver((entries) => {
+        if (
+          entries.some(
+            ({ target }) =>
+              measured.get(target) !==
+              (target === viewport
+                ? viewport.clientWidth
+                : (target as HTMLElement).offsetWidth),
+          )
+        )
+          requestRefresh();
+      })
     : undefined;
   const mutation = window.MutationObserver
     ? new window.MutationObserver(() => {

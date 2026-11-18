@@ -130,6 +130,39 @@ test("a click during a smooth scroll travels on to a snap point instead of stopp
   ).toBe("");
 });
 
+test("creating a strip measures it once, and a resize measures it again", async ({
+  page,
+}) => {
+  await mount(
+    page,
+    `<div id="strip" style="width:600px;--re-carousel-gap:0px">${slides}</div>`,
+    ["carousel/styles.css"],
+  );
+  const refreshes = await page.evaluate(async () => {
+    const strip = document.getElementById("strip") as HTMLElement;
+    let reads = 0;
+    const read = window.getComputedStyle;
+    window.getComputedStyle = (element, pseudo) => {
+      if (element instanceof HTMLElement && element.parentElement === strip)
+        reads++;
+      return read(element, pseudo);
+    };
+    const frames = (count: number) =>
+      new Promise<void>((resolve) => {
+        const tick = () => (--count ? requestAnimationFrame(tick) : resolve());
+        requestAnimationFrame(tick);
+      });
+    const { createCarousel } = await import("/modules/carousel/index.js");
+    createCarousel(strip);
+    await frames(5);
+    const created = reads / 6;
+    strip.style.width = "500px";
+    await frames(5);
+    return { created, resized: reads / 6 - created };
+  });
+  expect(refreshes).toEqual({ created: 1, resized: 1 });
+});
+
 test("a percentage scroll padding places the slide at the padded edge", async ({
   page,
 }) => {
