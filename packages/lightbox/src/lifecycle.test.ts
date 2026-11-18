@@ -1499,15 +1499,15 @@ describe("lightbox public API", () => {
     const controller = create({ history: false });
     const cancelable: boolean[] = [];
     controller.on("beforeclose", (event) => {
-      cancelable.push(event.cancelable);
       event.preventDefault();
+      cancelable.push(event.cancelable, event.defaultPrevented);
     });
     controller.open(gallery, 1);
     controller.setItems([]);
     expect(controller.getState().isClosing).toBe(true);
     await controller.close();
     expect(document.querySelector("dialog")).toBeNull();
-    expect(cancelable).toEqual([false]);
+    expect(cancelable).toEqual([false, false]);
     expect(controller.getState()).toMatchObject({ isOpen: false, count: 0 });
   });
 
