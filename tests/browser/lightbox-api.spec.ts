@@ -472,14 +472,25 @@ test("a slot draws the built-in icons, or the ones the icons option gives", asyn
     const drawn: string[] = [];
     const lightbox = createLightbox({
       history: false,
-      icons: { next: () => document.createTextNode("Next!") },
+      icons: {
+        next: () => document.createTextNode("Next!"),
+        slideshowPause: () => document.createTextNode("Pause!"),
+      },
       slots: {
         toolbarEnd: ({ icon }) => {
           const node = document.createElement("span");
-          for (const name of ["previous", "next"] as const) {
+          for (const name of [
+            "previous",
+            "next",
+            "zoomOut",
+            "fullscreenExit",
+            "slideshowPause",
+          ] as const) {
             const shown = icon(name);
             drawn.push(
-              shown instanceof SVGElement ? "svg" : String(shown.textContent),
+              shown instanceof SVGElement
+                ? String(shown.querySelector("path")?.getAttribute("d"))
+                : String(shown.textContent),
             );
             node.append(shown);
           }
@@ -496,5 +507,11 @@ test("a slot draws the built-in icons, or the ones the icons option gives", asyn
     ]);
     return drawn;
   });
-  expect(icons).toEqual(["svg", "Next!"]);
+  expect(icons).toEqual([
+    "m15 6-6 6 6 6",
+    "Next!",
+    "M18 11a7 7 0 1 1-14 0 7 7 0 0 1 14 0m-2 5 4 4M8 11h6",
+    "M9 4v5H4m11-5v5h5m0 6h-5v5m-6 0v-5H4",
+    "Pause!",
+  ]);
 });

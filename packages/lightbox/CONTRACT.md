@@ -17,7 +17,7 @@ LightboxOptions:
 - slideshow?: { interval?: number }, ms between photos, default 4000
 - autoHide?: number | false, default 2500, ms of a still mouse before the controls hide; false keeps them up
 - className?: string, added to the dialog
-- icons?: Partial<Record<"close" | "previous" | "next" | "zoom" | "fullscreen" | "download" | "slideshow", () => Node>>; a key without one keeps the built-in SVG icon, which zoom, slideshow and fullscreen switch with their state; the previous arrow keeps the class re-lightbox-prev
+- icons?: Partial<Record<LightboxIcon, () => Node>>, where LightboxIcon is "close" | "previous" | "next" | "zoom" | "zoomOut" | "fullscreen" | "fullscreenExit" | "download" | "slideshow" | "slideshowPause"; a key without one keeps the built-in SVG icon. Zoom, fullscreen and slideshow show zoomOut, fullscreenExit and slideshowPause while zoomed, in fullscreen and playing; without that key they show the built-in second icon when their own key is not given either, else keep the given one. The previous arrow keeps the class re-lightbox-prev
 - renderContent?: (context: LightboxContentContext) => undefined | (() => void), an overlay above the image; the returned function runs when the slide unloads. Media slides do not call it
 - content?: readonly LightboxContent[], the modules for items with a type (see Media slides)
 - autoplayMedia?: boolean, default true; a player starts the first time its slide is current after the open flight, when open() ran inside a user action (navigator.userActivation.isActive, assumed where missing)
@@ -65,7 +65,7 @@ Slideshow. button.re-lightbox-slideshow starts and stops it; its label is string
 
 LightboxSlotName: "toolbarStart" | "toolbarEnd" | "footer" | "aside".
 
-LightboxSlot: (context: { lightbox: Lightbox; document: Document; icon(name: LightboxIcon): Node }) => { node: Node; update?: (state: LightboxState) => void; destroy?: () => void }. toolbarStart sits after the counter at the start of the top bar, toolbarEnd before the close button, footer between the caption and the bottom strip, aside in a side panel 320px wide that narrows the photo and moves under it below 720px; the dialog carries data-aside while the panel exists. Slot elements take the theme's button style through the re-lightbox-button class, follow the markup in the tab order and hide with the controls. update runs on every published state change and once after mounting; destroy runs once when the dialog closes.
+LightboxSlot: (context: { lightbox: Lightbox; document: Document; icon(name: LightboxIcon): Node }) => { node: Node; update?: (state: LightboxState) => void; destroy?: () => void }. icon returns a new node for the icons option's key, else the built-in SVG, so a slot swaps icon("zoom") for icon("zoomOut") in update. toolbarStart sits after the counter at the start of the top bar, toolbarEnd before the close button, footer between the caption and the bottom strip, aside in a side panel 320px wide that narrows the photo and moves under it below 720px; the dialog carries data-aside while the panel exists. Slot elements take the theme's button style through the re-lightbox-button class, follow the markup in the tab order and hide with the controls. update runs on every published state change and once after mounting; destroy runs once when the dialog closes.
 
 LightboxEventMap: { open, opened, change, settle, closed: LightboxEvent; beforeclose: LightboxCancelableEvent }. LightboxEventName is keyof LightboxEventMap.
 

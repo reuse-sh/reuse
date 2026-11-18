@@ -1376,6 +1376,63 @@ test("an icon given for one key replaces only that button's built-in icon", asyn
   await expect(page.locator(".re-lightbox-zoom svg")).toHaveCount(1);
 });
 
+test("zoom, slideshow and fullscreen show the second-state icon the icons option gives, else keep a given first icon", async ({
+  page,
+}) => {
+  await mount(page, "", ["lightbox/base.css", "lightbox/theme.css"]);
+  await page.evaluate(async () => {
+    const { createLightbox } = await import("/modules/lightbox/index.js");
+    const mark = (name: string) => () => {
+      const element = document.createElement("i");
+      element.className = name;
+      return element;
+    };
+    createLightbox({
+      history: false,
+      controls: { fullscreen: true, slideshow: true },
+      icons: {
+        zoom: mark("own-zoom"),
+        zoomOut: mark("own-zoom-out"),
+        slideshow: mark("own-play"),
+        fullscreenExit: mark("own-exit"),
+      },
+    }).open(
+      Array.from({ length: 3 }, () => ({
+        src: `data:image/svg+xml,${encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="800"/>')}`,
+        width: 1200,
+        height: 800,
+      })),
+    );
+  });
+  const shown = (name: string) =>
+    page.evaluate(
+      (selector) =>
+        [...(document.querySelector(selector)?.children ?? [])].map((child) =>
+          child.getAttribute("class"),
+        ),
+      `.re-lightbox-${name}`,
+    );
+  const fullscreenPath = () =>
+    page.locator(".re-lightbox-fullscreen path").getAttribute("d");
+  expect(await shown("zoom")).toEqual(["own-zoom"]);
+  expect(await shown("slideshow")).toEqual(["own-play"]);
+  const enter = await fullscreenPath();
+  await page.click(".re-lightbox-zoom");
+  await expect.poll(() => shown("zoom")).toEqual(["own-zoom-out"]);
+  await page.click(".re-lightbox-zoom");
+  await expect.poll(() => shown("zoom")).toEqual(["own-zoom"]);
+  await page.click(".re-lightbox-slideshow");
+  await expect(page.locator(".re-lightbox-slideshow")).toHaveAttribute(
+    "aria-label",
+    "Stop slideshow",
+  );
+  expect(await shown("slideshow")).toEqual(["own-play"]);
+  await page.click(".re-lightbox-fullscreen");
+  await expect.poll(() => shown("fullscreen")).toEqual(["own-exit"]);
+  await page.evaluate(() => document.exitFullscreen());
+  await expect.poll(fullscreenPath).toBe(enter);
+});
+
 test("on a plain page the theme sets a sans-serif font, so the counter is not the browser's serif default", async ({
   page,
 }) => {

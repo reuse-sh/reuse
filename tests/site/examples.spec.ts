@@ -392,6 +392,29 @@ test("every control style shows an icon in each lightbox button", async ({
   }
 });
 
+test("the toolbar style's zoom button swaps to the site's zoom-out icon", async ({
+  page,
+}) => {
+  await page.goto("/lightbox/controls/toolbar");
+  await page.locator('main a[href^="/images/marble"]').first().click();
+  await expect(
+    page.locator("dialog[open] .re-lightbox-image").first(),
+  ).toBeVisible();
+  const zoom = page
+    .locator("dialog[open] .re-lightbox-style-toolbar button", {
+      has: page.locator("svg"),
+    })
+    .last();
+  const icon = () => zoom.evaluate((button) => button.innerHTML);
+  const zoomIn = await icon();
+  await zoom.click();
+  await expect(zoom).toHaveAttribute("aria-label", "Zoom out");
+  expect(await icon()).not.toBe(zoomIn);
+  await zoom.click();
+  await expect(zoom).toHaveAttribute("aria-label", "Zoom in");
+  expect(await icon()).toBe(zoomIn);
+});
+
 test("every lightbox on the site uses the site's icons and font", async ({
   page,
 }) => {

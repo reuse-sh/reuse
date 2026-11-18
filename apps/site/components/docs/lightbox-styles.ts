@@ -395,6 +395,8 @@ export function lightboxChrome(options: LightboxStyle) {
           options.zoomButton
             ? `
           const zoomed = state.zoom.scale > 1;
+          if (zoom.getAttribute("aria-pressed") !== String(zoomed))
+            zoom.replaceChildren(icon(zoomed ? "zoomOut" : "zoom"));
           zoom.setAttribute("aria-label", zoomed ? "Zoom out" : "Zoom in");
           zoom.setAttribute("aria-pressed", String(zoomed));`
             : ""

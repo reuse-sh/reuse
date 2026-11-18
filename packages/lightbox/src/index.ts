@@ -157,9 +157,12 @@ const builtInIcons: Record<LightboxIcon, BuiltInIcon> = {
   previous: "previous",
   next: "next",
   zoom: "zoomIn",
+  zoomOut: "zoomOut",
   fullscreen: "fullscreenEnter",
+  fullscreenExit: "fullscreenExit",
   download: "download",
   slideshow: "play",
+  slideshowPause: "pause",
 };
 
 export type LightboxIcon =
@@ -167,9 +170,12 @@ export type LightboxIcon =
   | "previous"
   | "next"
   | "zoom"
+  | "zoomOut"
   | "fullscreen"
+  | "fullscreenExit"
   | "download"
-  | "slideshow";
+  | "slideshow"
+  | "slideshowPause";
 
 export interface LightboxEvent {
   readonly type: LightboxEventName;
@@ -1088,7 +1094,7 @@ export function createLightbox<Item extends LightboxItem = LightboxItem>(
       "aria-label",
       on ? s.strings.slideshowStop : s.strings.slideshowStart,
     );
-    if (!settings.icons?.slideshow) showIcon(button, on ? "pause" : "play");
+    showStateIcon(button, "slideshow", "slideshowPause", on);
   }
 
   // A CSS easing list passes CSS.supports but makes animate() throw, so the check asks the same parser animate() uses.
@@ -1175,6 +1181,30 @@ export function createLightbox<Item extends LightboxItem = LightboxItem>(
     } finally {
       syncingCarousel = syncing;
     }
+  }
+
+  const shownIcons = new WeakMap<Element, LightboxIcon>();
+
+  function showControlIcon(button: Element, name: LightboxIcon) {
+    if (shownIcons.get(button) === name) return;
+    shownIcons.set(button, name);
+    const own = settings.icons?.[name]?.();
+    if (own) button.replaceChildren(own);
+    else showIcon(button, builtInIcons[name]);
+  }
+
+  // A given first icon stays in the second state unless the second one is given too.
+  function showStateIcon(
+    button: Element,
+    first: LightboxIcon,
+    second: LightboxIcon,
+    on: boolean,
+  ) {
+    const icons = settings.icons;
+    showControlIcon(
+      button,
+      on && (icons?.[second] || !icons?.[first]) ? second : first,
+    );
   }
 
   function lastIndex() {
@@ -1345,8 +1375,7 @@ export function createLightbox<Item extends LightboxItem = LightboxItem>(
       out ? s.strings.zoomOut : s.strings.zoomIn,
     );
     zoomButton?.setAttribute("aria-pressed", String(state.zoom.scale > 1));
-    if (zoomButton && !settings.icons?.zoom)
-      showIcon(zoomButton, out ? "zoomOut" : "zoomIn");
+    if (zoomButton) showStateIcon(zoomButton, "zoom", "zoomOut", out);
     s.dialog.dataset.zoomed = String(state.zoom.scale > 1);
     s.dialog.dataset.zoom = out ? "out" : "in";
     if (s.watchedScale !== state.zoom.scale) {
@@ -3780,10 +3809,12 @@ export function createLightbox<Item extends LightboxItem = LightboxItem>(
           "aria-label",
           full ? s.strings.fullscreenExit : s.strings.fullscreenEnter,
         );
-        if (s.fullscreenButton && !settings.icons?.fullscreen)
-          showIcon(
+        if (s.fullscreenButton)
+          showStateIcon(
             s.fullscreenButton,
-            full ? "fullscreenExit" : "fullscreenEnter",
+            "fullscreen",
+            "fullscreenExit",
+            full,
           );
         if (full) s.dialog.dataset.fullscreen = "";
         else delete s.dialog.dataset.fullscreen;
@@ -4081,7 +4112,6 @@ export function createLightbox<Item extends LightboxItem = LightboxItem>(
       tag: K,
       name: LightboxIcon,
       label: string,
-      builtIn: BuiltInIcon,
       action: (() => void) | undefined,
       parent: HTMLElement,
     ) => {
@@ -4089,9 +4119,7 @@ export function createLightbox<Item extends LightboxItem = LightboxItem>(
       if (tag === "button") element.setAttribute("type", "button");
       element.className = `re-lightbox-button re-lightbox-${name === "previous" ? "prev" : name}`;
       element.setAttribute("aria-label", label);
-      const icon = settings.icons?.[name]?.();
-      if (icon) element.append(icon);
-      else showIcon(element, builtIn);
+      showControlIcon(element, name);
       if (action)
         element.addEventListener("click", action, { signal: abort.signal });
       parent.append(element);
@@ -4106,21 +4134,13 @@ export function createLightbox<Item extends LightboxItem = LightboxItem>(
       toolbarStart.append(counter);
     }
     const zoomButton = control("zoom")
-      ? button(
-          "button",
-          "zoom",
-          strings.zoomIn,
-          "zoomIn",
-          () => toggleZoom(),
-          toolbarEnd,
-        )
+      ? button("button", "zoom", strings.zoomIn, () => toggleZoom(), toolbarEnd)
       : undefined;
     const slideshowButton = control("slideshow")
       ? button(
           "button",
           "slideshow",
           strings.slideshowStart,
-          "play",
           () => toggleSlideshow(s),
           toolbarEnd,
         )
@@ -4131,7 +4151,6 @@ export function createLightbox<Item extends LightboxItem = LightboxItem>(
             "button",
             "fullscreen",
             strings.fullscreenEnter,
-            "fullscreenEnter",
             () => {
               if (doc.fullscreenElement === stage)
                 void doc.exitFullscreen().catch(() => {});
@@ -4141,14 +4160,7 @@ export function createLightbox<Item extends LightboxItem = LightboxItem>(
           )
         : undefined;
     const download = control("download")
-      ? button(
-          "a",
-          "download",
-          strings.download,
-          "download",
-          undefined,
-          toolbarEnd,
-        )
+      ? button("a", "download", strings.download, undefined, toolbarEnd)
       : undefined;
     download?.setAttribute("download", "");
     download?.setAttribute("rel", "noopener");
@@ -4243,28 +4255,14 @@ export function createLightbox<Item extends LightboxItem = LightboxItem>(
       { signal: abort.signal },
     );
     const closeButton = control("close")
-      ? button(
-          "button",
-          "close",
-          strings.close,
-          "close",
-          () => void close(),
-          toolbarEnd,
-        )
+      ? button("button", "close", strings.close, () => void close(), toolbarEnd)
       : undefined;
     if (closeButton) closeButton.autofocus = true;
     const prev = control("arrows")
-      ? button(
-          "button",
-          "previous",
-          strings.previous,
-          "previous",
-          () => step(-1),
-          stage,
-        )
+      ? button("button", "previous", strings.previous, () => step(-1), stage)
       : undefined;
     const next = control("arrows")
-      ? button("button", "next", strings.next, "next", () => step(1), stage)
+      ? button("button", "next", strings.next, () => step(1), stage)
       : undefined;
     const footer = doc.createElement("div");
     footer.className = "re-lightbox-footer";
