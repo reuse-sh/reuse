@@ -1,11 +1,28 @@
+import {
+  type Annotation,
+  createAnnotatedImage,
+  createAnnotationEditor,
+} from "@reuse-sh/annotations";
 import { createAvatar, createAvatarGroup } from "@reuse-sh/avatars";
-import { easingGradient } from "@reuse-sh/gradients";
+import { createCarousel } from "@reuse-sh/carousel";
+import { createJustifiedGallery, createMasonry } from "@reuse-sh/gallery";
+import { createFadeEdge, easingGradient } from "@reuse-sh/gradients";
+import {
+  createCopyButton,
+  createFloatingTooltip,
+  createHoldToConfirm,
+  createMovingHighlight,
+} from "@reuse-sh/interactions";
 import { createThinkingDots } from "@reuse-sh/loaders";
+import { createStage, type StageAct, type StageOptions } from "@reuse-sh/stage";
 import { type MenuSlug, menuLibrary } from "../../lib/menu";
 import { photos } from "../../lib/photos";
 import { iconNode } from "../icons";
+import { nativeArrow } from "../lucide-arrows";
+import { buttonVariants } from "../ui/button";
 
-const people = ["Mara Lind", "Jonas Weber", "Aiko Tanaka", "Lea Novak"];
+const WIDTH = 240;
+const HEIGHT = 148;
 
 type Child = Node | string;
 
@@ -16,231 +33,873 @@ function el(tag: string, className = "", ...children: Child[]) {
   return node;
 }
 
-function img(index: number, on = false) {
+function target<T extends HTMLElement>(node: T, name: string) {
+  node.dataset.stageTarget = name;
+  return node;
+}
+
+function img(index: number, size?: string) {
   const image = document.createElement("img");
-  image.src = photos[index].src;
+  const photo = photos[index % photos.length];
+  image.src = size ? photo.src.replace(".svg", `-${size}.svg`) : photo.src;
   image.alt = "";
   image.decoding = "async";
-  if (on) image.setAttribute("data-on", "");
+  image.draggable = false;
   return image;
 }
 
-function cursor() {
-  return el("span", "pk-cursor", iconNode("cursor", 15));
+function arrow(name: "left" | "right", size: number) {
+  const svg = nativeArrow(name);
+  svg.setAttribute("width", String(size));
+  svg.setAttribute("height", String(size));
+  return svg;
 }
 
-function stage(slug: MenuSlug, cleanups: (() => void)[]) {
-  switch (slug) {
-    case "lightbox":
-      return el(
-        "div",
-        "pk pk-lb",
-        el("span", "pk-lb-photo", img(0)),
-        el("span", "pk-lb-n", `1 / ${photos.length}`),
-        el("span", "pk-lb-x", iconNode("close", 10)),
-        el("span", "pk-lb-thumbs", ...photos.map((_, i) => img(i, i === 0))),
-      );
-    case "carousel":
-      return el(
-        "div",
-        "pk pk-car",
-        el("span", "pk-car-track", ...[1, 4, 0, 5, 2, 3].map((i) => img(i))),
-        el(
-          "span",
-          "pk-car-dots",
-          ...[0, 1, 2, 3].map(() => document.createElement("i")),
-        ),
-      );
-    case "annotations":
-      return el(
-        "div",
-        "pk pk-ann",
-        img(0),
-        el("span", "pk-ann-region"),
-        el("span", "pk-ann-label", "Boathouse"),
-        el("span", "pk-ann-pin", "1"),
-      );
-    case "justified-gallery":
-      return el(
-        "div",
-        "pk pk-jg",
-        ...[
-          [1.78, 0.67, 1.5],
-          [1, 2.33],
-          [0.75, 1.33, 1.5],
-        ].map((ratios, row) =>
-          el(
-            "span",
-            "pk-jg-row",
-            ...ratios.map((ratio, i) => {
-              const image = img((row * 3 + i) % photos.length);
-              image.style.setProperty("--pk-ratio", String(ratio));
-              return image;
-            }),
-          ),
-        ),
-      );
-    case "masonry":
-      return el(
-        "div",
-        "pk pk-mas",
-        ...[
-          [52, 38, 24],
-          [30, 56, 30],
-          [44, 28, 46],
-        ].map((heights, lane) =>
-          el(
-            "span",
-            "pk-mas-lane",
-            ...heights.map((height, i) => {
-              const image = img((lane * 3 + i) % photos.length);
-              image.style.setProperty("--pk-height", `${height}px`);
-              return image;
-            }),
-          ),
-        ),
-      );
-    case "avatars": {
-      const single = el("span");
-      const group = el("div", "pk-av-group");
-      const faces = people.map(() => el("span"));
-      group.append(...faces);
-      const controllers = [
-        createAvatar(single, {
-          name: people[0],
-          src: photos[0].src,
-          size: 44,
-          badge: { type: "count", count: 3, label: "3 unread messages" },
-        }),
-        ...faces.map((face, i) =>
-          createAvatar(face, {
-            name: people[i],
-            src: photos[i + 1].src,
-            size: 30,
-          }),
-        ),
-      ];
-      const grouped = createAvatarGroup(group, { overlap: 8, clearance: 2 });
-      cleanups.push(() => {
-        grouped.destroy();
-        for (const controller of controllers) controller.destroy();
-      });
-      return el("div", "pk pk-av", single, group);
-    }
-    case "floating-tooltip": {
-      const tools = [
-        ["zoom", "Zoom"],
-        ["heart", "Favorite"],
-        ["share", "Share"],
-        ["trash", "Delete"],
-      ] as const;
-      const tip = el("span", "pk-tip-pop", tools[0][1]);
-      const move = el("span", "pk-tip-move", cursor(), tip);
-      const bar = el(
-        "span",
-        "pk-tip-bar",
-        ...tools.map(([name]) => iconNode(name, 15)),
-        move,
-      );
-      if (!matchMedia("(prefers-reduced-motion: reduce)").matches) {
-        let index = 0;
-        const arrive = () => {
-          tip.textContent = tools[index][1];
-        };
-        move.addEventListener("transitionend", arrive);
-        const step = setInterval(() => {
-          if (!bar.isConnected) return;
-          index = (index + 1) % tools.length;
-          move.style.setProperty("--i", String(index));
-        }, 1400);
-        cleanups.push(() => {
-          clearInterval(step);
-          move.removeEventListener("transitionend", arrive);
-        });
-      }
-      return el("div", "pk pk-tip", bar);
-    }
-    case "moving-highlight":
-      return el(
-        "div",
-        "pk pk-hl",
-        el(
-          "span",
-          "pk-hl-list",
-          el("span", "pk-hl-fill"),
-          ...["Inbox", "Drafts", "Sent", "Archive"].map((label) =>
-            el("span", "", label),
-          ),
-          el("span", "pk-hl-move", cursor()),
-        ),
-      );
-    case "hold-to-confirm":
-      return el(
-        "div",
-        "pk pk-hold",
-        el(
-          "span",
-          "pk-hold-btn",
-          el("span", "pk-hold-fill"),
-          iconNode("trash", 14),
-          "Hold to delete",
-        ),
-      );
-    case "loaders": {
-      const canvas = document.createElement("canvas");
-      const dots = createThinkingDots(canvas, { size: 48 });
-      cleanups.push(() => dots.destroy());
-      return el("div", "pk pk-load", canvas);
-    }
-    case "easing-gradients":
-      return el(
-        "div",
-        "pk pk-gr",
-        ...(["linear", "ease-in-out-sine"] as const).map((easing) => {
-          const bar = el("span");
-          bar.style.backgroundImage = easingGradient({
-            to: "var(--foreground)",
-            easing,
-            direction: "to right",
-          });
-          return bar;
-        }),
-      );
-    case "copy-button": {
-      const icons = el(
-        "span",
-        "pk-copy-icons",
-        iconNode("copy", 14),
-        iconNode("check", 14),
-      );
-      const button = el("span", "pk-copy-btn", icons);
-      if (!matchMedia("(prefers-reduced-motion: reduce)").matches) {
-        const step = setInterval(() => {
-          if (button.isConnected) button.toggleAttribute("data-copied");
-        }, 1400);
-        cleanups.push(() => clearInterval(step));
-      }
-      return el(
-        "div",
-        "pk pk-copy",
-        el(
-          "span",
-          "pk-copy-code",
-          el("code", "", "reuse.sh/copy-button"),
-          button,
-        ),
-      );
-    }
-    case "shadows":
-      return el(
-        "div",
-        "pk pk-sh",
-        ...["sm", "md", "xl"].map((level) =>
-          el("span", `re-shadow-ring-${level}`),
-        ),
-      );
-  }
+/** Everything a scene needs besides the stage itself. */
+interface Scene
+  extends Pick<StageOptions, "label" | "script" | "reset" | "still" | "rest"> {
+  root: HTMLElement;
+  cleanup?: () => void;
 }
+
+/** Runs setup once, the first time the scene is laid out on screen. */
+function once(setup: () => void) {
+  let done = false;
+  return () => {
+    if (done) return;
+    done = true;
+    setup();
+  };
+}
+
+function settle(...nodes: Element[]) {
+  for (const node of nodes)
+    for (const animation of node.getAnimations({ subtree: true }))
+      animation.cancel();
+}
+
+function lightbox(): Scene {
+  const tiles = photos
+    .slice(0, 6)
+    .map((_, i) => target(el("span", "pk-lb-tile", img(i)), `tile-${i}`));
+  const photo = el("span", "pk-lb-photo", img(1));
+  const incoming = el("span", "pk-lb-photo pk-lb-incoming", img(2));
+  const count = el("span", "pk-lb-count", "2 / 6");
+  const close = target(
+    el("span", "pk-lb-close", iconNode("close", 11)),
+    "close",
+  );
+  const next = target(el("span", "pk-lb-next", arrow("right", 13)), "next");
+  const view = el("div", "pk-lb-view", photo, incoming, count, close, next);
+  const root = el("div", "pk pk-lb", el("div", "pk-lb-grid", ...tiles), view);
+  const fit = { left: 38, top: 13, width: 164, height: 123 };
+  const box = (node: Element) => {
+    const outer = root.getBoundingClientRect();
+    const rect = node.getBoundingClientRect();
+    return {
+      left: rect.left - outer.left,
+      top: rect.top - outer.top,
+      width: rect.width,
+      height: rect.height,
+    };
+  };
+  const px = (rect: typeof fit, radius: number) => ({
+    left: `${rect.left}px`,
+    top: `${rect.top}px`,
+    width: `${rect.width}px`,
+    height: `${rect.height}px`,
+    borderRadius: `${radius}px`,
+  });
+  const fly = { duration: 440, easing: "cubic-bezier(0.2, 0, 0, 1)" };
+  const page = { duration: 420, easing: "cubic-bezier(0.25, 0.8, 0.25, 1)" };
+  const reset = () => {
+    settle(view);
+    root.removeAttribute("data-open");
+    root.removeAttribute("data-photo");
+    for (const tile of tiles) tile.style.visibility = "";
+    count.textContent = "2 / 6";
+  };
+  return {
+    root,
+    label:
+      "A thumbnail opens into a full view, pages to the next photo and closes back to its tile.",
+    rest: { x: 206, y: 132 },
+    reset,
+    still() {
+      reset();
+      tiles[1].style.visibility = "hidden";
+      root.setAttribute("data-open", "");
+      root.setAttribute("data-photo", "");
+    },
+    async script(act: StageAct) {
+      await act.click("tile-1");
+      tiles[1].style.visibility = "hidden";
+      root.setAttribute("data-open", "");
+      root.setAttribute("data-photo", "");
+      await photo.animate([px(box(tiles[1]), 6), px(fit, 4)], fly).finished;
+      await act.wait(500);
+      await act.click("next");
+      tiles[1].style.visibility = "";
+      tiles[2].style.visibility = "hidden";
+      count.textContent = "3 / 6";
+      incoming.animate(
+        [{ transform: "translateX(240px)" }, { transform: "translateX(0)" }],
+        { ...page, fill: "forwards" },
+      );
+      await photo.animate(
+        [{ transform: "translateX(0)" }, { transform: "translateX(-240px)" }],
+        { ...page, fill: "forwards" },
+      ).finished;
+      await act.wait(650);
+      await act.click("close");
+      root.removeAttribute("data-open");
+      await incoming.animate([px(fit, 4), px(box(tiles[2]), 6)], {
+        ...fly,
+        duration: 380,
+        fill: "forwards",
+      }).finished;
+      reset();
+      await act.wait(300);
+    },
+  };
+}
+
+function carousel(): Scene {
+  const order = [1, 4, 0, 5, 2];
+  const viewport = el(
+    "div",
+    "pk-car-track",
+    ...order.map((i) => el("div", "pk-car-slide", img(i, "1500x1000"))),
+  );
+  const dots = order.map(() => el("i"));
+  const prev = target(el("button", "pk-car-arrow", arrow("left", 13)), "prev");
+  const next = target(el("button", "pk-car-arrow", arrow("right", 13)), "next");
+  const root = el(
+    "div",
+    "pk pk-car",
+    viewport,
+    el("div", "pk-car-bar", el("span", "pk-car-dots", ...dots), prev, next),
+  );
+  let instance: ReturnType<typeof createCarousel> | undefined;
+  let unsubscribe = () => {};
+  const paint = (current: number) => {
+    for (const [i, dot] of dots.entries())
+      dot.toggleAttribute("data-on", i === current);
+  };
+  const ensure = once(() => {
+    instance = createCarousel(viewport, { align: "start" });
+    unsubscribe = instance.subscribe((state) => paint(state.index));
+    prev.addEventListener("click", () => instance?.prev());
+    next.addEventListener("click", () => instance?.next());
+  });
+  const reset = () => {
+    ensure();
+    instance?.goTo(0, "instant");
+    paint(0);
+  };
+  return {
+    root,
+    label: "A strip of photos glides to the next slide and back.",
+    rest: { x: 150, y: 140 },
+    reset,
+    async script(act) {
+      await act.click("next");
+      await act.wait(850);
+      await act.click("next");
+      await act.wait(1000);
+      await act.click("prev");
+      await act.wait(700);
+      await act.click("prev");
+      await act.wait(700);
+    },
+    cleanup() {
+      unsubscribe();
+      instance?.destroy();
+    },
+  };
+}
+
+function annotations(): Scene {
+  const canvas = el("div", "pk-ann-canvas");
+  const root = el("div", "pk pk-ann", canvas);
+  const base = {
+    src: photos[2].src,
+    alt: "",
+    width: 1600,
+    height: 1200,
+  };
+  let marks: Annotation[] = [];
+  let image: ReturnType<typeof createAnnotatedImage> | undefined;
+  let editor: ReturnType<typeof createAnnotationEditor> | undefined;
+  const publish = (next: Annotation[]) => {
+    marks = next;
+    image?.update({ ...base, annotations: next });
+    editor?.setAnnotations(next);
+  };
+  const ensure = once(() => {
+    image = createAnnotatedImage(canvas, { ...base, annotations: [] });
+    editor = createAnnotationEditor(canvas, {
+      annotations: [],
+      tool: "area",
+      onChange: publish,
+    });
+  });
+  const reset = () => {
+    ensure();
+    root.removeAttribute("data-clearing");
+    publish([]);
+    editor?.setTool("area");
+  };
+  const label = "Crop line";
+  return {
+    root,
+    label:
+      "A pointer draws a labelled area on a photo, then an arrow toward it.",
+    rest: { x: 214, y: 136 },
+    reset,
+    still() {
+      reset();
+      editor?.setTool("select");
+      publish([
+        { kind: "area", box: [20, 24, 36, 40], label },
+        { kind: "arrow", line: [84, 78, 60, 58] },
+      ]);
+    },
+    async script(act) {
+      await act.press({ x: 52, y: 42 });
+      await act.move({ x: 136, y: 98 }, { duration: 720 });
+      await act.release();
+      for (let end = 1; end <= label.length; end++) {
+        const [area, ...rest] = marks;
+        if (area?.kind !== "area") break;
+        publish([{ ...area, label: label.slice(0, end) }, ...rest]);
+        await act.wait(55);
+      }
+      await act.wait(450);
+      editor?.setTool("arrow");
+      await act.press({ x: 206, y: 124 });
+      await act.move({ x: 146, y: 100 }, { duration: 560 });
+      await act.release();
+      editor?.setTool("select");
+      await act.wait(1500);
+      root.setAttribute("data-clearing", "");
+      await act.wait(320);
+      publish([]);
+      root.removeAttribute("data-clearing");
+      editor?.setTool("area");
+    },
+    cleanup() {
+      editor?.destroy();
+      image?.destroy();
+    },
+  };
+}
+
+/** A box the cursor resizes by its right edge, so the layout inside it reflows. */
+function resizable(box: HTMLElement, wide: number, narrow: number) {
+  const grip = target(el("span", "pk-grip"), "grip");
+  const root = el(
+    "div",
+    "pk pk-resize",
+    el("div", "pk-resize-frame", box),
+    grip,
+  );
+  let dragging = false;
+  const set = (width: number) =>
+    root.style.setProperty("--pk-box", `${Math.round(width)}px`);
+  grip.addEventListener("pointerdown", () => {
+    dragging = true;
+  });
+  root.addEventListener("pointermove", (event) => {
+    if (!dragging) return;
+    const left = box.getBoundingClientRect().left;
+    set(Math.min(wide, Math.max(narrow, event.clientX - left - 6)));
+  });
+  root.addEventListener("pointerup", () => {
+    dragging = false;
+  });
+  return {
+    root,
+    reset() {
+      dragging = false;
+      set(wide);
+    },
+    async script(act: StageAct) {
+      const y = HEIGHT / 2;
+      await act.press("grip");
+      await act.move({ x: narrow + 16, y: y + 6 }, { duration: 1000 });
+      await act.wait(650);
+      await act.move({ x: wide + 16, y }, { duration: 900 });
+      await act.release();
+      await act.wait(400);
+    },
+  };
+}
+
+function justified(): Scene {
+  const sizes = [
+    "1600x900",
+    "900x1200",
+    "1500x1000",
+    "1200x1200",
+    "2100x900",
+    "800x1200",
+    "1500x1000",
+    "1600x900",
+  ];
+  const box = el(
+    "div",
+    "pk-jg",
+    ...sizes.map((size, i) => {
+      const image = img(i, size);
+      const [w, h] = size.split("x");
+      image.width = Number(w);
+      image.height = Number(h);
+      return image;
+    }),
+  );
+  const frame = resizable(box, 208, 128);
+  let gallery: ReturnType<typeof createJustifiedGallery> | undefined;
+  const ensure = once(() => {
+    gallery = createJustifiedGallery(box, { maxRows: 3 });
+  });
+  return {
+    root: frame.root,
+    label:
+      "Photo rows rebalance to fill the width as the frame narrows and widens.",
+    rest: { x: 226, y: 132 },
+    reset() {
+      ensure();
+      frame.reset();
+    },
+    script: frame.script,
+    cleanup: () => gallery?.destroy(),
+  };
+}
+
+function masonry(): Scene {
+  const heights = [44, 30, 56, 36, 48, 28, 40, 52, 34];
+  const box = el(
+    "div",
+    "pk-mas",
+    ...heights.map((height, i) => {
+      const card = el("span", "pk-mas-card", img(i + 2, "900x1200"));
+      card.style.height = `${height}px`;
+      return card;
+    }),
+  );
+  const frame = resizable(box, 208, 128);
+  let instance: ReturnType<typeof createMasonry> | undefined;
+  const ensure = once(() => {
+    instance = createMasonry(box);
+  });
+  return {
+    root: frame.root,
+    label: "Cards repack from three columns into two as the frame narrows.",
+    rest: { x: 226, y: 132 },
+    reset() {
+      ensure();
+      frame.reset();
+    },
+    script: frame.script,
+    cleanup: () => instance?.destroy(),
+  };
+}
+
+const people = ["Mara Lind", "Jonas Weber", "Aiko Tanaka", "Lea Novak"];
+
+function avatars(): Scene {
+  const group = el("div", "pk-av-group");
+  const add = target(el("button", "pk-av-add", iconNode("add", 13)), "add");
+  const root = el(
+    "div",
+    "pk pk-av",
+    el(
+      "div",
+      "pk-av-card",
+      el(
+        "span",
+        "pk-av-head",
+        el("b", "", "Design review"),
+        el("small", "", "Today, 14:00"),
+      ),
+      el("span", "pk-av-row", group, add),
+    ),
+  );
+  const controllers: { destroy(): void }[] = [];
+  let guest: HTMLElement | undefined;
+  const face = (i: number) => {
+    const node = el("span");
+    controllers.push(
+      createAvatar(node, {
+        name: people[i],
+        src: photos[i + 1].src,
+        size: 30,
+        badge:
+          i === 0
+            ? { type: "dot", label: "Online", corner: "bottom-right" }
+            : undefined,
+      }),
+    );
+    return node;
+  };
+  const ensure = once(() => {
+    group.append(face(0), face(1), face(2));
+    controllers.push(createAvatarGroup(group, { overlap: 9, clearance: 2 }));
+  });
+  const leave = () => {
+    guest?.remove();
+    guest = undefined;
+  };
+  return {
+    root,
+    label:
+      "A fourth person joins an overlapping avatar group, and the group cuts room for them.",
+    rest: { x: 196, y: 124 },
+    reset() {
+      ensure();
+      leave();
+    },
+    async script(act) {
+      await act.click("add");
+      const node = face(3);
+      node.classList.add("pk-av-join");
+      guest = node;
+      await act.run(() => group.append(node));
+      await act.wait(1400);
+      await act.move({ x: 120, y: 120 });
+      await act.wait(300);
+      await node.animate([{ opacity: 1 }, { opacity: 0 }], {
+        duration: 220,
+        fill: "forwards",
+      }).finished;
+      leave();
+      await act.wait(400);
+    },
+    cleanup() {
+      for (const controller of controllers.splice(0).reverse())
+        controller.destroy();
+    },
+  };
+}
+
+function tooltip(): Scene {
+  const tools = [
+    ["zoom", "Zoom", "zoom"],
+    ["heart", "Favorite", "heart"],
+    ["share", "Share", "share"],
+    ["trash", "Delete", "trash"],
+  ] as const;
+  const bar = el(
+    "div",
+    "pk-tip-bar",
+    ...tools.map(([icon, text, name]) => {
+      const button = target(
+        el("button", "pk-tip-btn", iconNode(icon, 16)),
+        name,
+      );
+      button.dataset.reTooltip = text;
+      return button;
+    }),
+  );
+  const root = el("div", "pk pk-tip", bar);
+  let instance: ReturnType<typeof createFloatingTooltip> | undefined;
+  const ensure = once(() => {
+    instance = createFloatingTooltip(bar, { delay: 60, className: "f-tip" });
+  });
+  return {
+    root,
+    label:
+      "A pointer moves along a toolbar, and one tooltip slides from button to button.",
+    rest: { x: 196, y: 128 },
+    reset: ensure,
+    async script(act) {
+      await act.move("zoom");
+      await act.wait(700);
+      await act.move("heart");
+      await act.wait(420);
+      await act.move("share");
+      await act.wait(420);
+      await act.move("trash");
+      await act.wait(900);
+    },
+    cleanup: () => instance?.destroy(),
+  };
+}
+
+function highlight(): Scene {
+  const labels = ["Inbox", "Drafts", "Sent", "Archive"];
+  const list = el(
+    "div",
+    "pk-hl-list moving-highlight",
+    ...labels.map((label) => {
+      const row = target(el("span", "pk-hl-row", label), label);
+      row.dataset.reRow = "";
+      return row;
+    }),
+  );
+  const root = el("div", "pk pk-hl", list);
+  let instance: ReturnType<typeof createMovingHighlight> | undefined;
+  const ensure = once(() => {
+    instance = createMovingHighlight(list);
+  });
+  return {
+    root,
+    label: "A highlight slides under each row the pointer reaches.",
+    rest: { x: 204, y: 128 },
+    reset: ensure,
+    async script(act) {
+      for (const label of labels) {
+        await act.move(label);
+        await act.wait(360);
+      }
+      await act.move("Drafts");
+      await act.wait(700);
+    },
+    cleanup: () => instance?.destroy(),
+  };
+}
+
+function hold(): Scene {
+  const button = target(
+    el(
+      "button",
+      `${buttonVariants({ variant: "destructive", size: "sm" })} pk-hold-btn`,
+      iconNode("trash", 14),
+      el(
+        "span",
+        "pk-hold-label",
+        el("span", "", "Hold to delete"),
+        el("span", "", "Deleted"),
+      ),
+    ) as HTMLButtonElement,
+    "hold",
+  );
+  const root = el("div", "pk pk-hold", button);
+  let instance: ReturnType<typeof createHoldToConfirm> | undefined;
+  const ensure = once(() => {
+    instance = createHoldToConfirm(button, {
+      holdMs: 1100,
+      resetMs: 1500,
+      onConfirm: () => {},
+    });
+  });
+  return {
+    root,
+    label:
+      "A pointer lets go of a hold early and the fill drains, then holds to the end and the button confirms.",
+    rest: { x: 186, y: 122 },
+    reset() {
+      ensure();
+      instance?.cancel();
+      instance?.reset();
+    },
+    async script(act) {
+      await act.press("hold");
+      await act.wait(480);
+      await act.release();
+      await act.wait(650);
+      await act.press();
+      await act.wait(1260);
+      await act.release();
+      await act.wait(1700);
+    },
+    cleanup: () => instance?.destroy(),
+  };
+}
+
+function copy(): Scene {
+  const button = target(
+    el("button", "pk-copy-btn") as HTMLButtonElement,
+    "copy",
+  );
+  const row = el(
+    "div",
+    "pk-copy-code",
+    el("code", "", "npm i @reuse-sh/interactions"),
+    button,
+  );
+  const root = el("div", "pk pk-copy", row);
+  let timer: number | undefined;
+  let instance: ReturnType<typeof createCopyButton> | undefined;
+  const idle = () => {
+    window.clearTimeout(timer);
+    button.setAttribute("data-state", "idle");
+  };
+  const ensure = once(() => {
+    instance = createCopyButton(button, {
+      text: "npm i @reuse-sh/interactions",
+    });
+    // The scene shows the real button and its states, but a scripted click
+    // must not overwrite the visitor's clipboard.
+    row.addEventListener(
+      "click",
+      (event) => {
+        if (event.isTrusted) return;
+        event.stopPropagation();
+        idle();
+        button.setAttribute("data-state", "copied");
+        timer = window.setTimeout(idle, 1500);
+      },
+      true,
+    );
+  });
+  return {
+    root,
+    label: "A pointer clicks a copy button, and its icon turns into a check.",
+    rest: { x: 168, y: 120 },
+    reset() {
+      ensure();
+      idle();
+    },
+    async script(act) {
+      await act.click("copy");
+      await act.move({ x: 214, y: 96 });
+      await act.wait(1500);
+    },
+    cleanup() {
+      idle();
+      instance?.destroy();
+    },
+  };
+}
+
+function loaders(): Scene {
+  const canvas = document.createElement("canvas");
+  const question = el("span", "pk-ld-ask");
+  const answer = el(
+    "span",
+    "pk-ld-answer",
+    el("span", "pk-ld-dots", canvas),
+    el("span", "pk-ld-reply", "Three days, one ferry, no rush."),
+  );
+  const field = target(el("input", "pk-ld-input") as HTMLInputElement, "field");
+  field.placeholder = "Ask anything";
+  field.readOnly = true;
+  const send = target(el("button", "pk-ld-send", iconNode("send", 13)), "send");
+  const root = el(
+    "div",
+    "pk pk-ld",
+    el("div", "pk-ld-thread", question, answer),
+    el("div", "pk-ld-bar", field, send),
+  );
+  let dots: ReturnType<typeof createThinkingDots> | undefined;
+  const ensure = once(() => {
+    dots = createThinkingDots(canvas, { size: 22 });
+  });
+  const reset = () => {
+    ensure();
+    field.value = "";
+    root.removeAttribute("data-step");
+  };
+  return {
+    root,
+    label:
+      "A question is sent, a dot loader thinks, and the answer replaces it.",
+    rest: { x: 196, y: 92 },
+    reset,
+    still() {
+      reset();
+      question.textContent = "Plan a weekend trip";
+      root.setAttribute("data-step", "thinking");
+    },
+    async script(act) {
+      await act.move("field");
+      await act.type("field", "Plan a weekend trip");
+      await act.wait(200);
+      await act.click("send");
+      question.textContent = field.value;
+      field.value = "";
+      root.setAttribute("data-step", "thinking");
+      await act.move({ x: 200, y: 96 });
+      await act.wait(2300);
+      root.setAttribute("data-step", "answer");
+      await act.wait(1800);
+      root.setAttribute("data-step", "clear");
+      await act.wait(300);
+    },
+    cleanup: () => dots?.destroy(),
+  };
+}
+
+function shadows(): Scene {
+  const card = target(
+    el(
+      "span",
+      "pk-sh-card re-shadow-ring-sm",
+      img(5, "1500x1000"),
+      el("span", "pk-sh-lines", el("i"), el("i")),
+    ),
+    "card",
+  );
+  const root = el("div", "pk pk-sh", card);
+  const drop = () => {
+    card.classList.replace("re-shadow-ring-xl", "re-shadow-ring-sm");
+    card.removeAttribute("data-lifted");
+  };
+  return {
+    root,
+    label:
+      "A pointer picks up a card, its shadow deepens, and it settles back down.",
+    rest: { x: 204, y: 130 },
+    reset: drop,
+    async script(act) {
+      await act.press("card");
+      card.classList.replace("re-shadow-ring-sm", "re-shadow-ring-xl");
+      card.setAttribute("data-lifted", "");
+      await act.wait(900);
+      await act.release();
+      drop();
+      await act.wait(900);
+    },
+  };
+}
+
+function gradients(): Scene {
+  const topics = [
+    "All",
+    "Photos",
+    "Albums",
+    "People",
+    "Places",
+    "Shared",
+    "Favorites",
+    "Archive",
+  ];
+  const strip = target(
+    el("div", "pk-gr-strip", ...topics.map((topic) => el("span", "", topic))),
+    "strip",
+  );
+  const scrim = el("span", "pk-gr-scrim");
+  scrim.style.backgroundImage = easingGradient({
+    to: "rgb(0 0 0 / 0.55)",
+    easing: "ease-in-out-sine",
+    direction: "to bottom",
+  });
+  const photo = el(
+    "span",
+    "pk-gr-photo",
+    img(4, "2100x900"),
+    scrim,
+    el("b", "", photos[4].caption),
+  );
+  const root = el("div", "pk pk-gr", photo, strip);
+  let fade: ReturnType<typeof createFadeEdge> | undefined;
+  const ensure = once(() => {
+    fade = createFadeEdge(strip, { size: 40, curve: "smooth", mode: "scroll" });
+  });
+  return {
+    root,
+    label:
+      "A row of tags scrolls, and its edges fade out smoothly instead of cutting off.",
+    rest: { x: 196, y: 130 },
+    reset() {
+      ensure();
+      strip.scrollLeft = 0;
+    },
+    async script(act) {
+      await act.move("strip");
+      await act.scroll(
+        "strip",
+        { left: strip.scrollWidth },
+        { duration: 1500 },
+      );
+      await act.wait(700);
+      await act.scroll("strip", { left: 0 }, { duration: 1300 });
+      await act.wait(500);
+    },
+    cleanup: () => fade?.destroy(),
+  };
+}
+
+function demoStage(): Scene {
+  const share = target(
+    el("button", "pk-ds-share", iconNode("share", 12), "Share"),
+    "share",
+  );
+  const link = target(
+    el(
+      "button",
+      "pk-ds-link",
+      iconNode("link", 12),
+      el("span", "", "Copy link"),
+    ),
+    "link",
+  );
+  const pop = el(
+    "div",
+    "pk-ds-pop re-shadow-ring-lg",
+    el("b", "", "Share this board"),
+    el("small", "", "Anyone with the link can view"),
+    link,
+  );
+  const root = el(
+    "div",
+    "pk pk-ds",
+    el(
+      "div",
+      "pk-ds-window re-shadow-ring-sm",
+      el(
+        "span",
+        "pk-ds-bar",
+        el("i"),
+        el("i"),
+        el("i"),
+        el("span", "pk-ds-title", "Moodboard"),
+        share,
+      ),
+      el(
+        "span",
+        "pk-ds-body",
+        img(0, "1200x1200"),
+        img(3, "1200x1200"),
+        img(6, "1200x1200"),
+      ),
+      pop,
+    ),
+  );
+  const label = link.querySelector("span") as HTMLElement;
+  const reset = () => {
+    root.removeAttribute("data-open");
+    link.removeAttribute("data-done");
+    label.textContent = "Copy link";
+  };
+  return {
+    root,
+    label: "A scripted pointer opens a share menu and copies a link.",
+    rest: { x: 132, y: 136 },
+    reset,
+    async script(act) {
+      await act.click("share");
+      root.setAttribute("data-open", "");
+      await act.wait(500);
+      await act.click("link");
+      link.setAttribute("data-done", "");
+      label.textContent = "Link copied";
+      await act.wait(1100);
+      await act.click({ x: 70, y: 112 });
+      reset();
+      await act.wait(400);
+    },
+  };
+}
+
+const scenes: Record<MenuSlug, () => Scene> = {
+  lightbox,
+  carousel,
+  annotations,
+  "justified-gallery": justified,
+  masonry,
+  avatars,
+  "floating-tooltip": tooltip,
+  "moving-highlight": highlight,
+  "hold-to-confirm": hold,
+  "copy-button": copy,
+  loaders,
+  shadows,
+  "easing-gradients": gradients,
+  "demo-stage": demoStage,
+};
 
 export function createLibraryPeek() {
   const panes = new Map<MenuSlug, HTMLElement>();
@@ -250,10 +909,25 @@ export function createLibraryPeek() {
       let pane = panes.get(slug);
       if (!pane) {
         const library = menuLibrary(slug);
+        const scene = scenes[slug]();
+        const stage = createStage(scene.root, {
+          width: WIDTH,
+          height: HEIGHT,
+          label: scene.label,
+          script: scene.script,
+          reset: scene.reset,
+          still: scene.still,
+          rest: scene.rest,
+          delay: 250,
+        });
+        cleanups.push(() => {
+          stage.destroy();
+          scene.cleanup?.();
+        });
         pane = el(
           "div",
           "w-60 font-sans tracking-tight",
-          stage(slug, cleanups),
+          scene.root,
           el(
             "p",
             "flex items-baseline justify-between gap-2 px-1.5 pt-2 pb-1 text-caption",

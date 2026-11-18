@@ -1,6 +1,7 @@
 "use client";
 
 import { createMovingHighlight } from "@reuse-sh/interactions";
+import { isStageEvent } from "@reuse-sh/stage";
 import { usePathname } from "next/navigation";
 import { type MouseEvent, useEffect, useRef, useState } from "react";
 import { cn } from "@/lib/utils";
@@ -66,7 +67,7 @@ export function SiteHeader() {
         menu.current?.contains(target) || button.current?.contains(target),
       );
     const onDown = (event: PointerEvent) => {
-      if (!inside(event.target)) setOpen(false);
+      if (!inside(event.target) && !isStageEvent(event)) setOpen(false);
     };
     const onEscape = (event: KeyboardEvent) => {
       if (event.key !== "Escape") return;

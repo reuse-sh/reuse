@@ -4,5 +4,6 @@
   "hold-to-confirm": "hold",
   "copy-button": "copy",
   "easing-gradients": "gradients",
-  "justified-gallery": "justified"
+  "justified-gallery": "justified",
+  "demo-stage": "stage"
 }
