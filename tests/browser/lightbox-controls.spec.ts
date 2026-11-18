@@ -415,6 +415,34 @@ test("Download saves a same-origin file without leaving the page", async ({
   expect(page.url()).toBe("http://reuse.test/");
 });
 
+test("Download names a file after the Content-Disposition it can read, else its decoded path", async ({
+  page,
+}) => {
+  await openFiles(page, ["/files/7", "/files/8", "/files/My%20Photo.jpg"]);
+  const dispositions: Record<string, string> = {
+    "/files/7": 'attachment; filename="Sunset at sea.jpg"',
+    "/files/8": "attachment; filename=fallback.jpg; filename*=UTF-8''%D1%84%D0%BE%D1%82%D0%BE.jpg",
+  };
+  await page.route("http://reuse.test/files/**", (route) => {
+    const disposition = dispositions[new URL(route.request().url()).pathname];
+    return route.fulfill({
+      contentType: "image/jpeg",
+      headers: disposition ? { "content-disposition": disposition } : {},
+      body: "photo",
+    });
+  });
+  const names: string[] = [];
+  for (const index of [0, 1, 2]) {
+    await page.evaluate((i) => (window as Window).lightbox.goTo(i), index);
+    const [file] = await Promise.all([
+      page.waitForEvent("download"),
+      page.click(".re-lightbox-download"),
+    ]);
+    names.push(file.suggestedFilename());
+  }
+  expect(names).toEqual(["Sunset at sea.jpg", "фото.jpg", "My Photo.jpg"]);
+});
+
 test("Download keeps the tab when a same-origin file redirects to another origin", {
   tag: "@desktop",
 }, async ({ page, browserName }) => {

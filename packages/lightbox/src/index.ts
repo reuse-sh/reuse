@@ -4072,18 +4072,24 @@ export function createLightbox<Item extends LightboxItem = LightboxItem>(
     // redirects to another one, and navigate the tab instead, and block a popup opened after
     // an await, so every web file is fetched before the click.
     let fetched:
-      | { href: string; blob?: Blob; failed?: boolean; wanted?: boolean }
+      | {
+          href: string;
+          blob?: Blob;
+          name?: string;
+          failed?: boolean;
+          wanted?: boolean;
+        }
       | undefined;
     const native = () =>
       !download ||
       download.protocol === "data:" ||
       download.protocol === "blob:";
-    const save = (blob: Blob, pathname: string) => {
+    const save = (blob: Blob, pathname: string, named?: string) => {
       const link = doc.createElement("a");
       link.href = URL.createObjectURL(blob);
       const name = pathname.split("/").pop() ?? "";
       try {
-        link.download = decodeURIComponent(name);
+        link.download = named ?? decodeURIComponent(name);
       } catch {
         link.download = name;
       }
@@ -4096,11 +4102,17 @@ export function createLightbox<Item extends LightboxItem = LightboxItem>(
       const entry: NonNullable<typeof fetched> = { href };
       fetched = entry;
       fetch(href)
-        .then((response) => (response.ok ? response.blob() : Promise.reject()))
+        .then((response) => {
+          if (!response.ok) return Promise.reject();
+          entry.name = dispositionName(
+            response.headers.get("content-disposition"),
+          );
+          return response.blob();
+        })
         .then(
           (blob) => {
             entry.blob = blob;
-            if (entry.wanted) save(blob, pathname);
+            if (entry.wanted) save(blob, pathname, entry.name);
             entry.wanted = false;
           },
           () => {
@@ -4141,7 +4153,7 @@ export function createLightbox<Item extends LightboxItem = LightboxItem>(
           return;
         }
         event.preventDefault();
-        if (entry.blob) save(entry.blob, download.pathname);
+        if (entry.blob) save(entry.blob, download.pathname, entry.name);
         else entry.wanted = true;
       },
       { signal: abort.signal },
@@ -4874,6 +4886,17 @@ function listen<T>(
   stops.add(stop);
   signal?.addEventListener("abort", stop, { once: true });
   return stop;
+}
+
+function dispositionName(header: string | null) {
+  if (!header) return undefined;
+  const extended = /filename\*\s*=\s*utf-8'[^']*'([^;\s]+)/i.exec(header);
+  if (extended)
+    try {
+      return decodeURIComponent(extended[1]);
+    } catch {}
+  const plain = /filename\s*=\s*(?:"((?:\\.|[^"\\])*)"|([^;\s]+))/i.exec(header);
+  return plain?.[1]?.replace(/\\(.)/g, "$1") || plain?.[2] || undefined;
 }
 
 function dimension(value: string | undefined) {
