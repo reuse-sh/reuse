@@ -101,7 +101,7 @@ export function LightboxLaunch({
             <a
               key={item.src}
               href={item.src}
-              className="relative block aspect-[4/3] cursor-zoom-in overflow-hidden rounded-control bg-media"
+              className="relative block aspect-4/3 cursor-zoom-in overflow-hidden rounded-control bg-media"
               onClick={(event) => {
                 if (
                   event.defaultPrevented ||
