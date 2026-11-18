@@ -225,9 +225,18 @@ const takeover = `<!doctype html><button id="go" style="width:100%;height:100%">
 document.getElementById("go").onclick = () => { top.location.href = "https://evil.test/phish"; };
 </script>`;
 
-// Popups may leave the sandbox, so a player's own links open a working tab.
+// Popups keep the frame's sandbox, so a popup cannot navigate the tab either.
 const sandbox =
-  "allow-scripts allow-same-origin allow-forms allow-presentation allow-popups allow-popups-to-escape-sandbox";
+  "allow-scripts allow-same-origin allow-forms allow-presentation allow-popups";
+
+// A page that opens a popup, and the popup tries to take over the tab behind the frame.
+const popupTakeover = `<!doctype html><button id="go" style="width:100%;height:100%">Continue</button><script>
+document.getElementById("go").onclick = () => { open("https://evil.test/popup"); };
+</script>`;
+const popup = `<!doctype html><script>
+try { opener.top.location.href = "https://evil.test/phish"; } catch {}
+document.title = "tried";
+</script>`;
 
 const frameOf = (page: Page) =>
   page.locator(".re-lightbox-media iframe").evaluate((frame) => ({
@@ -257,6 +266,31 @@ test("an iframe sandboxes a page from another origin, so a click inside cannot n
     sandbox,
   });
   await page.frameLocator(".re-lightbox-media iframe").locator("#go").click();
+  await page.waitForTimeout(500);
+  expect(page.url()).toBe("http://reuse.test/");
+});
+
+test("a popup from a sandboxed frame keeps the sandbox, so it cannot navigate the tab @desktop", async ({
+  page,
+}) => {
+  await page.route("https://evil.test/page", (route) =>
+    route.fulfill({ contentType: "text/html", body: popupTakeover }),
+  );
+  await page
+    .context()
+    .route("https://evil.test/popup", (route) =>
+      route.fulfill({ contentType: "text/html", body: popup }),
+    );
+  await page
+    .context()
+    .route("https://evil.test/phish", (route) =>
+      route.fulfill({ contentType: "text/html", body: "Phish" }),
+    );
+  await setup(page, "page");
+  const opened = page.context().waitForEvent("page");
+  await page.frameLocator(".re-lightbox-media iframe").locator("#go").click();
+  const tab = await opened;
+  await expect(tab).toHaveTitle("tried");
   await page.waitForTimeout(500);
   expect(page.url()).toBe("http://reuse.test/");
 });

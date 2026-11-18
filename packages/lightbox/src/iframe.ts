@@ -5,9 +5,9 @@ export interface FrameOptions {
   sandbox?: string;
 }
 
-// No top navigation for a page from another origin; its popups open as normal tabs.
+// No top navigation for a page from another origin or for the popups it opens.
 const CROSS_ORIGIN_SANDBOX =
-  "allow-scripts allow-same-origin allow-forms allow-presentation allow-popups allow-popups-to-escape-sandbox";
+  "allow-scripts allow-same-origin allow-forms allow-presentation allow-popups";
 
 export function frameOf(
   container: HTMLElement,
