@@ -1080,6 +1080,38 @@ test("the last of 40 photos without loop goes back to the first without showing 
   expect(blank).toBe(0);
 });
 
+test("theme.css takes its font sizes, blur and control timings from --re-lightbox-* properties", async ({
+  page,
+}) => {
+  await open(page, { thumbnails: "bottom" }, { captions: true });
+  await page.addStyleTag({
+    content:
+      ".re-lightbox{--re-lightbox-glyph-size:30px;--re-lightbox-font-size:15px;--re-lightbox-counter-font-size:11px;--re-lightbox-blur:4px;--re-lightbox-control-duration:120ms;--re-lightbox-ring-duration:60ms}",
+  });
+  const styles = await page.evaluate(() => {
+    const css = (selector: string) =>
+      getComputedStyle(document.querySelector(selector) as Element);
+    return {
+      glyph: css(".re-lightbox-close").fontSize,
+      blur: css(".re-lightbox-counter").backdropFilter,
+      rotate: css(".re-lightbox-close").transitionDuration,
+      counter: css(".re-lightbox-counter").fontSize,
+      caption: css(".re-lightbox-caption").fontSize,
+      thumbnail: css(".re-lightbox-thumbnails button").transitionDuration,
+      ring: css(".re-lightbox-thumbnail-ring").transitionDuration,
+    };
+  });
+  expect(styles).toEqual({
+    glyph: "30px",
+    blur: "blur(4px)",
+    rotate: "0.12s",
+    counter: "11px",
+    caption: "15px",
+    thumbnail: "0.12s",
+    ring: "0.06s, 0.06s",
+  });
+});
+
 test("the photos theme is white with the controls and fades to black over 300ms without them", async ({
   page,
 }) => {
