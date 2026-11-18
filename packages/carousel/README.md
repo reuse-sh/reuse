@@ -21,7 +21,7 @@ These are the rules the code keeps. An adaptation on any framework keeps them to
 - **Publish one state.** Index, pages, visible slides and autoplay progress come from one source that every control reads, and every label and announcement from the carousel's strings.
 - **Swipe by the group the buttons use.** With group set, only the first slide of each group and the slide a move was sent to snap, so a swipe and a released drag move a group like next() does.
 - **Give the strip back to the visitor.** A drag or a touch takes the position from a driver such as a marquee, and the strip snaps again once the driver lets go.
-- **Let the markup carry the options.** Options printed in data-carousel-options apply under the options from code, key by key, and an attribute that is not a JSON object stops with the element's name instead of a strip with defaults.
+- **Let the markup carry the options.** Options printed in data-carousel-options apply under the options from code, key by key, and an attribute that is not a JSON object, or a key whose JSON type does not match its option, stops with the element's name and the key before the DOM changes instead of a strip with defaults.
 - **Re-render only what reads the change.** A React component re-renders for the part of the state it selects, so autoplay progress and scrolling leave a counter that shows the index alone, and a changed option reaches the same carousel instead of a new one.
 
 <!-- principles:end -->
@@ -45,7 +45,7 @@ For a page without a bundler or an import map, such as a theme or a plugin, copy
 </script>
 ```
 
-The server can print the options with the markup. `data-carousel-options` holds a JSON object that `createCarousel` reads under the options passed in code, and invalid JSON throws a `TypeError` that names the element.
+The server can print the options with the markup. `data-carousel-options` holds a JSON object that `createCarousel` reads under the options passed in code, and invalid JSON, an unknown key or a value of the wrong JSON type (`"loop":"false"`, `"align":"end"`, a `strings.slide` that needs a function) throws a `TypeError` that names the element and the key before the carousel touches the DOM.
 
 ```html
 <div id="prints" class="re-carousel" data-carousel-options='{"loop":true,"autoplay":5000,"strings":{"previous":"Vorheriges Bild","next":"Nächstes Bild"}}'>

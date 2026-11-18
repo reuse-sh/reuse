@@ -238,18 +238,71 @@ const liveOptions = [
   "strings",
 ] as const;
 
+const motions = ["spring", "native"] as const;
+
+const markupValues: {
+  [K in Exclude<keyof CarouselOptions, "strings">]-?: readonly (
+    | NonNullable<CarouselOptions[K]>
+    | typeof Number
+    | typeof String
+    | typeof Boolean
+  )[];
+} = {
+  slides: [String],
+  align: ["start", "center"],
+  loop: [Boolean],
+  drag: [Boolean],
+  group: [Number, "page"],
+  autoplay: [Number],
+  releaseMotion: motions,
+  releaseDuration: [Number],
+  moveMotion: motions,
+  wheel: ["vertical"],
+};
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return !!value && typeof value === "object" && !Array.isArray(value);
+}
+
 function markupOptions(viewport: HTMLElement): CarouselOptions {
   const json = viewport.dataset.carouselOptions;
   if (json === undefined) return {};
+  const name = `Carousel data-carousel-options on ${viewport.localName}${
+    viewport.id
+      ? `#${viewport.id}`
+      : viewport.classList[0]
+        ? `.${viewport.classList[0]}`
+        : ""
+  }`;
   let value: unknown;
   try {
     value = JSON.parse(json);
   } catch {}
-  if (!value || typeof value !== "object" || Array.isArray(value))
-    throw new TypeError(
-      `Carousel data-carousel-options on ${viewport.localName}${viewport.id ? `#${viewport.id}` : ""} is not a JSON object.`,
-    );
-  return value;
+  if (!isRecord(value)) throw new TypeError(`${name} is not a JSON object.`);
+  const check = (key: string, valid: boolean) => {
+    if (!valid) throw new TypeError(`${name} has an invalid "${key}".`);
+  };
+  for (const [key, option] of Object.entries(value)) {
+    if (key === "strings") {
+      check(key, isRecord(option));
+      for (const [text, string] of Object.entries(option as object))
+        check(
+          `strings.${text}`,
+          Object.hasOwn(defaultStrings, text) &&
+            typeof defaultStrings[text as keyof CarouselStrings] ===
+              typeof string,
+        );
+    } else
+      check(
+        key,
+        Object.hasOwn(markupValues, key) &&
+          markupValues[key as keyof typeof markupValues].some(
+            (allowed) =>
+              allowed === option || allowed === Object(option).constructor,
+          ),
+      );
+  }
+  return value as CarouselOptions;
 }
 
 export function createCarousel(

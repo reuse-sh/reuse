@@ -1034,6 +1034,51 @@ describe("native carousel", () => {
     }
   });
 
+  it("rejects a markup option of the wrong type before touching the DOM", () => {
+    for (const [markup, key] of [
+      ['{"strings": {"slide": "Slide"}}', "strings.slide"],
+      ['{"loop": "false"}', "loop"],
+      ['{"align": "end"}', "align"],
+      ['{"group": "3"}', "group"],
+      ['{"strings": {"next": 2}}', "strings.next"],
+      ['{"strings": {"close": "Close"}}', "strings.close"],
+      ['{"onChange": "go"}', "onChange"],
+    ] as const) {
+      const { viewport, slides } = fixture();
+      viewport.className = "prints strip";
+      viewport.dataset.carouselOptions = markup;
+      expect(() => createCarousel(viewport), markup).toThrow(TypeError);
+      expect(() => createCarousel(viewport), markup).toThrow(
+        `Carousel data-carousel-options on div.prints has an invalid "${key}"`,
+      );
+      expect(viewport.classList.contains("re-carousel")).toBe(false);
+      expect(viewport.hasAttribute("role")).toBe(false);
+      expect(slides[0].hasAttribute("aria-label")).toBe(false);
+      viewport.remove();
+    }
+  });
+
+  it("accepts markup options whose JSON types match the options", () => {
+    const { viewport, slides } = fixture(Array(4).fill(100), 200);
+    viewport.dataset.carouselOptions = JSON.stringify({
+      loop: false,
+      drag: false,
+      align: "center",
+      group: "page",
+      autoplay: 4000,
+      releaseMotion: "native",
+      releaseDuration: 300,
+      moveMotion: "spring",
+      wheel: "vertical",
+      slides: "[data-carousel-slide]",
+      strings: { next: "Weiter", slideRole: "Folie" },
+    });
+    const carousel = createCarousel(viewport);
+    cleanups.push(carousel.destroy);
+    expect(carousel.getState()).toMatchObject({ count: 4, isPlaying: true });
+    expect(slides[0].getAttribute("aria-roledescription")).toBe("Folie");
+  });
+
   it("handles empty and non-overflowing content and rejects invalid timers at the boundary", () => {
     const { viewport } = fixture([], 100);
     const carousel = createCarousel(viewport, { loop: true });
