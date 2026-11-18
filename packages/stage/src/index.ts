@@ -143,6 +143,8 @@ export function createStage(root: HTMLElement, options: StageOptions): Stage {
 
   const silenced = new Map<Element, string | null>();
   const silence = () => {
+    for (const element of silenced.keys())
+      if (!scene.contains(element)) silenced.delete(element);
     for (const element of scene.querySelectorAll(FOCUSABLE)) {
       if (!silenced.has(element))
         silenced.set(element, element.getAttribute("tabindex"));
@@ -463,7 +465,11 @@ export function createStage(root: HTMLElement, options: StageOptions): Stage {
         const goal = { left: to.left ?? from.left, top: to.top ?? from.top };
         const distance = Math.hypot(goal.left - from.left, goal.top - from.top);
         const ms = scrollOptions.duration ?? moveDuration(distance) + 160;
-        if (ms <= 0) return;
+        if (ms <= 0) {
+          box.scrollLeft = goal.left;
+          box.scrollTop = goal.top;
+          return;
+        }
         await animate(ms, (t) => {
           const eased = moveEasing(t);
           box.scrollLeft = from.left + (goal.left - from.left) * eased;
@@ -563,14 +569,15 @@ export function createStage(root: HTMLElement, options: StageOptions): Stage {
     play(own).catch((error) => {
       if (error instanceof Aborted || controller !== own) return;
       failed = true;
-      stop("waiting");
+      stop("waiting", () => options.reset?.());
       view.reportError(error);
     });
   }
 
   const intersection = view.IntersectionObserver
     ? new view.IntersectionObserver(
-        ([entry]) => {
+        (entries) => {
+          const entry = entries.at(-1);
           visible = Boolean(
             entry?.isIntersecting && entry.intersectionRatio >= 0.4,
           );
@@ -595,6 +602,7 @@ export function createStage(root: HTMLElement, options: StageOptions): Stage {
   const giveBack = (ms: number) => {
     view.clearTimeout(resume);
     resume = view.setTimeout(() => {
+      if (scene.contains(document.activeElement)) return giveBack(ms);
       visitor = false;
       root.removeAttribute("data-visitor");
       update();

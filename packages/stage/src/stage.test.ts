@@ -268,9 +268,11 @@ describe("stage", () => {
 
   it("stops on a missing target and reports it instead of looping", async () => {
     const script = vi.fn((act: StageAct) => act.click("nowhere"));
-    const { stage } = mount("<i></i>", { script });
+    const reset = vi.fn();
+    const { stage } = mount("<i></i>", { script, reset });
     await tick(3000);
     expect(script).toHaveBeenCalledOnce();
+    expect(reset).toHaveBeenCalledTimes(2);
     expect(String(reported[0])).toContain('no target "nowhere"');
     expect(stage.status).toBe("waiting");
   });
@@ -302,6 +304,69 @@ describe("stage", () => {
     await tick(200);
     expect(stage.status).toBe("playing");
     expect(passes).toBe(2);
+  });
+
+  it("keeps a touch visitor's scene while focus is inside it", async () => {
+    let passes = 0;
+    const { root, stage } = mount('<input data-stage-target="email" />', {
+      interactive: true,
+      async script(act) {
+        passes++;
+        await act.wait(10_000);
+      },
+    });
+    await tick(100);
+    root.dispatchEvent(
+      new PointerEvent("pointerdown", { pointerType: "touch" }),
+    );
+    const field = root.querySelector("input") as HTMLInputElement;
+    field.focus();
+    await tick(9000);
+    expect(stage.status).toBe("visitor");
+    field.blur();
+    await tick(4000);
+    expect(stage.status).toBe("playing");
+    expect(passes).toBe(2);
+  });
+
+  it("scrolls at once for a zero duration", async () => {
+    const seen: number[] = [];
+    const { root } = mount('<div data-stage-target="box"></div>', {
+      async script(act) {
+        await act.scroll("box", { top: 40 }, { duration: 0 });
+        seen.push(box.scrollTop);
+        await act.wait(10_000);
+      },
+    });
+    const box = root.querySelector("div[data-stage-target]") as HTMLElement;
+    await tick(1000);
+    expect(seen).toEqual([40]);
+  });
+
+  it("follows the newest visibility entry of a batch", async () => {
+    let report: (entries: Partial<IntersectionObserverEntry>[]) => void =
+      () => {};
+    vi.stubGlobal(
+      "IntersectionObserver",
+      class {
+        constructor(callback: typeof report) {
+          report = callback;
+        }
+        observe() {}
+        disconnect() {}
+      },
+    );
+    const { stage } = mount("<i></i>", { script: (act) => act.wait(10_000) });
+    report([
+      { isIntersecting: false, intersectionRatio: 0 },
+      { isIntersecting: true, intersectionRatio: 1 },
+    ]);
+    expect(stage.status).toBe("playing");
+    report([
+      { isIntersecting: true, intersectionRatio: 1 },
+      { isIntersecting: false, intersectionRatio: 0 },
+    ]);
+    expect(stage.status).toBe("waiting");
   });
 
   it("puts the markup back on destroy", async () => {

@@ -1221,7 +1221,7 @@ export const libraries: Library[] = [
       ],
       [
         "Leave focus where it is",
-        "Nothing in the scene can take focus, and focus a component moves into it goes back where it was, so a demo never closes the menu or dialog around it.",
+        "Scene elements that are not native controls cannot take focus. When a component focuses a native control in the scene, focus goes back where it was, though the page has already seen a focusout.",
       ],
       [
         "Move like a hand",
@@ -1249,7 +1249,7 @@ export const libraries: Library[] = [
       ],
       [
         "Hand over to the visitor",
-        "An interactive stage stops when a pointer enters it and lets the visitor use the real component. It plays again from the first frame after the pointer leaves.",
+        "An interactive stage stops when a mouse enters it or a touch lands on it, and lets the visitor use the real component. It plays again from the first frame 1.2 s after the mouse leaves or 4 s after the last touch, and never while focus is inside the scene.",
       ],
       [
         "Fail loud",

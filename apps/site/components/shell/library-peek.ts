@@ -441,28 +441,32 @@ function avatars(): Scene {
     ),
   );
   const controllers: { destroy(): void }[] = [];
-  let guest: HTMLElement | undefined;
-  const face = (i: number) => {
+  let guest: { node: HTMLElement; destroy(): void } | undefined;
+  const avatar = (i: number) => {
     const node = el("span");
-    controllers.push(
-      createAvatar(node, {
-        name: people[i],
-        src: photos[i + 1].src,
-        size: 30,
-        badge:
-          i === 0
-            ? { type: "dot", label: "Online", corner: "bottom-right" }
-            : undefined,
-      }),
-    );
-    return node;
+    const controller = createAvatar(node, {
+      name: people[i],
+      src: photos[i + 1].src,
+      size: 30,
+      badge:
+        i === 0
+          ? { type: "dot", label: "Online", corner: "bottom-right" }
+          : undefined,
+    });
+    return { node, destroy: () => controller.destroy() };
+  };
+  const face = (i: number) => {
+    const made = avatar(i);
+    controllers.push(made);
+    return made.node;
   };
   const ensure = once(() => {
     group.append(face(2), face(1), face(0));
     controllers.push(createAvatarGroup(group, { overlap: 9, clearance: 2 }));
   });
   const leave = () => {
-    guest?.remove();
+    guest?.destroy();
+    guest?.node.remove();
     guest = undefined;
   };
   return {
@@ -476,9 +480,9 @@ function avatars(): Scene {
     },
     async script(act) {
       await act.click("add");
-      const node = face(3);
+      guest = avatar(3);
+      const { node } = guest;
       node.classList.add("pk-av-join");
-      guest = node;
       await act.run(() => group.prepend(node));
       await act.wait(1400);
       await act.move({ x: 120, y: 120 });
@@ -491,6 +495,7 @@ function avatars(): Scene {
       await act.wait(400);
     },
     cleanup() {
+      leave();
       for (const controller of controllers.splice(0).reverse())
         controller.destroy();
     },

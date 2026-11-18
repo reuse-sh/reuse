@@ -14,7 +14,7 @@ import {
 } from "../../lib/menu";
 import { DocLink } from "../docs/doc-link";
 import { Icon } from "../icons";
-import { createLibraryPeek } from "./library-peek";
+import type { createLibraryPeek } from "./library-peek";
 
 function rowsOf(menu: HTMLElement) {
   return [...menu.querySelectorAll<HTMLElement>("[data-menu-col]")].map(
@@ -72,13 +72,28 @@ export function LibraryMenu({
   ref: Ref<HTMLDivElement>;
 }) {
   const rows = useRef<HTMLElement>(null);
+  const peek = useRef<ReturnType<typeof createLibraryPeek> | null>(null);
+  const tooltip = useRef<ReturnType<typeof createFloatingTooltip> | null>(null);
+
+  useEffect(() => {
+    if (!open || peek.current) return;
+    if (!matchMedia("(hover: hover) and (pointer: fine)").matches) return;
+    let current = true;
+    import("./library-peek").then((module) => {
+      if (!current || peek.current) return;
+      peek.current = module.createLibraryPeek();
+      tooltip.current?.refresh();
+    });
+    return () => {
+      current = false;
+    };
+  }, [open]);
 
   useEffect(() => {
     const root = rows.current;
     if (!root) return;
     const highlight = createMovingHighlight(root);
-    const peek = createLibraryPeek();
-    const tooltip = createFloatingTooltip(root, {
+    const created = createFloatingTooltip(root, {
       selector: "[data-peek]",
       side: "bottom-right",
       sideOffset: 18,
@@ -88,13 +103,16 @@ export function LibraryMenu({
       content: (row) =>
         row.matches(":focus-visible")
           ? null
-          : peek.pane(row.dataset.peek as MenuSlug),
+          : (peek.current?.pane(row.dataset.peek as MenuSlug) ?? null),
     });
+    tooltip.current = created;
     root.addEventListener("keydown", moveFocus);
     return () => {
       root.removeEventListener("keydown", moveFocus);
-      tooltip.destroy();
-      peek.destroy();
+      created.destroy();
+      tooltip.current = null;
+      peek.current?.destroy();
+      peek.current = null;
       highlight.destroy();
     };
   }, []);
