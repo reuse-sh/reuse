@@ -8,6 +8,7 @@ type Lightbox = {
   goTo(index: number): void;
   zoomTo(scale: number): void;
   getState(): { index: number; isOpen: boolean; zoom: { scale: number } };
+  close(): Promise<void>;
   on(type: string, listener: (event: { index: number }) => void): () => void;
 };
 type Window = globalThis.Window &
@@ -139,6 +140,244 @@ test("the controls sit in their corners in a fixed order", async ({ page }) => {
     "href",
     "https://cdn.test/photo-1-2400.jpg",
   );
+});
+
+async function openFiles(page: Page, files: string[]) {
+  await mount(page, "", ["lightbox/base.css", "lightbox/theme.css"]);
+  await page.evaluate(async (sources) => {
+    const { createLightbox } = await import("/modules/lightbox/index.js");
+    const blob = URL.createObjectURL(
+      new Blob(["photo"], { type: "image/jpeg" }),
+    );
+    const lightbox = createLightbox({
+      history: false,
+      controls: { download: true },
+    });
+    Object.assign(window, { lightbox });
+    lightbox.open(
+      sources.map((src) => ({
+        src: src === "blob" ? blob : src,
+        width: 1200,
+        height: 800,
+      })),
+    );
+  }, files);
+  await page.waitForTimeout(500);
+}
+
+test("Download offers only web, blob and raster data files", async ({
+  page,
+}) => {
+  const files = [
+    "javascript:alert(1)",
+    "JAVASCRIPT:alert(1)",
+    "\tjavascript:alert(1)",
+    "data:text/html,%3Cscript%3Ealert(1)%3C/script%3E",
+    "data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'/%3E",
+    "https://cdn.test/photo.jpg",
+    "blob",
+    "data:image/png;base64,iVBORw0KGgo=",
+    "data:image/jpeg;base64,/9j/4AAQ",
+    "data:image/gif;base64,R0lGODlh",
+    "data:image/webp;base64,UklGRg==",
+    "data:image/avif;base64,AAAAIGZ0eXA=",
+  ];
+  await openFiles(page, files);
+  const offered: boolean[] = [];
+  for (let index = 0; index < files.length; index++) {
+    await page.evaluate((i) => (window as Window).lightbox.goTo(i), index);
+    offered.push(await page.locator(".re-lightbox-download").isVisible());
+  }
+  expect(offered).toEqual([
+    false,
+    false,
+    false,
+    false,
+    false,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+  ]);
+});
+
+test("Download saves a file from another origin without leaving the page", async ({
+  page,
+}) => {
+  await page.route("https://cdn.test/photo.jpg", (route) =>
+    route.fulfill({
+      contentType: "image/jpeg",
+      headers: { "access-control-allow-origin": "*" },
+      body: "photo",
+    }),
+  );
+  await openFiles(page, ["https://cdn.test/photo.jpg"]);
+  const [file] = await Promise.all([
+    page.waitForEvent("download"),
+    page.click(".re-lightbox-download"),
+  ]);
+  expect(file.suggestedFilename()).toBe("photo.jpg");
+  expect(page.url()).toBe("http://reuse.test/");
+});
+
+test("Download saves a file from another origin under its decoded name", async ({
+  page,
+}) => {
+  await page.route("https://cdn.test/**", (route) =>
+    route.fulfill({
+      contentType: "image/jpeg",
+      headers: { "access-control-allow-origin": "*" },
+      body: "photo",
+    }),
+  );
+  await openFiles(page, [
+    "https://cdn.test/My%20Photo.jpg",
+    "https://cdn.test/%D1%84%D0%BE%D1%82%D0%BE.jpg",
+    "https://cdn.test/100%25%zz.jpg",
+  ]);
+  const names: string[] = [];
+  for (const index of [0, 1, 2]) {
+    await page.evaluate((i) => (window as Window).lightbox.goTo(i), index);
+    const [file] = await Promise.all([
+      page.waitForEvent("download"),
+      page.click(".re-lightbox-download"),
+    ]);
+    names.push(file.suggestedFilename());
+  }
+  expect(names).toEqual(["My Photo.jpg", "фото.jpg", "100%25%zz.jpg"]);
+});
+
+test("Download frees the saved file's object URL a minute after the click, even when the viewer closes first", async ({
+  page,
+}) => {
+  await page.clock.install();
+  await page.addInitScript(() => {
+    const revoked: string[] = [];
+    const revoke = URL.revokeObjectURL;
+    URL.revokeObjectURL = (url: string) => {
+      revoked.push(url);
+      revoke(url);
+    };
+    Object.assign(window, { revoked });
+  });
+  let answer = () => {};
+  const answered = new Promise<void>((resolve) => {
+    answer = resolve;
+  });
+  await page.route("https://cdn.test/photo.jpg", async (route) => {
+    await answered;
+    await route.fulfill({
+      contentType: "image/jpeg",
+      headers: { "access-control-allow-origin": "*" },
+      body: "photo",
+    });
+  });
+  await openFiles(page, ["https://cdn.test/photo.jpg"]);
+  await page.click(".re-lightbox-download");
+  await page.evaluate(() => (window as Window).lightbox.close());
+  const download = page.waitForEvent("download");
+  answer();
+  await download;
+  const revoked = () =>
+    page.evaluate(
+      () => (window as unknown as { revoked: string[] }).revoked.length,
+    );
+  await page.clock.runFor(59_000);
+  expect(await revoked()).toBe(0);
+  await page.clock.runFor(1_000);
+  expect(await revoked()).toBe(1);
+});
+
+test("Download opens a file another origin keeps from scripts in a new tab", async ({
+  page,
+}) => {
+  // Playwright answers a fulfilled cross-origin fetch with CORS headers, so a refused read is an aborted fetch.
+  await page
+    .context()
+    .route("https://cdn.test/photo.jpg", (route) =>
+      route.request().resourceType() === "fetch"
+        ? route.abort()
+        : route.fulfill({ contentType: "image/jpeg", body: "photo" }),
+    );
+  await openFiles(page, ["https://cdn.test/photo.jpg"]);
+  const [popup] = await Promise.all([
+    page.waitForEvent("popup"),
+    page.click(".re-lightbox-download"),
+  ]);
+  await popup.waitForLoadState();
+  expect(popup.url()).toBe("https://cdn.test/photo.jpg");
+  expect(await popup.evaluate(() => window.opener)).toBeNull();
+  expect(page.url()).toBe("http://reuse.test/");
+});
+
+test("Download opens a file whose fetch already failed as a plain link, so no popup blocker can stop it", async ({
+  page,
+}) => {
+  await page
+    .context()
+    .route("https://cdn.test/photo.jpg", (route) =>
+      route.request().resourceType() === "fetch"
+        ? route.abort()
+        : route.fulfill({ contentType: "image/jpeg", body: "photo" }),
+    );
+  await openFiles(page, ["https://cdn.test/photo.jpg"]);
+  const failed = page.waitForEvent("requestfailed");
+  await page.focus(".re-lightbox-download");
+  await failed;
+  await page.evaluate(() => {
+    Object.assign(window, { prevented: [] as boolean[] });
+    window.open = () => null;
+    document.addEventListener("click", (event) =>
+      (window as unknown as { prevented: boolean[] }).prevented.push(
+        event.defaultPrevented,
+      ),
+    );
+  });
+  const [popup] = await Promise.all([
+    page.waitForEvent("popup"),
+    page.click(".re-lightbox-download"),
+  ]);
+  await popup.waitForLoadState();
+  expect(popup.url()).toBe("https://cdn.test/photo.jpg");
+  expect(await popup.evaluate(() => window.opener)).toBeNull();
+  expect(
+    await page.evaluate(
+      () => (window as unknown as { prevented: boolean[] }).prevented,
+    ),
+  ).toEqual([false]);
+  expect(page.url()).toBe("http://reuse.test/");
+});
+
+test("Download saves a raster data file without leaving the page", async ({
+  page,
+}) => {
+  await openFiles(page, ["data:image/png;base64,iVBORw0KGgo="]);
+  const [file] = await Promise.all([
+    page.waitForEvent("download"),
+    page.click(".re-lightbox-download"),
+  ]);
+  expect(await file.failure()).toBeNull();
+  expect(page.url()).toBe("http://reuse.test/");
+});
+
+test("Download saves a same-origin file natively", async ({ page }) => {
+  await openFiles(page, ["/photo.jpg"]);
+  await page.route("http://reuse.test/photo.jpg", (route) =>
+    route.fulfill({ contentType: "image/jpeg", body: "photo" }),
+  );
+  await expect(page.locator(".re-lightbox-download")).toHaveAttribute(
+    "download",
+    "",
+  );
+  const [file] = await Promise.all([
+    page.waitForEvent("download"),
+    page.click(".re-lightbox-download"),
+  ]);
+  expect(file.suggestedFilename()).toBe("photo.jpg");
+  expect(page.url()).toBe("http://reuse.test/");
 });
 
 test("the fullscreen button toggles the viewer's stage, and leaving fullscreen keeps it open", async ({

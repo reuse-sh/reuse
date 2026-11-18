@@ -2054,14 +2054,17 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
       s.next.disabled = !looping() && state.index === items.length - 1;
     if (single) toggleSlideshow(s, false);
     if (s.download) {
-      s.download.hidden = Boolean(item.type);
       const href = largestSource(item.srcset, item.src ?? "");
-      let scheme = "";
+      let file = false;
       try {
-        scheme = new URL(href, s.dialog.ownerDocument.baseURI).protocol;
+        const url = new URL(href, s.dialog.ownerDocument.baseURI);
+        file =
+          /^(https?|blob):$/.test(url.protocol) ||
+          /^data:image\/(png|jpeg|gif|webp|avif)[;,]/i.test(url.href);
       } catch {}
-      if (scheme === "javascript:") s.download.removeAttribute("href");
-      else s.download.setAttribute("href", href);
+      s.download.hidden = Boolean(item.type) || !file;
+      if (file) s.download.setAttribute("href", href);
+      else s.download.removeAttribute("href");
     }
     const mark = (index: number, current: boolean) => {
       const slide = s.slides[index];
@@ -3650,6 +3653,78 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
       ? button("a", "download", strings.download, "↓", undefined, toolbarEnd)
       : undefined;
     download?.setAttribute("download", "");
+    download?.setAttribute("rel", "noopener");
+    // Browsers ignore the download attribute across origins and navigate the tab instead,
+    // and block a popup opened after an await, so the fetch starts before the click.
+    let fetched:
+      | { href: string; blob?: Blob; failed?: boolean; wanted?: boolean }
+      | undefined;
+    const native = () =>
+      !download ||
+      download.origin === doc.location.origin ||
+      download.protocol === "data:";
+    const save = (blob: Blob, pathname: string) => {
+      const link = doc.createElement("a");
+      link.href = URL.createObjectURL(blob);
+      const name = pathname.split("/").pop() ?? "";
+      try {
+        link.download = decodeURIComponent(name);
+      } catch {
+        link.download = name;
+      }
+      link.click();
+      setTimeout(() => URL.revokeObjectURL(link.href), 60_000);
+    };
+    const prefetch = () => {
+      if (!download || native() || fetched?.href === download.href) return;
+      const { href, pathname } = download;
+      const entry: NonNullable<typeof fetched> = { href };
+      fetched = entry;
+      fetch(href)
+        .then((response) => (response.ok ? response.blob() : Promise.reject()))
+        .then(
+          (blob) => {
+            entry.blob = blob;
+            if (entry.wanted) save(blob, pathname);
+            entry.wanted = false;
+          },
+          () => {
+            entry.failed = true;
+            if (entry.wanted) doc.defaultView?.open(href, "_blank", "noopener");
+            entry.wanted = false;
+          },
+        );
+    };
+    download?.addEventListener("pointerdown", prefetch, {
+      signal: abort.signal,
+    });
+    download?.addEventListener("focus", prefetch, { signal: abort.signal });
+    download?.addEventListener(
+      "click",
+      (event) => {
+        download.removeAttribute("target");
+        if (
+          native() ||
+          event.button ||
+          event.metaKey ||
+          event.ctrlKey ||
+          event.shiftKey ||
+          event.altKey
+        )
+          return;
+        prefetch();
+        const entry = fetched;
+        if (!entry) return;
+        if (entry.failed) {
+          download.target = "_blank";
+          return;
+        }
+        event.preventDefault();
+        if (entry.blob) save(entry.blob, download.pathname);
+        else entry.wanted = true;
+      },
+      { signal: abort.signal },
+    );
     const closeButton = control("close")
       ? button(
           "button",
