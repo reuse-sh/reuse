@@ -1417,3 +1417,32 @@ test("on a plain page the download link is the same 44 by 44px as the buttons", 
     { width: 44, height: 44 },
   ]);
 });
+
+test("the photo fits beside the thumbnails: above the bottom strip and before the side column, also after a resize", async ({
+  page,
+}) => {
+  const edges = () =>
+    page.evaluate(() => {
+      const frame = document
+        .querySelector(
+          '.re-lightbox-slide[aria-hidden="false"] .re-lightbox-frame',
+        )
+        ?.getBoundingClientRect();
+      const strip = document
+        .querySelector(".re-lightbox-thumbnails")
+        ?.getBoundingClientRect();
+      return {
+        bottom: (strip?.top ?? 0) - (frame?.bottom ?? 0),
+        side: (strip?.left ?? 0) - (frame?.right ?? 0),
+      };
+    });
+  await open(page, { thumbnails: "bottom" });
+  expect((await edges()).bottom).toBeGreaterThanOrEqual(0);
+  await page.setViewportSize({ width: 1000, height: 600 });
+  await expect
+    .poll(async () => (await edges()).bottom)
+    .toBeGreaterThanOrEqual(0);
+  await page.setViewportSize({ width: 1000, height: 700 });
+  await open(page, { thumbnails: "side" });
+  expect((await edges()).side).toBeGreaterThanOrEqual(0);
+});

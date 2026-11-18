@@ -438,6 +438,7 @@ type Session = {
   makeThumbs: (strings: LightboxStrings) => void;
   pointers: Map<number, Point>;
   box: Rect;
+  inset: { left: number; right: number; bottom: number };
   gesture?: {
     start: Point;
     zoom: Zoom;
@@ -1183,18 +1184,36 @@ export function createLightbox<Item extends LightboxItem = LightboxItem>(
     return rect.width > 0 && rect.height > 0 ? rect : undefined;
   }
 
-  function measure(viewport: HTMLElement, paddingProbe: HTMLElement): Rect {
-    const rect = viewport.getBoundingClientRect();
-    const win = viewport.ownerDocument.defaultView;
+  function measure(s: Session) {
+    const rect = s.viewport.getBoundingClientRect();
+    const win = s.viewport.ownerDocument.defaultView;
     const space = Number.parseFloat(
-      win?.getComputedStyle(paddingProbe).paddingLeft ?? "",
+      win?.getComputedStyle(s.paddingProbe).paddingLeft ?? "",
     );
     padding = Number.isFinite(space) ? Math.max(0, space) : PADDING;
-    return {
-      left: rect.left,
+    const width = rect.width || win?.innerWidth || 1;
+    const height = rect.height || win?.innerHeight || 1;
+    const strip = s.thumbStrip?.getBoundingClientRect();
+    const layout =
+      strip?.width && strip.height ? s.dialog.dataset.thumbnails : undefined;
+    const rtl = s.viewport.matches(":dir(rtl)");
+    const inset = { left: 0, right: 0, bottom: 0 };
+    if (strip && layout === "bottom")
+      inset.bottom = Math.max(0, rect.bottom - strip.top);
+    else if (strip && layout === "side" && rtl)
+      inset.left = Math.max(0, strip.right - rect.left);
+    else if (strip && layout === "side")
+      inset.right = Math.max(0, rect.right - strip.left);
+    s.inset = inset;
+    s.viewport.style.setProperty(
+      "--re-lightbox-thumbnails-room",
+      `0px ${inset.right}px ${inset.bottom}px ${inset.left}px`,
+    );
+    s.box = {
+      left: rect.left + inset.left,
       top: rect.top,
-      width: rect.width || win?.innerWidth || 1,
-      height: rect.height || win?.innerHeight || 1,
+      width: width - inset.left - inset.right,
+      height: height - inset.bottom,
     };
   }
 
@@ -1513,7 +1532,7 @@ export function createLightbox<Item extends LightboxItem = LightboxItem>(
     origin: HTMLElement,
     rect: DOMRect,
     size: Size,
-    box: DOMRect,
+    box: Rect,
   ) {
     const doc = s.dialog.ownerDocument;
     const src = image.currentSrc || image.src;
@@ -1650,7 +1669,13 @@ export function createLightbox<Item extends LightboxItem = LightboxItem>(
         ? crop.top
         : (rect.height - crop.height) / 2;
     const scale = crop.width / size.width;
-    const x = rect.left + left + crop.width / 2 - box.left - viewport.width / 2;
+    const x =
+      rect.left +
+      left +
+      crop.width / 2 -
+      box.left -
+      s.inset.left -
+      viewport.width / 2;
     const y = rect.top + top + crop.height / 2 - box.top - viewport.height / 2;
     const radius = corners(origin, rect, win)
       .map((corner) => `${corner / scale}px`)
@@ -1669,7 +1694,12 @@ export function createLightbox<Item extends LightboxItem = LightboxItem>(
       return animate(s, entry.frame, [clipped, expanded], duration, ease);
     const made =
       landing && duration > 0
-        ? landingCopy(s, entry.image, origin, rect, size, box)
+        ? landingCopy(s, entry.image, origin, rect, size, {
+            left: box.left + s.inset.left,
+            top: box.top,
+            width: box.width - s.inset.left - s.inset.right,
+            height: box.height - s.inset.bottom,
+          })
         : undefined;
     if (!made) return animate(s, entry.frame, [live, clipped], duration, ease);
     const { holder, copy } = made;
@@ -1765,7 +1795,7 @@ export function createLightbox<Item extends LightboxItem = LightboxItem>(
     const before = state.zoom;
     const from = fit(state.index, s);
     const resting = s.rest !== undefined && sameZoom(before, s.rest);
-    s.box = measure(s.viewport, s.paddingProbe);
+    measure(s);
     s.pinned = undefined;
     s.thumbCenters = undefined;
     if (resting) updateState({ zoom: restZoom(s, state.index) });
@@ -3165,7 +3195,7 @@ export function createLightbox<Item extends LightboxItem = LightboxItem>(
           publish({});
         }
         interruptImageMotion(s);
-        if (!s.pointers.size) s.box = measure(s.viewport, s.paddingProbe);
+        if (!s.pointers.size) measure(s);
         s.pointers.set(event.pointerId, point(event));
         resetGesture();
         if (s.gesture) {
@@ -3533,7 +3563,7 @@ export function createLightbox<Item extends LightboxItem = LightboxItem>(
         )
           return;
         freezeZoom(s);
-        s.box = measure(s.viewport, s.paddingProbe);
+        measure(s);
         s.safariScale = state.zoom.scale;
       },
       { signal },
@@ -4329,7 +4359,8 @@ export function createLightbox<Item extends LightboxItem = LightboxItem>(
       makeThumbs,
       pointers: new Map(),
       paddingProbe,
-      box: measure(viewport, paddingProbe),
+      box: { left: 0, top: 0, width: 1, height: 1 },
+      inset: { left: 0, right: 0, bottom: 0 },
       suppressClickUntil: 0,
       paged: false,
       flying: true,
@@ -4339,6 +4370,7 @@ export function createLightbox<Item extends LightboxItem = LightboxItem>(
         settings.autoplayMedia !== false &&
         (doc.defaultView?.navigator.userActivation?.isActive ?? true),
     };
+    measure(s);
     session = s;
     if (doc.defaultView) enterHistory(doc.defaultView);
     publish({
@@ -4359,7 +4391,7 @@ export function createLightbox<Item extends LightboxItem = LightboxItem>(
       aside: (node) => s.aside?.append(node),
     });
     placeThumbs(s);
-    s.box = measure(viewport, paddingProbe);
+    measure(s);
     update(s);
     s.carousel.goTo(state.index, "instant");
     dialog.addEventListener(
