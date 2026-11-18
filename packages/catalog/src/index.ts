@@ -443,6 +443,11 @@ export const libraries: Library[] = [
         "tests/browser/carousel-effects.spec.ts",
       ],
       [
+        "Let the markup carry the options",
+        "Options printed in data-carousel-options apply under the options from code, key by key, and an attribute that is not a JSON object stops with the element's name instead of a strip with defaults.",
+        "packages/carousel/src/index.test.ts",
+      ],
+      [
         "Re-render only what reads the change",
         "A React component re-renders for the part of the state it selects, so autoplay progress and scrolling leave a counter that shows the index alone, and a changed option reaches the same carousel instead of a new one.",
         "packages/carousel/src/react.test.tsx",
@@ -534,6 +539,7 @@ export const libraries: Library[] = [
       "A mouse drag inside a nested strip that can scroll moves only that strip.",
       "Autoplay pauses for hover, keyboard focus (:focus-visible), dragging, hidden pages, strips less than half in view and reduced motion, and picks up the rest of its wait when it resumes. --re-carousel-autoplay-progress on the viewport fills from 0 to 1 over the wait, every frame.",
       'For a page without a bundler or an import map, such as a theme or a plugin, load @reuse-sh/carousel/browser/carousel.js with <script type="module">. It is one minified ES module with a source map and no imports. The controls entry is controls.js in the same folder, also with no imports.',
+      'data-carousel-options on the viewport holds a JSON object of options, such as data-carousel-options=\'{"loop":true,"autoplay":5000}\', for a theme or a plugin that prints its settings with the markup. Options passed in code win key by key and strings merge, and an attribute that is not a JSON object throws a TypeError that names the element. Strings that are functions, such as goTo, come from code.',
       "bindCarouselControls(root, carousel, { strings, dotsWindow }) from @reuse-sh/carousel/controls wires your own markup: [data-carousel-prev], [data-carousel-next], [data-carousel-dots], [data-carousel-counter], [data-carousel-play] and [data-carousel-progress], also outside root with data-carousel-controls set to the viewport id. It reads pages, pageIndex, isPaused and autoplayProgress from the one state, and the function it returns removes every listener and element it added.",
       "The strings option supplies every label and announcement, such as goTo(index, count) and slide(index, count), with English defaults. carousel.on(type, listener, { signal }) reports change, settle, play and pause with { state }, and the viewport dispatches the same events as re-carousel:change, re-carousel:settle, re-carousel:play and re-carousel:pause with the state in detail, for markup and scripts that hold no controller.",
       "A div or span viewport without a role becomes a region described by strings.carouselRole, and div or span slides without one become groups described by strings.slideRole and labeled from strings.slide, such as 3 of 8. next(), prev(), the arrows, dots and keys announce the slide they reach; autoplay and swipes stay quiet.",

@@ -995,6 +995,45 @@ describe("native carousel", () => {
     expect(vi.getTimerCount()).toBe(0);
   });
 
+  it("reads options from data-carousel-options under the options passed in code", () => {
+    const { viewport, slides } = fixture(Array(6).fill(100), 300);
+    viewport.dataset.carouselOptions = JSON.stringify({
+      group: 3,
+      align: "center",
+      strings: { slideRole: "Folie", carouselRole: "Galerie" },
+    });
+    const carousel = createCarousel(viewport, {
+      group: 2,
+      strings: { carouselRole: "Karussell" },
+    });
+    cleanups.push(carousel.destroy);
+    expect(carousel.getState().pageCount).toBe(3);
+    expect(slides[1].style.scrollSnapAlign).toBe("none");
+    expect(slides[2].style.scrollSnapAlign).toBe("center");
+    expect(viewport.getAttribute("aria-roledescription")).toBe("Karussell");
+    expect(slides[0].getAttribute("aria-roledescription")).toBe("Folie");
+  });
+
+  it("names the element whose data-carousel-options is not an options object", () => {
+    for (const [markup, error] of [
+      ["{loop: true}", TypeError],
+      ["[true]", TypeError],
+      ["null", TypeError],
+      ['{"group": 0}', RangeError],
+    ] as const) {
+      const { viewport } = fixture();
+      viewport.id = "prints";
+      viewport.dataset.carouselOptions = markup;
+      expect(() => createCarousel(viewport)).toThrow(error);
+      if (error === TypeError)
+        expect(() => createCarousel(viewport)).toThrow(
+          /data-carousel-options on div#prints/,
+        );
+      expect(viewport.classList.contains("re-carousel")).toBe(false);
+      viewport.remove();
+    }
+  });
+
   it("handles empty and non-overflowing content and rejects invalid timers at the boundary", () => {
     const { viewport } = fixture([], 100);
     const carousel = createCarousel(viewport, { loop: true });

@@ -128,6 +128,29 @@ it("applies changed options to the same carousel instead of rebuilding it", asyn
   await act(() => root.unmount());
 });
 
+it("keeps options read from markup until the component changes them", async () => {
+  const host = document.createElement("div");
+  document.body.append(host);
+  const root = createRoot(host);
+  function Marked({ options }: { options: CarouselOptions }) {
+    const { ref, carousel } = useCarousel(options);
+    current = carousel;
+    return createElement(
+      "div",
+      { ref, "data-carousel-options": '{"group":2}' },
+      slides(),
+    );
+  }
+  await act(() => root.render(createElement(Marked, { options: {} })));
+  await act(() => root.render(createElement(Marked, { options: {} })));
+  expect(current?.getState().pageCount).toBe(3);
+  await act(() =>
+    root.render(createElement(Marked, { options: { group: 1 } })),
+  );
+  expect(current?.getState().pageCount).toBe(4);
+  await act(() => root.unmount());
+});
+
 it("re-renders a component only for the part of the state it selects", async () => {
   vi.useFakeTimers();
   renders = {};

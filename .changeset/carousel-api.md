@@ -6,6 +6,8 @@ One event model. `subscribe(listener, { signal })` and the new `on(type, listene
 
 `setOptions` applies every option except `slides`: `releaseMotion`, `releaseDuration`, `moveMotion`, `wheel` and `strings` join `autoplay`, `loop`, `group`, `align` and `drag`. New strings relabel the strip and its slides at once.
 
+Markup options: `data-carousel-options` on the viewport holds a JSON object of options that `createCarousel` reads under the options passed in code, key by key, with `strings` merged. A theme or a plugin can print its settings and translations with the markup. An attribute that is not a JSON object throws a `TypeError` that names the element.
+
 React: `useCarouselState(carousel, selector)` subscribes a component to the part of the state it selects through `useSyncExternalStore`, with a server snapshot, so autoplay progress no longer re-renders a component that shows only the index. `useCarousel` applies changed options with `setOptions` instead of creating the carousel again.
 
 Breaking changes (0.x, so a minor release):

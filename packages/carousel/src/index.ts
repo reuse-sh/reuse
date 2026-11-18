@@ -231,6 +231,20 @@ const liveOptions = [
   "strings",
 ] as const;
 
+function markupOptions(viewport: HTMLElement): CarouselOptions {
+  const json = viewport.dataset.carouselOptions;
+  if (json === undefined) return {};
+  let value: unknown;
+  try {
+    value = JSON.parse(json);
+  } catch {}
+  if (!value || typeof value !== "object" || Array.isArray(value))
+    throw new TypeError(
+      `Carousel data-carousel-options on ${viewport.localName}${viewport.id ? `#${viewport.id}` : ""} is not a JSON object.`,
+    );
+  return value;
+}
+
 export function createCarousel(
   viewport: HTMLElement,
   initialOptions: CarouselOptions = {},
@@ -239,7 +253,12 @@ export function createCarousel(
   const browserWindow = document.defaultView;
   if (!browserWindow) throw new Error("Carousel requires a browser document.");
   const window = browserWindow;
-  const options = { ...initialOptions };
+  const markup = markupOptions(viewport);
+  const options = {
+    ...markup,
+    ...initialOptions,
+    strings: { ...markup.strings, ...initialOptions.strings },
+  };
   validate(options);
   const strings = { ...defaultStrings, ...options.strings };
 

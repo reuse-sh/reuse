@@ -4,6 +4,8 @@ This contract is shared with the lightbox worker. Keep these names and shapes st
 
 createCarousel(viewport: HTMLElement, options?: CarouselOptions): Carousel
 
+Markup options: a viewport's data-carousel-options attribute holds a JSON object of CarouselOptions, read once when the carousel is created. Options passed in code win over it key by key, and strings merge key by key, so a theme or a plugin can print the options and their translations with the markup and a script can still override one of them. JSON carries no functions, so goTo, counter and slide strings come from code. An attribute that is not a JSON object throws a TypeError that names the element (tag and id, such as div#prints) before the carousel touches the DOM, and its values pass the same validation as options from code.
+
 CarouselOptions:
 - slides?: string, defaults to [data-carousel-slide] descendants or direct element children when no marked slides exist
 - align?: "start" | "center", default start
