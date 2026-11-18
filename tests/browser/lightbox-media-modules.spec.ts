@@ -46,15 +46,16 @@ async function setup(
     async ([list, extra, index, image, frameOptions]) => {
       const { createLightbox } = await import("/modules/lightbox/index.js");
       const { video } = await import("/modules/lightbox/video.js");
-      const { embed, registerEmbed } = await import(
-        "/modules/lightbox/embed.js"
-      );
+      const { embed } = await import("/modules/lightbox/embed.js");
       const { iframe } = await import("/modules/lightbox/iframe.js");
-      registerEmbed({
-        name: "videos",
-        pattern: /^https:\/\/videos\.test\/(\w+)/,
-        url: (match) => `https://player.videos.test/${match[1]}`,
-      });
+      const providers = [
+        {
+          name: "videos",
+          pattern: /^https:\/\/videos\.test\/(\w+)/,
+          url: (match: RegExpExecArray) =>
+            `https://player.videos.test/${match[1]}`,
+        },
+      ];
       // A short WebM recorded from a canvas, so the page needs no media file.
       const recorded = async () => {
         const canvas = document.createElement("canvas");
@@ -127,7 +128,11 @@ async function setup(
       );
       const lightbox = createLightbox({
         history: false,
-        content: [video(), embed(frameOptions), iframe(frameOptions)],
+        content: [
+          video(),
+          embed({ ...frameOptions, providers }),
+          iframe(frameOptions),
+        ],
         ...extra,
       });
       Object.assign(window, { lightbox });
@@ -256,7 +261,7 @@ test("an iframe sandboxes a page from another origin, so a click inside cannot n
   expect(page.url()).toBe("http://reuse.test/");
 });
 
-test("a registered provider's player is sandboxed too, so a click inside cannot navigate the tab", async ({
+test("a provider passed to embed() is sandboxed too, so a click inside cannot navigate the tab", async ({
   page,
 }) => {
   await page.route("https://player.videos.test/**", (route) =>

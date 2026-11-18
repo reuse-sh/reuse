@@ -78,7 +78,7 @@ const remotes = new WeakMap<EmbedProvider, Remote>();
 const youtube = (id: string) =>
   `https://www.youtube-nocookie.com/embed/${id}?enablejsapi=1&playsinline=1`;
 
-const providers: EmbedProvider[] = [
+const builtIn: readonly EmbedProvider[] = [
   {
     name: "youtube-shorts",
     pattern: /^https?:\/\/(?:www\.|m\.)?youtube\.com\/shorts\/([\w-]+)/,
@@ -99,13 +99,13 @@ const providers: EmbedProvider[] = [
       `https://player.vimeo.com/video/${match[1]}${match[2] ? `?h=${match[2]}` : ""}`,
   },
 ];
-remotes.set(providers[0], youtubeRemote);
-remotes.set(providers[1], youtubeRemote);
-remotes.set(providers[2], vimeoRemote);
+remotes.set(builtIn[0], youtubeRemote);
+remotes.set(builtIn[1], youtubeRemote);
+remotes.set(builtIn[2], vimeoRemote);
 
-/** Adds a provider ahead of the built-in YouTube and Vimeo ones. */
-export function registerEmbed(provider: EmbedProvider): void {
-  providers.unshift(provider);
+export interface EmbedOptions extends FrameOptions {
+  /** Tried in order before the built-in YouTube and Vimeo providers. */
+  providers?: readonly EmbedProvider[];
 }
 
 // The source URL's own parameters, such as a start time, carry over to the player.
@@ -132,7 +132,8 @@ function withParameters(url: string, source: string) {
 
 const MUTED_RETRY = 1000;
 
-export function embed(options: FrameOptions = {}): LightboxContent {
+export function embed(options: EmbedOptions = {}): LightboxContent {
+  const providers = [...(options.providers ?? []), ...builtIn];
   return {
     type: "embed",
     mount(container, { item, signal, autoplay }): LightboxMounted {

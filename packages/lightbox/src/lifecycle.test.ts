@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { embed } from "./embed.js";
 import {
   bindLightboxGallery,
   createLightbox,
@@ -1382,6 +1383,28 @@ describe("lightbox public API", () => {
         isClosing: false,
       });
     }
+  });
+
+  it("keeps embed providers to the module they were passed to", () => {
+    const provider = {
+      name: "videos",
+      pattern: /^https:\/\/videos\.test\/(\w+)/,
+      url: (match: RegExpExecArray) => `https://player.videos.test/${match[1]}`,
+    };
+    const frame = (module: ReturnType<typeof embed>) => {
+      const box = document.createElement("div");
+      module.mount(box, {
+        item: { type: "embed", src: "https://videos.test/abc" },
+        index: 0,
+        signal: new AbortController().signal,
+        autoplay: false,
+      });
+      return box.querySelector("iframe")?.src;
+    };
+    expect([frame(embed({ providers: [provider] })), frame(embed())]).toEqual([
+      "https://player.videos.test/abc",
+      "about:blank",
+    ]);
   });
 
   it("plays a video item from src with previewSrc as its poster", async () => {
