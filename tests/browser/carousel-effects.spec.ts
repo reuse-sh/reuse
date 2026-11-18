@@ -10,6 +10,7 @@ type Strip = {
   getState(): {
     index: number;
     count: number;
+    progress: number;
     isLooping: boolean;
     seamSlides: readonly number[];
   };
@@ -469,17 +470,24 @@ for (const scale of [1, 1.5, 2])
             .carousels)
             carousel[name]();
         }, method);
+      // Names the strips not resting on the first slide with a progress of 0.
+      const awayFromStart = () =>
+        page.evaluate(() =>
+          (window as unknown as { carousels: Strip[] }).carousels.flatMap(
+            (carousel, at) => {
+              const { index, progress } = carousel.getState();
+              return index === 0 && progress < 0.01
+                ? []
+                : [`${at} index ${index} progress ${progress}`];
+            },
+          ),
+        );
       expect(await moving()).toEqual([]);
+      expect(await awayFromStart()).toEqual([]);
       await each("prev");
       expect(await moving()).toEqual([]);
       await each("next");
       expect(await moving()).toEqual([]);
-      expect(
-        await page.evaluate(() =>
-          (window as unknown as { carousels: Strip[] }).carousels.map(
-            (carousel) => carousel.getState().index,
-          ),
-        ),
-      ).toEqual(strips.map(() => 0));
+      expect(await awayFromStart()).toEqual([]);
     });
   });

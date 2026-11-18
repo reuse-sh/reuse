@@ -709,12 +709,16 @@ export function createCarousel(
     viewport.toggleAttribute("data-re-at-start", !span && current < 1);
     viewport.toggleAttribute("data-re-at-end", !span && current > max - 1);
     const visible = visibleSlides(current);
+    // Browsers round scrollLeft, so a strip resting on the first slide can sit just below it.
+    const lap = span > 0 ? wrap(current - (targets[0] ?? span)) : 0;
     const next: CarouselState = {
       index,
       count: slides.length,
       progress:
         span > 0
-          ? wrap(current - (targets[0] ?? span)) / span
+          ? lap > span - 1
+            ? 0
+            : lap / span
           : max > 0
             ? current / max
             : 0,
