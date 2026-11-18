@@ -1982,6 +1982,7 @@ export function createCarousel(
   listen(viewport, "pointerdown", (event) => {
     const input = event as PointerEvent;
     const target = input.target as HTMLElement;
+    suppressClick = false;
     if (taken && input.pointerType !== "mouse") {
       grabbedTouch = input.pointerId;
       interrupt(false);

@@ -580,3 +580,33 @@ test("an arrow key while the mouse is pressed but has not moved is kept by the d
     ),
   ).toBe(1);
 });
+
+test("a click on a control inside a slide works after a drag a key ended off the strip", async ({
+  page,
+}) => {
+  await mount(
+    page,
+    `<div id="strip" style="width:600px;--re-carousel-gap:0px">${Array.from(
+      { length: 6 },
+      (_, index) =>
+        `<label data-carousel-slide style="flex:0 0 300px;height:200px;display:block;background:hsl(${index * 50} 60% 60%)"><input type="checkbox" id="box${index}"></label>`,
+    ).join("")}</div><div style="height:300px"></div>`,
+    ["carousel/styles.css"],
+  );
+  await page.evaluate(async () => {
+    const { createCarousel } = await import("/modules/carousel/index.js");
+    createCarousel(document.getElementById("strip") as HTMLElement);
+  });
+  await page.focus("#strip");
+  await page.mouse.move(500, 100);
+  await page.mouse.down();
+  await page.mouse.move(440, 100, { steps: 8 });
+  await page.keyboard.press("ArrowRight");
+  await page.mouse.move(440, 400, { steps: 4 });
+  await page.mouse.up();
+  await framesUntilIdle(page, scrollLeft);
+  const box = await page.locator("#strip input").nth(1).boundingBox();
+  if (!box) throw new Error("The second checkbox has no box.");
+  await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2);
+  expect(await page.locator("#strip input").nth(1).isChecked()).toBe(true);
+});
