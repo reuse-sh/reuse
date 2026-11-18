@@ -77,13 +77,17 @@ export function LibraryMenu({
 
   useEffect(() => {
     if (!open || peek.current) return;
-    if (!matchMedia("(hover: hover) and (pointer: fine)").matches) return;
+    if (!matchMedia("(any-hover: hover) and (any-pointer: fine)").matches)
+      return;
     let current = true;
-    import("./library-peek").then((module) => {
-      if (!current || peek.current) return;
-      peek.current = module.createLibraryPeek();
-      tooltip.current?.refresh();
-    });
+    import("./library-peek").then(
+      (module) => {
+        if (!current || peek.current) return;
+        peek.current = module.createLibraryPeek();
+        tooltip.current?.refresh();
+      },
+      (error) => reportError(error),
+    );
     return () => {
       current = false;
     };
@@ -93,6 +97,9 @@ export function LibraryMenu({
     const root = rows.current;
     if (!root) return;
     const highlight = createMovingHighlight(root);
+    const loading = document.createElement("div");
+    loading.className = "f-peek-loading";
+    loading.setAttribute("aria-hidden", "true");
     const created = createFloatingTooltip(root, {
       selector: "[data-peek]",
       side: "bottom-right",
@@ -103,7 +110,7 @@ export function LibraryMenu({
       content: (row) =>
         row.matches(":focus-visible")
           ? null
-          : (peek.current?.pane(row.dataset.peek as MenuSlug) ?? null),
+          : (peek.current?.pane(row.dataset.peek as MenuSlug) ?? loading),
     });
     tooltip.current = created;
     root.addEventListener("keydown", moveFocus);

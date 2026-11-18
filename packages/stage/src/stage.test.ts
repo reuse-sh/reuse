@@ -369,6 +369,39 @@ describe("stage", () => {
     expect(stage.status).toBe("waiting");
   });
 
+  it("gives a control that leaves the scene its own tab order back", async () => {
+    const { root, scene } = mount('<button tabindex="2">Save</button>', {
+      script: (act) => act.wait(10_000),
+    });
+    const button = scene.querySelector("button") as HTMLButtonElement;
+    expect(button.getAttribute("tabindex")).toBe("-1");
+    document.body.append(button);
+    await Promise.resolve();
+    expect(button.getAttribute("tabindex")).toBe("2");
+    scene.append(button);
+    await Promise.resolve();
+    for (const stage of stages.splice(0)) stage.destroy();
+    expect(root.querySelector("button")?.getAttribute("tabindex")).toBe("2");
+  });
+
+  it("reports a failed pass even when its reset throws", async () => {
+    mount("<i></i>", {
+      script: (act) => act.click("nowhere"),
+      reset: (() => {
+        let calls = 0;
+        return () => {
+          calls++;
+          if (calls > 1) throw new Error("reset broke");
+        };
+      })(),
+    });
+    await tick(3000);
+    expect(reported.map(String)).toEqual([
+      'Error: The stage has no target "nowhere".',
+      "Error: reset broke",
+    ]);
+  });
+
   it("puts the markup back on destroy", async () => {
     const root = document.createElement("div");
     root.className = "demo";

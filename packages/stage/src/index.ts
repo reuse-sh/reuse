@@ -142,9 +142,16 @@ export function createStage(root: HTMLElement, options: StageOptions): Stage {
   };
 
   const silenced = new Map<Element, string | null>();
+  const restore = (element: Element, value: string | null) => {
+    if (value === null) element.removeAttribute("tabindex");
+    else element.setAttribute("tabindex", value);
+  };
   const silence = () => {
-    for (const element of silenced.keys())
-      if (!scene.contains(element)) silenced.delete(element);
+    for (const [element, value] of silenced)
+      if (!scene.contains(element)) {
+        restore(element, value);
+        silenced.delete(element);
+      }
     for (const element of scene.querySelectorAll(FOCUSABLE)) {
       if (!silenced.has(element))
         silenced.set(element, element.getAttribute("tabindex"));
@@ -569,8 +576,12 @@ export function createStage(root: HTMLElement, options: StageOptions): Stage {
     play(own).catch((error) => {
       if (error instanceof Aborted || controller !== own) return;
       failed = true;
-      stop("waiting", () => options.reset?.());
       view.reportError(error);
+      try {
+        stop("waiting", () => options.reset?.());
+      } catch (resetError) {
+        view.reportError(resetError);
+      }
     });
   }
 
@@ -652,10 +663,7 @@ export function createStage(root: HTMLElement, options: StageOptions): Stage {
       root.removeEventListener("pointerenter", enterRoot);
       root.removeEventListener("pointerdown", downRoot);
       root.removeEventListener("pointerleave", leaveRoot);
-      for (const [node, value] of silenced) {
-        if (value === null) node.removeAttribute("tabindex");
-        else node.setAttribute("tabindex", value);
-      }
+      for (const [node, value] of silenced) restore(node, value);
       shield.remove();
       cursor.remove();
       if (sceneHidden === null) scene.removeAttribute("aria-hidden");

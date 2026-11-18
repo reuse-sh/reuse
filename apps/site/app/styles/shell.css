@@ -41,6 +41,13 @@
   .f-tip-keys kbd {
     @apply inline-grid h-4 min-w-4.5 place-items-center rounded-full bg-overlay-foreground/15 px-1 font-sans text-caption leading-none font-medium text-overlay-foreground/80;
   }
+  .f-peek-tip .f-peek-loading {
+    width: 240px;
+    height: 148px;
+    margin-bottom: 44px;
+    border-radius: 10px;
+    background: var(--muted);
+  }
   .f-peek-tip .pk {
     --re-stage-cursor-size: 15px;
     --re-stage-ring: rgb(0 0 0 / 0.35);
