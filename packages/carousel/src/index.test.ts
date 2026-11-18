@@ -1617,6 +1617,41 @@ describe("one state for every control", () => {
     expect(late).toEqual([]);
   });
 
+  it("reports a throwing listener and keeps delivering to the rest and to later events", () => {
+    const { viewport } = fixture();
+    const carousel = createCarousel(viewport);
+    cleanups.push(carousel.destroy);
+    const reported: unknown[] = [];
+    vi.stubGlobal("reportError", (error: unknown) => reported.push(error));
+    const failure = new Error("listener failed");
+    let failed = false;
+    const seen: string[] = [];
+    carousel.on("change", () => {
+      if (failed) return;
+      failed = true;
+      throw failure;
+    });
+    carousel.subscribe(() => {
+      if (!failed) throw failure;
+    });
+    carousel.on("change", ({ state }) => seen.push(`on ${state.index}`));
+    carousel.subscribe((state) => seen.push(`subscribe ${state.index}`));
+    viewport.addEventListener("re-carousel:change", (event) =>
+      seen.push(`dom ${(event as CustomEvent).detail.index}`),
+    );
+    carousel.goTo(1, "instant");
+    carousel.goTo(2, "instant");
+    expect(reported).toEqual([failure, failure]);
+    expect(seen).toEqual([
+      "subscribe 1",
+      "on 1",
+      "dom 1",
+      "subscribe 2",
+      "on 2",
+      "dom 2",
+    ]);
+  });
+
   it("delivers a listener added twice twice and removes each with its own unsubscribe", () => {
     const { viewport } = fixture();
     const carousel = createCarousel(viewport);

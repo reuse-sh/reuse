@@ -121,6 +121,15 @@ function generic(element: HTMLElement) {
   );
 }
 
+function report(error: unknown) {
+  if (typeof globalThis.reportError === "function")
+    globalThis.reportError(error);
+  else
+    setTimeout(() => {
+      throw error;
+    });
+}
+
 function clamp(value: number, max: number): number {
   return Math.max(0, Math.min(value, max));
 }
@@ -581,9 +590,13 @@ export function createCarousel(
   function call(type?: string, detail?: CarouselState) {
     for (const entry of listeners)
       if (entry.type === type)
-        (entry.listener as (value: unknown) => void)(
-          type ? { state: detail } : state,
-        );
+        try {
+          (entry.listener as (value: unknown) => void)(
+            type ? { state: detail } : state,
+          );
+        } catch (error) {
+          report(error);
+        }
   }
 
   function emit(type: string, detail: CarouselState) {
@@ -659,9 +672,13 @@ export function createCarousel(
       events.push([to.isPlaying ? "play" : "pause", to]);
     if (dispatching) return;
     dispatching = true;
-    for (let event = events.shift(); event; event = events.shift())
-      emit(...event);
-    dispatching = false;
+    try {
+      for (let event = events.shift(); event; event = events.shift())
+        emit(...event);
+    } finally {
+      dispatching = false;
+      events.length = 0;
+    }
   }
 
   function tick() {
