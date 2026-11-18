@@ -10,14 +10,14 @@ These are the rules the code keeps. An adaptation on any framework keeps them to
 
 - **Drive the real component.** The cursor sends pointer events to the element under it, so hover, press, drag and release run the component's own code instead of a drawing of it.
 - **Mark its events.** Scripted events bubble like real ones, so handlers delegated to a parent, such as React's, run too. isStageEvent tells them apart, so page code that closes on an outside press can ignore them.
-- **Leave focus where it is.** Nothing in the scene can take focus, and focus a component moves into it goes back where it was, so a demo never closes the menu or dialog around it.
+- **Leave focus where it is.** Scene elements that are not native controls cannot take focus. When a component focuses a native control in the scene, focus goes back where it was, though the page has already seen a focusout.
 - **Move like a hand.** The cursor travels on a shallow arc timed by distance, quick to leave and slow to land, and every press shows.
 - **Land on a moving target.** A move measures its target on every frame, so it lands even when the layout shifts or the stage resizes mid-move.
 - **Start every pass from the first frame.** reset runs before every pass. A pass cut short by leaving the screen resets at once, so the scene never resumes halfway.
 - **Play only when seen.** It plays while at least 40% of the stage is on screen and the page is visible, and stops otherwise.
 - **Hold still for reduced motion.** With reduced motion the script never runs, the cursor hides and the scene shows its still frame.
 - **Stay a picture to the keyboard.** The scene is hidden from assistive technology and its controls leave the tab order. The stage carries one label that says what the scene shows.
-- **Hand over to the visitor.** An interactive stage stops when a pointer enters it and lets the visitor use the real component. It plays again from the first frame after the pointer leaves.
+- **Hand over to the visitor.** An interactive stage stops when a mouse enters it or a touch lands on it, and lets the visitor use the real component. It plays again from the first frame 1.2 s after the mouse leaves or 4 s after the last touch, and never while focus is inside the scene.
 - **Fail loud.** A target the scene lacks throws, and the error stops the stage instead of looping on a broken scene.
 - **Restore the markup.** Destroy ends the pass, removes the cursor and listeners, gives the controls back their tab order and unwraps the scene.
 

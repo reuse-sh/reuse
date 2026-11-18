@@ -533,3 +533,26 @@ test("the narrow header keeps a visible library icon and a usable keyboard switc
     await expect(button).toBeFocused();
   }
 });
+
+test("every library preview plays its real scene and keeps the menu open", async ({
+  page,
+}) => {
+  const errors: string[] = [];
+  page.on("pageerror", (error) => errors.push(error.message));
+  await page.route("https://cdn.visitors.now/v.js", (route) => route.abort());
+  await page.goto("/");
+  await page.getByRole("button", { name: "Libraries" }).click();
+  await page.mouse.move(1200, 700);
+  const rows = page.locator("[data-peek]");
+  const count = await rows.count();
+  expect(count).toBe(14);
+  for (let index = 0; index < count; index++) {
+    await rows.nth(index).hover();
+    await expect(
+      page.locator(".f-peek-tip:not([hidden]) .re-stage-cursor[data-visible]"),
+    ).toHaveCount(1);
+    await expect(page.locator(".library-menu")).toBeVisible();
+    await page.mouse.move(1200, 700);
+  }
+  expect(errors).toEqual([]);
+});
