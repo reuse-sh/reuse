@@ -1654,6 +1654,23 @@ describe("effects, groups and drivers", () => {
     expect(aligns()).toEqual(["", "end", "", "", "", "", "", ""]);
   });
 
+  it("steps a looping group onto the group starts it snaps to when the count does not divide", () => {
+    const { viewport } = fixture(Array(8).fill(100), 200);
+    const carousel = createCarousel(viewport, { loop: true, group: 3 });
+    cleanups.push(carousel.destroy);
+    expect(carousel.getState()).toMatchObject({
+      isLooping: true,
+      pageCount: 3,
+    });
+    const seen: number[] = [];
+    for (const step of ["next", "next", "next", "prev", "prev"] as const) {
+      carousel[step]();
+      vi.advanceTimersByTime(1000);
+      seen.push(carousel.getState().index);
+    }
+    expect(seen).toEqual([3, 6, 0, 6, 3]);
+  });
+
   it("snaps the first slide of each page with group page", () => {
     const { viewport, slides } = fixture([100, 100, 100, 100, 100, 100], 200);
     const carousel = createCarousel(viewport, { group: "page" });

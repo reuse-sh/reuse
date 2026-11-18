@@ -1031,7 +1031,21 @@ export function createCarousel(
 
   function step(direction: 1 | -1) {
     if (!enabled || destroyed || !slides.length || max === 0) return;
-    goTo(stepIndex(state.index, direction), "smooth", direction);
+    goTo(
+      span && (options.group ?? 1) !== 1
+        ? pageAhead(state.index, direction)
+        : stepIndex(state.index, direction),
+      "smooth",
+      direction,
+    );
+  }
+
+  function pageAhead(current: number, direction: 1 | -1) {
+    const ahead =
+      direction === 1
+        ? pages.find((start) => start > current)
+        : [...pages].reverse().find((start) => start < current);
+    return ahead ?? (direction === 1 ? pages[0] : (pages.at(-1) ?? 0));
   }
 
   function say(text: string) {

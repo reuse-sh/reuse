@@ -9,7 +9,7 @@ CarouselOptions:
 - align?: "start" | "center", default start
 - loop?: boolean, default false
 - drag?: boolean, default true
-- group?: number | "page", default 1. With N above 1 or "page", only the slides next() reaches from the first slide keep scroll-snap-align, plus the slide a move or a refresh left active; the others get scroll-snap-align: none, so touch and trackpad swipes, a released mouse drag and settling all rest on a group start. destroy restores each slide's own value.
+- group?: number | "page", default 1. With N above 1 or "page", only the slides next() reaches from the first slide keep scroll-snap-align, plus the slide a move or a refresh left active; the others get scroll-snap-align: none, so touch and trackpad swipes, a released mouse drag and settling all rest on a group start. In a loop, next() and prev() move between those same starts and wrap from the last to the first, also when the count is not a multiple of N. destroy restores each slide's own value.
 - autoplay?: number, milliseconds, off by default
 - releaseMotion?: "spring" | "native", default spring. A released mouse drag projects its speed 260ms ahead and travels to the snap point nearest that stop, at least one slide ahead after a flick, and never past the first slide on the way whose scroll-snap-stop is always. Spring starts at the drag speed and slows down without overshooting a target it moves toward; native uses the browser smooth scroll. Reduced motion jumps.
 - releaseDuration?: number, milliseconds, default 260, the spring time for a slow release and for the return from a stretched end
