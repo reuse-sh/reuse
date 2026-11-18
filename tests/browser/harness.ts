@@ -99,7 +99,7 @@ function isChromium(page: Page) {
 
 type TouchPhase = "start" | "move" | "end" | "cancel";
 
-async function synthesizeTouches(
+export async function synthesizeTouches(
   page: Page,
   type: TouchPhase,
   points: Point[],

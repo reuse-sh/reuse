@@ -446,6 +446,33 @@ test("in RTL previous sits on the right and next on the left, each icon mirrored
   ]);
 });
 
+test("a narrow right-to-left viewer with a side caption keeps next at its edge", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 600, height: 700 });
+  await mount(page, "", ["lightbox/base.css", "lightbox/theme.css"]);
+  await page.evaluate(async () => {
+    document.documentElement.dir = "rtl";
+    const { createLightbox } = await import("/modules/lightbox/index.js");
+    const photo = (i: number) =>
+      `data:image/svg+xml,${encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="800"><rect width="1200" height="800" fill="hsl(${i * 47} 60% 55%)"/></svg>`)}`;
+    createLightbox({ history: false, caption: "side" }).open(
+      [0, 1, 2].map((i) => ({
+        src: photo(i),
+        width: 1200,
+        height: 800,
+        caption: `Caption ${i + 1}`,
+      })),
+      1,
+    );
+  });
+  await page.waitForTimeout(500);
+  const next = await page.locator(".re-lightbox-next").boundingBox();
+  const prev = await page.locator(".re-lightbox-prev").boundingBox();
+  expect(Math.round(next?.x ?? 0)).toBe(16);
+  expect(Math.round(600 - (prev?.x ?? 0) - (prev?.width ?? 0))).toBe(16);
+});
+
 test("a side column sits at the end edge, left in RTL, and turns into the bottom strip at 700px", async ({
   page,
 }) => {

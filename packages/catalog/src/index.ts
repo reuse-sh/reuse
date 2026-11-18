@@ -144,7 +144,7 @@ export const libraries: Library[] = [
       ],
       [
         "Dismiss like a photos app",
-        "A vertical swipe carries the photo, fades the backdrop and the controls with it, and closes past a distance or a speed. A cancelled pointer never closes.",
+        "A vertical swipe carries the photo, fades the backdrop and the controls with it, and closes past a distance or a speed. A cancelled pointer never closes, a second finger leaves the swipe with the first, and a close ends the gesture.",
         "tests/browser/lightbox-gestures.spec.ts",
       ],
       [
@@ -154,7 +154,7 @@ export const libraries: Library[] = [
       ],
       [
         "Return to what is on screen",
-        "Close goes back to the current photo's tile, after bringing it into view in its own carousel, and fades in place when the tile cannot be seen or the strip is still moving. The page scrolls and takes clicks during the flight and stays where it was scrolled once the viewer is gone, focus moved there stays, and the tile's container does not cut the photo before it nears the tile.",
+        "Close goes back to the current photo's tile, after bringing it into view in its own carousel, and fades in place when the tile cannot be seen, in the window and in every container that clips it, or the strip is still moving. The page scrolls and takes clicks during the flight and stays where it was scrolled once the viewer is gone, focus moved there stays, and the tile's container does not cut the photo before it nears the tile.",
         "tests/browser/lightbox-close.spec.ts",
       ],
       [

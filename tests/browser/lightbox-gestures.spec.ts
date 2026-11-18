@@ -1,5 +1,5 @@
 import { expect, type Page, test } from "@playwright/test";
-import { mount, photo, swipe, tap } from "./harness";
+import { mount, photo, swipe, synthesizeTouches, tap } from "./harness";
 
 type Lightbox = {
   close(): Promise<void>;
@@ -317,6 +317,73 @@ test.describe("lightbox dismiss and taps", { tag: "@touch" }, () => {
     await page.waitForTimeout(500);
     await swipe(page, center, { x: 195, y: 482 }, { speed: 0.8 });
     await expect.poll(async () => (await state(page)).isOpen).toBe(false);
+  });
+
+  test("a close during a held dismiss drag ignores the finger that lifts after it", async ({
+    page,
+  }) => {
+    await open(page);
+    await page.waitForTimeout(500);
+    await synthesizeTouches(page, "start", [center]);
+    for (let step = 1; step <= 5; step++)
+      await synthesizeTouches(page, "move", [{ x: 195, y: 422 + step * 10 }]);
+    await expect(page.locator("dialog")).toHaveAttribute(
+      "data-phase",
+      "dragging",
+    );
+    await page.evaluate(() => {
+      const dialog = document.querySelector("dialog") as HTMLElement;
+      const phases: string[] = [];
+      Object.assign(window, { phases });
+      new MutationObserver((records) => {
+        for (const _ of records) phases.push(dialog.dataset.phase ?? "");
+      }).observe(dialog, { attributeFilter: ["data-phase"] });
+      void (window as Window).lightbox.close();
+    });
+    // Stamped 300ms later, the lift carries no speed that would close by itself.
+    await synthesizeTouches(
+      page,
+      "end",
+      [{ x: 195, y: 472 }],
+      0,
+      Date.now() + 300,
+    );
+    await page.waitForTimeout(100);
+    expect(
+      await page.evaluate(
+        () => (window as unknown as { phases: string[] }).phases,
+      ),
+    ).toEqual(["closing"]);
+  });
+
+  test("a second finger during a dismiss drag leaves the photo and the backdrop where they are", async ({
+    page,
+  }) => {
+    await open(page);
+    await page.waitForTimeout(500);
+    await synthesizeTouches(page, "start", [{ x: 195, y: 300 }]);
+    for (let step = 1; step <= 10; step++)
+      await synthesizeTouches(page, "move", [{ x: 195, y: 300 + step * 10 }]);
+    const read = () =>
+      page.evaluate(() => ({
+        top: (
+          document.querySelector(
+            '.re-lightbox-slide[aria-hidden="false"] .re-lightbox-frame',
+          ) as Element
+        ).getBoundingClientRect().top,
+        backdrop: Number(
+          getComputedStyle(
+            document.querySelector(".re-lightbox-backdrop") as Element,
+          ).opacity,
+        ),
+      }));
+    const before = await read();
+    await synthesizeTouches(page, "start", [{ x: 275, y: 400 }], 1);
+    const after = await read();
+    await synthesizeTouches(page, "end", [{ x: 275, y: 400 }], 1);
+    await synthesizeTouches(page, "end", [{ x: 195, y: 400 }]);
+    expect(Math.abs(after.top - before.top)).toBeLessThan(2);
+    expect(Math.abs(after.backdrop - before.backdrop)).toBeLessThan(0.02);
   });
 
   test("a slow 100px drag puts the photo back", async ({ page }) => {

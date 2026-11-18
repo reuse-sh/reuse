@@ -448,6 +448,37 @@ function corners(origin: HTMLElement, rect: DOMRect, win: Window) {
   return [0, 0, 0, 0];
 }
 
+// A tile shows when part of it lies inside the window and inside every ancestor that clips it.
+function onScreen(origin: HTMLElement, rect: DOMRect, win: Window) {
+  let left = Math.max(rect.left, 0);
+  let top = Math.max(rect.top, 0);
+  let right = Math.min(rect.right, win.innerWidth);
+  let bottom = Math.min(rect.bottom, win.innerHeight);
+  for (
+    let element = origin.parentElement;
+    // The body's overflow belongs to the window, which the start already clips to.
+    element &&
+    element !== origin.ownerDocument.body &&
+    right > left &&
+    bottom > top;
+    element = element.parentElement
+  ) {
+    const style = win.getComputedStyle(element);
+    if (style.overflowX === "visible" && style.overflowY === "visible")
+      continue;
+    const clip = element.getBoundingClientRect();
+    if (style.overflowX !== "visible") {
+      left = Math.max(left, clip.left);
+      right = Math.min(right, clip.right);
+    }
+    if (style.overflowY !== "visible") {
+      top = Math.max(top, clip.top);
+      bottom = Math.min(bottom, clip.bottom);
+    }
+  }
+  return right > left && bottom > top;
+}
+
 function lockScroll(doc: Document) {
   const win = doc.defaultView;
   if (!win) return () => {};
@@ -901,11 +932,13 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
     if (!settings.icons?.slideshow) button.textContent = on ? "❚❚" : "▶";
   }
 
-  function easing(value: string) {
+  // A CSS easing list passes CSS.supports but makes animate() throw, so the check asks the same parser animate() uses.
+  function easing(value: string, win: Window | null) {
+    const Effect = (win as (Window & typeof globalThis) | null)?.KeyframeEffect;
+    if (!value || !Effect) return FLIGHT_EASE;
     try {
-      return value && CSS.supports("transition-timing-function", value)
-        ? value
-        : FLIGHT_EASE;
+      new Effect(null, null, { easing: value });
+      return value;
     } catch {
       return FLIGHT_EASE;
     }
@@ -927,7 +960,10 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
       close:
         fixed ??
         milliseconds(read("--re-lightbox-close-duration"), CLOSE_DURATION),
-      ease: easing(read("--re-lightbox-ease").trim()),
+      ease: easing(
+        read("--re-lightbox-ease").trim(),
+        s.dialog.ownerDocument.defaultView,
+      ),
     };
   }
 
@@ -1158,12 +1194,11 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
   ) {
     if (duration <= 0 || typeof node.animate !== "function")
       return Promise.resolve();
-    let animation: Animation;
-    try {
-      animation = node.animate(frames, { duration, easing, fill: "both" });
-    } catch {
-      return Promise.resolve();
-    }
+    const animation = node.animate(frames, {
+      duration,
+      easing,
+      fill: "both",
+    });
     return new Promise<void>((resolve) => {
       s.animations.add(animation);
       syncAnimating(s);
@@ -1186,7 +1221,22 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
       };
       // A timeline that has not advanced by the deadline still lands the last keyframe. It is
       // written directly, since WebKit commits the first keyframe of an animation that never got a frame.
-      const timer = setTimeout(() => finish(true), duration + 80);
+      // The deadline counts from the animation's start, so a busy main thread does not cut it short.
+      let elapsed = -1;
+      const deadline = () => {
+        const time = Number(animation.currentTime);
+        if (
+          animation.startTime === null ||
+          !(time > elapsed) ||
+          time >= duration
+        )
+          finish(true);
+        else {
+          elapsed = time;
+          timer = setTimeout(deadline, duration - time + 80);
+        }
+      };
+      let timer = setTimeout(deadline, duration + 80);
       s.finishAnimations.add(finish);
       void animation.finished.then(
         () => finish(),
@@ -1242,15 +1292,10 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
       typeof frame.animate !== "function"
     )
       return;
-    let animation: Animation;
-    try {
-      animation = frame.animate(
-        [{ transform: zoomTransform(from) }, { transform: zoomTransform(to) }],
-        { duration, easing: ease },
-      );
-    } catch {
-      return;
-    }
+    const animation = frame.animate(
+      [{ transform: zoomTransform(from) }, { transform: zoomTransform(to) }],
+      { duration, easing: ease },
+    );
     const motion = { from, to, animation };
     s.zoomMotion = motion;
     s.animations.add(animation);
@@ -1323,7 +1368,9 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
     copy.draggable = false;
     copy.src = src;
     copy.style.cssText = `position:absolute;left:0;top:0;right:auto;bottom:auto;display:block;box-sizing:content-box;width:${size.width}px;height:${size.height}px;min-width:0;min-height:0;max-width:none;max-height:none;margin:0;padding:0;border:0;border-radius:0;box-shadow:none;outline:0;object-fit:fill;opacity:1;visibility:visible;filter:none;transition:none;animation:none;translate:none;rotate:none;scale:none;transform-origin:center;pointer-events:none`;
-    origin.after(copy);
+    // A carousel of bare children would count a copy beside its slide as one more slide.
+    const parent = origin.parentElement;
+    (parent?.classList.contains("re-carousel") ? parent : origin).after(copy);
     const at = copy.getBoundingClientRect();
     copy.style.left = `${box.left + (box.width - size.width) / 2 - at.left}px`;
     copy.style.top = `${box.top + (box.height - size.height) / 2 - at.top}px`;
@@ -1381,14 +1428,12 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
         "ease",
       );
     const visible =
+      origin &&
       rect &&
       slide &&
       Math.abs(slide.left - box.left) <= 1 &&
       Math.abs(slide.right - box.right) <= 1 &&
-      rect.bottom > 0 &&
-      rect.right > 0 &&
-      rect.top < viewport.height &&
-      rect.left < viewport.width;
+      onScreen(origin, rect, win);
     if (
       !visible ||
       !origin ||
@@ -1433,8 +1478,8 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
         ? crop.top
         : (rect.height - crop.height) / 2;
     const scale = crop.width / size.width;
-    const x = rect.left + left + crop.width / 2 - viewport.width / 2;
-    const y = rect.top + top + crop.height / 2 - viewport.height / 2;
+    const x = rect.left + left + crop.width / 2 - box.left - viewport.width / 2;
+    const y = rect.top + top + crop.height / 2 - box.top - viewport.height / 2;
     const radius = corners(origin, rect, win)
       .map((corner) => `${corner / scale}px`)
       .join(" ");
@@ -2814,6 +2859,8 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
         if (
           event.button !== 0 ||
           state.isClosing ||
+          // A dismiss swipe stays with its finger.
+          s.gesture?.axis === "y" ||
           (isElement(event.target) &&
             event.target.closest(
               "button, a, input, textarea, select, [data-lightbox-interactive]",
@@ -4175,6 +4222,11 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
     clearStands(s);
     clearTimeout(s.tapTimer);
     s.tapTimer = undefined;
+    s.pointers.clear();
+    s.gesture = undefined;
+    delete s.dialog.dataset.panning;
+    // beforeclose may have rendered the tile again.
+    hideOrigin(s);
     chromeInput(s, { type: "close" });
     publish({ isClosing: true });
     leaveFullscreen(s);
