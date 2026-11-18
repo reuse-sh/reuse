@@ -316,6 +316,7 @@ type Session = {
   zoomed: boolean;
   footer: HTMLDivElement;
   thumbStrip?: HTMLDivElement;
+  thumbRing?: HTMLSpanElement;
   thumbCarousel?: Carousel;
   roving: number;
   centeredThumb: number;
@@ -1553,6 +1554,7 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
     s.carousel.goTo(state.index, "instant");
     syncingCarousel = false;
     applyZoom(s, false);
+    ringThumb(s, false);
     if (!sameZoom(before, state.zoom)) publish({});
   }
 
@@ -2086,6 +2088,7 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
     const behavior =
       s.centeredThumb < 0 || prefersReducedMotion(s) ? "instant" : "smooth";
     s.centeredThumb = state.index;
+    ringThumb(s, behavior === "smooth");
     if (s.thumbCarousel) {
       s.thumbCarousel.goTo(state.index, behavior);
       return;
@@ -2094,6 +2097,22 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
       top: thumb.offsetTop - (strip.clientHeight - thumb.offsetHeight) / 2,
       behavior,
     });
+  }
+
+  // Offsets are the thumbnail's place in the strip's content, so the ring scrolls with it.
+  function ringThumb(s: Session, glide: boolean) {
+    const ring = s.thumbRing;
+    const thumb = s.thumbs[state.index];
+    if (!ring) return;
+    ring.hidden = !thumb;
+    if (!thumb) return;
+    if (!glide) ring.style.transition = "none";
+    ring.style.translate = `${thumb.offsetLeft}px ${thumb.offsetTop}px`;
+    ring.style.width = `${thumb.offsetWidth}px`;
+    ring.style.height = `${thumb.offsetHeight}px`;
+    if (glide) return;
+    void ring.offsetWidth;
+    ring.style.removeProperty("transition");
   }
 
   function teardown(s: Session) {
@@ -3550,11 +3569,16 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
     stage.append(footer, status);
     const thumbs: HTMLButtonElement[] = [];
     let thumbStrip: HTMLDivElement | undefined;
+    let thumbRing: HTMLSpanElement | undefined;
     if (settings.thumbnails) {
       thumbStrip = doc.createElement("div");
       thumbStrip.className = "re-lightbox-thumbnails";
       thumbStrip.setAttribute("role", "group");
       thumbStrip.setAttribute("aria-label", strings.thumbnails);
+      thumbRing = doc.createElement("span");
+      thumbRing.className = "re-lightbox-thumbnail-ring";
+      thumbRing.setAttribute("aria-hidden", "true");
+      thumbRing.hidden = true;
     }
     const makeThumbs = () => {
       if (!thumbStrip) return;
@@ -3564,6 +3588,9 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
           const thumb = doc.createElement("button");
           thumb.type = "button";
           thumb.tabIndex = -1;
+          thumb.dataset.carouselSlide = "";
+          if (item.width && item.height)
+            thumb.style.aspectRatio = `${item.width} / ${item.height}`;
           thumb.setAttribute("aria-label", strings.thumbnail(i, items.length));
           const thumbnailSrc = item.thumbnailSrc || item.previewSrc;
           if (thumbnailSrc) {
@@ -3586,6 +3613,7 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
           thumbs.push(thumb);
           return thumb;
         }),
+        ...(thumbRing ? [thumbRing] : []),
       );
     };
     makeThumbs();
@@ -3615,6 +3643,7 @@ export function createLightbox(options: LightboxOptions = {}): Lightbox {
       slots: [],
       footer,
       thumbStrip,
+      thumbRing,
       roving: -1,
       centeredThumb: -1,
       pauses: new Set(["phase"]),

@@ -3,6 +3,7 @@ import { mount } from "./harness";
 
 type Lightbox = {
   open(items: unknown[], index?: number): void;
+  setItems(items: unknown[], index?: number): void;
   next(): void;
   goTo(index: number): void;
   zoomTo(scale: number): void;
@@ -251,7 +252,7 @@ const offCenter = (page: Page) =>
     return Math.abs(b.left + b.width / 2 - (a.left + a.width / 2));
   });
 
-test("the carousel's own stylesheet on the page leaves the slides edge to edge and the thumbnails at 44px, 8px apart", async ({
+test("the carousel's own stylesheet on the page leaves the slides edge to edge and the 3:2 thumbnails 66 by 44px, 8px apart", async ({
   page,
 }) => {
   await open(
@@ -270,14 +271,14 @@ test("the carousel's own stylesheet on the page leaves the slides edge to edge a
     return {
       pitch: slides[1].offsetLeft - slides[0].offsetLeft,
       width: viewport.clientWidth,
-      thumb: first.width,
+      thumb: [first.width, first.height],
       gap: second.left - first.right,
     };
   });
   expect(layout).toEqual({
     pitch: layout.width,
     width: layout.width,
-    thumb: 44,
+    thumb: [66, 44],
     gap: 8,
   });
 });
@@ -346,6 +347,49 @@ test("a second click on a thumbnail while the strip centers it still ends with i
   await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2);
   expect((await lightbox(page)).index).toBe(5);
   await expect.poll(() => offCenter(page)).toBeLessThanOrEqual(2);
+});
+
+test("bottom thumbnails take each photo's proportions, square without a size and 24px at the narrowest, and the ring follows the active one", async ({
+  page,
+}) => {
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await open(page, { thumbnails: "bottom" });
+  const ringOff = () =>
+    page.evaluate(() => {
+      const ring = document.querySelector(".re-lightbox-thumbnail-ring");
+      const thumb = document.querySelector(
+        '.re-lightbox-thumbnails [aria-current="true"]',
+      );
+      if (!ring || !thumb) return Number.NaN;
+      const a = ring.getBoundingClientRect();
+      const b = thumb.getBoundingClientRect();
+      return Math.max(
+        Math.abs(a.left - b.left),
+        Math.abs(a.top - b.top),
+        Math.abs(a.width - b.width),
+      );
+    });
+  const widths = await page.evaluate(() => {
+    const src = (
+      document.querySelector(".re-lightbox-thumbnails img") as HTMLImageElement
+    ).src;
+    (window as Window).lightbox.setItems([
+      { src, thumbnailSrc: src, width: 1200, height: 800 },
+      { src: `${src}#2`, thumbnailSrc: src },
+      { src: `${src}#3`, thumbnailSrc: src, width: 300, height: 1200 },
+      { src: `${src}#4`, thumbnailSrc: src, width: 1600, height: 400 },
+    ]);
+    return [...document.querySelectorAll(".re-lightbox-thumbnails button")].map(
+      (thumb) => thumb.getBoundingClientRect().width,
+    );
+  });
+  expect(widths).toEqual([66, 44, 24, 176]);
+  for (const index of [1, 2, 3]) {
+    await page.evaluate((i) => (window as Window).lightbox.goTo(i), index);
+    await expect.poll(ringOff).toBeLessThanOrEqual(1);
+  }
+  await page.setViewportSize({ width: 390, height: 844 });
+  await expect.poll(ringOff).toBeLessThanOrEqual(1);
 });
 
 test("the strip is one tab stop: Tab reaches the active thumbnail, arrows move focus, Enter opens", async ({

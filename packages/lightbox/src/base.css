@@ -246,7 +246,8 @@
 /* The strip spans the footer to center its ends; only the thumbnails take input. */
 .re-lightbox-thumbnails {
   --re-carousel-gap: var(--re-lightbox-thumbnail-gap, 8px);
-  --re-carousel-slide-width: var(--re-lightbox-thumbnail-size, 44px);
+  --re-carousel-slide-width: auto;
+  --re-carousel-press-scale: 1;
   position: relative;
   box-sizing: border-box;
   pointer-events: none;
@@ -262,11 +263,25 @@
 .re-lightbox-thumbnails > * {
   pointer-events: auto;
 }
+.re-lightbox-thumbnails > .re-lightbox-thumbnail-ring {
+  position: absolute;
+  top: 0;
+  left: 0;
+  box-sizing: border-box;
+  pointer-events: none;
+}
 :is(.re-lightbox-prev, .re-lightbox-next):dir(rtl) > * {
   scale: -1 1;
 }
 .re-lightbox[data-thumbnails="bottom"] .re-lightbox-thumbnails {
-  padding-inline: calc(50% - var(--re-lightbox-thumbnail-size, 44px) / 2);
+  width: calc(100% + 2 * var(--re-lightbox-footer-inset, 72px));
+  max-width: none;
+  margin-inline: calc(-1 * var(--re-lightbox-footer-inset, 72px));
+  margin-block-end: calc(
+    -1 *
+    max(var(--re-lightbox-inset, 16px), env(safe-area-inset-bottom))
+  );
+  padding-inline: calc(50% + var(--re-lightbox-footer-inset, 72px));
 }
 .re-lightbox[data-thumbnails="side"] .re-lightbox-thumbnails::before,
 .re-lightbox[data-thumbnails="side"] .re-lightbox-thumbnails::after {
