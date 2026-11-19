@@ -134,6 +134,7 @@
   width: 100%;
 }
 .re-lightbox-button {
+  position: relative;
   display: grid;
   flex: none;
   place-items: center;
