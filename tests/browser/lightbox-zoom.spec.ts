@@ -296,7 +296,7 @@ test.describe("lightbox zoom with a mouse, wheel and trackpad", {
         const rest = await photo(page);
         return Math.round(rest.y + rest.height);
       })
-      .toBeLessThanOrEqual(900 - 100);
+      .toBe(900 - 100 - 32);
     const edges = async () => {
       const box = await photo(page);
       return [box.x, box.y, box.x + box.width, box.y + box.height].map(
