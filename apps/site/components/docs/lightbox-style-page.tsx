@@ -99,7 +99,7 @@ export function LightboxStylePage({ style }: { style: string }) {
               Save this as <C>lightbox-chrome.js</C>. The setup above passes it
               to the lightbox. It{" "}
               {options.caption === "Panel"
-                ? "fills the aside slot with a side panel for the current image"
+                ? "fills the aside slot with a panel for the current image and a list of every image in the set"
                 : "fills the footer slot with a toolbar of its own controls"}
               .
             </Text>
