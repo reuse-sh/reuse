@@ -1,4 +1,14 @@
 @reference "../../app/globals.css";
+@property --re-fade-start {
+  syntax: "<length>";
+  inherits: false;
+  initial-value: 0px;
+}
+@property --re-fade-end {
+  syntax: "<length>";
+  inherits: false;
+  initial-value: 0px;
+}
 @layer components {
   .cc {
     @apply min-w-0 text-foreground;
@@ -312,28 +322,12 @@
   .cc-c-edge .cc-slide {
     @apply aspect-portrait rounded-xl;
   }
-  .cc-edge .cc-view:where([data-re-at-start]:not([data-re-at-end])) {
-    mask-image: linear-gradient(
-      to right,
-      var(--scrim) calc(100% - 56px),
-      transparent
-    );
-  }
-  .cc-edge .cc-view:where([data-re-at-end]:not([data-re-at-start])) {
-    mask-image: linear-gradient(
-      to left,
-      var(--scrim) calc(100% - 56px),
-      transparent
-    );
-  }
-  .cc-edge .cc-view:where(:not([data-re-at-start], [data-re-at-end])) {
-    mask-image: linear-gradient(
-      to right,
-      transparent,
-      var(--scrim) 56px,
-      var(--scrim) calc(100% - 56px),
-      transparent
-    );
+  @media (prefers-reduced-motion: no-preference) {
+    .cc-edge .cc-view {
+      transition:
+        --re-fade-start 280ms ease-out,
+        --re-fade-end 280ms ease-out;
+    }
   }
   .cc-edge .cc-view:where(:focus-visible) {
     outline: none;
