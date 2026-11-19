@@ -257,6 +257,17 @@ const rules: readonly (readonly [(o: LightboxStyle) => boolean, string])[] = [
   font-weight: 500;
   font-variant-numeric: tabular-nums;
 }
+.re-lightbox-style .re-lightbox-style-panel-count > .re-lightbox-counter:not([hidden]) {
+  position: static;
+  display: inline;
+  height: auto;
+  padding: 0;
+  border-radius: 0;
+  background: none;
+  box-shadow: none;
+  font-size: inherit;
+  font-weight: inherit;
+}
 .re-lightbox-style-panel-summary { margin-top: 12px; overflow: clip; }
 .re-lightbox-style-panel h2 {
   font-size: 20px;
@@ -494,7 +505,7 @@ export function lightboxChrome(options: LightboxStyle) {
     },`);
   }
   if (panel)
-    slots.push(`    aside: ({ lightbox, document }) => {
+    slots.push(`    aside: ({ lightbox, document, counter }) => {
       const view = document.defaultView;
       const element = (tag, className, text) => {
         const node = document.createElement(tag);
@@ -504,6 +515,7 @@ export function lightboxChrome(options: LightboxStyle) {
       };
       const panel = element("aside", "re-lightbox-style-panel");
       const count = element("p", "re-lightbox-style-panel-count");
+      count.append(counter());
       const summary = element("div", "re-lightbox-style-panel-summary");
       const title = element("h2");
       const text = element("p", "re-lightbox-style-panel-text");
@@ -556,15 +568,16 @@ export function lightboxChrome(options: LightboxStyle) {
         list.replaceChildren(...rows.map((row) => row.parentElement));
       };
 
-      const fading = [count, title, text];
+      const fading = [title, text];
       let shown = "";
+      let index = 0;
+      let heading = 1;
       let next;
       let fadeOut;
       let fadeIn = [];
       let resize;
       const fill = (state) => {
         const item = state.item;
-        count.textContent = state.count > 1 ? \`\${state.index + 1} / \${state.count}\` : "";
         title.textContent = item?.caption ?? "";
         text.textContent = item?.alt ? \`\${item.alt}.\` : "";
       };
@@ -580,7 +593,13 @@ export function lightboxChrome(options: LightboxStyle) {
         const time = duration() * 0.55;
         const after = summary.offsetHeight;
         fadeIn = fading.map((node) =>
-          node.animate([{ opacity: 0 }, { opacity: 1 }], { duration: time, easing: "ease-out" }),
+          node.animate(
+            [
+              { opacity: 0, translate: \`0 \${heading * 0.4}em\` },
+              { opacity: 1, translate: "none" },
+            ],
+            { duration: time, easing: "ease-out" },
+          ),
         );
         if (before !== after && view.getComputedStyle(summary).display !== "contents")
           resize = summary.animate([{ height: \`\${before}px\` }, { height: \`\${after}px\` }], {
@@ -595,6 +614,8 @@ export function lightboxChrome(options: LightboxStyle) {
         if (key === shown) return;
         const first = !shown;
         shown = key;
+        heading = state.index < index ? -1 : 1;
+        index = state.index;
         next = state;
         if (fadeOut) return;
         const time = duration();
@@ -602,12 +623,12 @@ export function lightboxChrome(options: LightboxStyle) {
           for (const animation of fadeIn) animation.cancel();
           return fill(state);
         }
-        const from = fadeIn.some((animation) => animation.playState === "running")
-          ? Number(view.getComputedStyle(title).opacity)
-          : 1;
+        const running = fadeIn.some((animation) => animation.playState === "running");
+        const from = running ? Number(view.getComputedStyle(title).opacity) : 1;
+        const moved = running ? view.getComputedStyle(title).translate : "none";
         for (const animation of fadeIn) animation.cancel();
         fadeOut = fading.map((node) =>
-          node.animate([{ opacity: from }, { opacity: 0 }], {
+          node.animate([{ opacity: from, translate: moved }, { opacity: 0, translate: \`0 \${heading * -0.4}em\` }], {
             duration: time * 0.45 * from,
             easing: "ease-in",
             fill: "forwards",

@@ -353,7 +353,7 @@ test("the narrow panel sheet shows one caption line until it expands", async ({
   await expect(toggle).toHaveAttribute("aria-expanded", "false");
 });
 
-test("the panel style fades its text through a change and lands on the latest photo", async ({
+test("the panel style rises its text through a change and lands on the latest photo", async ({
   page,
 }) => {
   await page.goto("/lightbox/controls/panel");
@@ -362,12 +362,14 @@ test("the panel style fades its text through a change and lands on the latest ph
   await expect(title).toHaveText("Mint and ember");
   await expect(page.locator(".re-lightbox-image").nth(1)).toBeVisible();
   await title.evaluate((element) => {
-    const frames: [string, number][] = [];
+    const frames: [string, number, number][] = [];
     (window as unknown as { frames_: typeof frames }).frames_ = frames;
     const sample = () => {
+      const style = getComputedStyle(element);
       frames.push([
         element.textContent ?? "",
-        Number(getComputedStyle(element).opacity),
+        Number(style.opacity),
+        Number.parseFloat(style.translate.split(" ")[1] ?? "0"),
       ]);
       if (frames.length < 40) requestAnimationFrame(sample);
     };
@@ -377,20 +379,23 @@ test("the panel style fades its text through a change and lands on the latest ph
   await expect(title).toHaveText("Lilac bloom");
   const recorded = () =>
     page.evaluate(
-      () => (window as unknown as { frames_: [string, number][] }).frames_,
+      () =>
+        (window as unknown as { frames_: [string, number, number][] }).frames_,
     );
   await expect.poll(async () => (await recorded()).length).toBe(40);
   const frames = await recorded();
-  const seen = (text: string) =>
-    frames.some(([shown, opacity]) => shown === text && opacity < 0.5);
+  const seen = (text: string, rise: (y: number) => boolean) =>
+    frames.some(
+      ([shown, opacity, y]) => shown === text && opacity < 0.5 && rise(y),
+    );
   expect({
-    fadesOut: seen("Mint and ember"),
-    fadesIn: seen("Lilac bloom"),
+    leavesUpward: seen("Mint and ember", (y) => y < 0),
+    entersFromBelow: seen("Lilac bloom", (y) => y > 0),
     ends: frames.at(-1),
   }).toEqual({
-    fadesOut: true,
-    fadesIn: true,
-    ends: ["Lilac bloom", 1],
+    leavesUpward: true,
+    entersFromBelow: true,
+    ends: ["Lilac bloom", 1, 0],
   });
   const opacity = () =>
     title.evaluate((element) => Number(getComputedStyle(element).opacity));
@@ -544,7 +549,54 @@ test("the panel style switches its text at once under reduced motion", async ({
     text: element.textContent,
     animations: element.getAnimations().length,
   }));
+  const count = page.locator(".re-lightbox-style-panel-count");
+  const rolled = await count.evaluate((element) => ({
+    text: element.textContent,
+    animations: element.getAnimations({ subtree: true }).length,
+  }));
   expect(shown).toEqual({ text: "Lilac bloom", animations: 0 });
+  expect(rolled).toEqual({ text: "3 / 8", animations: 0 });
+});
+
+test("the panel style rolls its position digit in the paging direction", async ({
+  page,
+}) => {
+  await page.goto("/lightbox/controls/panel");
+  await page.locator('main a[href^="/images/marble"]').nth(1).click();
+  const count = page.locator(".re-lightbox-style-panel-count");
+  await expect(count).toHaveText("2 / 8");
+  const roll = (key: string) =>
+    count.evaluate((element, key) => {
+      document.activeElement?.dispatchEvent(
+        new KeyboardEvent("keydown", { key, bubbles: true }),
+      );
+      return element
+        .getAnimations({ subtree: true })
+        .map((animation) =>
+          (animation.effect as KeyframeEffect)
+            .getKeyframes()
+            .map((frame) => frame.translate)
+            .join(" > "),
+        )
+        .sort();
+    }, key);
+  expect(await roll("ArrowRight")).toEqual([
+    "0px 100% > 0px",
+    "0px > 0px -100%",
+  ]);
+  await expect(count).toHaveText("3 / 8");
+  await expect
+    .poll(() =>
+      count.evaluate(
+        (element) => element.getAnimations({ subtree: true }).length,
+      ),
+    )
+    .toBe(0);
+  expect(await roll("ArrowLeft")).toEqual([
+    "0px -100% > 0px",
+    "0px > 0px 100%",
+  ]);
+  await expect(count).toHaveText("2 / 8");
 });
 
 test("the panel style keeps a plain close button inside its card", async ({
