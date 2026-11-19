@@ -11,6 +11,7 @@
   --re-lightbox-button-size: 44px;
   --re-lightbox-button-padding: 10px;
   --re-lightbox-button-radius: 50%;
+  --re-lightbox-press-scale: 0.96;
   --re-lightbox-icon-size: 24px;
   --re-lightbox-font-size: 14px;
   --re-lightbox-counter-font-size: 13px;
@@ -76,7 +77,14 @@
   background: var(--re-lightbox-control-hover);
 }
 .re-lightbox-button:active:not(:disabled) {
-  scale: 0.96;
+  scale: var(--re-lightbox-press-scale);
+}
+/* Hit testing follows the scale, so a press held on the edge would end off the button and fire no click. */
+.re-lightbox-button:active:not(:disabled)::before {
+  content: "";
+  position: absolute;
+  inset: calc(-50% * (1 / var(--re-lightbox-press-scale) - 1));
+  border-radius: inherit;
 }
 .re-lightbox-button:disabled {
   opacity: calc(0.3 * var(--re-lightbox-chrome-opacity, 1));

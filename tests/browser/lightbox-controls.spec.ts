@@ -1563,3 +1563,32 @@ test("a click in the gap between two thumbnails keeps the viewer open", {
   await page.waitForTimeout(400);
   expect((await lightbox(page)).isOpen).toBe(true);
 });
+
+test("a mouse press held on the outer edge of close, an arrow or zoom still presses it, and a release off the button does not", async ({
+  page,
+}) => {
+  await open(page, { autoHide: false }, { index: 1 });
+  const pressEdge = async (name: string, offset = 0.5) => {
+    const box = await page.locator(`.re-lightbox-${name}`).boundingBox();
+    if (!box) throw new Error(`no ${name} button`);
+    const y = box.y + box.height / 2;
+    await page.mouse.move(box.x + box.width - 0.5, y);
+    await page.mouse.down();
+    await page.waitForTimeout(200);
+    await page.mouse.move(box.x + box.width - 0.5 + offset - 0.5, y);
+    await page.mouse.up();
+    await page.waitForTimeout(400);
+  };
+  await pressEdge("next");
+  expect((await lightbox(page)).index).toBe(2);
+  await pressEdge("prev");
+  expect((await lightbox(page)).index).toBe(1);
+  await pressEdge("zoom");
+  expect((await lightbox(page)).zoom.scale).toBeGreaterThan(1);
+  await pressEdge("zoom");
+  expect((await lightbox(page)).zoom.scale).toBe(1);
+  await pressEdge("close", 4);
+  expect(await lightbox(page)).toMatchObject({ isOpen: true });
+  await pressEdge("close");
+  await expect.poll(async () => (await lightbox(page)).isOpen).toBe(false);
+});

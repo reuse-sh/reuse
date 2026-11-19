@@ -62,6 +62,7 @@ const rules: readonly (readonly [(o: LightboxStyle) => boolean, string])[] = [
   --re-lightbox-control: #fff;
   --re-lightbox-control-hover: #f4f4f4;
   --re-lightbox-placeholder: rgb(0 0 0 / 5%);
+  --re-lightbox-press-scale: 0.95;
 }
 .re-lightbox-style *, .re-lightbox-style *::before, .re-lightbox-style *::after { box-sizing: border-box; }
 .re-lightbox-style .re-lightbox-viewport {
@@ -75,12 +76,11 @@ const rules: readonly (readonly [(o: LightboxStyle) => boolean, string])[] = [
   color: inherit;
   box-shadow: var(--re-lightbox-ring);
   backdrop-filter: none;
-  transition: background-color 150ms ease, transform 160ms cubic-bezier(0.23, 1, 0.32, 1), opacity 300ms ease;
+  transition: background-color 150ms ease, scale 160ms cubic-bezier(0.23, 1, 0.32, 1), opacity 300ms ease;
 }
 .re-lightbox-style .re-lightbox-button svg { width: 18px; height: 18px; }
 .re-lightbox-style .re-lightbox-retry { box-shadow: var(--re-lightbox-ring); }
 .re-lightbox-style .re-lightbox-button:hover { background: #f4f4f4; }
-.re-lightbox-style .re-lightbox-button:active:not(:disabled) { transform: scale(0.95); }
 .re-lightbox-style .re-lightbox-button:disabled { opacity: 0.3; }
 .re-lightbox-style .re-lightbox-footer {
   right: calc(var(--re-lightbox-side) + var(--re-lightbox-pad));
