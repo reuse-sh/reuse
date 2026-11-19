@@ -757,6 +757,55 @@ for (const [path, section] of [
   });
 }
 
+test("every site lightbox opens with the Classic controls", async ({
+  page,
+}) => {
+  const look = async (path: string) => {
+    await page.goto(path);
+    await page
+      .locator("main :is(a, button):has(img) >> visible=true")
+      .first()
+      .click();
+    const close = page.locator("dialog.re-lightbox[open] .re-lightbox-close");
+    await expect(close).toBeVisible();
+    const style = await close.evaluate((button) => {
+      const own = getComputedStyle(button);
+      const room = button
+        .closest(".re-lightbox")
+        ?.querySelector(".re-lightbox-backdrop");
+      return {
+        size: own.width,
+        control: own.backgroundColor,
+        ring: own.boxShadow,
+        room: room ? getComputedStyle(room).backgroundColor : null,
+      };
+    });
+    await page.keyboard.press("Escape");
+    return style;
+  };
+  const classic = await look("/lightbox/controls/classic");
+  for (const path of [
+    "/lightbox",
+    "/lightbox/examples/product",
+    "/lightbox/examples/album",
+    "/justified-gallery/examples/lightbox",
+    "/carousel",
+    "/",
+  ])
+    expect(await look(path), path).toEqual(classic);
+});
+
+test("a site lightbox with one photo shows no counter", async ({ page }) => {
+  await page.goto("/lightbox/examples/chat");
+  await page.locator(".re-single [data-photo]").click();
+  await expect(
+    page.locator("dialog.re-lightbox[open] .re-lightbox-close"),
+  ).toBeVisible();
+  await expect(
+    page.locator("dialog.re-lightbox[open] .re-lightbox-counter"),
+  ).toBeHidden();
+});
+
 test("the narrow header keeps a visible library icon and a usable keyboard switcher", async ({
   page,
 }) => {
