@@ -105,7 +105,8 @@ export const lightboxLookCss = [
   background: #fff;
   box-shadow: var(--re-lightbox-ring);
   font-weight: 500;
-}`,
+}
+.re-lightbox-style .re-lightbox-counter[hidden] { display: none; }`,
   `.re-lightbox-style { --re-lightbox-caption: 30px; }
 .re-lightbox-style .re-lightbox-caption {
   order: 1;

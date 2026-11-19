@@ -795,6 +795,17 @@ test("every site lightbox opens with the Classic controls", async ({
     expect(await look(path), path).toEqual(classic);
 });
 
+test("a site lightbox with one photo shows no counter", async ({ page }) => {
+  await page.goto("/lightbox/examples/chat");
+  await page.locator(".re-single [data-photo]").click();
+  await expect(
+    page.locator("dialog.re-lightbox[open] .re-lightbox-close"),
+  ).toBeVisible();
+  await expect(
+    page.locator("dialog.re-lightbox[open] .re-lightbox-counter"),
+  ).toBeHidden();
+});
+
 test("the narrow header keeps a visible library icon and a usable keyboard switcher", async ({
   page,
 }) => {
