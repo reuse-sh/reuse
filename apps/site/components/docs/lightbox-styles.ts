@@ -160,7 +160,9 @@ const rules: readonly (readonly [(o: LightboxStyle) => boolean, string])[] = [
   ],
   [
     (o) => !o.zoomButton,
-    '.re-lightbox-style:not([data-zoomed="true"]) .re-lightbox-zoom { display: none; }',
+    `.re-lightbox-style:not([data-zoomed="true"]) .re-lightbox-zoom { display: none; }
+.re-lightbox-style[data-zoomed="true"] .re-lightbox-zoom { transition-delay: 0s, 0s, 300ms; }
+@starting-style { .re-lightbox-style[data-zoomed="true"] .re-lightbox-zoom { opacity: 0; } }`,
   ],
   [
     (o) => o.caption !== "Below",
@@ -177,7 +179,9 @@ const rules: readonly (readonly [(o: LightboxStyle) => boolean, string])[] = [
   ],
   [
     (o) => hasBar(o) && o.zoomButton,
-    '.re-lightbox-style:not([data-zoomed="true"]) .re-lightbox-toolbar .re-lightbox-zoom { display: none; }',
+    `.re-lightbox-style:not([data-zoomed="true"]) .re-lightbox-toolbar .re-lightbox-zoom { display: none; }
+.re-lightbox-style[data-zoomed="true"] .re-lightbox-toolbar .re-lightbox-zoom { transition-delay: 0s, 0s, 300ms; }
+@starting-style { .re-lightbox-style[data-zoomed="true"] .re-lightbox-toolbar .re-lightbox-zoom { opacity: 0; } }`,
   ],
   [
     hasBar,
@@ -368,15 +372,6 @@ export function lightboxChrome(options: LightboxStyle) {
           options.counter === "Toolbar"
             ? `
           counter.textContent = \`\${state.index + 1} / \${state.count}\`;`
-            : ""
-        }${
-          options.zoomButton
-            ? `
-          const zoomed = state.zoom.scale > 1;
-          if (zoom.getAttribute("aria-pressed") !== String(zoomed))
-            zoom.replaceChildren(icon(zoomed ? "zoomOut" : "zoom"));
-          zoom.setAttribute("aria-label", zoomed ? "Zoom out" : "Zoom in");
-          zoom.setAttribute("aria-pressed", String(zoomed));`
             : ""
         }
         },

@@ -768,6 +768,7 @@ const FADE_DURATION = 240;
 const PADDING = 32;
 const FLIGHT_EASE = "cubic-bezier(0.32, 0.72, 0, 1)";
 const ZOOM_EASE = "cubic-bezier(.16,1,.3,1)";
+const NUDGE_DURATION = 220;
 const DOUBLE_TAP_TIME = 300;
 const DOUBLE_TAP_DISTANCE = 30;
 const DISMISS_DISTANCE = 120;
@@ -1588,6 +1589,10 @@ export function createLightbox<Item extends LightboxItem = LightboxItem>(
     return prefersReducedMotion(s) ? 0 : s.timing.zoom;
   }
 
+  function nudgeDuration(s: Session) {
+    return Math.min(zoomDuration(s), NUDGE_DURATION);
+  }
+
   function flightDuration(s: Session, closing: boolean) {
     const duration = closing ? s.timing.close : s.timing.open;
     return prefersReducedMotion(s)
@@ -2191,7 +2196,7 @@ export function createLightbox<Item extends LightboxItem = LightboxItem>(
               { width: `${before.width}px`, height: `${before.height}px` },
               { width: `${after.width}px`, height: `${after.height}px` },
             ],
-            zoomDuration(s),
+            nudgeDuration(s),
           );
       };
       const failed = () => {
@@ -2783,7 +2788,7 @@ export function createLightbox<Item extends LightboxItem = LightboxItem>(
     moveZoom(
       s,
       bound(s, { ...state.zoom, x: state.zoom.x + dx, y: state.zoom.y + dy }),
-      zoomDuration(s),
+      nudgeDuration(s),
       ZOOM_EASE,
     );
     publish({});

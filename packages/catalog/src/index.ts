@@ -130,7 +130,7 @@ export const libraries: Library[] = [
       ],
       [
         "Zoom around the point you touch",
-        "Pinch, wheel, a double tap and a click zoom in around the pointer or fingers, and a double tap, a click or the zoom button zooms back out to the whole photo. A single finger tap shows or hides the controls.",
+        "Pinch, wheel, a double tap and a click zoom in around the pointer or fingers, and a double tap, a click or the zoom button zooms back out to the whole photo. A pinch and a wheel follow the input at once, and the rest ease over the zoom duration from wherever the photo is. A single finger tap shows or hides the controls.",
         "tests/browser/lightbox-zoom.spec.ts",
       ],
       [
@@ -154,7 +154,7 @@ export const libraries: Library[] = [
       ],
       [
         "Let the photo lead",
-        "Controls fade in after the photo starts moving and leave before it. They hide while zoomed and after a still pointer, and a still pointer never hides them while one is hovered or keyboard-focused. While zoomed only close and zoom come back, focus on any other control moves to the photo, and the photo pans to the window's edges under the room the other controls kept.",
+        "Controls fade in after the photo starts moving and leave before it. They hide while zoomed and after a still pointer, and a still pointer never hides them while one is hovered or keyboard-focused. While zoomed only close and zoom come back, focus on any other control, or on one a zoom stops rendering, moves to the photo, and the photo pans to the window's edges under the room the other controls kept.",
         "tests/browser/lightbox-gestures.spec.ts",
       ],
       [

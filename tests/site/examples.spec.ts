@@ -404,6 +404,16 @@ test("the toolbar style hides its bar while zoomed and zooms out from the button
   const zoomIn = bar.getByRole("button", { name: "Zoom in" });
   const icon = await zoomIn.evaluate((button) => button.innerHTML);
   await zoomIn.click();
+  const seen = await page.evaluate(() => {
+    const top = document.querySelector("dialog[open] .re-lightbox-toolbar");
+    const zoom = top?.querySelector(".re-lightbox-zoom");
+    if (!top || !zoom) return -1;
+    return (
+      Number(getComputedStyle(zoom).opacity) *
+      Number(getComputedStyle(top).opacity)
+    );
+  });
+  expect(seen).toBeLessThan(0.05);
   await expect(bar).toBeHidden();
   await page.mouse.move(600, 400);
   await page.mouse.move(660, 460, { steps: 4 });
