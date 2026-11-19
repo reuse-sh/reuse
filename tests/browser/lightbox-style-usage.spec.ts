@@ -1,5 +1,6 @@
 import { expect, test } from "@playwright/test";
 import {
+  LIGHTBOX_STYLE_CLASS,
   lightboxCode,
   lightboxStyles,
 } from "../../apps/site/components/docs/lightbox-styles";
@@ -52,5 +53,32 @@ for (const [name, options] of Object.entries(lightboxStyles)) {
     );
     await expect(page.locator("dialog")).toHaveCount(0);
     expect(errors).toEqual([]);
+  });
+
+  test(`published ${name} lightbox closes from a mouse press held on the close button's outer edge`, async ({
+    page,
+  }) => {
+    const code = lightboxCode(options);
+    await mount(page, "", ["lightbox/base.css", "lightbox/theme.css"]);
+    await page.addStyleTag({ content: code.css });
+    await page.evaluate(
+      async ([className, src]) => {
+        const { createLightbox } = await import("/modules/lightbox/index.js");
+        createLightbox({ history: false, autoHide: false, className }).open([
+          { src, width: 1200, height: 800 },
+        ]);
+      },
+      [LIGHTBOX_STYLE_CLASS, photo(1)] as const,
+    );
+    const close = page.locator("dialog[open] .re-lightbox-close");
+    await expect(close).toBeVisible();
+    await page.waitForTimeout(500);
+    const box = await close.boundingBox();
+    if (!box) throw new Error("no close button");
+    await page.mouse.move(box.x + box.width - 0.5, box.y + box.height / 2);
+    await page.mouse.down();
+    await page.waitForTimeout(200);
+    await page.mouse.up();
+    await expect(page.locator("dialog[open]")).toHaveCount(0);
   });
 }
