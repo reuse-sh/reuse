@@ -10,6 +10,10 @@ function internalsOf(carousel: Carousel) {
 }
 
 const ROLL = 200;
+// The engine starts a mouse drag after the same distance.
+const DRAG_START = 5;
+// The engine settles a released drag at this rate by default, 6 / releaseDuration.
+const SETTLE_RATE = 6 / 260;
 let generated = 0;
 
 export function bindCarouselControls(
@@ -284,18 +288,68 @@ export function bindCarouselControls(
     const named = !bar.hasAttribute("aria-label");
     bar.setAttribute("aria-controls", id);
     bar.setAttribute("aria-valuemin", "1");
-    let dragging: { id: number; page: number } | null = null;
-    const show = (fraction: number) =>
+    let dragging: {
+      id: number;
+      x: number;
+      page: number;
+      moved: boolean;
+    } | null = null;
+    // After a drag the handle keeps its offset from the strip and gives it up as the strip travels
+    // to its page. When the strip is already there, the offset eases out at the engine's settle rate.
+    let gliding = false;
+    let from = 0;
+    let start = 0;
+    let goal = 0;
+    let began: number | undefined;
+    let frame = 0;
+    let shown = 0;
+    const view = document.defaultView;
+    const show = (fraction: number) => {
+      shown = fraction;
       bar.style.setProperty("--re-carousel-progress", String(fraction));
-    const move = (event: Event) => {
-      const input = event as PointerEvent;
-      if (!dragging || input.pointerId !== dragging.id) return;
+    };
+    const stopGlide = () => {
+      gliding = false;
+      if (frame) view?.cancelAnimationFrame(frame);
+      frame = 0;
+    };
+    cleanup.push(stopGlide);
+    const tick = () => {
+      place(carousel.getState());
+      frame = gliding ? (view?.requestAnimationFrame(tick) ?? 0) : 0;
+    };
+    const aim = (state: CarouselState) => {
+      from = shown;
+      start = state.progress;
+      goal = strip.pagePositions()[state.pageIndex] ?? start;
+      began =
+        Math.abs(goal - start) < 0.001 ? view?.performance.now() : undefined;
+      if (began !== undefined && !frame)
+        frame = view?.requestAnimationFrame(tick) ?? 0;
+    };
+    const place = (state: CarouselState) => {
+      const { progress } = state;
+      if (gliding && goal !== strip.pagePositions()[state.pageIndex])
+        aim(state);
+      let rest = 0;
+      if (gliding && began !== undefined) {
+        const now = view?.performance.now() ?? began;
+        const u = SETTLE_RATE * Math.max(0, now - began);
+        rest = (1 + u) * Math.exp(-u);
+      } else if (gliding)
+        rest = Math.max(0, Math.min(1, (goal - progress) / (goal - start)));
+      if (rest < 0.002) stopGlide();
+      show(progress + (from - start) * (gliding ? rest : 0));
+    };
+    const fractionAt = (input: PointerEvent) => {
       const rect = bar.getBoundingClientRect();
-      let fraction = rect.width
+      const fraction = rect.width
         ? Math.max(0, Math.min(1, (input.clientX - rect.left) / rect.width))
         : 0;
-      if (rtl()) fraction = 1 - fraction;
-      show(fraction);
+      return rtl() ? 1 - fraction : fraction;
+    };
+    const pick = (fraction: number) => {
+      if (!dragging) return;
       const positions = strip.pagePositions();
       let page = 0;
       positions.forEach((position, at) => {
@@ -310,12 +364,29 @@ export function bindCarouselControls(
         goToPage(page);
       }
     };
+    const move = (event: Event) => {
+      const input = event as PointerEvent;
+      if (!dragging || input.pointerId !== dragging.id) return;
+      if (!dragging.moved && Math.abs(input.clientX - dragging.x) < DRAG_START)
+        return;
+      dragging.moved = true;
+      stopGlide();
+      const fraction = fractionAt(input);
+      show(fraction);
+      pick(fraction);
+    };
     const end = (event: Event) => {
       if (!dragging || (event as PointerEvent).pointerId !== dragging.id)
         return;
+      const { moved } = dragging;
       dragging = null;
       bar.removeAttribute("data-dragging");
-      show(carousel.getState().progress);
+      const state = carousel.getState();
+      if (moved && !reduced() && view?.requestAnimationFrame) {
+        gliding = true;
+        aim(state);
+      } else if (moved) stopGlide();
+      place(state);
     };
     listen(bar, "pointerdown", (event) => {
       const input = event as PointerEvent;
@@ -325,9 +396,14 @@ export function bindCarouselControls(
       try {
         bar.setPointerCapture?.(input.pointerId);
       } catch {}
-      dragging = { id: input.pointerId, page: carousel.getState().pageIndex };
+      dragging = {
+        id: input.pointerId,
+        x: input.clientX,
+        page: carousel.getState().pageIndex,
+        moved: false,
+      };
       bar.setAttribute("data-dragging", "");
-      move(event);
+      pick(fractionAt(input));
     });
     listen(bar, "pointermove", move);
     listen(bar, "pointerup", end);
@@ -355,7 +431,7 @@ export function bindCarouselControls(
         "aria-valuetext",
         strings.slide(state.index, state.count),
       );
-      if (!dragging) show(state.progress);
+      if (!dragging?.moved) place(state);
     });
   }
 
