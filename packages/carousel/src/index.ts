@@ -2065,6 +2065,7 @@ export function createCarousel(
             ? (targets[index] ?? 0) / max
             : 0,
       ),
+    settling: () => unsettled,
     align: () => options.align,
     goTo: (index, behavior, announce) =>
       announce ? announced(() => goTo(index, behavior)) : goTo(index, behavior),

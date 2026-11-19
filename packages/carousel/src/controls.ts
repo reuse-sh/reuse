@@ -295,7 +295,7 @@ export function bindCarouselControls(
       moved: boolean;
     } | null = null;
     // After a drag the handle keeps its offset from the strip and gives it up as the strip travels
-    // to its page. When the strip is already there, the offset eases out at the engine's settle rate.
+    // to its page. Once the strip rests, what is left eases out over time from began.
     let gliding = false;
     let from = 0;
     let start = 0;
@@ -318,29 +318,42 @@ export function bindCarouselControls(
       place(carousel.getState());
       frame = gliding ? (view?.requestAnimationFrame(tick) ?? 0) : 0;
     };
-    const aim = (state: CarouselState) => {
+    const aim = (state: CarouselState, resting: boolean) => {
       from = shown;
       start = state.progress;
       goal = strip.pagePositions()[state.pageIndex] ?? start;
       began =
-        Math.abs(goal - start) < 0.001 ? view?.performance.now() : undefined;
+        resting || Math.abs(goal - start) < 0.001
+          ? view?.performance.now()
+          : undefined;
       if (began !== undefined && !frame)
         frame = view?.requestAnimationFrame(tick) ?? 0;
     };
     const place = (state: CarouselState) => {
       const { progress } = state;
-      if (gliding && goal !== strip.pagePositions()[state.pageIndex])
-        aim(state);
+      if (
+        gliding &&
+        began === undefined &&
+        goal !== (strip.pagePositions()[state.pageIndex] ?? progress)
+      )
+        aim(state, false);
       let rest = 0;
       if (gliding && began !== undefined) {
         const now = view?.performance.now() ?? began;
         const u = SETTLE_RATE * Math.max(0, now - began);
         rest = (1 + u) * Math.exp(-u);
-      } else if (gliding)
+      } else if (gliding && Math.abs(goal - start) < 0.001) rest = 1;
+      else if (gliding)
         rest = Math.max(0, Math.min(1, (goal - progress) / (goal - start)));
       if (rest < 0.002) stopGlide();
       show(progress + (from - start) * (gliding ? rest : 0));
     };
+    cleanup.push(
+      carousel.on("settle", ({ state }) => {
+        if (gliding && began === undefined && !dragging?.moved)
+          aim(state, true);
+      }),
+    );
     const fractionAt = (input: PointerEvent) => {
       const rect = bar.getBoundingClientRect();
       const fraction = rect.width
@@ -384,7 +397,7 @@ export function bindCarouselControls(
       const state = carousel.getState();
       if (moved && !reduced() && view?.requestAnimationFrame) {
         gliding = true;
-        aim(state);
+        aim(state, !strip.settling());
       } else if (moved) stopGlide();
       place(state);
     };

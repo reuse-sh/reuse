@@ -362,6 +362,33 @@ test.describe("carousel controls", { tag: "@desktop" }, () => {
       expect(after.at(-1)).toBe(0.4);
     }
 
+    await page.evaluate(() => {
+      const { carousel } = window as unknown as {
+        carousel: {
+          setOptions(options: { group: number }): void;
+          goTo(index: number, behavior: string): void;
+        };
+      };
+      carousel.setOptions({ group: 3 });
+      carousel.goTo(4, "instant");
+    });
+    await page.waitForTimeout(400);
+    const grouped = await frames(async () => {
+      await page.mouse.move(at(0.8), y);
+      await page.mouse.down();
+      await page.mouse.move(at(0.775), y);
+      await page.mouse.move(at(0.75), y);
+      await page.mouse.up();
+    });
+    expect(grouped.at(-1)).toBe(0.8);
+    await page.evaluate(() =>
+      (
+        window as unknown as {
+          carousel: { setOptions(options: { group: number }): void };
+        }
+      ).carousel.setOptions({ group: 1 }),
+    );
+
     await page.emulateMedia({ reducedMotion: "reduce" });
     await page.evaluate(() =>
       (
