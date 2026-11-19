@@ -557,6 +557,73 @@ test("only the press to grab example shrinks its slides during a mouse drag", as
   await press("/carousel/examples/product-strip", "none");
 });
 
+test("the arrows style eases each edge fade in with the scroll, never on mount", async ({
+  page,
+}) => {
+  const mountArrows = async () => {
+    await page.goto("/carousel/guides/controls");
+    let mounted: { fades: string[]; animations: number } | undefined;
+    await expect(async () => {
+      mounted = await page.evaluate(async () => {
+        const label = [...document.querySelectorAll(".cc-seg-item")].find(
+          (node) => node.textContent?.trim() === "Arrows",
+        ) as HTMLElement;
+        label.click();
+        const frame = () => new Promise(requestAnimationFrame);
+        let view: HTMLElement | null = null;
+        for (let at = 0; at < 30 && !view; at++) {
+          await frame();
+          view = document.querySelector<HTMLElement>(".cc-edge .cc-view");
+        }
+        if (!view) throw new Error("Arrows did not mount");
+        view.scrollIntoView({ block: "center" });
+        const style = getComputedStyle(view);
+        return {
+          fades: [
+            style.getPropertyValue("--re-fade-start"),
+            style.getPropertyValue("--re-fade-end"),
+          ],
+          animations: view.getAnimations().length,
+        };
+      });
+    }).toPass();
+    return mounted;
+  };
+  const leaveStart = () =>
+    page.locator(".cc-edge .cc-view").evaluate(async (view) => {
+      const next = view
+        .closest(".cc-c")
+        ?.querySelector<HTMLElement>("[data-carousel-next]");
+      next?.click();
+      const widths: number[] = [];
+      const start = performance.now();
+      while (performance.now() - start < 500) {
+        await new Promise(requestAnimationFrame);
+        widths.push(
+          Number.parseFloat(
+            getComputedStyle(view).getPropertyValue("--re-fade-start"),
+          ),
+        );
+      }
+      return widths;
+    });
+
+  expect(await mountArrows()).toEqual({
+    fades: ["0px", "56px"],
+    animations: 0,
+  });
+  const eased = await leaveStart();
+  expect(
+    eased.filter((width) => width > 0 && width < 56).length,
+  ).toBeGreaterThan(5);
+  expect(eased.at(-1)).toBe(56);
+
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await mountArrows();
+  const instant = await leaveStart();
+  expect(instant.slice(2)).toEqual(instant.slice(2).map(() => 56));
+});
+
 test("the panel style shows the photo's position once", async ({ page }) => {
   for (const width of [390, 1280]) {
     await page.setViewportSize({ width, height: 844 });

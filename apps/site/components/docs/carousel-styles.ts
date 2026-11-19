@@ -309,6 +309,8 @@ const builders: Record<CarouselStyleName, (demo: HTMLElement) => Cleanup> = {
     );
     const unbind = bindCarouselControls(box, carousel);
     const fade = createFadeEdge(viewport, { size: 56 });
+    // The registered fade sizes start at 0px, so the first write would ease in from there.
+    for (const animation of viewport.getAnimations()) animation.finish();
     return () => {
       fade.destroy();
       unbind();
