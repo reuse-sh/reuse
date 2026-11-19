@@ -112,8 +112,15 @@ test("published panel layout lists only the photos when the gallery holds a text
     .replace(/^import \{ [^}]+ \} from "\.\/lightbox-chrome\.js";\n?/m, "");
   await page.addScriptTag({
     type: "module",
-    content: `${code.chrome?.replaceAll("export function", "function") ?? ""}\n${setup}`,
+    content: `${code.chrome?.replaceAll("export function", "function") ?? ""}\n${setup}\nwindow.__ready = true;`,
   });
+  await expect
+    .poll(() =>
+      page.evaluate(() =>
+        Boolean((window as unknown as { __ready?: boolean }).__ready),
+      ),
+    )
+    .toBe(true);
   await page.locator("[data-gallery] a").nth(1).click();
   await expect(page.locator("dialog[open]")).toHaveCount(1);
   await expect(

@@ -232,6 +232,7 @@ const rules: readonly (readonly [(o: LightboxStyle) => boolean, string])[] = [
   box-shadow: var(--re-lightbox-panel-ring);
   color: var(--re-lightbox-panel-foreground);
   overscroll-behavior: contain;
+  scroll-padding-top: 56px;
 }
 .re-lightbox-style-panel {
   display: flex;
@@ -367,6 +368,7 @@ const rules: readonly (readonly [(o: LightboxStyle) => boolean, string])[] = [
     width: auto;
     max-height: var(--re-lightbox-panel-sheet);
     overflow: hidden;
+    scroll-padding-top: 0;
     transition: max-height 320ms var(--re-lightbox-ease, ease);
   }
   .re-lightbox-style .re-lightbox-aside:has([data-open]) { max-height: 72%; overflow: auto; }
@@ -403,7 +405,7 @@ const rules: readonly (readonly [(o: LightboxStyle) => boolean, string])[] = [
   .re-lightbox-style-panel-text, .re-lightbox-style-panel-label, .re-lightbox-style-panel-list { grid-column: 1 / -1; }
   .re-lightbox-style-panel-text { margin-top: 2px; font-size: 13px; line-height: 19px; }
   .re-lightbox-style-panel:not([data-open]) .re-lightbox-style-panel-text { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .re-lightbox-style-panel:not([data-open]) :is(.re-lightbox-style-panel-label, .re-lightbox-style-panel-list) { visibility: hidden; }
+  .re-lightbox-style-panel:not([data-open]) :is(.re-lightbox-style-panel-label, .re-lightbox-style-panel-list) { visibility: hidden; transition: visibility 0s 320ms; }
   .re-lightbox-style-panel-label { margin-top: 16px; }
 }`,
   ],
@@ -518,10 +520,14 @@ export function lightboxChrome(options: LightboxStyle) {
       const expand = (open) => {
         toggle.setAttribute("aria-expanded", String(open));
         panel.toggleAttribute("data-open", open);
-        if (!open && panel.parentElement) panel.parentElement.scrollTop = 0;
+        if (open) return;
+        if (panel.parentElement) panel.parentElement.scrollTop = 0;
+        if (list.contains(document.activeElement)) toggle.focus({ preventScroll: true });
       };
       expand(false);
       toggle.addEventListener("click", () => expand(!panel.hasAttribute("data-open")));
+      const collapse = () => expand(false);
+      narrow.addEventListener("change", collapse);
 
       let rows = [];
       let listed = "";
@@ -612,6 +618,7 @@ export function lightboxChrome(options: LightboxStyle) {
 
       return {
         node: panel,
+        destroy: () => narrow.removeEventListener("change", collapse),
         update: (state) => {
           const single = state.count < 2;
           toggle.hidden = single;

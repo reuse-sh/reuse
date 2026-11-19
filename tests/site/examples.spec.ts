@@ -423,8 +423,16 @@ test("the panel style list glides when quick paging changes the text height", as
   await expect(page.locator(".re-lightbox-style-panel h2")).toHaveText(
     "Sand and fern",
   );
+  // The second key lands while Blue hour fades in, so its height change is still running.
   await page.evaluate(() => {
-    const label = document.querySelector(".re-lightbox-style-panel-label");
+    const panel = document.querySelector(".re-lightbox-style-panel");
+    const label = panel?.querySelector(".re-lightbox-style-panel-label");
+    const title = panel?.querySelector("h2");
+    const dialog = document.querySelector("dialog.re-lightbox");
+    const press = () =>
+      dialog?.dispatchEvent(
+        new KeyboardEvent("keydown", { key: "ArrowRight", bubbles: true }),
+      );
     const tops: number[] = [];
     (window as unknown as { tops: number[] }).tops = tops;
     const sample = () => {
@@ -432,10 +440,18 @@ test("the panel style list glides when quick paging changes the text height", as
       if (tops.length < 60) requestAnimationFrame(sample);
     };
     requestAnimationFrame(sample);
+    if (title)
+      new MutationObserver((_, observer) => {
+        if (title.textContent !== "Blue hour") return;
+        observer.disconnect();
+        setTimeout(press, 40);
+      }).observe(title, {
+        childList: true,
+        characterData: true,
+        subtree: true,
+      });
+    press();
   });
-  await page.keyboard.press("ArrowRight");
-  await page.waitForTimeout(120);
-  await page.keyboard.press("ArrowRight");
   await expect(page.locator(".re-lightbox-style-panel h2")).toHaveText("Amber");
   const tops = () =>
     page.evaluate(() => (window as unknown as { tops: number[] }).tops);
@@ -461,6 +477,58 @@ test("the collapsed panel sheet keeps its list out of the tab order", async ({
     scrolled: document.querySelector(".re-lightbox-aside")?.scrollTop,
   }));
   expect(focused).toEqual({ inList: false, scrolled: 0 });
+});
+
+test("picking from the open panel sheet keeps the arrow keys paging", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 600, height: 844 });
+  await page.goto("/lightbox/controls/panel");
+  await page.locator('main a[href^="/images/marble"]').first().click();
+  const toggle = page.getByRole("button", { name: "All photos" });
+  await toggle.click();
+  const row = page.locator(".re-lightbox-style-panel-list button", {
+    hasText: "Lilac bloom",
+  });
+  await row.focus();
+  await page.keyboard.press("Enter");
+  await expect(toggle).toHaveAttribute("aria-expanded", "false");
+  await expect(toggle).toBeFocused();
+  await page.keyboard.press("ArrowRight");
+  await expect(page.locator(".re-lightbox-style-panel h2")).toHaveText(
+    "Sand and fern",
+  );
+});
+
+test("the panel sheet shows its title after turning from wide to narrow", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 844, height: 390 });
+  await page.goto("/lightbox/controls/panel");
+  await page.locator('main a[href^="/images/marble"]').first().click();
+  const count = page.locator(".re-lightbox-style-panel-count");
+  await expect(count).toHaveText("1 / 8");
+  for (let step = 2; step <= 6; step++) {
+    await page.keyboard.press("ArrowRight");
+    await expect(count).toHaveText(`${step} / 8`);
+  }
+  await expect(page.locator(".re-lightbox-style-panel h2")).toHaveText("Amber");
+  await page.setViewportSize({ width: 390, height: 844 });
+  await expect(
+    page.getByRole("button", { name: "All photos" }),
+  ).toBeInViewport();
+  const inside = await page.evaluate(() => {
+    const sheet = document
+      .querySelector(".re-lightbox-aside")
+      ?.getBoundingClientRect();
+    const title = document
+      .querySelector(".re-lightbox-style-panel h2")
+      ?.getBoundingClientRect();
+    return Boolean(
+      sheet && title && title.top >= sheet.top && title.bottom <= sheet.bottom,
+    );
+  });
+  expect(inside).toBe(true);
 });
 
 test("the panel style switches its text at once under reduced motion", async ({
