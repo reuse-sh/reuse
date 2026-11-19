@@ -1592,3 +1592,280 @@ test("a mouse press held on the outer edge of close, an arrow or zoom still pres
   await pressEdge("close");
   await expect.poll(async () => (await lightbox(page)).isOpen).toBe(false);
 });
+
+// Records every text the caption shows, and its opacity and shift on each frame.
+async function watchCaption(page: Page) {
+  await page.evaluate(() => {
+    const caption = document.querySelector(".re-lightbox-caption") as Element;
+    const texts: string[] = [];
+    const opacities: number[] = [];
+    const shifts: [string, number, number][] = [];
+    new MutationObserver(() => texts.push(caption.textContent ?? "")).observe(
+      caption,
+      { childList: true, characterData: true, subtree: true },
+    );
+    const sample = () => {
+      const style = getComputedStyle(caption);
+      opacities.push(Number(style.opacity));
+      const [x = "0", y = "0"] =
+        style.translate === "none" ? [] : style.translate.split(" ");
+      shifts.push([
+        caption.textContent ?? "",
+        Number.parseFloat(x),
+        Number.parseFloat(y),
+      ]);
+      requestAnimationFrame(sample);
+    };
+    requestAnimationFrame(sample);
+    Object.assign(window, { texts, opacities, shifts });
+  });
+}
+
+const captionLog = (page: Page) =>
+  page.evaluate(() => {
+    const {
+      texts = [],
+      opacities = [],
+      shifts = [],
+    } = window as unknown as {
+      texts?: string[];
+      opacities?: number[];
+      shifts?: [string, number, number][];
+    };
+    const caption = document.querySelector(".re-lightbox-caption") as Element;
+    return {
+      texts,
+      shifts,
+      lowest: Math.min(...opacities),
+      text: caption.textContent,
+      opacity: getComputedStyle(caption).opacity,
+      running: caption.getAnimations().length,
+      status: document.querySelector(".re-lightbox-status")?.textContent,
+    };
+  });
+
+test("a page fades the caption out, swaps its text while hidden, and fades it back in", async ({
+  page,
+}) => {
+  await open(page, {}, { captions: true });
+  await watchCaption(page);
+  await page.keyboard.press("ArrowRight");
+  await page.waitForTimeout(400);
+  const log = await captionLog(page);
+  expect(log.texts).toEqual(["Caption 2"]);
+  expect(log.lowest).toBeLessThan(0.1);
+  expect(log).toMatchObject({ text: "Caption 2", opacity: "1", running: 0 });
+  expect(log.status).toBe("Image 2 of 5, Caption 2");
+});
+
+test("the caption leaves upward and the next one rises from below, and paging back reverses both", async ({
+  page,
+}) => {
+  await open(page, {}, { captions: true });
+  const shifts = async (key: string, text: string) => {
+    await watchCaption(page);
+    await page.keyboard.press(key);
+    await expect.poll(async () => (await captionLog(page)).text).toBe(text);
+    await expect.poll(async () => (await captionLog(page)).running).toBe(0);
+    const { shifts } = await captionLog(page);
+    const of = (shown: string) =>
+      shifts.filter(([t]) => t === shown).map(([, , y]) => y);
+    return {
+      leaving: of(text === "Caption 2" ? "Caption 1" : "Caption 2"),
+      entering: of(text),
+    };
+  };
+  const next = await shifts("ArrowRight", "Caption 2");
+  expect(Math.min(...next.leaving)).toBeLessThan(-1);
+  expect(Math.max(...next.leaving)).toBeLessThanOrEqual(0);
+  expect(Math.max(...next.entering)).toBeGreaterThan(1);
+  expect(next.entering.at(-1)).toBe(0);
+  const back = await shifts("ArrowLeft", "Caption 1");
+  expect(Math.max(...back.leaving)).toBeGreaterThan(1);
+  expect(Math.min(...back.entering)).toBeLessThan(-1);
+  expect(back.entering.at(-1)).toBe(0);
+});
+
+test("a page back during the rise goes on from the shift on screen, over a host's own translate", async ({
+  page,
+}) => {
+  await open(page, {}, { captions: true });
+  await page.addStyleTag({
+    content: ".re-lightbox-caption { translate: 30px 0; }",
+  });
+  await watchCaption(page);
+  await page.keyboard.press("ArrowRight");
+  await page.waitForTimeout(70);
+  const jump = await page.evaluate(() => {
+    const caption = document.querySelector(".re-lightbox-caption") as Element;
+    const shift = () =>
+      Number.parseFloat(
+        getComputedStyle(caption).translate.split(" ")[1] ?? "0",
+      );
+    const before = shift();
+    (window as Window).lightbox.goTo(0);
+    return { before, after: shift() };
+  });
+  expect(jump.before).toBeLessThan(-0.5);
+  expect(Math.abs(jump.after - jump.before)).toBeLessThan(0.5);
+  await expect.poll(async () => (await captionLog(page)).running).toBe(0);
+  const log = await captionLog(page);
+  expect(log.texts).toEqual([]);
+  expect(log.shifts.every(([, x]) => x === 30)).toBe(true);
+  expect(log.shifts.at(-1)?.[2]).toBe(0);
+});
+
+test("fast repeated paging shows only the last caption and announces it once", async ({
+  page,
+}) => {
+  await open(page, {}, { captions: true, count: 8 });
+  await watchCaption(page);
+  await page.evaluate(() => {
+    const status = document.querySelector(".re-lightbox-status") as Element;
+    const announced: string[] = [];
+    new MutationObserver(() =>
+      announced.push(status.textContent ?? ""),
+    ).observe(status, { childList: true, characterData: true, subtree: true });
+    Object.assign(window, { announced });
+  });
+  for (let i = 0; i < 4; i++) await page.keyboard.press("ArrowRight");
+  for (let i = 0; i < 2; i++) await page.keyboard.press("ArrowLeft");
+  await expect.poll(async () => (await captionLog(page)).running).toBe(0);
+  const log = await captionLog(page);
+  const index = (await lightbox(page)).index;
+  expect(log.text).toBe(`Caption ${index + 1}`);
+  expect(log.opacity).toBe("1");
+  // Every swap happens at the low point, so the stale captions in between never show.
+  expect(log.texts.length).toBeLessThanOrEqual(2);
+  expect(log.texts.at(-1)).toBe(`Caption ${index + 1}`);
+  const announced = await page.evaluate(
+    () => (window as unknown as { announced: string[] }).announced,
+  );
+  expect(announced.at(-1)).toBe(
+    `Image ${index + 1} of 8, Caption ${index + 1}`,
+  );
+});
+
+test("a photo without a caption fades the caption away and the next one fades in without moving the strip", async ({
+  page,
+}) => {
+  await mount(page, "", ["lightbox/base.css", "lightbox/theme.css"]);
+  await page.evaluate(async () => {
+    const { createLightbox } = await import("/modules/lightbox/index.js");
+    const photo = (i: number) =>
+      `data:image/svg+xml,${encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="800"><rect width="1200" height="800" fill="hsl(${i * 47} 60% 55%)"/></svg>`)}`;
+    const captions = [
+      "Short",
+      undefined,
+      "A much longer caption that wraps onto a second line at this width, so the box is taller than the one before it and the swap has to happen while it is hidden",
+    ];
+    const lightbox = createLightbox({ history: false, thumbnails: "bottom" });
+    Object.assign(window, { lightbox });
+    lightbox.open(
+      captions.map((caption, i) => ({
+        src: photo(i),
+        thumbnailSrc: photo(i),
+        width: 1200,
+        height: 800,
+        caption,
+      })),
+    );
+  });
+  await page.waitForTimeout(500);
+  const strip = () =>
+    page.evaluate(
+      () =>
+        document
+          .querySelector(".re-lightbox-thumbnails")
+          ?.getBoundingClientRect().top,
+    );
+  const top = await strip();
+  await watchCaption(page);
+  await page.keyboard.press("ArrowRight");
+  await expect.poll(async () => (await captionLog(page)).running).toBe(0);
+  expect((await captionLog(page)).text).toBe("");
+  expect(
+    await page
+      .locator(".re-lightbox-caption")
+      .evaluate((node) => getComputedStyle(node).display),
+  ).toBe("none");
+  expect(await strip()).toBe(top);
+  expect((await captionLog(page)).status).toBe("Image 2 of 3");
+  await page.keyboard.press("ArrowRight");
+  await page.waitForTimeout(50);
+  const entering = await captionLog(page);
+  expect(entering.text).toMatch(/^A much longer/);
+  expect(Number(entering.opacity)).toBeLessThan(1);
+  await expect.poll(async () => (await captionLog(page)).running).toBe(0);
+  expect((await captionLog(page)).opacity).toBe("1");
+  expect(await strip()).toBe(top);
+});
+
+test("reduced motion swaps the caption at once", async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await open(page, {}, { captions: true });
+  await watchCaption(page);
+  await page.keyboard.press("ArrowRight");
+  await expect
+    .poll(async () => (await captionLog(page)).text)
+    .toBe("Caption 2");
+  await page.waitForTimeout(200);
+  const log = await captionLog(page);
+  expect(log).toMatchObject({ opacity: "1", running: 0, lowest: 1 });
+});
+
+test("a list change from a change listener keeps the fade, and the fade ends on the host's caption opacity", async ({
+  page,
+}) => {
+  await open(page, {}, { captions: true });
+  await page.addStyleTag({ content: ".re-lightbox-caption { opacity: 0.6; }" });
+  await page.evaluate(() => {
+    const lightbox = (window as Window).lightbox as Lightbox & {
+      append(items: unknown[]): void;
+    };
+    lightbox.on("change", () =>
+      lightbox.append([
+        {
+          src: `data:image/svg+xml,${encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="800"/>')}`,
+          width: 1200,
+          height: 800,
+          caption: "Appended",
+        },
+      ]),
+    );
+  });
+  await watchCaption(page);
+  await page.keyboard.press("ArrowRight");
+  await expect.poll(async () => (await captionLog(page)).running).toBe(0);
+  const log = await captionLog(page);
+  expect(log.text).toBe("Caption 2");
+  expect(log.lowest).toBeLessThan(0.1);
+  expect(log.opacity).toBe("0.6");
+  const highest = await page.evaluate(() =>
+    Math.max(...(window as unknown as { opacities: number[] }).opacities),
+  );
+  expect(highest).toBeLessThanOrEqual(0.6);
+});
+
+test("a page during the fade runs the rest of it at the fade's own speed over a dimmed caption", async ({
+  page,
+}) => {
+  await open(page, {}, { captions: true });
+  await page.addStyleTag({ content: ".re-lightbox-caption { opacity: 0.6; }" });
+  await page.keyboard.press("ArrowRight");
+  await page.waitForTimeout(60);
+  const fade = await page.evaluate(() => {
+    const caption = document.querySelector(".re-lightbox-caption") as Element;
+    const at = Number(getComputedStyle(caption).opacity);
+    (window as Window).lightbox.next();
+    const [animation] = caption.getAnimations();
+    return {
+      at,
+      duration: Number(animation?.effect?.getComputedTiming().duration),
+    };
+  });
+  expect(fade.at).toBeGreaterThan(0);
+  expect(fade.at).toBeLessThan(0.6);
+  const wholeFadeOut = 240 * 0.45;
+  expect(fade.duration).toBeCloseTo(wholeFadeOut * (fade.at / 0.6), 0);
+});

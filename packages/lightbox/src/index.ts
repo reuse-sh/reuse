@@ -75,7 +75,7 @@ export type { Point, Rect, Size, Zoom } from "./geometry.js";
 
 export interface LightboxStrings {
   dialog: string;
-  slide: (index: number, count: number) => string;
+  slide: (index: number, count: number, caption?: string) => string;
   counter: (index: number, count: number) => string;
   close: string;
   previous: string;
@@ -97,7 +97,8 @@ export interface LightboxStrings {
 
 const defaultStrings: LightboxStrings = {
   dialog: "Image gallery",
-  slide: (index, count) => `Image ${index + 1} of ${count}`,
+  slide: (index, count, caption) =>
+    `Image ${index + 1} of ${count}${caption ? `, ${caption}` : ""}`,
   counter: (index, count) => `${index + 1} / ${count}`,
   close: "Close gallery",
   previous: "Previous image",
@@ -452,6 +453,13 @@ type Session = {
   counterText: string;
   status: HTMLDivElement;
   caption: HTMLParagraphElement;
+  captionText: string;
+  captionFade?: {
+    fade: Animation;
+    drift: Animation;
+    from: number;
+    to: number;
+  };
   prev?: HTMLButtonElement;
   next?: HTMLButtonElement;
   zoomButton?: HTMLButtonElement;
@@ -2370,8 +2378,89 @@ export function createLightbox<Item extends LightboxItem = LightboxItem>(
 
   function announce(s: Session, index: number) {
     s.reported = index;
-    s.status.textContent = s.strings.slide(index, items.length);
+    s.status.textContent = s.strings.slide(
+      index,
+      items.length,
+      items[index]?.caption || undefined,
+    );
     emit("change", s);
+  }
+
+  function showCaption(s: Session, text: string, direction: 1 | -1 | 0) {
+    const caption = s.caption;
+    if (text === s.captionText) return;
+    s.captionText = text;
+    const shown = caption.textContent ?? "";
+    const win = caption.ownerDocument.defaultView;
+    const opacity = () => Number(win?.getComputedStyle(caption).opacity ?? 1);
+    const running = s.captionFade;
+    const at = running ? opacity() : 1;
+    const drift = running?.drift.effect?.getComputedTiming().progress;
+    const side = running
+      ? running.from + (running.to - running.from) * (drift ?? 1)
+      : 0;
+    running?.fade.cancel();
+    running?.drift.cancel();
+    s.captionFade = undefined;
+    const duration = s.timing.fade;
+    if (
+      direction === 0 ||
+      duration <= 0 ||
+      prefersReducedMotion(s) ||
+      typeof caption.animate !== "function"
+    ) {
+      caption.textContent = text;
+      return;
+    }
+    const rest = opacity();
+    const share = running && rest > 0 ? Math.min(at / rest, 1) : 1;
+    const run = (
+      frames: Keyframe[],
+      from: number,
+      to: number,
+      timing: KeyframeAnimationOptions,
+    ) => {
+      const fade = caption.animate(frames, timing);
+      const drift = caption.animate(
+        [from, to].map((shift) => ({ translate: `0 ${shift * 0.4}em` })),
+        { ...timing, composite: "add" },
+      );
+      s.captionFade = { fade, drift, from, to };
+      return fade;
+    };
+    const fadeIn = (start: number, from: number, share = 0) => {
+      const fade = run([{ opacity: start, offset: 0 }], from, 0, {
+        duration: duration * 0.55 * (1 - share),
+        easing: "ease-out",
+      });
+      fade.onfinish = () => {
+        if (s.captionFade?.fade === fade) s.captionFade = undefined;
+      };
+    };
+    if (text === shown) return fadeIn(running ? at : rest, side, share);
+    if (!shown) {
+      caption.textContent = text;
+      return fadeIn(0, direction);
+    }
+    const fadeOut = run(
+      [{ opacity: running ? at : rest }, { opacity: 0 }],
+      side,
+      -direction,
+      {
+        duration: duration * 0.45 * share,
+        easing: "ease-in",
+        fill: "forwards",
+      },
+    );
+    fadeOut.onfinish = () => {
+      const current = s.captionFade;
+      if (current?.fade !== fadeOut) return;
+      s.captionFade = undefined;
+      caption.textContent = text;
+      if (text) fadeIn(0, direction);
+      current.fade.cancel();
+      current.drift.cancel();
+    };
   }
 
   function renderCounter(s: Session, direction: 1 | -1 | 0) {
@@ -2452,7 +2541,7 @@ export function createLightbox<Item extends LightboxItem = LightboxItem>(
     hideOrigin(s);
     renderCounter(s, direction);
     const item = items[state.index];
-    s.caption.textContent = item.caption || "";
+    showCaption(s, item.caption || "", direction);
     const single = items.length < 2;
     for (const control of [s.prev, s.next, s.counter, s.slideshowButton])
       if (control) control.hidden = single;
@@ -4436,6 +4525,7 @@ export function createLightbox<Item extends LightboxItem = LightboxItem>(
       counterText: "",
       status,
       caption,
+      captionText: "",
       prev,
       next,
       zoomButton,

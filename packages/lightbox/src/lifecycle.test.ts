@@ -2314,7 +2314,7 @@ describe("lightbox chrome, taps and keys", () => {
     expect(counter?.textContent).toBe("10 / 12");
     const after = [...(counter?.children ?? [])].slice(1);
     for (const [index, node] of tail.entries()) expect(after[index]).toBe(node);
-    expect(status?.textContent).toBe("Image 10 of 12");
+    expect(status?.textContent).toBe("Image 10 of 12, Caption 0");
     const nodes = [...(counter?.querySelectorAll("span") ?? [])].map(
       (cell) => cell.firstChild,
     );
@@ -2326,5 +2326,13 @@ describe("lightbox chrome, taps and keys", () => {
     expect(
       dialog().querySelectorAll("[aria-live], [role=status]"),
     ).toHaveLength(1);
+    controller.setOptions({
+      strings: {
+        slide: (index, count, caption) =>
+          `写真 ${index + 1}/${count}${caption ? `：${caption}` : ""}`,
+      },
+    });
+    controller.next();
+    expect(status?.textContent).toBe("写真 11/12：Caption 0");
   });
 });
