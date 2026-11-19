@@ -557,7 +557,7 @@ test("only the press to grab example shrinks its slides during a mouse drag", as
   await press("/carousel/examples/product-strip", "none");
 });
 
-test("the arrows style eases each edge fade in with the scroll, never on mount", async ({
+test("the arrows style sizes each edge fade by the scroll left, frame by frame", async ({
   page,
 }) => {
   const mountArrows = async () => {
@@ -589,39 +589,64 @@ test("the arrows style eases each edge fade in with the scroll, never on mount",
     }).toPass();
     return mounted;
   };
-  const leaveStart = () =>
+  // The fade edge measures on the frame after a scroll, so a fade may show the scroll of up to two frames before.
+  const offTrack = () =>
     page.locator(".cc-edge .cc-view").evaluate(async (view) => {
       const next = view
         .closest(".cc-c")
         ?.querySelector<HTMLElement>("[data-carousel-next]");
-      next?.click();
-      const widths: number[] = [];
-      const start = performance.now();
-      while (performance.now() - start < 500) {
-        await new Promise(requestAnimationFrame);
-        widths.push(
-          Number.parseFloat(
-            getComputedStyle(view).getPropertyValue("--re-fade-start"),
-          ),
-        );
+      const max = view.scrollWidth - view.clientWidth;
+      const read = () => {
+        const style = getComputedStyle(view);
+        const scrolled = Math.abs(view.scrollLeft);
+        return {
+          start: Math.min(56, scrolled),
+          end: Math.min(56, max - scrolled),
+          fades: [
+            Number.parseFloat(style.getPropertyValue("--re-fade-start")),
+            Number.parseFloat(style.getPropertyValue("--re-fade-end")),
+          ],
+        };
+      };
+      const misses: string[] = [];
+      const recent = [read(), read()];
+      const near = (value: number, targets: number[]) =>
+        value >= Math.min(...targets) - 0.5 &&
+        value <= Math.max(...targets) + 0.5;
+      for (const _ of [0, 1, 2]) {
+        next?.click();
+        const begin = performance.now();
+        while (performance.now() - begin < 700) {
+          await new Promise(requestAnimationFrame);
+          const now = read();
+          recent.push(now);
+          const window = recent.slice(-3);
+          const [start, end] = now.fades;
+          if (
+            !near(
+              start,
+              window.map((frame) => frame.start),
+            ) ||
+            !near(
+              end,
+              window.map((frame) => frame.end),
+            )
+          )
+            misses.push(`${start}/${end} at ${now.start}/${now.end}`);
+        }
       }
-      return widths;
+      return { misses, reached: recent.at(-1)?.fades };
     });
 
   expect(await mountArrows()).toEqual({
     fades: ["0px", "56px"],
     animations: 0,
   });
-  const eased = await leaveStart();
-  expect(
-    eased.filter((width) => width > 0 && width < 56).length,
-  ).toBeGreaterThan(5);
-  expect(eased.at(-1)).toBe(56);
+  expect(await offTrack()).toEqual({ misses: [], reached: [56, 0] });
 
   await page.emulateMedia({ reducedMotion: "reduce" });
   await mountArrows();
-  const instant = await leaveStart();
-  expect(instant.slice(2)).toEqual(instant.slice(2).map(() => 56));
+  expect(await offTrack()).toEqual({ misses: [], reached: [56, 0] });
 });
 
 test("the panel style shows the photo's position once", async ({ page }) => {
