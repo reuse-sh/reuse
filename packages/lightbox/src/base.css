@@ -61,9 +61,6 @@
   scroll-snap-stop: always;
   overflow: hidden;
 }
-.re-lightbox:not([data-zoomed="true"]) .re-lightbox-slide {
-  clip-path: inset(var(--re-lightbox-room-clip));
-}
 .re-lightbox-slide[data-re-cycle]:not([data-re-cycle="0"]) {
   translate: var(--re-carousel-shift);
 }

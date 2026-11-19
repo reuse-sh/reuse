@@ -297,15 +297,19 @@ test.describe("lightbox zoom with a mouse, wheel and trackpad", {
         return Math.round(rest.y + rest.height);
       })
       .toBeLessThanOrEqual(900 - 100);
+    const edges = async () => {
+      const box = await photo(page);
+      return [box.x, box.y, box.x + box.width, box.y + box.height].map(
+        (value) => Math.abs(Math.round(value)),
+      );
+    };
     await zoomTo(page, 10, { x: 9000, y: 9000 });
-    const corner = await photo(page);
-    expect(Math.round(corner.x + corner.width)).toBe(1440);
-    expect(Math.round(corner.y + corner.height)).toBe(900);
+    await expect
+      .poll(async () => (await edges()).slice(2))
+      .toEqual([1440, 900]);
     await zoomTo(page, 1, { x: 0, y: 0 });
     await zoomTo(page, 10, { x: -9000, y: -9000 });
-    const start = await photo(page);
-    expect(Math.abs(Math.round(start.x))).toBe(0);
-    expect(Math.abs(Math.round(start.y))).toBe(0);
+    await expect.poll(async () => (await edges()).slice(0, 2)).toEqual([0, 0]);
     await page.mouse.move(700, 400);
     await page.mouse.move(760, 460, { steps: 4 });
     await expect(page.locator(".re-lightbox-close")).toBeVisible();

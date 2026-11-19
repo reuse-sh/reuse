@@ -1277,12 +1277,6 @@ export function createLightbox<Item extends LightboxItem = LightboxItem>(
       "--re-lightbox-thumbnails-room",
       `0px ${inset.right}px ${inset.bottom}px ${inset.left}px`,
     );
-    if (kept.left || kept.right || kept.bottom)
-      s.viewport.style.setProperty(
-        "--re-lightbox-room-clip",
-        `0px ${kept.right}px ${kept.bottom}px ${kept.left}px`,
-      );
-    else s.viewport.style.removeProperty("--re-lightbox-room-clip");
     s.box = {
       left: rect.left + inset.left,
       top: rect.top,
