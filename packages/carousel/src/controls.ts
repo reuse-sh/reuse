@@ -12,7 +12,7 @@ function internalsOf(carousel: Carousel) {
 const ROLL = 200;
 // The engine starts a mouse drag after the same distance.
 const DRAG_START = 5;
-// The engine settles a released drag at this rate by default, 6 / releaseDuration.
+// Eases a leftover offset out in about 260ms, the engine's default for a released drag.
 const SETTLE_RATE = 6 / 260;
 let generated = 0;
 
@@ -342,8 +342,7 @@ export function bindCarouselControls(
         const now = view?.performance.now() ?? began;
         const u = SETTLE_RATE * Math.max(0, now - began);
         rest = (1 + u) * Math.exp(-u);
-      } else if (gliding && Math.abs(goal - start) < 0.001) rest = 1;
-      else if (gliding)
+      } else if (gliding)
         rest = Math.max(0, Math.min(1, (goal - progress) / (goal - start)));
       if (rest < 0.002) stopGlide();
       show(progress + (from - start) * (gliding ? rest : 0));
