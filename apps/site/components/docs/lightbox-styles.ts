@@ -242,9 +242,15 @@ const rules: readonly (readonly [(o: LightboxStyle) => boolean, string])[] = [
 .re-lightbox-style-panel :where(h2, p, ol) { margin: 0; padding: 0; }
 .re-lightbox-style-panel [hidden] { display: none; }
 .re-lightbox-style-panel-count {
+  position: sticky;
+  z-index: 1;
+  top: 0;
   display: flex;
   align-items: center;
   height: 56px;
+  margin: 0 -24px;
+  padding: 0 24px;
+  background: var(--re-lightbox-panel-background);
   color: var(--re-lightbox-panel-subtle);
   font-size: 13px;
   font-weight: 500;
@@ -290,8 +296,8 @@ const rules: readonly (readonly [(o: LightboxStyle) => boolean, string])[] = [
 .re-lightbox-style-panel-list button:hover { background: var(--re-lightbox-panel-hover); }
 .re-lightbox-style-panel-list button[aria-current="true"] { background: var(--re-lightbox-panel-current); color: var(--re-lightbox-panel-foreground); font-weight: 500; }
 .re-lightbox-style-panel :is(.re-lightbox-style-panel-list button, .re-lightbox-style-panel-toggle):focus-visible { outline: 2px solid currentColor; outline-offset: 2px; }
-.re-lightbox-style-panel-list img { flex: none; width: 48px; height: 36px; border-radius: 6px; background: var(--re-lightbox-panel-hover); object-fit: cover; }
-.re-lightbox-style-panel-list span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }`,
+.re-lightbox-style-panel-thumbnail { flex: none; width: 48px; height: 36px; border-radius: 6px; background: var(--re-lightbox-panel-hover); object-fit: cover; }
+.re-lightbox-style-panel-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }`,
   ],
   [
     dark,
@@ -347,7 +353,7 @@ const rules: readonly (readonly [(o: LightboxStyle) => boolean, string])[] = [
   ],
   [
     (o) => o.caption === "Panel",
-    `@media (max-width: 559px) {
+    `@media (max-width: 719.98px) {
   .re-lightbox-style {
     --re-lightbox-side: 0px;
     --re-lightbox-panel-inset: 8px;
@@ -375,7 +381,7 @@ const rules: readonly (readonly [(o: LightboxStyle) => boolean, string])[] = [
   .re-lightbox-style-panel-summary { display: contents; }
   .re-lightbox-style-panel h2 { grid-area: 1 / 1; overflow: hidden; font-size: 16px; line-height: 22px; text-overflow: ellipsis; white-space: nowrap; }
   .re-lightbox-style-panel[data-open] h2 { white-space: normal; }
-  .re-lightbox-style-panel-count { grid-area: 1 / 2; height: auto; }
+  .re-lightbox-style-panel-count { position: static; grid-area: 1 / 2; height: auto; margin: 0; padding: 0; background: none; }
   .re-lightbox-style-panel-toggle:not([hidden]) {
     display: inline-flex;
     grid-area: 1 / 3;
@@ -397,6 +403,7 @@ const rules: readonly (readonly [(o: LightboxStyle) => boolean, string])[] = [
   .re-lightbox-style-panel-text, .re-lightbox-style-panel-label, .re-lightbox-style-panel-list { grid-column: 1 / -1; }
   .re-lightbox-style-panel-text { margin-top: 2px; font-size: 13px; line-height: 19px; }
   .re-lightbox-style-panel:not([data-open]) .re-lightbox-style-panel-text { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .re-lightbox-style-panel:not([data-open]) :is(.re-lightbox-style-panel-label, .re-lightbox-style-panel-list) { visibility: hidden; }
   .re-lightbox-style-panel-label { margin-top: 16px; }
 }`,
   ],
@@ -506,11 +513,12 @@ export function lightboxChrome(options: LightboxStyle) {
       const list = element("ol", "re-lightbox-style-panel-list");
       panel.append(count, summary, toggle, label, list);
 
-      const narrow = view.matchMedia("(max-width: 559px)");
+      const narrow = view.matchMedia("(max-width: 719.98px)");
       const reduced = view.matchMedia("(prefers-reduced-motion: reduce)");
       const expand = (open) => {
         toggle.setAttribute("aria-expanded", String(open));
         panel.toggleAttribute("data-open", open);
+        if (!open && panel.parentElement) panel.parentElement.scrollTop = 0;
       };
       expand(false);
       toggle.addEventListener("click", () => expand(!panel.hasAttribute("data-open")));
@@ -524,11 +532,14 @@ export function lightboxChrome(options: LightboxStyle) {
         rows = items.map((item, index) => {
           const row = element("button");
           row.type = "button";
-          const image = element("img");
-          image.src = item.thumbnailSrc ?? item.src;
-          image.alt = "";
-          image.loading = "lazy";
-          row.append(image, element("span", "", item.caption ?? ""));
+          const thumbnail = item.thumbnailSrc || item.previewSrc;
+          const image = element(thumbnail ? "img" : "span", "re-lightbox-style-panel-thumbnail");
+          if (thumbnail) {
+            image.src = thumbnail;
+            image.alt = "";
+            image.loading = "lazy";
+          }
+          row.append(image, element("span", "re-lightbox-style-panel-name", item.caption ?? ""));
           row.addEventListener("click", () => {
             lightbox.goTo(index);
             if (narrow.matches) expand(false);
@@ -544,6 +555,7 @@ export function lightboxChrome(options: LightboxStyle) {
       let next;
       let fadeOut;
       let fadeIn = [];
+      let resize;
       const fill = (state) => {
         const item = state.item;
         count.textContent = state.count > 1 ? \`\${state.index + 1} / \${state.count}\` : "";
@@ -553,10 +565,11 @@ export function lightboxChrome(options: LightboxStyle) {
       const duration = () => {
         const value = view.getComputedStyle(panel).getPropertyValue("--re-lightbox-fade-duration").trim();
         const number = Number.parseFloat(value) || 0;
-        return value.endsWith("ms") ? number : number * 1000;
+        return value.endsWith("s") && !value.endsWith("ms") ? number * 1000 : number;
       };
       const swap = () => {
         const before = summary.offsetHeight;
+        resize?.cancel();
         fill(next);
         const time = duration() * 0.55;
         const after = summary.offsetHeight;
@@ -564,7 +577,7 @@ export function lightboxChrome(options: LightboxStyle) {
           node.animate([{ opacity: 0 }, { opacity: 1 }], { duration: time, easing: "ease-out" }),
         );
         if (before !== after && view.getComputedStyle(summary).display !== "contents")
-          summary.animate([{ height: \`\${before}px\` }, { height: \`\${after}px\` }], {
+          resize = summary.animate([{ height: \`\${before}px\` }, { height: \`\${after}px\` }], {
             duration: time,
             easing: view.getComputedStyle(panel).getPropertyValue("--re-lightbox-ease").trim() || "ease",
           });
@@ -604,7 +617,7 @@ export function lightboxChrome(options: LightboxStyle) {
           toggle.hidden = single;
           label.hidden = single;
           list.hidden = single;
-          renderList(getItems());
+          renderList(getItems().filter(Boolean));
           rows.forEach((row, index) => {
             const current = index === state.index;
             if (current === (row.getAttribute("aria-current") === "true")) return;
@@ -642,6 +655,7 @@ export default (createLightbox, icons, getItems) =>
 }
 
 export function lightboxCode(options: LightboxStyle) {
+  const thumbnailed = options.thumbnails || options.caption === "Panel";
   const chromeSource = lightboxChrome(options);
   const slots = chromeSource?.includes("chromeSlots") ?? false;
   const names = slots ? ["chromeSlots"] : [];
@@ -692,8 +706,8 @@ import { useRef } from "react";
 ${imports}
 
 const photos: LightboxItem[] = [
-  { src: "/photos/coast.jpg", alt: "A rocky coast", caption: "Coast"${options.thumbnails ? ', thumbnailSrc: "/photos/coast.jpg"' : ""} },
-  { src: "/photos/forest.jpg", alt: "A path through a forest", caption: "Forest"${options.thumbnails ? ', thumbnailSrc: "/photos/forest.jpg"' : ""} },
+  { src: "/photos/coast.jpg", alt: "A rocky coast", caption: "Coast"${thumbnailed ? ', thumbnailSrc: "/photos/coast.jpg"' : ""} },
+  { src: "/photos/forest.jpg", alt: "A path through a forest", caption: "Forest"${thumbnailed ? ', thumbnailSrc: "/photos/forest.jpg"' : ""} },
 ];
 
 export function Gallery() {

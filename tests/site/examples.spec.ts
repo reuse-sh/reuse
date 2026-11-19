@@ -413,6 +413,56 @@ test("the panel style fades its text through a change and lands on the latest ph
   );
 });
 
+test("the panel style list glides when quick paging changes the text height", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await page.goto("/lightbox/controls/panel");
+  // Sand and fern wraps to two lines, Blue hour to one, Amber to two.
+  await page.locator('main a[href^="/images/marble"]').nth(3).click();
+  await expect(page.locator(".re-lightbox-style-panel h2")).toHaveText(
+    "Sand and fern",
+  );
+  await page.evaluate(() => {
+    const label = document.querySelector(".re-lightbox-style-panel-label");
+    const tops: number[] = [];
+    (window as unknown as { tops: number[] }).tops = tops;
+    const sample = () => {
+      tops.push(label?.getBoundingClientRect().top ?? 0);
+      if (tops.length < 60) requestAnimationFrame(sample);
+    };
+    requestAnimationFrame(sample);
+  });
+  await page.keyboard.press("ArrowRight");
+  await page.waitForTimeout(120);
+  await page.keyboard.press("ArrowRight");
+  await expect(page.locator(".re-lightbox-style-panel h2")).toHaveText("Amber");
+  const tops = () =>
+    page.evaluate(() => (window as unknown as { tops: number[] }).tops);
+  await expect.poll(async () => (await tops()).length).toBe(60);
+  const sampled = await tops();
+  const steps = sampled.slice(1).map((top, i) => Math.abs(top - sampled[i]));
+  expect(Math.max(...steps)).toBeLessThan(12);
+});
+
+test("the collapsed panel sheet keeps its list out of the tab order", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto("/lightbox/controls/panel");
+  await page.locator('main a[href^="/images/marble"]').first().click();
+  const toggle = page.getByRole("button", { name: "All photos" });
+  await toggle.focus();
+  await page.keyboard.press("Tab");
+  const focused = await page.evaluate(() => ({
+    inList: Boolean(
+      document.activeElement?.closest(".re-lightbox-style-panel-list"),
+    ),
+    scrolled: document.querySelector(".re-lightbox-aside")?.scrollTop,
+  }));
+  expect(focused).toEqual({ inList: false, scrolled: 0 });
+});
+
 test("the panel style switches its text at once under reduced motion", async ({
   page,
 }) => {
