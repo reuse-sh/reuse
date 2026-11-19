@@ -10,6 +10,7 @@ export interface CarouselInternals {
   readonly strings: CarouselStrings;
   slides(): readonly HTMLElement[];
   pagePositions(): readonly number[];
+  settling(): boolean;
   autoplays(): boolean;
   onOptions(listener: () => void): () => void;
   align(): "start" | "center" | undefined;

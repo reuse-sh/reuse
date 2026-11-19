@@ -466,6 +466,11 @@ export const libraries: Library[] = [
         "tests/browser/carousel-motion.spec.ts",
       ],
       [
+        "Land the slider with the strip",
+        "A click on the progress slider moves its handle with the strip, never to the pointer and back. A released drag eases the handle from the pointer to where the strip comes to rest, and under reduced motion it lands there at once.",
+        "tests/browser/carousel-controls.spec.ts",
+      ],
+      [
         "Publish one state",
         "Index, pages, visible slides and autoplay progress come from one source that every control reads, and every label and announcement from the carousel's strings.",
         "tests/browser/carousel-controls.spec.ts",

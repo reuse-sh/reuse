@@ -4,7 +4,7 @@
       "carousel": "dist/index.js",
       "controls": "dist/controls.js"
     },
-    "budgets": { "carousel.js": 10.69, "controls.js": 2.62 }
+    "budgets": { "carousel.js": 10.69, "controls.js": 3.16 }
   },
   "lightbox": {
     "entries": {
