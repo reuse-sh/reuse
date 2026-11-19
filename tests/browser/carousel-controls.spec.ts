@@ -290,4 +290,88 @@ test.describe("carousel controls", { tag: "@desktop" }, () => {
       visible: [5, 6, 7],
     });
   });
+
+  test("the slider handle moves once on a click and eases from the pointer after a drag", async ({
+    page,
+  }) => {
+    await setup(page);
+    const box = await page.locator("[data-carousel-progress]").boundingBox();
+    if (!box) throw new Error("No slider");
+    const y = box.y + box.height / 2;
+    const at = (fraction: number) => box.x + box.width * fraction;
+    await page.evaluate(() => {
+      const bar = document.querySelector(
+        "[data-carousel-progress]",
+      ) as HTMLElement;
+      const seen: number[] = [];
+      const read = () => {
+        seen.push(Number(bar.style.getPropertyValue("--re-carousel-progress")));
+        requestAnimationFrame(read);
+      };
+      read();
+      Object.assign(window, { seen });
+    });
+    const frames = async (run: () => Promise<void>) => {
+      await page.evaluate(() =>
+        (window as unknown as { seen: number[] }).seen.splice(0),
+      );
+      await run();
+      await page.waitForTimeout(800);
+      return page.evaluate(() =>
+        (window as unknown as { seen: number[] }).seen.splice(0),
+      );
+    };
+    const steady = (values: number[], direction: 1 | -1) =>
+      values.every(
+        (value, at) =>
+          at === 0 || (value - values[at - 1]) * direction >= -0.001,
+      );
+
+    const click = await frames(async () => {
+      await page.mouse.move(at(0.65), y);
+      await page.mouse.down();
+      await page.waitForTimeout(80);
+      await page.mouse.up();
+    });
+    expect(steady(click, 1)).toBe(true);
+    expect(click.at(-1)).toBe(0.6);
+
+    const drag = async (hold: number) => {
+      await page.mouse.move(at(0.6), y);
+      await page.mouse.down();
+      for (let step = 1; step <= 10; step++)
+        await page.mouse.move(at(0.6 - 0.13 * (step / 10)), y);
+      await page.waitForTimeout(hold);
+      await page.mouse.up();
+    };
+    for (const hold of [0, 700]) {
+      await page.evaluate(() =>
+        (
+          window as unknown as {
+            carousel: { goTo(index: number, behavior: string): void };
+          }
+        ).carousel.goTo(3, "instant"),
+      );
+      const released = await frames(() => drag(hold));
+      const after = released.slice(released.findIndex((value) => value < 0.48));
+      expect(after[0]).toBeGreaterThan(0.46);
+      expect(steady(after, -1)).toBe(true);
+      expect(
+        after.filter((value) => value > 0.41 && value < 0.46).length,
+      ).toBeGreaterThan(2);
+      expect(after.at(-1)).toBe(0.4);
+    }
+
+    await page.emulateMedia({ reducedMotion: "reduce" });
+    await page.evaluate(() =>
+      (
+        window as unknown as {
+          carousel: { goTo(index: number, behavior: string): void };
+        }
+      ).carousel.goTo(3, "instant"),
+    );
+    const reduced = await frames(() => drag(0));
+    expect(reduced.filter((value) => value > 0.41 && value < 0.46)).toEqual([]);
+    expect(reduced.at(-1)).toBe(0.4);
+  });
 });
