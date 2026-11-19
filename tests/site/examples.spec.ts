@@ -451,16 +451,21 @@ test("the panel style mirrors its rise when paging back and continues from where
           shown === caption && opacity < 0.5 && side(shift),
       );
     press("ArrowRight");
-    while (
-      element.textContent !== "Lilac bloom" ||
-      Number(getComputedStyle(element).opacity) > 0.6
-    )
-      await frame();
-    while (Number(getComputedStyle(element).opacity) < 0.3) await frame();
+    let left = 120;
+    const wait = async (ready: () => boolean) => {
+      while (!ready() && left-- > 0) await frame();
+      return ready();
+    };
+    const opacity = () => Number(getComputedStyle(element).opacity);
+    const rose =
+      (await wait(
+        () => element.textContent === "Lilac bloom" && opacity() <= 0.6,
+      )) && (await wait(() => opacity() >= 0.3));
     const before = [y(element), y(text)];
     press("ArrowRight");
     const after = [y(element), y(text)];
     return {
+      rose,
       leavesDownward: seen("Lilac bloom", (shift) => shift > 0),
       entersFromAbove: seen("Mint and ember", (shift) => shift < 0),
       rising: before.every((shift) => shift > 0),
@@ -468,6 +473,7 @@ test("the panel style mirrors its rise when paging back and continues from where
     };
   });
   expect(result).toEqual({
+    rose: true,
     leavesDownward: true,
     entersFromAbove: true,
     rising: true,
