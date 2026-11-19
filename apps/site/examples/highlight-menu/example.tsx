@@ -1,6 +1,6 @@
 "use client";
 import { MovingHighlight } from "@reuse-sh/interactions/react";
-import { type KeyboardEvent, useRef, useState } from "react";
+import { Fragment, type KeyboardEvent, useRef, useState } from "react";
 
 const iconPaths = {
   layers: (
@@ -160,7 +160,7 @@ export function FileMenu() {
     items.current[next]?.focus();
   };
   return (
-    <div className="overflow-hidden rounded-2xl bg-card shadow-panel max-w-85 pb-1.5">
+    <div className="overflow-hidden rounded-2xl bg-card shadow-panel max-w-85">
       <div
         className="flex gap-0.5 p-1.5 border-b border-border text-label text-muted-foreground [&_[data-open]]:bg-accent [&_[data-open]]:text-foreground"
         aria-hidden="true"
@@ -178,39 +178,40 @@ export function FileMenu() {
         onKeyDown={onKeyDown}
       >
         {menuItems.map(([icon, label, shortcut], index) => (
-          <button
-            key={label}
-            ref={(node) => {
-              items.current[index] = node;
-            }}
-            type="button"
-            role="menuitem"
-            data-re-row=""
-            tabIndex={index === focus ? 0 : -1}
-            className={
-              index === menuItems.length - 1
-                ? "flex items-center gap-2.5 h-8.5 px-2.5 border-0 rounded-lg bg-transparent text-ui text-left cursor-pointer [&:focus-visible]:outline-2 [&:focus-visible]:outline-ring [&:focus-visible]:-outline-offset-2 [&[aria-current=page]]:font-semibold mt-1.5 text-destructive border-t border-border [&_.re-highlight-menu-x-row-icon]:text-current"
-                : "flex items-center gap-2.5 h-8.5 px-2.5 border-0 rounded-lg bg-transparent text-foreground text-ui text-left cursor-pointer [&:focus-visible]:outline-2 [&:focus-visible]:outline-ring [&:focus-visible]:-outline-offset-2 [&[aria-current=page]]:font-semibold"
-            }
-            onFocus={() => setFocus(index)}
-            onClick={() => setLast(label)}
-          >
-            <span className="re-highlight-menu-x-row-icon inline-flex flex-none text-muted-foreground">
-              <Icon name={icon} size={16} />
-            </span>
-            <span>{label}</span>
-            <kbd className="ml-auto font-sans text-caption text-subtle-foreground">
-              {shortcut}
-            </kbd>
-          </button>
+          <Fragment key={label}>
+            {icon === "trash" && (
+              <hr className="my-1 -mx-1.5 h-px border-0 bg-border" />
+            )}
+            <button
+              ref={(node) => {
+                items.current[index] = node;
+              }}
+              type="button"
+              role="menuitem"
+              data-re-row=""
+              tabIndex={index === focus ? 0 : -1}
+              className={`flex items-center gap-2.5 h-8.5 px-2.5 border-0 rounded-lg bg-transparent text-ui text-left cursor-pointer [&:focus-visible]:outline-2 [&:focus-visible]:outline-ring [&:focus-visible]:-outline-offset-2 ${
+                icon === "trash"
+                  ? "text-destructive [&_.re-highlight-menu-x-row-icon]:text-current"
+                  : "text-foreground"
+              }`}
+              onFocus={() => setFocus(index)}
+              onClick={() => setLast(label)}
+            >
+              <span className="re-highlight-menu-x-row-icon inline-flex flex-none text-muted-foreground">
+                <Icon name={icon} size={16} />
+              </span>
+              <span>{label}</span>
+              <kbd className="ml-auto font-sans text-caption text-subtle-foreground">
+                {shortcut}
+              </kbd>
+            </button>
+          </Fragment>
         ))}
       </MovingHighlight>
-      <p
-        className="px-4 pt-0.5 pb-1.5 text-caption text-subtle-foreground"
-        aria-live="polite"
-      >
-        {last ? `Chose ${last}` : " "}
-      </p>
+      <span className="sr-only" role="status">
+        {last ? `Chose ${last}` : ""}
+      </span>
     </div>
   );
 }
