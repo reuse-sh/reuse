@@ -50,6 +50,7 @@ export const lightboxLookCss = [
   --re-lightbox-bar: 0px;
   --re-lightbox-under: 0px;
   --re-lightbox-bottom: calc(var(--re-lightbox-caption) + var(--re-lightbox-strip) + var(--re-lightbox-bar) + var(--re-lightbox-under));
+  --re-lightbox-bottom-room: var(--re-lightbox-bottom);
   --re-lightbox-ring: 0 0 0 0.5px rgb(0 0 0 / 10%), 0 1px 2px rgb(0 0 0 / 6%), 0 2px 6px rgb(0 0 0 / 4%);
   --re-lightbox-background: #fcfcfc;
   --re-lightbox-foreground: #1f1f1f;
@@ -59,10 +60,6 @@ export const lightboxLookCss = [
   --re-lightbox-press-scale: 0.95;
 }
 .re-lightbox-style *, .re-lightbox-style *::before, .re-lightbox-style *::after { box-sizing: border-box; }
-.re-lightbox-style .re-lightbox-viewport {
-  width: calc(100% - var(--re-lightbox-side));
-  height: calc(100% - var(--re-lightbox-bottom));
-}
 .re-lightbox-style .re-lightbox-button {
   width: 40px;
   height: 40px;
@@ -200,7 +197,12 @@ const rules: readonly (readonly [(o: LightboxStyle) => boolean, string])[] = [
 .re-lightbox-style-toolbar .re-lightbox-button { position: static; box-shadow: none; background: transparent; }
 .re-lightbox-style-toolbar .re-lightbox-button:hover { background: rgb(0 0 0 / 5%); }
 .re-lightbox-style-toolbar .re-lightbox-counter { position: static; display: block; height: auto; min-width: 52px; padding: 0 6px; background: none; box-shadow: none; font-weight: 500; text-align: center; }
-.re-lightbox-style-toolbar-divider { width: 1px; height: 20px; margin: 0 4px; background: rgb(0 0 0 / 10%); }`,
+.re-lightbox-style-toolbar-divider { width: 1px; height: 20px; margin: 0 4px; background: rgb(0 0 0 / 10%); }
+.re-lightbox-style-toolbar { transition: background-color 300ms ease, box-shadow 300ms ease; }
+.re-lightbox-style[data-zoomed="true"] .re-lightbox-style-toolbar { background: transparent; box-shadow: none; }
+.re-lightbox-style[data-zoomed="true"] .re-lightbox-style-toolbar > :not(.re-lightbox-zoom) { visibility: hidden; opacity: 0; }
+.re-lightbox-style[data-zoomed="true"] .re-lightbox-style-toolbar .re-lightbox-zoom { background: var(--re-lightbox-control); box-shadow: var(--re-lightbox-ring); }
+.re-lightbox-style[data-zoomed="true"] .re-lightbox-style-toolbar .re-lightbox-zoom:hover { background: var(--re-lightbox-control-hover); }`,
   ],
   [
     (o) => o.caption === "Panel",
@@ -356,6 +358,7 @@ export function lightboxChrome(options: LightboxStyle) {
       divider.className = "re-lightbox-style-toolbar-divider";
       divider.setAttribute("aria-hidden", "true");
       const zoom = button("zoom", "Zoom in", () => lightbox.toggleZoom());
+      zoom.classList.add("re-lightbox-zoom");
       bar.append(divider, zoom);`
           : ""
       }

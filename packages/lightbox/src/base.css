@@ -82,10 +82,12 @@
   .re-lightbox-frame {
   cursor: zoom-out;
 }
-.re-lightbox[data-zoomed="true"] .re-lightbox-frame:active {
+.re-lightbox[data-zoomed="true"]
+  :is(.re-lightbox-viewport:active, .re-lightbox-viewport:active *) {
   cursor: grab;
 }
-.re-lightbox[data-panning="true"] .re-lightbox-frame {
+.re-lightbox[data-zoomed="true"][data-panning="true"]
+  :is(.re-lightbox-viewport, .re-lightbox-viewport *) {
   cursor: grabbing;
 }
 .re-lightbox[data-chrome="hidden"]:not([data-zoomed="true"])
@@ -351,9 +353,6 @@
   max-width: 100%;
   overflow: auto;
 }
-.re-lightbox[data-aside] .re-lightbox-viewport {
-  width: calc(100% - var(--re-lightbox-aside-width, 320px));
-}
 .re-lightbox[data-aside] .re-lightbox-next:dir(ltr) {
   right: calc(
     var(--re-lightbox-aside-width, 320px) +
@@ -533,6 +532,23 @@
   * {
   pointer-events: none;
 }
+.re-lightbox[data-zoomed="true"]
+  :is(
+    .re-lightbox-prev,
+    .re-lightbox-next,
+    .re-lightbox-aside,
+    .re-lightbox-stage > .re-lightbox-thumbnails,
+    .re-lightbox-stage > .re-lightbox-thumbnail-ring,
+    .re-lightbox-toolbar-start,
+    .re-lightbox-toolbar-end > :not(.re-lightbox-zoom, .re-lightbox-close),
+    .re-lightbox-footer > :not(:has(.re-lightbox-zoom))
+  ) {
+  visibility: hidden;
+  opacity: 0;
+  transition:
+    opacity 300ms ease,
+    visibility 0s 300ms;
+}
 @media (max-width: 719.98px) {
   .re-lightbox-aside {
     top: auto;
@@ -540,10 +556,6 @@
     right: 0;
     width: auto;
     height: var(--re-lightbox-aside-height, 40%);
-  }
-  .re-lightbox[data-aside] .re-lightbox-viewport {
-    width: 100%;
-    height: calc(100% - var(--re-lightbox-aside-height, 40%));
   }
   .re-lightbox[data-aside] .re-lightbox-next:dir(ltr) {
     right: max(

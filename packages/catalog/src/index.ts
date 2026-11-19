@@ -154,7 +154,7 @@ export const libraries: Library[] = [
       ],
       [
         "Let the photo lead",
-        "Controls fade in after the photo starts moving and leave before it. They hide while zoomed and after a still pointer, never while hovered or keyboard-focused.",
+        "Controls fade in after the photo starts moving and leave before it. They hide while zoomed and after a still pointer, never while hovered or keyboard-focused. While zoomed only close and zoom come back, and the photo pans to the window's edges under the room the other controls kept.",
         "tests/browser/lightbox-gestures.spec.ts",
       ],
       [
@@ -236,7 +236,7 @@ export const libraries: Library[] = [
     api: [
       [
         "createLightbox(options?)",
-        "Creates a viewer. Options include controls, thumbnails, caption, slideshow, content, autoplayMedia, loop, history, strings, slots, imageClick, doubleTapZoom, autoHide, maxZoom, protect, className and icons, copied at creation and changed with setOptions. The space around the photo is --re-lightbox-padding, any CSS length, 32px by default.",
+        "Creates a viewer. Options include controls, thumbnails, caption, slideshow, content, autoplayMedia, loop, history, strings, slots, imageClick, doubleTapZoom, autoHide, maxZoom, protect, className and icons, copied at creation and changed with setOptions. The space around the photo is --re-lightbox-padding, any CSS length, 32px by default, and --re-lightbox-bottom-room keeps room below it for a page's own footer.",
       ],
       [
         "bindLightboxGallery(root, lightbox, options?)",
@@ -286,7 +286,7 @@ export const libraries: Library[] = [
     ],
     notes: [
       'A click on the image zooms by default, and a click beside it closes. On a phone a tap on the photo shows or hides the controls once the 300ms double-tap window passes, a double tap zooms, and a tap beside it closes. For a publishing gallery, set imageClick: "close", which also turns off the double tap.',
-      "A vertical swipe either way closes past 120px or 0.5px/ms, measured over the last 80ms before the finger lifts. The controls hide after autoHide ms of a still mouse, 2500 by default, and while zoomed, and come back on a key, a 24px move, or a tap. The open and close flights take --re-lightbox-open-duration and --re-lightbox-close-duration on the --re-lightbox-ease curve, a zoom --re-lightbox-zoom-duration (220ms) and a fade to a distant photo --re-lightbox-fade-duration (240ms); 0ms makes each instant.",
+      "A vertical swipe either way closes past 120px or 0.5px/ms, measured over the last 80ms before the finger lifts. The controls hide after autoHide ms of a still mouse, 2500 by default, and while zoomed, and come back on a key, a 24px move, or a tap; while zoomed only close and zoom come back, and a drag shows the grabbing cursor. The open and close flights take --re-lightbox-open-duration and --re-lightbox-close-duration on the --re-lightbox-ease curve, a zoom --re-lightbox-zoom-duration (220ms) and a fade to a distant photo --re-lightbox-fade-duration (240ms); 0ms makes each instant.",
       "Zoom follows the file's pixels: a double tap, a click or the zoom button goes to 1:1, or to tapZoom (2.5) when that is larger, and maxZoom (1) is a multiple of 1:1. A photo the screen already shows at full resolution has no zoom, and an SVG zooms up to maxZoom times its fitted size, 4 by default. A pinch below 0.75 closes, Ctrl or Cmd with the wheel and a trackpad pinch zoom, and a plain wheel does nothing until you zoom in, then pans. While zoomed the arrow keys pan and a pan glides on release; the next photo is a second swipe once the photo rests against its edge.",
       "A photo more than twice as tall as it is wide that would run past two screens at the screen's width opens at that width, top first, and scrolls; a swipe down closes it only from its top edge, and a double tap shows its whole height. A photo more than three times as wide as it is tall opens whole and zooms to the screen's height on a double tap. PNG, WebP, AVIF, GIF and SVG photos sit on --re-lightbox-media-background, #f2f2f2 in the default theme; JPEG gets none. An SVG takes its size from its own width and height, else its viewBox.",
       "The photo is a real img: right click and a long press open the browser's image menu, a mouse drag on it pages like a swipe, and Cmd or Ctrl and C copies it as PNG where the browser supports image copy. protect: true turns off the menu and the copy. A swipe that passes the closing distance taps the vibration motor once where the device has one.",
