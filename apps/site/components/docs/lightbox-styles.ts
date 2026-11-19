@@ -50,6 +50,7 @@ export const lightboxLookCss = [
   --re-lightbox-bar: 0px;
   --re-lightbox-under: 0px;
   --re-lightbox-bottom: calc(var(--re-lightbox-caption) + var(--re-lightbox-strip) + var(--re-lightbox-bar) + var(--re-lightbox-under));
+  --re-lightbox-bottom-room: var(--re-lightbox-bottom);
   --re-lightbox-ring: 0 0 0 0.5px rgb(0 0 0 / 10%), 0 1px 2px rgb(0 0 0 / 6%), 0 2px 6px rgb(0 0 0 / 4%);
   --re-lightbox-background: #fcfcfc;
   --re-lightbox-foreground: #1f1f1f;
@@ -59,10 +60,6 @@ export const lightboxLookCss = [
   --re-lightbox-press-scale: 0.95;
 }
 .re-lightbox-style *, .re-lightbox-style *::before, .re-lightbox-style *::after { box-sizing: border-box; }
-.re-lightbox-style .re-lightbox-viewport {
-  width: calc(100% - var(--re-lightbox-side));
-  height: calc(100% - var(--re-lightbox-bottom));
-}
 .re-lightbox-style .re-lightbox-button {
   width: 40px;
   height: 40px;
@@ -163,7 +160,9 @@ const rules: readonly (readonly [(o: LightboxStyle) => boolean, string])[] = [
   ],
   [
     (o) => !o.zoomButton,
-    ".re-lightbox-style .re-lightbox-zoom { display: none; }",
+    `.re-lightbox-style:not([data-zoomed="true"]) .re-lightbox-zoom { display: none; }
+.re-lightbox-style[data-zoomed="true"] .re-lightbox-zoom { transition-delay: 0s, 0s, 300ms; }
+@starting-style { .re-lightbox-style[data-zoomed="true"] .re-lightbox-zoom { opacity: 0; } }`,
   ],
   [
     (o) => o.caption !== "Below",
@@ -180,7 +179,9 @@ const rules: readonly (readonly [(o: LightboxStyle) => boolean, string])[] = [
   ],
   [
     (o) => hasBar(o) && o.zoomButton,
-    ".re-lightbox-style .re-lightbox-toolbar .re-lightbox-zoom { display: none; }",
+    `.re-lightbox-style:not([data-zoomed="true"]) .re-lightbox-toolbar .re-lightbox-zoom { display: none; }
+.re-lightbox-style[data-zoomed="true"] .re-lightbox-toolbar .re-lightbox-zoom { transition-delay: 0s, 0s, 300ms; }
+@starting-style { .re-lightbox-style[data-zoomed="true"] .re-lightbox-toolbar .re-lightbox-zoom { opacity: 0; } }`,
   ],
   [
     hasBar,
@@ -371,15 +372,6 @@ export function lightboxChrome(options: LightboxStyle) {
           options.counter === "Toolbar"
             ? `
           counter.textContent = \`\${state.index + 1} / \${state.count}\`;`
-            : ""
-        }${
-          options.zoomButton
-            ? `
-          const zoomed = state.zoom.scale > 1;
-          if (zoom.getAttribute("aria-pressed") !== String(zoomed))
-            zoom.replaceChildren(icon(zoomed ? "zoomOut" : "zoom"));
-          zoom.setAttribute("aria-label", zoomed ? "Zoom out" : "Zoom in");
-          zoom.setAttribute("aria-pressed", String(zoomed));`
             : ""
         }
         },

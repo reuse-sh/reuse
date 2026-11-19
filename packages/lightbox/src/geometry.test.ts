@@ -43,10 +43,30 @@ describe("image geometry", () => {
       ),
     ).toEqual({ scale: 1, x: 0, y: 0 });
   });
+  it("pans to the edges of an area whose center sits below the photo's resting center", () => {
+    const area = { width: 1000, height: 900, y: 50 };
+    expect(
+      boundZoom(
+        { scale: 2, x: 0, y: -5000 },
+        { width: 800, height: 600 },
+        area,
+      ),
+    ).toEqual({ scale: 2, x: 0, y: -100 });
+    expect(
+      boundZoom({ scale: 2, x: 0, y: 5000 }, { width: 800, height: 600 }, area),
+    ).toEqual({ scale: 2, x: 0, y: 200 });
+    expect(
+      boundZoom({ scale: 1.4, x: 0, y: 0 }, { width: 800, height: 600 }, area),
+    ).toEqual({ scale: 1.4, x: 0, y: 20 });
+    expect(
+      boundZoom({ scale: 1, x: 0, y: 40 }, { width: 800, height: 600 }, area),
+    ).toEqual({ scale: 1, x: 0, y: 0 });
+  });
   it("follows 35% past the edge and 35% of the move where the photo fits", () => {
-    expect(rubber(-300 - 200, 300)).toBeCloseTo(-370);
-    expect(rubber(120, 300)).toBe(120);
-    expect(unrubber(rubber(-500, 300), 300)).toBeCloseTo(-500);
+    const range = { min: -300, max: 300 };
+    expect(rubber(-300 - 200, range)).toBeCloseTo(-370);
+    expect(rubber(120, range)).toBe(120);
+    expect(unrubber(rubber(-500, range), range)).toBeCloseTo(-500);
     expect(
       elasticZoom(
         { scale: 2, x: -500, y: 100 },
@@ -123,6 +143,12 @@ describe("image geometry", () => {
     expect(wide.min).toBe(1);
     expect(wide.tap).toBeCloseTo(844 / ((1000 * 326) / 6000));
     expect(wide.max).toBeCloseTo(6000 / 326);
+    expect(
+      limits({ width: 6000, height: 1000 }, 6000, {
+        viewport: { width: 390, height: 724 },
+        zoomed: phone,
+      }).tap,
+    ).toBeCloseTo(844 / ((1000 * 326) / 6000));
     expect(limits({ width: 6000, height: 1000 }, 1200).tap).toBeCloseTo(
       1200 / 326,
     );

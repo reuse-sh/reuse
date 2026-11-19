@@ -8,6 +8,7 @@ import {
   stepChrome,
 } from "./chrome.js";
 import {
+  type Area,
   boundZoom,
   clamp,
   contain,
@@ -15,7 +16,7 @@ import {
   elasticZoom,
   identity,
   type Point,
-  panLimits,
+  panRange,
   type Rect,
   type Size,
   shapeOf,
@@ -462,7 +463,9 @@ type Session = {
   makeThumbs: (strings: LightboxStrings) => void;
   pointers: Map<number, Point>;
   box: Rect;
+  area: Area;
   inset: { left: number; right: number; bottom: number };
+  room: { left: number; right: number; bottom: number };
   gesture?: {
     start: Point;
     zoom: Zoom;
@@ -760,11 +763,12 @@ function validateItems(
 const OPEN_DURATION = 400;
 const CLOSE_DURATION = 300;
 const REDUCED_DURATION = 150;
-const ZOOM_DURATION = 220;
+const ZOOM_DURATION = 350;
 const FADE_DURATION = 240;
 const PADDING = 32;
 const FLIGHT_EASE = "cubic-bezier(0.32, 0.72, 0, 1)";
 const ZOOM_EASE = "cubic-bezier(.16,1,.3,1)";
+const NUDGE_DURATION = 220;
 const DOUBLE_TAP_TIME = 300;
 const DOUBLE_TAP_DISTANCE = 30;
 const DISMISS_DISTANCE = 120;
@@ -1239,6 +1243,9 @@ export function createLightbox<Item extends LightboxItem = LightboxItem>(
       win?.getComputedStyle(s.paddingProbe).paddingLeft ?? "",
     );
     padding = Number.isFinite(space) ? Math.max(0, space) : PADDING;
+    const room = Number.parseFloat(
+      win?.getComputedStyle(s.paddingProbe).height ?? "",
+    );
     const width = rect.width || win?.innerWidth || 1;
     const height = rect.height || win?.innerHeight || 1;
     const strip = s.thumbStrip?.getBoundingClientRect();
@@ -1252,6 +1259,20 @@ export function createLightbox<Item extends LightboxItem = LightboxItem>(
       inset.left = Math.max(0, strip.right - rect.left);
     else if (strip && layout === "side")
       inset.right = Math.max(0, rect.right - strip.left);
+    const kept = {
+      left: 0,
+      right: 0,
+      bottom: Number.isFinite(room) ? room : 0,
+    };
+    const aside = s.aside && rendered(s.aside);
+    if (aside && aside.top > rect.top + 0.5)
+      kept.bottom = Math.max(kept.bottom, rect.bottom - aside.top);
+    else if (aside && rtl) kept.left = Math.max(0, aside.right - rect.left);
+    else if (aside) kept.right = Math.max(0, rect.right - aside.left);
+    s.room = kept;
+    inset.left = Math.max(inset.left, kept.left);
+    inset.right = Math.max(inset.right, kept.right);
+    inset.bottom = Math.max(inset.bottom, kept.bottom);
     s.inset = inset;
     s.viewport.style.setProperty(
       "--re-lightbox-thumbnails-room",
@@ -1263,10 +1284,24 @@ export function createLightbox<Item extends LightboxItem = LightboxItem>(
       width: width - inset.left - inset.right,
       height: height - inset.bottom,
     };
+    s.area = {
+      width,
+      height,
+      x: (inset.right - inset.left) / 2,
+      y: inset.bottom / 2,
+    };
   }
 
   function view(s: Session): Size {
     return s.box;
+  }
+
+  function area(s: Session, scale: number): Area {
+    return scale > 1 ? s.area : s.box;
+  }
+
+  function bound(s: Session, zoom: Zoom) {
+    return boundZoom(zoom, fit(state.index, s), area(s, zoom.scale));
   }
 
   function tileImage(index: number) {
@@ -1321,7 +1356,7 @@ export function createLightbox<Item extends LightboxItem = LightboxItem>(
 
   function restZoom(s: Session, index: number): Zoom {
     const zoom = tall(index, s)
-      ? { scale: 1, x: 0, y: panLimits(1, fit(index, s), view(s)).y }
+      ? { scale: 1, x: 0, y: panRange(1, fit(index, s), view(s)).y.max }
       : { ...identity };
     s.rest = zoom;
     return zoom;
@@ -1336,6 +1371,7 @@ export function createLightbox<Item extends LightboxItem = LightboxItem>(
       fileWidth: largestWidth(item?.srcset) ?? entry?.natural ?? item?.width,
       image: imageSize(index, s),
       viewport: view(s),
+      zoomed: s.area,
       padding,
       svg: Boolean(
         item?.src &&
@@ -1391,6 +1427,16 @@ export function createLightbox<Item extends LightboxItem = LightboxItem>(
     }
     if (s.zoomed !== state.zoom.scale > 1) {
       s.zoomed = state.zoom.scale > 1;
+      const active = s.dialog.ownerDocument.activeElement;
+      if (
+        active &&
+        active !== s.viewport &&
+        s.dialog.contains(active) &&
+        ((s.zoomed &&
+          !active.closest(".re-lightbox-zoom, .re-lightbox-close")) ||
+          active.checkVisibility?.() === false)
+      )
+        s.viewport.focus({ preventScroll: true });
       chromeInput(s, { type: s.zoomed ? "zoom" : "unzoom" }, notify);
       holdSlideshow(s, "zoom", s.zoomed);
     }
@@ -1541,6 +1587,10 @@ export function createLightbox<Item extends LightboxItem = LightboxItem>(
 
   function zoomDuration(s: Session) {
     return prefersReducedMotion(s) ? 0 : s.timing.zoom;
+  }
+
+  function nudgeDuration(s: Session) {
+    return Math.min(zoomDuration(s), NUDGE_DURATION);
   }
 
   function flightDuration(s: Session, closing: boolean) {
@@ -1820,10 +1870,7 @@ export function createLightbox<Item extends LightboxItem = LightboxItem>(
     else if (state.zoom.scale > 1) {
       const scale = Math.min(state.zoom.scale, limits(s).max);
       publish({
-        zoom:
-          scale > 1
-            ? boundZoom({ ...state.zoom, scale }, fit(state.index, s), view(s))
-            : { ...identity },
+        zoom: scale > 1 ? bound(s, { ...state.zoom, scale }) : { ...identity },
       });
     }
     applyZoom(s);
@@ -1847,15 +1894,11 @@ export function createLightbox<Item extends LightboxItem = LightboxItem>(
       const scale = clamp(before.scale, range.min, range.max);
       const ratio = scale / before.scale;
       updateState({
-        zoom: boundZoom(
-          {
-            scale,
-            x: ((before.x * to.width) / from.width) * ratio,
-            y: ((before.y * to.height) / from.height) * ratio,
-          },
-          to,
-          view(s),
-        ),
+        zoom: bound(s, {
+          scale,
+          x: ((before.x * to.width) / from.width) * ratio,
+          y: ((before.y * to.height) / from.height) * ratio,
+        }),
       });
     }
     layout(s);
@@ -2153,7 +2196,7 @@ export function createLightbox<Item extends LightboxItem = LightboxItem>(
               { width: `${before.width}px`, height: `${before.height}px` },
               { width: `${after.width}px`, height: `${after.height}px` },
             ],
-            zoomDuration(s),
+            nudgeDuration(s),
           );
       };
       const failed = () => {
@@ -2464,6 +2507,15 @@ export function createLightbox<Item extends LightboxItem = LightboxItem>(
     s.roving = index;
   }
 
+  function inRoom(s: Session, x: number, y: number) {
+    const rect = s.viewport.getBoundingClientRect();
+    return (
+      x < rect.left + s.room.left ||
+      x > rect.right - s.room.right ||
+      y > rect.bottom - s.room.bottom
+    );
+  }
+
   function overThumbnails(s: Session, x: number, y: number) {
     const first = s.thumbs[0]?.getBoundingClientRect();
     const last = s.thumbs.at(-1)?.getBoundingClientRect();
@@ -2712,17 +2764,13 @@ export function createLightbox<Item extends LightboxItem = LightboxItem>(
     if (animated && s.animations.size > 0 && !s.zoomMotion)
       interruptImageMotion(s);
     if (!animated) freezeZoom(s);
-    const zoom = boundZoom(
-      zoomAround(state.zoom, nextScale, focus),
-      fit(state.index, s),
-      view(s),
-    );
+    const zoom = bound(s, zoomAround(state.zoom, nextScale, focus));
     const frame = s.loaded.get(state.index)?.frame;
     if (frame && animated) {
       frame.style.clipPath = "";
       frame.style.opacity = "";
     }
-    moveZoom(s, zoom, animated ? zoomDuration(s) : 0, ZOOM_EASE);
+    moveZoom(s, zoom, animated ? zoomDuration(s) : 0, s.timing.ease);
     if (notify) publish({});
   }
 
@@ -2739,12 +2787,8 @@ export function createLightbox<Item extends LightboxItem = LightboxItem>(
   function panBy(s: Session, dx: number, dy: number) {
     moveZoom(
       s,
-      boundZoom(
-        { ...state.zoom, x: state.zoom.x + dx, y: state.zoom.y + dy },
-        fit(state.index, s),
-        view(s),
-      ),
-      zoomDuration(s),
+      bound(s, { ...state.zoom, x: state.zoom.x + dx, y: state.zoom.y + dy }),
+      nudgeDuration(s),
       ZOOM_EASE,
     );
     publish({});
@@ -2956,11 +3000,11 @@ export function createLightbox<Item extends LightboxItem = LightboxItem>(
       const scale = Math.hypot(matrix.a, matrix.b);
       if (scale > 1 || state.zoom.scale > 1) {
         updateState({
-          zoom: boundZoom(
-            { scale: Math.max(1, scale), x: matrix.e, y: matrix.f },
-            fit(state.index, s),
-            view(s),
-          ),
+          zoom: bound(s, {
+            scale: Math.max(1, scale),
+            x: matrix.e,
+            y: matrix.f,
+          }),
         });
       }
     }
@@ -3032,22 +3076,13 @@ export function createLightbox<Item extends LightboxItem = LightboxItem>(
       void close();
       if (state.isClosing || session !== s) return;
     }
-    const content = fit(state.index, s);
     const viewport = view(s);
     const reduced = prefersReducedMotion(s);
     let target: Zoom;
     if (scale < min)
-      target = boundZoom(
-        zoomAround(state.zoom, min, gesture.focus),
-        content,
-        viewport,
-      );
+      target = bound(s, zoomAround(state.zoom, min, gesture.focus));
     else if (scale > max)
-      target = boundZoom(
-        zoomAround(state.zoom, max, gesture.focus),
-        content,
-        viewport,
-      );
+      target = bound(s, zoomAround(state.zoom, max, gesture.focus));
     else {
       const speed =
         pinch || reduced || event.type !== "pointerup" || gesture.axis === "x"
@@ -3056,15 +3091,11 @@ export function createLightbox<Item extends LightboxItem = LightboxItem>(
               x: event.clientX,
               y: event.clientY,
             });
-      target = boundZoom(
-        {
-          scale,
-          x: state.zoom.x + speed.x * GLIDE_TIME,
-          y: state.zoom.y + speed.y * GLIDE_TIME,
-        },
-        content,
-        viewport,
-      );
+      target = bound(s, {
+        scale,
+        x: state.zoom.x + speed.x * GLIDE_TIME,
+        y: state.zoom.y + speed.y * GLIDE_TIME,
+      });
       const dx = event.clientX - gesture.start.x;
       const dy = event.clientY - gesture.start.y;
       const pinned = gesture.pinned;
@@ -3090,14 +3121,14 @@ export function createLightbox<Item extends LightboxItem = LightboxItem>(
           return;
         }
       }
-      const limit = panLimits(scale, content, viewport);
+      const range = panRange(scale, fit(state.index, s), area(s, scale)).x;
       if (pinched) s.pinned = undefined;
       else if (gesture.moved)
         s.pinned = {
           index: state.index,
           zoom: target,
-          left: target.x >= limit.x - 0.5,
-          right: target.x <= -limit.x + 0.5,
+          left: target.x >= range.max - 0.5,
+          right: target.x <= range.min + 0.5,
         };
     }
     if (target.scale <= 1) s.pinned = undefined;
@@ -3212,14 +3243,18 @@ export function createLightbox<Item extends LightboxItem = LightboxItem>(
         s.gesture = undefined;
         return;
       }
-      const limit = panLimits(state.zoom.scale, fit(state.index, s), view(s));
+      const range = panRange(
+        state.zoom.scale,
+        fit(state.index, s),
+        area(s, state.zoom.scale),
+      );
       const middle = points.length > 1 ? midpoint(points) : points[0];
       s.gesture = {
         start: points[0],
         zoom: { ...state.zoom },
         raw: {
-          x: unrubber(state.zoom.x, limit.x),
-          y: unrubber(state.zoom.y, limit.y),
+          x: unrubber(state.zoom.x, range.x),
+          y: unrubber(state.zoom.y, range.y),
         },
         distance: points.length > 1 ? distance(points) : 0,
         midpoint: middle,
@@ -3323,7 +3358,7 @@ export function createLightbox<Item extends LightboxItem = LightboxItem>(
             !gesture.axis &&
             Math.hypot(dx, dy) >= 10
           ) {
-            const limit = panLimits(
+            const range = panRange(
               gesture.zoom.scale,
               fit(state.index, s),
               view(s),
@@ -3331,7 +3366,8 @@ export function createLightbox<Item extends LightboxItem = LightboxItem>(
             gesture.axis =
               Math.abs(dy) <= Math.abs(dx)
                 ? "x"
-                : limit > 0.5 && !(dy > 0 && gesture.zoom.y >= limit - 0.5)
+                : range.max - range.min > 1 &&
+                    !(dy > 0 && gesture.zoom.y >= range.max - 0.5)
                   ? "pan"
                   : "y";
             if (gesture.axis !== "x") {
@@ -3359,7 +3395,7 @@ export function createLightbox<Item extends LightboxItem = LightboxItem>(
                   y: gesture.raw.y + dy,
                 },
                 fit(state.index, s),
-                view(s),
+                area(s, gesture.zoom.scale),
               ),
             });
             applyZoom(s, false);
@@ -3427,7 +3463,12 @@ export function createLightbox<Item extends LightboxItem = LightboxItem>(
         clearTimeout(s.tapTimer);
         s.tapTimer = undefined;
         s.lastTap = undefined;
-        if (!onPhoto && overThumbnails(s, current.x, current.y)) return;
+        if (
+          !onPhoto &&
+          (overThumbnails(s, current.x, current.y) ||
+            inRoom(s, current.x, current.y))
+        )
+          return;
         const doubleTap =
           settings.imageClick !== "close" &&
           settings.doubleTapZoom !== false &&
@@ -3536,7 +3577,11 @@ export function createLightbox<Item extends LightboxItem = LightboxItem>(
             event.clientY >= box.top &&
             event.clientY <= box.bottom);
         if (!onPhoto) {
-          if (!overThumbnails(s, event.clientX, event.clientY)) void close();
+          if (
+            !overThumbnails(s, event.clientX, event.clientY) &&
+            !inRoom(s, event.clientX, event.clientY)
+          )
+            void close();
           return;
         }
         if (settings.imageClick === "close") void close();
@@ -3586,15 +3631,11 @@ export function createLightbox<Item extends LightboxItem = LightboxItem>(
                 ? view(s).height
                 : 1;
           updateState({
-            zoom: boundZoom(
-              {
-                ...state.zoom,
-                x: state.zoom.x - event.deltaX * unit,
-                y: state.zoom.y - event.deltaY * unit,
-              },
-              fit(state.index, s),
-              view(s),
-            ),
+            zoom: bound(s, {
+              ...state.zoom,
+              x: state.zoom.x - event.deltaX * unit,
+              y: state.zoom.y - event.deltaY * unit,
+            }),
           });
           applyZoom(s, false);
         }
@@ -4122,7 +4163,7 @@ export function createLightbox<Item extends LightboxItem = LightboxItem>(
     const paddingProbe = doc.createElement("div");
     paddingProbe.setAttribute("aria-hidden", "true");
     paddingProbe.style.cssText =
-      "position:absolute;left:0;top:0;width:0;height:0;visibility:hidden;pointer-events:none;padding-left:var(--re-lightbox-padding, 32px)";
+      "position:absolute;left:0;top:0;width:0;height:var(--re-lightbox-bottom-room, 0px);visibility:hidden;pointer-events:none;padding-left:var(--re-lightbox-padding, 32px)";
     stage.append(backdrop, viewport, toolbar, paddingProbe);
     const abort = new AbortController();
     const button = <K extends "button" | "a">(
@@ -4407,7 +4448,9 @@ export function createLightbox<Item extends LightboxItem = LightboxItem>(
       pointers: new Map(),
       paddingProbe,
       box: { left: 0, top: 0, width: 1, height: 1 },
+      area: { width: 1, height: 1 },
       inset: { left: 0, right: 0, bottom: 0 },
+      room: { left: 0, right: 0, bottom: 0 },
       suppressClickUntil: 0,
       paged: false,
       flying: true,

@@ -56,40 +56,65 @@ export function zoomAround(from: Zoom, scale: number, focus: Point): Zoom {
   };
 }
 
-export function panLimits(scale: number, content: Size, viewport: Size): Point {
+/** Where the photo pans: the area's size and how far its center sits from the photo's resting center. */
+export interface Area extends Size {
+  x?: number;
+  y?: number;
+}
+
+export interface Range {
+  min: number;
+  max: number;
+}
+
+export interface PanRange {
+  x: Range;
+  y: Range;
+}
+
+function axisRange(content: number, area: number, offset = 0): Range {
+  const over = (content - area) / 2;
+  if (over >= 0) return { min: offset - over, max: offset + over };
+  const at = clamp(0, offset + over, offset - over);
+  return { min: at, max: at };
+}
+
+export function panRange(scale: number, content: Size, area: Area): PanRange {
   return {
-    x: Math.max(0, (content.width * scale - viewport.width) / 2),
-    y: Math.max(0, (content.height * scale - viewport.height) / 2),
+    x: axisRange(content.width * scale, area.width, area.x),
+    y: axisRange(content.height * scale, area.height, area.y),
   };
 }
 
-export function boundZoom(zoom: Zoom, content: Size, viewport: Size): Zoom {
-  const limit = panLimits(zoom.scale, content, viewport);
+export function boundZoom(zoom: Zoom, content: Size, area: Area): Zoom {
+  const range = panRange(zoom.scale, content, area);
   return {
     scale: zoom.scale,
-    x: clamp(zoom.x, -limit.x, limit.x) || 0,
-    y: clamp(zoom.y, -limit.y, limit.y) || 0,
+    x: clamp(zoom.x, range.x.min, range.x.max) || 0,
+    y: clamp(zoom.y, range.y.min, range.y.max) || 0,
   };
 }
 
 export const RUBBER = 0.35;
 
-export function rubber(value: number, limit: number) {
-  const over = Math.abs(value) - limit;
-  return over > 0 ? Math.sign(value) * (limit + over * RUBBER) : value;
+export function rubber(value: number, range: Range) {
+  if (value > range.max) return range.max + (value - range.max) * RUBBER;
+  if (value < range.min) return range.min - (range.min - value) * RUBBER;
+  return value;
 }
 
-export function unrubber(value: number, limit: number) {
-  const over = Math.abs(value) - limit;
-  return over > 0 ? Math.sign(value) * (limit + over / RUBBER) : value;
+export function unrubber(value: number, range: Range) {
+  if (value > range.max) return range.max + (value - range.max) / RUBBER;
+  if (value < range.min) return range.min - (range.min - value) / RUBBER;
+  return value;
 }
 
-export function elasticZoom(zoom: Zoom, content: Size, viewport: Size): Zoom {
-  const limit = panLimits(zoom.scale, content, viewport);
+export function elasticZoom(zoom: Zoom, content: Size, area: Area): Zoom {
+  const range = panRange(zoom.scale, content, area);
   return {
     scale: zoom.scale,
-    x: rubber(zoom.x, limit.x),
-    y: rubber(zoom.y, limit.y),
+    x: rubber(zoom.x, range.x),
+    y: rubber(zoom.y, range.y),
   };
 }
 
@@ -103,6 +128,7 @@ export function zoomLimits({
   fileWidth,
   image,
   viewport,
+  zoomed = viewport,
   padding,
   svg,
   maxZoom,
@@ -111,6 +137,7 @@ export function zoomLimits({
   fileWidth: number | undefined;
   image: Size;
   viewport: Size;
+  zoomed?: Size;
   padding: number;
   svg: boolean;
   maxZoom: number | undefined;
@@ -128,7 +155,7 @@ export function zoomLimits({
     shape === "tall"
       ? min
       : shape === "wide"
-        ? clamp(viewport.height / fitted.height, 1, max)
+        ? clamp(zoomed.height / fitted.height, 1, max)
         : clamp(fallback, 1, max);
   const tap = Number.isFinite(tapZoom) ? tapZoom : 1;
   if (svg) {
