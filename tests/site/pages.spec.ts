@@ -98,9 +98,12 @@ test("the toolbar preview's counter rolls its digit in the paging direction", as
     ".re-lightbox-style-toolbar .re-lightbox-counter",
   );
   await expect(counter).toHaveText("2 / 8");
-  const roll = () =>
-    counter.evaluate((element) =>
-      element
+  const roll = (key: string) =>
+    counter.evaluate((element, key) => {
+      document.activeElement?.dispatchEvent(
+        new KeyboardEvent("keydown", { key, bubbles: true }),
+      );
+      return element
         .getAnimations({ subtree: true })
         .map((animation) =>
           (animation.effect as KeyframeEffect)
@@ -108,14 +111,24 @@ test("the toolbar preview's counter rolls its digit in the paging direction", as
             .map((frame) => frame.translate)
             .join(" > "),
         )
-        .sort(),
-    );
-  await page.keyboard.press("ArrowRight");
-  expect(await roll()).toEqual(["0px 100% > 0px", "0px > 0px -100%"]);
+        .sort();
+    }, key);
+  expect(await roll("ArrowRight")).toEqual([
+    "0px 100% > 0px",
+    "0px > 0px -100%",
+  ]);
   await expect(counter).toHaveText("3 / 8");
-  await expect.poll(roll).toEqual([]);
-  await page.keyboard.press("ArrowLeft");
-  expect(await roll()).toEqual(["0px -100% > 0px", "0px > 0px 100%"]);
+  await expect
+    .poll(() =>
+      counter.evaluate(
+        (element) => element.getAnimations({ subtree: true }).length,
+      ),
+    )
+    .toBe(0);
+  expect(await roll("ArrowLeft")).toEqual([
+    "0px -100% > 0px",
+    "0px > 0px 100%",
+  ]);
   await expect(counter).toHaveText("2 / 8");
 });
 

@@ -366,8 +366,15 @@ export function lightboxChrome(options: LightboxStyle) {
         update: (state) => {${
           options.arrows === "Toolbar"
             ? `
+          prev.hidden = state.count < 2;
+          next.hidden = state.count < 2;
           prev.disabled = !state.canPrev;
           next.disabled = !state.canNext;`
+            : ""
+        }${
+          options.zoomButton
+            ? `
+          divider.hidden = state.count < 2;`
             : ""
         }
         },

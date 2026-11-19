@@ -669,6 +669,14 @@ test("a slot's counter() shows the position, rolls its digits in the paging dire
       };
       lightbox.open([photo, photo, photo], 0);
       const counter = document.querySelector(".slot > .re-lightbox-counter");
+      const separator = counter?.querySelector(".re-lightbox-counter-text");
+      const width = () => separator?.getBoundingClientRect().width ?? 0;
+      const inline = width();
+      const flex = document.createElement("style");
+      flex.textContent = ".slot > .re-lightbox-counter { display: flex; }";
+      document.head.append(flex);
+      const spaced = inline > 0 && Math.abs(width() - inline) < 0.5;
+      flex.remove();
       const roll = () =>
         (counter?.getAnimations({ subtree: true }) ?? [])
           .map((animation) =>
@@ -690,7 +698,7 @@ test("a slot's counter() shows the position, rolls its digits in the paging dire
       const single = (counter as HTMLElement | null)?.hidden;
       const builtIn = document.querySelectorAll(".re-lightbox-counter").length;
       lightbox.destroy();
-      return { first, second, forward, back, single, builtIn };
+      return { first, second, forward, back, single, builtIn, spaced };
     });
   expect(await run()).toEqual({
     first: "1 / 3",
@@ -699,6 +707,7 @@ test("a slot's counter() shows the position, rolls its digits in the paging dire
     back: ["0px -100% > 0px", "0px > 0px 100%"],
     single: true,
     builtIn: 1,
+    spaced: true,
   });
   await page.emulateMedia({ reducedMotion: "reduce" });
   expect(await run()).toMatchObject({ forward: [], back: [] });
