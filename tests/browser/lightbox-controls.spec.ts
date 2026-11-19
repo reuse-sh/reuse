@@ -1741,3 +1741,36 @@ test("reduced motion swaps the caption at once", async ({ page }) => {
   const log = await captionLog(page);
   expect(log).toMatchObject({ opacity: "1", running: 0, lowest: 1 });
 });
+
+test("a list change from a change listener keeps the fade, and the fade ends on the host's caption opacity", async ({
+  page,
+}) => {
+  await open(page, {}, { captions: true });
+  await page.addStyleTag({ content: ".re-lightbox-caption { opacity: 0.6; }" });
+  await page.evaluate(() => {
+    const lightbox = (window as Window).lightbox as Lightbox & {
+      append(items: unknown[]): void;
+    };
+    lightbox.on("change", () =>
+      lightbox.append([
+        {
+          src: `data:image/svg+xml,${encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="800"/>')}`,
+          width: 1200,
+          height: 800,
+          caption: "Appended",
+        },
+      ]),
+    );
+  });
+  await watchCaption(page);
+  await page.keyboard.press("ArrowRight");
+  await expect.poll(async () => (await captionLog(page)).running).toBe(0);
+  const log = await captionLog(page);
+  expect(log.text).toBe("Caption 2");
+  expect(log.lowest).toBeLessThan(0.1);
+  expect(log.opacity).toBe("0.6");
+  const highest = await page.evaluate(() =>
+    Math.max(...(window as unknown as { opacities: number[] }).opacities),
+  );
+  expect(highest).toBeLessThanOrEqual(0.6);
+});

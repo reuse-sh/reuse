@@ -2326,5 +2326,13 @@ describe("lightbox chrome, taps and keys", () => {
     expect(
       dialog().querySelectorAll("[aria-live], [role=status]"),
     ).toHaveLength(1);
+    controller.setOptions({
+      strings: {
+        slide: (index, count, caption) =>
+          `写真 ${index + 1}/${count}${caption ? `：${caption}` : ""}`,
+      },
+    });
+    controller.next();
+    expect(status?.textContent).toBe("写真 11/12：Caption 0");
   });
 });

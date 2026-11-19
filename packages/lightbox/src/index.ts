@@ -75,7 +75,7 @@ export type { Point, Rect, Size, Zoom } from "./geometry.js";
 
 export interface LightboxStrings {
   dialog: string;
-  slide: (index: number, count: number) => string;
+  slide: (index: number, count: number, caption?: string) => string;
   counter: (index: number, count: number) => string;
   close: string;
   previous: string;
@@ -97,7 +97,8 @@ export interface LightboxStrings {
 
 const defaultStrings: LightboxStrings = {
   dialog: "Image gallery",
-  slide: (index, count) => `Image ${index + 1} of ${count}`,
+  slide: (index, count, caption) =>
+    `Image ${index + 1} of ${count}${caption ? `, ${caption}` : ""}`,
   counter: (index, count) => `${index + 1} / ${count}`,
   close: "Close gallery",
   previous: "Previous image",
@@ -452,6 +453,7 @@ type Session = {
   counterText: string;
   status: HTMLDivElement;
   caption: HTMLParagraphElement;
+  captionText: string;
   captionFade?: Animation;
   prev?: HTMLButtonElement;
   next?: HTMLButtonElement;
@@ -2371,21 +2373,23 @@ export function createLightbox<Item extends LightboxItem = LightboxItem>(
 
   function announce(s: Session, index: number) {
     s.reported = index;
-    const slide = s.strings.slide(index, items.length);
-    const caption = items[index]?.caption;
-    s.status.textContent = caption ? `${slide}, ${caption}` : slide;
+    s.status.textContent = s.strings.slide(
+      index,
+      items.length,
+      items[index]?.caption || undefined,
+    );
     emit("change", s);
   }
 
-  // The text swaps while the caption is invisible, so a caption of another height never shows mid-fade.
   function showCaption(s: Session, text: string, animated: boolean) {
     const caption = s.caption;
+    if (text === s.captionText) return;
+    s.captionText = text;
     const shown = caption.textContent ?? "";
-    if (!s.captionFade && shown === text) return;
-    const win = caption.ownerDocument.defaultView;
-    const from = s.captionFade
-      ? Number(win?.getComputedStyle(caption).opacity ?? 1)
-      : 1;
+    const from = Number(
+      caption.ownerDocument.defaultView?.getComputedStyle(caption).opacity ?? 1,
+    );
+    const share = s.captionFade ? from : 1;
     s.captionFade?.cancel();
     s.captionFade = undefined;
     const duration = s.timing.fade;
@@ -2398,9 +2402,9 @@ export function createLightbox<Item extends LightboxItem = LightboxItem>(
       caption.textContent = text;
       return;
     }
-    const fadeIn = (start: number) => {
-      const animation = caption.animate([{ opacity: start }, { opacity: 1 }], {
-        duration: duration * 0.55 * (1 - start),
+    const fadeIn = (start: number, share = 0) => {
+      const animation = caption.animate([{ opacity: start, offset: 0 }], {
+        duration: duration * 0.55 * (1 - share),
         easing: "ease-out",
       });
       s.captionFade = animation;
@@ -2408,13 +2412,13 @@ export function createLightbox<Item extends LightboxItem = LightboxItem>(
         if (s.captionFade === animation) s.captionFade = undefined;
       };
     };
-    if (text === shown) return fadeIn(from);
+    if (text === shown) return fadeIn(from, share);
     if (!shown) {
       caption.textContent = text;
       return fadeIn(0);
     }
     const fadeOut = caption.animate([{ opacity: from }, { opacity: 0 }], {
-      duration: duration * 0.45 * from,
+      duration: duration * 0.45 * share,
       easing: "ease-in",
       fill: "forwards",
     });
@@ -4490,6 +4494,7 @@ export function createLightbox<Item extends LightboxItem = LightboxItem>(
       counterText: "",
       status,
       caption,
+      captionText: "",
       prev,
       next,
       zoomButton,
