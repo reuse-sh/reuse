@@ -143,6 +143,12 @@ describe("image geometry", () => {
     expect(wide.min).toBe(1);
     expect(wide.tap).toBeCloseTo(844 / ((1000 * 326) / 6000));
     expect(wide.max).toBeCloseTo(6000 / 326);
+    expect(
+      limits({ width: 6000, height: 1000 }, 6000, {
+        viewport: { width: 390, height: 724 },
+        zoomed: phone,
+      }).tap,
+    ).toBeCloseTo(844 / ((1000 * 326) / 6000));
     expect(limits({ width: 6000, height: 1000 }, 1200).tap).toBeCloseTo(
       1200 / 326,
     );

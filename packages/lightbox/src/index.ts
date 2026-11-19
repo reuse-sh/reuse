@@ -465,6 +465,7 @@ type Session = {
   box: Rect;
   area: Area;
   inset: { left: number; right: number; bottom: number };
+  room: { left: number; right: number; bottom: number };
   gesture?: {
     start: Point;
     zoom: Zoom;
@@ -1257,19 +1258,31 @@ export function createLightbox<Item extends LightboxItem = LightboxItem>(
       inset.left = Math.max(0, strip.right - rect.left);
     else if (strip && layout === "side")
       inset.right = Math.max(0, rect.right - strip.left);
+    const kept = {
+      left: 0,
+      right: 0,
+      bottom: Number.isFinite(room) ? room : 0,
+    };
     const aside = s.aside && rendered(s.aside);
     if (aside && aside.top > rect.top + 0.5)
-      inset.bottom = Math.max(inset.bottom, rect.bottom - aside.top);
-    else if (aside && rtl)
-      inset.left = Math.max(inset.left, aside.right - rect.left);
-    else if (aside)
-      inset.right = Math.max(inset.right, rect.right - aside.left);
-    if (Number.isFinite(room)) inset.bottom = Math.max(inset.bottom, room);
+      kept.bottom = Math.max(kept.bottom, rect.bottom - aside.top);
+    else if (aside && rtl) kept.left = Math.max(0, aside.right - rect.left);
+    else if (aside) kept.right = Math.max(0, rect.right - aside.left);
+    s.room = kept;
+    inset.left = Math.max(inset.left, kept.left);
+    inset.right = Math.max(inset.right, kept.right);
+    inset.bottom = Math.max(inset.bottom, kept.bottom);
     s.inset = inset;
     s.viewport.style.setProperty(
       "--re-lightbox-thumbnails-room",
       `0px ${inset.right}px ${inset.bottom}px ${inset.left}px`,
     );
+    if (kept.left || kept.right || kept.bottom)
+      s.viewport.style.setProperty(
+        "--re-lightbox-room-clip",
+        `0px ${kept.right}px ${kept.bottom}px ${kept.left}px`,
+      );
+    else s.viewport.style.removeProperty("--re-lightbox-room-clip");
     s.box = {
       left: rect.left + inset.left,
       top: rect.top,
@@ -1363,6 +1376,7 @@ export function createLightbox<Item extends LightboxItem = LightboxItem>(
       fileWidth: largestWidth(item?.srcset) ?? entry?.natural ?? item?.width,
       image: imageSize(index, s),
       viewport: view(s),
+      zoomed: s.area,
       padding,
       svg: Boolean(
         item?.src &&
@@ -1418,6 +1432,15 @@ export function createLightbox<Item extends LightboxItem = LightboxItem>(
     }
     if (s.zoomed !== state.zoom.scale > 1) {
       s.zoomed = state.zoom.scale > 1;
+      const active = s.dialog.ownerDocument.activeElement;
+      if (
+        s.zoomed &&
+        active &&
+        active !== s.viewport &&
+        s.dialog.contains(active) &&
+        !active.closest(".re-lightbox-zoom, .re-lightbox-close")
+      )
+        s.viewport.focus({ preventScroll: true });
       chromeInput(s, { type: s.zoomed ? "zoom" : "unzoom" }, notify);
       holdSlideshow(s, "zoom", s.zoomed);
     }
@@ -2484,6 +2507,15 @@ export function createLightbox<Item extends LightboxItem = LightboxItem>(
     s.roving = index;
   }
 
+  function inRoom(s: Session, x: number, y: number) {
+    const rect = s.viewport.getBoundingClientRect();
+    return (
+      x < rect.left + s.room.left ||
+      x > rect.right - s.room.right ||
+      y > rect.bottom - s.room.bottom
+    );
+  }
+
   function overThumbnails(s: Session, x: number, y: number) {
     const first = s.thumbs[0]?.getBoundingClientRect();
     const last = s.thumbs.at(-1)?.getBoundingClientRect();
@@ -3431,7 +3463,12 @@ export function createLightbox<Item extends LightboxItem = LightboxItem>(
         clearTimeout(s.tapTimer);
         s.tapTimer = undefined;
         s.lastTap = undefined;
-        if (!onPhoto && overThumbnails(s, current.x, current.y)) return;
+        if (
+          !onPhoto &&
+          (overThumbnails(s, current.x, current.y) ||
+            inRoom(s, current.x, current.y))
+        )
+          return;
         const doubleTap =
           settings.imageClick !== "close" &&
           settings.doubleTapZoom !== false &&
@@ -3540,7 +3577,11 @@ export function createLightbox<Item extends LightboxItem = LightboxItem>(
             event.clientY >= box.top &&
             event.clientY <= box.bottom);
         if (!onPhoto) {
-          if (!overThumbnails(s, event.clientX, event.clientY)) void close();
+          if (
+            !overThumbnails(s, event.clientX, event.clientY) &&
+            !inRoom(s, event.clientX, event.clientY)
+          )
+            void close();
           return;
         }
         if (settings.imageClick === "close") void close();
@@ -4409,6 +4450,7 @@ export function createLightbox<Item extends LightboxItem = LightboxItem>(
       box: { left: 0, top: 0, width: 1, height: 1 },
       area: { width: 1, height: 1 },
       inset: { left: 0, right: 0, bottom: 0 },
+      room: { left: 0, right: 0, bottom: 0 },
       suppressClickUntil: 0,
       paged: false,
       flying: true,

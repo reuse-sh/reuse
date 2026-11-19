@@ -318,6 +318,50 @@ test.describe("lightbox zoom with a mouse, wheel and trackpad", {
       await expect(page.locator(hidden)).toBeHidden();
   });
 
+  test("a zoom from a focused arrow moves focus to the photo, where the arrow keys pan", async ({
+    page,
+  }) => {
+    await open(page, [
+      [4000, 3000],
+      [4000, 3000],
+    ]);
+    await page.locator(".re-lightbox-next").focus();
+    await page.keyboard.press("+");
+    await still(page);
+    expect(
+      await page.evaluate(() =>
+        document.activeElement?.classList.contains("re-lightbox-viewport"),
+      ),
+    ).toBe(true);
+    const before = (await state(page)).zoom.x;
+    await page.keyboard.press("ArrowLeft");
+    await still(page);
+    expect((await state(page)).zoom.x).not.toBe(before);
+    expect((await state(page)).index).toBe(0);
+  });
+
+  test("a click in the bottom room beside the photo leaves the viewer open", async ({
+    page,
+  }) => {
+    await open(page, [[4000, 3000]]);
+    await page.addStyleTag({
+      content: ".re-lightbox { --re-lightbox-bottom-room: 100px; }",
+    });
+    await page.setViewportSize({ width: 1440, height: 901 });
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await expect
+      .poll(async () => {
+        const rest = await photo(page);
+        return Math.round(rest.y + rest.height);
+      })
+      .toBeLessThanOrEqual(800);
+    await page.mouse.click(60, 870);
+    await page.waitForTimeout(500);
+    expect((await state(page)).isOpen).toBe(true);
+    await page.mouse.click(60, 400);
+    await expect.poll(async () => (await state(page)).isOpen).toBe(false);
+  });
+
   test("a mouse drag on a zoomed photo shows the grabbing cursor until release", async ({
     page,
   }) => {

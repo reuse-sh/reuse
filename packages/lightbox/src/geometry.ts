@@ -128,6 +128,7 @@ export function zoomLimits({
   fileWidth,
   image,
   viewport,
+  zoomed = viewport,
   padding,
   svg,
   maxZoom,
@@ -136,6 +137,7 @@ export function zoomLimits({
   fileWidth: number | undefined;
   image: Size;
   viewport: Size;
+  zoomed?: Size;
   padding: number;
   svg: boolean;
   maxZoom: number | undefined;
@@ -153,7 +155,7 @@ export function zoomLimits({
     shape === "tall"
       ? min
       : shape === "wide"
-        ? clamp(viewport.height / fitted.height, 1, max)
+        ? clamp(zoomed.height / fitted.height, 1, max)
         : clamp(fallback, 1, max);
   const tap = Number.isFinite(tapZoom) ? tapZoom : 1;
   if (svg) {
