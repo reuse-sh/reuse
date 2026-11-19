@@ -158,6 +158,11 @@ export const libraries: Library[] = [
         "tests/browser/lightbox-gestures.spec.ts",
       ],
       [
+        "Change the caption with the photo",
+        "Each page fades the caption out and back in over --re-lightbox-fade-duration and swaps its text while it is hidden, so a caption of another height, or none, never jumps into view. A page during the fade goes on from the opacity on screen with the newest caption, and reduced motion swaps it at once. The announcement of the settled photo reads its number and its caption once.",
+        "tests/browser/lightbox-controls.spec.ts",
+      ],
+      [
         "Return to what is on screen",
         "Close goes back to the current photo's tile, after bringing it into view in its own carousel, and fades in place when the tile cannot be seen, in the window and in every container that clips it. A close during a mouse drag or a fling ends it, puts the strip on the current photo at once and flies from where the photo was, with no neighbor in view. The page scrolls and takes clicks during the flight and stays where it was scrolled once the viewer is gone, focus moved there stays, the tile's container does not cut the photo before it nears the tile, and the landing photo never changes the size of a scroll area.",
         "tests/browser/lightbox-close.spec.ts",

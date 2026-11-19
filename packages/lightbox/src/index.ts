@@ -452,6 +452,7 @@ type Session = {
   counterText: string;
   status: HTMLDivElement;
   caption: HTMLParagraphElement;
+  captionFade?: Animation;
   prev?: HTMLButtonElement;
   next?: HTMLButtonElement;
   zoomButton?: HTMLButtonElement;
@@ -2370,8 +2371,61 @@ export function createLightbox<Item extends LightboxItem = LightboxItem>(
 
   function announce(s: Session, index: number) {
     s.reported = index;
-    s.status.textContent = s.strings.slide(index, items.length);
+    const slide = s.strings.slide(index, items.length);
+    const caption = items[index]?.caption;
+    s.status.textContent = caption ? `${slide}, ${caption}` : slide;
     emit("change", s);
+  }
+
+  // The text swaps while the caption is invisible, so a caption of another height never shows mid-fade.
+  function showCaption(s: Session, text: string, animated: boolean) {
+    const caption = s.caption;
+    const shown = caption.textContent ?? "";
+    if (!s.captionFade && shown === text) return;
+    const win = caption.ownerDocument.defaultView;
+    const from = s.captionFade
+      ? Number(win?.getComputedStyle(caption).opacity ?? 1)
+      : 1;
+    s.captionFade?.cancel();
+    s.captionFade = undefined;
+    const duration = s.timing.fade;
+    if (
+      !animated ||
+      duration <= 0 ||
+      prefersReducedMotion(s) ||
+      typeof caption.animate !== "function"
+    ) {
+      caption.textContent = text;
+      return;
+    }
+    const fadeIn = (start: number) => {
+      const animation = caption.animate([{ opacity: start }, { opacity: 1 }], {
+        duration: duration * 0.55 * (1 - start),
+        easing: "ease-out",
+      });
+      s.captionFade = animation;
+      animation.onfinish = () => {
+        if (s.captionFade === animation) s.captionFade = undefined;
+      };
+    };
+    if (text === shown) return fadeIn(from);
+    if (!shown) {
+      caption.textContent = text;
+      return fadeIn(0);
+    }
+    const fadeOut = caption.animate([{ opacity: from }, { opacity: 0 }], {
+      duration: duration * 0.45 * from,
+      easing: "ease-in",
+      fill: "forwards",
+    });
+    s.captionFade = fadeOut;
+    fadeOut.onfinish = () => {
+      if (s.captionFade !== fadeOut) return;
+      s.captionFade = undefined;
+      caption.textContent = text;
+      if (text) fadeIn(0);
+      fadeOut.cancel();
+    };
   }
 
   function renderCounter(s: Session, direction: 1 | -1 | 0) {
@@ -2452,7 +2506,7 @@ export function createLightbox<Item extends LightboxItem = LightboxItem>(
     hideOrigin(s);
     renderCounter(s, direction);
     const item = items[state.index];
-    s.caption.textContent = item.caption || "";
+    showCaption(s, item.caption || "", direction !== 0);
     const single = items.length < 2;
     for (const control of [s.prev, s.next, s.counter, s.slideshowButton])
       if (control) control.hidden = single;

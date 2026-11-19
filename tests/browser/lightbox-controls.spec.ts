@@ -1592,3 +1592,152 @@ test("a mouse press held on the outer edge of close, an arrow or zoom still pres
   await pressEdge("close");
   await expect.poll(async () => (await lightbox(page)).isOpen).toBe(false);
 });
+
+// Records every text the caption shows and the caption's opacity on each frame.
+async function watchCaption(page: Page) {
+  await page.evaluate(() => {
+    const caption = document.querySelector(".re-lightbox-caption") as Element;
+    const texts: string[] = [];
+    const opacities: number[] = [];
+    new MutationObserver(() => texts.push(caption.textContent ?? "")).observe(
+      caption,
+      { childList: true, characterData: true, subtree: true },
+    );
+    const sample = () => {
+      opacities.push(Number(getComputedStyle(caption).opacity));
+      requestAnimationFrame(sample);
+    };
+    requestAnimationFrame(sample);
+    Object.assign(window, { texts, opacities });
+  });
+}
+
+const captionLog = (page: Page) =>
+  page.evaluate(() => {
+    const { texts = [], opacities = [] } = window as unknown as {
+      texts?: string[];
+      opacities?: number[];
+    };
+    const caption = document.querySelector(".re-lightbox-caption") as Element;
+    return {
+      texts,
+      lowest: Math.min(...opacities),
+      text: caption.textContent,
+      opacity: getComputedStyle(caption).opacity,
+      running: caption.getAnimations().length,
+      status: document.querySelector(".re-lightbox-status")?.textContent,
+    };
+  });
+
+test("a page fades the caption out, swaps its text while hidden, and fades it back in", async ({
+  page,
+}) => {
+  await open(page, {}, { captions: true });
+  await watchCaption(page);
+  await page.keyboard.press("ArrowRight");
+  await page.waitForTimeout(400);
+  const log = await captionLog(page);
+  expect(log.texts).toEqual(["Caption 2"]);
+  expect(log.lowest).toBeLessThan(0.1);
+  expect(log).toMatchObject({ text: "Caption 2", opacity: "1", running: 0 });
+  expect(log.status).toBe("Image 2 of 5, Caption 2");
+});
+
+test("fast repeated paging shows only the last caption and announces it once", async ({
+  page,
+}) => {
+  await open(page, {}, { captions: true, count: 8 });
+  await watchCaption(page);
+  await page.evaluate(() => {
+    const status = document.querySelector(".re-lightbox-status") as Element;
+    const announced: string[] = [];
+    new MutationObserver(() =>
+      announced.push(status.textContent ?? ""),
+    ).observe(status, { childList: true, characterData: true, subtree: true });
+    Object.assign(window, { announced });
+  });
+  for (let i = 0; i < 4; i++) await page.keyboard.press("ArrowRight");
+  for (let i = 0; i < 2; i++) await page.keyboard.press("ArrowLeft");
+  await expect.poll(async () => (await captionLog(page)).running).toBe(0);
+  const log = await captionLog(page);
+  const index = (await lightbox(page)).index;
+  expect(log.text).toBe(`Caption ${index + 1}`);
+  expect(log.opacity).toBe("1");
+  // Every swap happens at the low point, so the stale captions in between never show.
+  expect(log.texts.length).toBeLessThanOrEqual(2);
+  expect(log.texts.at(-1)).toBe(`Caption ${index + 1}`);
+  const announced = await page.evaluate(
+    () => (window as unknown as { announced: string[] }).announced,
+  );
+  expect(announced.at(-1)).toBe(
+    `Image ${index + 1} of 8, Caption ${index + 1}`,
+  );
+});
+
+test("a photo without a caption fades the caption away and the next one fades in without moving the strip", async ({
+  page,
+}) => {
+  await mount(page, "", ["lightbox/base.css", "lightbox/theme.css"]);
+  await page.evaluate(async () => {
+    const { createLightbox } = await import("/modules/lightbox/index.js");
+    const photo = (i: number) =>
+      `data:image/svg+xml,${encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="800"><rect width="1200" height="800" fill="hsl(${i * 47} 60% 55%)"/></svg>`)}`;
+    const captions = [
+      "Short",
+      undefined,
+      "A much longer caption that wraps onto a second line at this width, so the box is taller than the one before it and the swap has to happen while it is hidden",
+    ];
+    const lightbox = createLightbox({ history: false, thumbnails: "bottom" });
+    Object.assign(window, { lightbox });
+    lightbox.open(
+      captions.map((caption, i) => ({
+        src: photo(i),
+        thumbnailSrc: photo(i),
+        width: 1200,
+        height: 800,
+        caption,
+      })),
+    );
+  });
+  await page.waitForTimeout(500);
+  const strip = () =>
+    page.evaluate(
+      () =>
+        document
+          .querySelector(".re-lightbox-thumbnails")
+          ?.getBoundingClientRect().top,
+    );
+  const top = await strip();
+  await watchCaption(page);
+  await page.keyboard.press("ArrowRight");
+  await expect.poll(async () => (await captionLog(page)).running).toBe(0);
+  expect((await captionLog(page)).text).toBe("");
+  expect(
+    await page
+      .locator(".re-lightbox-caption")
+      .evaluate((node) => getComputedStyle(node).display),
+  ).toBe("none");
+  expect(await strip()).toBe(top);
+  expect((await captionLog(page)).status).toBe("Image 2 of 3");
+  await page.keyboard.press("ArrowRight");
+  await page.waitForTimeout(50);
+  const entering = await captionLog(page);
+  expect(entering.text).toMatch(/^A much longer/);
+  expect(Number(entering.opacity)).toBeLessThan(1);
+  await expect.poll(async () => (await captionLog(page)).running).toBe(0);
+  expect((await captionLog(page)).opacity).toBe("1");
+  expect(await strip()).toBe(top);
+});
+
+test("reduced motion swaps the caption at once", async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await open(page, {}, { captions: true });
+  await watchCaption(page);
+  await page.keyboard.press("ArrowRight");
+  await expect
+    .poll(async () => (await captionLog(page)).text)
+    .toBe("Caption 2");
+  await page.waitForTimeout(200);
+  const log = await captionLog(page);
+  expect(log).toMatchObject({ opacity: "1", running: 0, lowest: 1 });
+});
