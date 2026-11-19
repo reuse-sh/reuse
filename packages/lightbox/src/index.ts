@@ -454,7 +454,12 @@ type Session = {
   status: HTMLDivElement;
   caption: HTMLParagraphElement;
   captionText: string;
-  captionFade?: Animation;
+  captionFade?: {
+    fade: Animation;
+    drift: Animation;
+    from: number;
+    to: number;
+  };
   prev?: HTMLButtonElement;
   next?: HTMLButtonElement;
   zoomButton?: HTMLButtonElement;
@@ -2387,12 +2392,15 @@ export function createLightbox<Item extends LightboxItem = LightboxItem>(
     s.captionText = text;
     const shown = caption.textContent ?? "";
     const win = caption.ownerDocument.defaultView;
-    const look = () => win?.getComputedStyle(caption);
+    const opacity = () => Number(win?.getComputedStyle(caption).opacity ?? 1);
     const running = s.captionFade;
-    const now = look();
-    const at = running ? Number(now?.opacity ?? 1) : 1;
-    const moved = now?.translate || "none";
-    running?.cancel();
+    const at = running ? opacity() : 1;
+    const drift = running?.drift.effect?.getComputedTiming().progress;
+    const side = running
+      ? running.from + (running.to - running.from) * (drift ?? 1)
+      : 0;
+    running?.fade.cancel();
+    running?.drift.cancel();
     s.captionFade = undefined;
     const duration = s.timing.fade;
     if (
@@ -2404,40 +2412,54 @@ export function createLightbox<Item extends LightboxItem = LightboxItem>(
       caption.textContent = text;
       return;
     }
-    const rest = Number(look()?.opacity ?? 1);
-    const from: Keyframe = { opacity: running ? at : rest, translate: moved };
+    const rest = opacity();
     const share = running && rest > 0 ? Math.min(at / rest, 1) : 1;
-    const away = (sign: number): Keyframe => ({
-      opacity: 0,
-      translate: `0 ${sign * 0.4}em`,
-    });
-    const fadeIn = (start: Keyframe, share = 0) => {
-      const animation = caption.animate([{ ...start, offset: 0 }], {
+    const run = (
+      frames: Keyframe[],
+      from: number,
+      to: number,
+      timing: KeyframeAnimationOptions,
+    ) => {
+      const fade = caption.animate(frames, timing);
+      const drift = caption.animate(
+        [from, to].map((shift) => ({ translate: `0 ${shift * 0.4}em` })),
+        { ...timing, composite: "add" },
+      );
+      s.captionFade = { fade, drift, from, to };
+      return fade;
+    };
+    const fadeIn = (start: number, from: number, share = 0) => {
+      const fade = run([{ opacity: start, offset: 0 }], from, 0, {
         duration: duration * 0.55 * (1 - share),
         easing: "ease-out",
       });
-      s.captionFade = animation;
-      animation.onfinish = () => {
-        if (s.captionFade === animation) s.captionFade = undefined;
+      fade.onfinish = () => {
+        if (s.captionFade?.fade === fade) s.captionFade = undefined;
       };
     };
-    if (text === shown) return fadeIn(from, share);
+    if (text === shown) return fadeIn(running ? at : rest, side, share);
     if (!shown) {
       caption.textContent = text;
-      return fadeIn(away(direction));
+      return fadeIn(0, direction);
     }
-    const fadeOut = caption.animate([from, away(-direction)], {
-      duration: duration * 0.45 * share,
-      easing: "ease-in",
-      fill: "forwards",
-    });
-    s.captionFade = fadeOut;
+    const fadeOut = run(
+      [{ opacity: running ? at : rest }, { opacity: 0 }],
+      side,
+      -direction,
+      {
+        duration: duration * 0.45 * share,
+        easing: "ease-in",
+        fill: "forwards",
+      },
+    );
     fadeOut.onfinish = () => {
-      if (s.captionFade !== fadeOut) return;
+      const current = s.captionFade;
+      if (current?.fade !== fadeOut) return;
       s.captionFade = undefined;
       caption.textContent = text;
-      if (text) fadeIn(away(direction));
-      fadeOut.cancel();
+      if (text) fadeIn(0, direction);
+      current.fade.cancel();
+      current.drift.cancel();
     };
   }
 
