@@ -2,12 +2,12 @@
 import { JustifiedGallery } from "@reuse-sh/gallery/react";
 import { useLightbox } from "@reuse-sh/lightbox/react";
 import type { CSSProperties } from "react";
-import { lightboxIcons } from "@/components/icons";
+import { siteLightbox } from "@/components/site-lightbox";
 import { galleryPhotos } from "@/lib/photos";
 import "./rows.css";
 
 export function Example() {
-  const viewer = useLightbox({ icons: lightboxIcons, thumbnails: "bottom" });
+  const viewer = useLightbox({ ...siteLightbox, thumbnails: "bottom" });
   return (
     <JustifiedGallery className="re-jg-rows w-full" aria-label="Prints">
       {galleryPhotos.map((photo, index) => (

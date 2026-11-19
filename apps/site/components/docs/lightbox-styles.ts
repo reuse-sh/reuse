@@ -37,15 +37,9 @@ export const lightboxStyles: Record<string, LightboxStyle> = {
 
 export const LIGHTBOX_STYLE_CLASS = "re-lightbox-style";
 
-const hasBar = (o: LightboxStyle) =>
-  o.arrows === "Toolbar" || o.counter === "Toolbar";
-const dark = (o: LightboxStyle) => o.backdrop === "Dark";
-const always = () => true;
-
-const rules: readonly (readonly [(o: LightboxStyle) => boolean, string])[] = [
-  [
-    always,
-    `.re-lightbox-style {
+/** The look every lightbox on the site shares. A style adds only its differences on top. */
+export const lightboxLookCss = [
+  `.re-lightbox-style {
   --re-lightbox-pad: 16px;
   --re-lightbox-padding: 24px;
   --re-lightbox-inset: var(--re-lightbox-pad);
@@ -94,26 +88,11 @@ const rules: readonly (readonly [(o: LightboxStyle) => boolean, string])[] = [
   backdrop-filter: none;
   font-size: 13px;
 }`,
-  ],
-  [
-    (o) => o.arrows === "Sides",
-    `.re-lightbox-style .re-lightbox-prev,
+  `.re-lightbox-style .re-lightbox-prev,
 .re-lightbox-style .re-lightbox-next { top: calc((100% - var(--re-lightbox-bottom)) / 2 - 20px); }
 .re-lightbox-style .re-lightbox-prev { left: var(--re-lightbox-pad); }
 .re-lightbox-style .re-lightbox-next { right: calc(var(--re-lightbox-side) + var(--re-lightbox-pad)); }`,
-  ],
-  [
-    (o) => o.arrows === "None",
-    `.re-lightbox-style .re-lightbox-prev,
-.re-lightbox-style .re-lightbox-next { display: none; }`,
-  ],
-  [
-    (o) => o.counter === "None",
-    ".re-lightbox-style .re-lightbox-counter { display: none; }",
-  ],
-  [
-    (o) => o.counter === "Corner",
-    `.re-lightbox-style .re-lightbox-counter {
+  `.re-lightbox-style .re-lightbox-counter {
   position: fixed;
   z-index: 2;
   top: var(--re-lightbox-pad);
@@ -127,14 +106,7 @@ const rules: readonly (readonly [(o: LightboxStyle) => boolean, string])[] = [
   box-shadow: var(--re-lightbox-ring);
   font-weight: 500;
 }`,
-  ],
-  [
-    (o) => !o.zoomButton,
-    ".re-lightbox-style .re-lightbox-zoom { display: none; }",
-  ],
-  [
-    (o) => o.caption === "Below",
-    `.re-lightbox-style { --re-lightbox-caption: 30px; }
+  `.re-lightbox-style { --re-lightbox-caption: 30px; }
 .re-lightbox-style .re-lightbox-caption {
   order: 1;
   padding: 0;
@@ -143,17 +115,10 @@ const rules: readonly (readonly [(o: LightboxStyle) => boolean, string])[] = [
   font-size: 14px;
   line-height: 20px;
 }`,
-  ],
-  [
-    (o) => o.caption !== "Below",
-    ".re-lightbox-style .re-lightbox-caption { display: none; }",
-  ],
-  [
-    (o) => o.thumbnails,
-    `.re-lightbox-style { --re-lightbox-strip: 64px; }
-.re-lightbox-style .re-lightbox-thumbnails { order: 2; max-width: 100%; margin: 0; gap: 6px; padding: 5px 50%; scrollbar-width: none; }
-.re-lightbox-style .re-lightbox-thumbnails::-webkit-scrollbar { display: none; }
-.re-lightbox-style .re-lightbox-thumbnails button {
+  `.re-lightbox-style[data-thumbnails="bottom"] { --re-lightbox-strip: 64px; }
+.re-lightbox-style[data-thumbnails="bottom"] .re-lightbox-thumbnails { order: 2; max-width: 100%; margin: 0; gap: 6px; padding: 5px 50%; scrollbar-width: none; }
+.re-lightbox-style[data-thumbnails="bottom"] .re-lightbox-thumbnails::-webkit-scrollbar { display: none; }
+.re-lightbox-style[data-thumbnails="bottom"] .re-lightbox-thumbnails button {
   flex: 0 0 60px;
   width: 60px;
   height: 44px;
@@ -163,12 +128,46 @@ const rules: readonly (readonly [(o: LightboxStyle) => boolean, string])[] = [
   opacity: 0.45;
   transition: opacity 200ms ease;
 }
-.re-lightbox-style .re-lightbox-thumbnails button[aria-current="true"] { opacity: 1; }
-.re-lightbox-style .re-lightbox-thumbnail-ring {
+.re-lightbox-style[data-thumbnails="bottom"] .re-lightbox-thumbnails button[aria-current="true"] { opacity: 1; }
+.re-lightbox-style[data-thumbnails="bottom"] .re-lightbox-thumbnail-ring {
   border-radius: 8px;
   outline: 0;
   box-shadow: 0 0 0 2px var(--re-lightbox-background), 0 0 0 3.5px var(--re-lightbox-foreground);
 }`,
+  `@media (max-width: 559px) {
+  .re-lightbox-style { --re-lightbox-pad: 12px; --re-lightbox-padding: 12px; }
+}`,
+  `@media (max-width: 559px) {
+  .re-lightbox-style[data-thumbnails="bottom"] { --re-lightbox-strip: 56px; }
+  .re-lightbox-style[data-thumbnails="bottom"] .re-lightbox-thumbnails button { flex-basis: 48px; width: 48px; height: 36px; }
+}`,
+  `@media (prefers-reduced-motion: reduce) {
+  .re-lightbox-style, .re-lightbox-style * { transition-duration: 0ms !important; }
+}`,
+].join("\n\n");
+
+const hasBar = (o: LightboxStyle) =>
+  o.arrows === "Toolbar" || o.counter === "Toolbar";
+const dark = (o: LightboxStyle) => o.backdrop === "Dark";
+
+const rules: readonly (readonly [(o: LightboxStyle) => boolean, string])[] = [
+  [
+    (o) => o.arrows === "None",
+    `.re-lightbox-style .re-lightbox-prev,
+.re-lightbox-style .re-lightbox-next { display: none; }`,
+  ],
+  [
+    (o) => o.counter === "None",
+    ".re-lightbox-style .re-lightbox-counter { display: none; }",
+  ],
+  [
+    (o) => !o.zoomButton,
+    ".re-lightbox-style .re-lightbox-zoom { display: none; }",
+  ],
+  [
+    (o) => o.caption !== "Below",
+    `.re-lightbox-style { --re-lightbox-caption: 0px; }
+.re-lightbox-style .re-lightbox-caption { display: none; }`,
   ],
   [
     (o) => o.arrows === "Toolbar",
@@ -199,7 +198,7 @@ const rules: readonly (readonly [(o: LightboxStyle) => boolean, string])[] = [
 }
 .re-lightbox-style-toolbar .re-lightbox-button { position: static; box-shadow: none; background: transparent; }
 .re-lightbox-style-toolbar .re-lightbox-button:hover { background: rgb(0 0 0 / 5%); }
-.re-lightbox-style-toolbar .re-lightbox-counter { min-width: 52px; padding: 0 6px; font-weight: 500; text-align: center; }
+.re-lightbox-style-toolbar .re-lightbox-counter { position: static; display: block; height: auto; min-width: 52px; padding: 0 6px; background: none; box-shadow: none; font-weight: 500; text-align: center; }
 .re-lightbox-style-toolbar-divider { width: 1px; height: 20px; margin: 0 4px; background: rgb(0 0 0 / 10%); }`,
   ],
   [
@@ -259,7 +258,7 @@ const rules: readonly (readonly [(o: LightboxStyle) => boolean, string])[] = [
   ],
   [
     (o) => dark(o) && o.thumbnails,
-    ".re-lightbox-style .re-lightbox-thumbnails button { background: #222; }",
+    '.re-lightbox-style[data-thumbnails="bottom"] .re-lightbox-thumbnails button { background: #222; }',
   ],
   [
     (o) => dark(o) && hasBar(o),
@@ -272,19 +271,6 @@ const rules: readonly (readonly [(o: LightboxStyle) => boolean, string])[] = [
     `.re-lightbox-style .re-lightbox-aside { background: #151517; box-shadow: -1px 0 0 rgb(255 255 255 / 8%); color: #fff; }
 .re-lightbox-style-panel-place { color: rgb(255 255 255 / 50%); }
 .re-lightbox-style-panel-text { color: rgb(255 255 255 / 70%); }`,
-  ],
-  [
-    always,
-    `@media (max-width: 559px) {
-  .re-lightbox-style { --re-lightbox-pad: 12px; --re-lightbox-padding: 12px; }
-}`,
-  ],
-  [
-    (o) => o.thumbnails,
-    `@media (max-width: 559px) {
-  .re-lightbox-style { --re-lightbox-strip: 56px; }
-  .re-lightbox-style .re-lightbox-thumbnails button { flex-basis: 48px; width: 48px; height: 36px; }
-}`,
   ],
   [
     (o) => o.caption === "Panel",
@@ -309,15 +295,9 @@ const rules: readonly (readonly [(o: LightboxStyle) => boolean, string])[] = [
   .re-lightbox-style .re-lightbox-aside { box-shadow: 0 -1px 0 rgb(255 255 255 / 8%); }
 }`,
   ],
-  [
-    always,
-    `@media (prefers-reduced-motion: reduce) {
-  .re-lightbox-style, .re-lightbox-style * { transition-duration: 0ms !important; }
-}`,
-  ],
 ];
 
-/** The page CSS one style needs, written against the re-lightbox-style class. */
+/** What one style changes on top of lightboxLookCss, written against the re-lightbox-style class. */
 export function lightboxStyleCss(options: LightboxStyle) {
   return rules
     .filter(([when]) => when(options))
@@ -530,7 +510,9 @@ ${body("    ", "() => photos")}
     </div>
   );
 }`,
-    css: lightboxStyleCss(options),
+    css: [lightboxLookCss, lightboxStyleCss(options)]
+      .filter(Boolean)
+      .join("\n\n"),
     chrome: chromeSource,
     cleanup: "unbind();\nlightbox.destroy();",
   };

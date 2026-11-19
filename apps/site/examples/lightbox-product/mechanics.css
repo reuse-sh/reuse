@@ -24,16 +24,6 @@
     @apply hidden;
   }
 
-  .re-lightbox-demo {
-    --re-lightbox-background: var(--background);
-    --re-lightbox-foreground: var(--foreground);
-    --re-lightbox-control: color-mix(in srgb, var(--card) 96%, transparent);
-  }
-  .re-lightbox-demo .re-lightbox-button,
-  .re-lightbox-demo .re-lightbox-counter {
-    @apply shadow-raised;
-  }
-
   .re-thumbs .re-photo {
     aspect-ratio: 1;
     @apply rounded-lg;

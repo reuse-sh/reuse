@@ -3,7 +3,7 @@ import { useCarousel, useCarouselState } from "@reuse-sh/carousel/react";
 import "./controls.css";
 import { useLightbox } from "@reuse-sh/lightbox/react";
 import type { CSSProperties } from "react";
-import { lightboxIcons } from "@/components/icons";
+import { siteLightbox } from "@/components/site-lightbox";
 
 const photos = [
   {
@@ -62,7 +62,7 @@ export function Example() {
     canPrev,
     canNext,
   }));
-  const viewer = useLightbox({ icons: lightboxIcons, thumbnails: "bottom" });
+  const viewer = useLightbox({ ...siteLightbox, thumbnails: "bottom" });
   return (
     <section className="w-full min-w-0 grid gap-6">
       <article>
