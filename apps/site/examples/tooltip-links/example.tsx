@@ -100,7 +100,7 @@ export function TooltipLinks() {
         <Template
           key={id}
           id={`tt-print-${id}`}
-          html={`<span class="grid grid-cols-3 gap-3 w-72 max-w-full text-label leading-4.5 [&>img]:w-21 [&>img]:h-21 [&>img]:rounded-control [&>img]:object-cover"><img src="${escapeHtml(photo.src)}" alt="" width="2400" height="1800"><span class="col-span-2 grid content-start gap-0.5 pt-0.5 pr-1.5 [&>b]:font-semibold [&>span]:text-muted-foreground [&>small]:mt-0.5 [&>small]:text-caption [&>small]:text-subtle-foreground"><b>${escapeHtml(name)}</b><span>${escapeHtml(text)}</span><small>prints.example.com</small></span></span>`}
+          html={`<span class="grid grid-cols-[auto_minmax(0,1fr)] gap-3 w-72 max-w-full text-label leading-4.5 [&>img]:size-21 [&>img]:rounded-control [&>img]:object-cover"><img src="${escapeHtml(photo.src)}" alt="" width="2400" height="1800"><span class="grid grid-cols-[minmax(0,1fr)] min-w-0 content-center gap-0.5 pr-1.5 [&>b]:font-semibold [&>b]:overflow-x-clip [&>b]:text-ellipsis [&>b]:whitespace-nowrap [&>b]:[text-box:trim-start_cap_alphabetic] [&>span]:line-clamp-2 [&>span]:text-muted-foreground [&>small]:overflow-x-clip [&>small]:text-ellipsis [&>small]:whitespace-nowrap [&>small]:text-caption [&>small]:text-subtle-foreground [&>small]:[text-box:trim-end_cap_alphabetic]"><b>${escapeHtml(name)}</b><span>${escapeHtml(text)}</span><small>prints.example.com</small></span></span>`}
         />
       ))}
     </>

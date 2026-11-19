@@ -88,7 +88,7 @@ export function TooltipPeople() {
         <Template
           key={name}
           id={`tt-person-${index}`}
-          html={`<span class="flex items-center gap-2.5 py-1 pl-1 pr-2.5 text-label leading-4.5"><span class="block shrink-0 size-10 rounded-full bg-center bg-cover shadow-ring" style="background-image:url(${escapeHtml(photos[index].src)})"></span><span class="grid [&>b]:font-semibold [&>span]:text-muted-foreground [&>small]:text-muted-foreground [&>small]:text-caption"><b>${escapeHtml(name)}</b><span>${escapeHtml(role)}</span><small>${escapeHtml(time)}</small></span></span>`}
+          html={`<span class="flex items-center gap-3 max-w-72 p-1 pr-3 text-label leading-4.5"><span class="block shrink-0 size-10 rounded-full bg-center bg-cover shadow-ring" style="background-image:url(${escapeHtml(photos[index].src)})"></span><span class="grid min-w-0 gap-0.5 [&>b]:font-semibold [&>b]:truncate [&>span]:truncate [&>span]:text-muted-foreground"><b>${escapeHtml(name)}</b><span>${escapeHtml(`${role} · ${time}`)}</span></span></span>`}
         />
       ))}
     </>
