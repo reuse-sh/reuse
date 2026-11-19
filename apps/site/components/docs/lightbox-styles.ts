@@ -625,10 +625,10 @@ export function lightboxChrome(options: LightboxStyle) {
         }
         const running = fadeIn.some((animation) => animation.playState === "running");
         const from = running ? Number(view.getComputedStyle(title).opacity) : 1;
-        const moved = running ? view.getComputedStyle(title).translate : "none";
+        const moved = fading.map((node) => (running ? view.getComputedStyle(node).translate : "none"));
         for (const animation of fadeIn) animation.cancel();
-        fadeOut = fading.map((node) =>
-          node.animate([{ opacity: from, translate: moved }, { opacity: 0, translate: \`0 \${heading * -0.4}em\` }], {
+        fadeOut = fading.map((node, at) =>
+          node.animate([{ opacity: from, translate: moved[at] }, { opacity: 0, translate: \`0 \${heading * -0.4}em\` }], {
             duration: time * 0.45 * from,
             easing: "ease-in",
             fill: "forwards",

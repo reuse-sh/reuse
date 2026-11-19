@@ -418,6 +418,63 @@ test("the panel style rises its text through a change and lands on the latest ph
   );
 });
 
+test("the panel style mirrors its rise when paging back and continues from where an interrupted rise is", async ({
+  page,
+}) => {
+  await page.goto("/lightbox/controls/panel");
+  await page.locator('main a[href^="/images/marble"]').nth(2).click();
+  const title = page.locator(".re-lightbox-style-panel h2");
+  await expect(title).toHaveText("Lilac bloom");
+  await expect(page.locator(".re-lightbox-image").nth(2)).toBeVisible();
+  const result = await title.evaluate(async (element) => {
+    const text = element.nextElementSibling as HTMLElement;
+    const frame = () => new Promise((done) => requestAnimationFrame(done));
+    const y = (node: Element) =>
+      Number.parseFloat(getComputedStyle(node).translate.split(" ")[1] ?? "0");
+    const press = (key: string) =>
+      document.activeElement?.dispatchEvent(
+        new KeyboardEvent("keydown", { key, bubbles: true }),
+      );
+    const frames: [string, number, number][] = [];
+    press("ArrowLeft");
+    for (let at = 0; at < 30; at++) {
+      frames.push([
+        element.textContent ?? "",
+        Number(getComputedStyle(element).opacity),
+        y(element),
+      ]);
+      await frame();
+    }
+    const seen = (caption: string, side: (y: number) => boolean) =>
+      frames.some(
+        ([shown, opacity, shift]) =>
+          shown === caption && opacity < 0.5 && side(shift),
+      );
+    press("ArrowRight");
+    while (
+      element.textContent !== "Lilac bloom" ||
+      Number(getComputedStyle(element).opacity) > 0.6
+    )
+      await frame();
+    while (Number(getComputedStyle(element).opacity) < 0.3) await frame();
+    const before = [y(element), y(text)];
+    press("ArrowRight");
+    const after = [y(element), y(text)];
+    return {
+      leavesDownward: seen("Lilac bloom", (shift) => shift > 0),
+      entersFromAbove: seen("Mint and ember", (shift) => shift < 0),
+      rising: before.every((shift) => shift > 0),
+      steady: after.map((shift, at) => Math.abs(shift - before[at]) < 0.1),
+    };
+  });
+  expect(result).toEqual({
+    leavesDownward: true,
+    entersFromAbove: true,
+    rising: true,
+    steady: [true, true],
+  });
+});
+
 test("the panel style list glides when quick paging changes the text height", async ({
   page,
 }) => {
