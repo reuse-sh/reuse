@@ -455,6 +455,7 @@ type Session = {
   caption: HTMLParagraphElement;
   captionText: string;
   captionFade?: Animation;
+  captionRoll?: Animation;
   prev?: HTMLButtonElement;
   next?: HTMLButtonElement;
   zoomButton?: HTMLButtonElement;
@@ -779,6 +780,7 @@ const DISMISS_SPEED = 0.5;
 const SPEED_WINDOW = 80;
 const GLIDE_TIME = 180;
 const GLIDE_DURATION = 400;
+const ROLL = { duration: 200, easing: "ease" };
 const PINCH_MIN = 0.6;
 const PINCH_OVER = 1.25;
 const PINCH_CLOSE = 0.75;
@@ -2381,32 +2383,53 @@ export function createLightbox<Item extends LightboxItem = LightboxItem>(
     emit("change", s);
   }
 
-  function showCaption(s: Session, text: string, animated: boolean) {
+  function showCaption(s: Session, text: string, direction: 1 | -1 | 0) {
     const caption = s.caption;
     if (text === s.captionText) return;
+    const rolled = s.captionText;
     s.captionText = text;
-    const shown = caption.textContent ?? "";
     const win = caption.ownerDocument.defaultView;
-    const opacity = () => Number(win?.getComputedStyle(caption).opacity ?? 1);
-    const running = s.captionFade;
-    const at = running ? opacity() : 1;
-    running?.cancel();
-    s.captionFade = undefined;
+    const look = () => win?.getComputedStyle(caption);
+    const motion = look()
+      ?.getPropertyValue("--re-lightbox-caption-motion")
+      .trim();
     const duration = s.timing.fade;
-    if (
-      !animated ||
+    const instant =
+      direction === 0 ||
       duration <= 0 ||
       prefersReducedMotion(s) ||
-      typeof caption.animate !== "function"
-    ) {
+      typeof caption.animate !== "function";
+    if (s.captionRoll && (instant || motion !== "roll" || !text)) {
+      s.captionRoll = undefined;
+      caption.textContent = rolled;
+    }
+    const shown = caption.textContent ?? "";
+    const running = s.captionFade;
+    const now = look();
+    const at = running ? Number(now?.opacity ?? 1) : 1;
+    const moved = running ? now?.translate || "none" : "none";
+    const blurred = running ? now?.filter || "none" : "none";
+    running?.cancel();
+    s.captionFade = undefined;
+    if (instant) {
       caption.textContent = text;
       return;
     }
-    const rest = opacity();
+    const rest = Number(look()?.opacity ?? 1);
     const from = running ? at : rest;
     const share = running && rest > 0 ? Math.min(at / rest, 1) : 1;
-    const fadeIn = (start: number, share = 0) => {
-      const animation = caption.animate([{ opacity: start, offset: 0 }], {
+    const away = (sign: number): Keyframe => ({
+      opacity: 0,
+      ...(motion === "rise" && { translate: `0 ${sign * 0.4}em` }),
+      ...(motion === "blur" && { filter: "blur(4px)" }),
+    });
+    const here = (opacity: number): Keyframe => ({
+      opacity,
+      ...(motion === "rise" && { translate: moved }),
+      ...(motion === "blur" && { filter: blurred }),
+    });
+    const fadeIn = (start: Keyframe, share = 0) => {
+      const animation = caption.animate([{ ...start, offset: 0 }], {
         duration: duration * 0.55 * (1 - share),
         easing: "ease-out",
       });
@@ -2415,12 +2438,16 @@ export function createLightbox<Item extends LightboxItem = LightboxItem>(
         if (s.captionFade === animation) s.captionFade = undefined;
       };
     };
-    if (text === shown) return fadeIn(from, share);
+    if (text === shown) return fadeIn(here(from), share);
+    if (motion === "roll" && shown && text) {
+      if (running && share < 1) fadeIn(here(at), share);
+      return rollCaption(s, text, direction);
+    }
     if (!shown) {
       caption.textContent = text;
-      return fadeIn(0);
+      return fadeIn(away(direction));
     }
-    const fadeOut = caption.animate([{ opacity: from }, { opacity: 0 }], {
+    const fadeOut = caption.animate([here(from), away(-direction)], {
       duration: duration * 0.45 * share,
       easing: "ease-in",
       fill: "forwards",
@@ -2430,8 +2457,51 @@ export function createLightbox<Item extends LightboxItem = LightboxItem>(
       if (s.captionFade !== fadeOut) return;
       s.captionFade = undefined;
       caption.textContent = text;
-      if (text) fadeIn(0);
+      if (text) fadeIn(away(direction));
       fadeOut.cancel();
+    };
+  }
+
+  function rollCaption(s: Session, text: string, direction: 1 | -1) {
+    const caption = s.caption;
+    const doc = caption.ownerDocument;
+    let roll = caption.firstElementChild as HTMLElement | null;
+    let current: HTMLElement;
+    let from = "none";
+    if (roll?.className === "re-lightbox-caption-roll") {
+      current = roll.lastElementChild as HTMLElement;
+      from = doc.defaultView?.getComputedStyle(current).translate || "none";
+      for (const line of [...roll.children]) {
+        for (const animation of line.getAnimations()) animation.cancel();
+        if (line !== current) line.remove();
+      }
+    } else {
+      roll = doc.createElement("span");
+      roll.className = "re-lightbox-caption-roll";
+      current = doc.createElement("span");
+      current.textContent = caption.textContent;
+      roll.append(current);
+      caption.replaceChildren(roll);
+    }
+    current.className = "re-lightbox-caption-line re-lightbox-caption-leaving";
+    current.setAttribute("aria-hidden", "true");
+    const incoming = doc.createElement("span");
+    incoming.className = "re-lightbox-caption-line";
+    incoming.textContent = text;
+    roll.append(incoming);
+    current.animate(
+      [{ translate: from }, { translate: `0 ${direction * -100}%` }],
+      { ...ROLL, fill: "forwards" },
+    );
+    const entering = incoming.animate(
+      [{ translate: `0 ${direction * 100}%` }, { translate: "0 0" }],
+      ROLL,
+    );
+    s.captionRoll = entering;
+    entering.onfinish = () => {
+      if (s.captionRoll !== entering) return;
+      s.captionRoll = undefined;
+      caption.textContent = text;
     };
   }
 
@@ -2494,14 +2564,13 @@ export function createLightbox<Item extends LightboxItem = LightboxItem>(
         cell.append(incoming);
         current.dataset.char = previous;
         current.textContent = "";
-        const timing = { duration: 200, easing: "ease" };
         incoming.animate(
           [{ translate: `0 ${direction * 100}%` }, { translate: "0 0" }],
-          timing,
+          ROLL,
         );
         const leaving = current.animate(
           [{ translate: "0 0" }, { translate: `0 ${direction * -100}%` }],
-          { ...timing, fill: "forwards" },
+          { ...ROLL, fill: "forwards" },
         );
         leaving.onfinish = () => current.remove();
       }
@@ -2513,7 +2582,7 @@ export function createLightbox<Item extends LightboxItem = LightboxItem>(
     hideOrigin(s);
     renderCounter(s, direction);
     const item = items[state.index];
-    showCaption(s, item.caption || "", direction !== 0);
+    showCaption(s, item.caption || "", direction);
     const single = items.length < 2;
     for (const control of [s.prev, s.next, s.counter, s.slideshowButton])
       if (control) control.hidden = single;
