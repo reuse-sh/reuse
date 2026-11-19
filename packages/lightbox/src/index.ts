@@ -763,7 +763,7 @@ function validateItems(
 const OPEN_DURATION = 400;
 const CLOSE_DURATION = 300;
 const REDUCED_DURATION = 150;
-const ZOOM_DURATION = 220;
+const ZOOM_DURATION = 350;
 const FADE_DURATION = 240;
 const PADDING = 32;
 const FLIGHT_EASE = "cubic-bezier(0.32, 0.72, 0, 1)";
@@ -1428,11 +1428,12 @@ export function createLightbox<Item extends LightboxItem = LightboxItem>(
       s.zoomed = state.zoom.scale > 1;
       const active = s.dialog.ownerDocument.activeElement;
       if (
-        s.zoomed &&
         active &&
         active !== s.viewport &&
         s.dialog.contains(active) &&
-        !active.closest(".re-lightbox-zoom, .re-lightbox-close")
+        ((s.zoomed &&
+          !active.closest(".re-lightbox-zoom, .re-lightbox-close")) ||
+          active.checkVisibility?.() === false)
       )
         s.viewport.focus({ preventScroll: true });
       chromeInput(s, { type: s.zoomed ? "zoom" : "unzoom" }, notify);
@@ -2764,7 +2765,7 @@ export function createLightbox<Item extends LightboxItem = LightboxItem>(
       frame.style.clipPath = "";
       frame.style.opacity = "";
     }
-    moveZoom(s, zoom, animated ? zoomDuration(s) : 0, ZOOM_EASE);
+    moveZoom(s, zoom, animated ? zoomDuration(s) : 0, s.timing.ease);
     if (notify) publish({});
   }
 

@@ -403,6 +403,70 @@ test.describe("lightbox zoom with a mouse, wheel and trackpad", {
     await expect.poll(async () => (await state(page)).index).toBe(2);
   });
 
+  test("a zoom eases in, covering under a fifth of the way in its first frame", async ({
+    page,
+  }) => {
+    await open(page, [[4000, 3000]]);
+    const covered = await page.evaluate(() => {
+      const frame = document.querySelector(
+        '.re-lightbox-slide[aria-hidden="false"] .re-lightbox-frame',
+      ) as HTMLElement;
+      const width = () => frame.getBoundingClientRect().width;
+      const before = width();
+      (window as Window).lightbox.zoomTo(3);
+      const [motion] = frame
+        .getAnimations()
+        .filter((animation) => animation.playState === "running");
+      motion.pause();
+      motion.currentTime = 16;
+      const early = width();
+      motion.currentTime = Number(motion.effect?.getComputedTiming().endTime);
+      return (early - before) / (width() - before);
+    });
+    expect(covered).toBeGreaterThan(0);
+    expect(covered).toBeLessThan(0.2);
+  });
+
+  test("reduced motion zooms at once", async ({ page }) => {
+    await page.emulateMedia({ reducedMotion: "reduce" });
+    await open(page, [[4000, 3000]]);
+    const running = await page.evaluate(() => {
+      (window as Window).lightbox.zoomTo(3);
+      return document
+        .querySelector(
+          '.re-lightbox-slide[aria-hidden="false"] .re-lightbox-frame',
+        )
+        ?.getAnimations()
+        .filter((animation) => animation.playState === "running").length;
+    });
+    expect(running).toBe(0);
+    expect((await state(page)).zoom.scale).toBe(3);
+  });
+
+  test("a zoom-out that hides the focused zoom button moves focus to the photo", async ({
+    page,
+  }) => {
+    await open(page, [[4000, 3000]]);
+    await page.addStyleTag({
+      content:
+        '.re-lightbox:not([data-zoomed="true"]) .re-lightbox-zoom { display: none; }',
+    });
+    await zoomTo(page, 3, { x: 0, y: 0 });
+    await page.locator(".re-lightbox-zoom").focus();
+    await page.keyboard.press("Enter");
+    await still(page);
+    await expect(page.locator(".re-lightbox-zoom")).toBeHidden();
+    expect(
+      await page.evaluate(() =>
+        document.activeElement?.classList.contains("re-lightbox-viewport"),
+      ),
+    ).toBe(true);
+    await page.keyboard.press("+");
+    await expect
+      .poll(async () => (await state(page)).zoom.scale)
+      .toBeGreaterThan(1);
+  });
+
   test("--re-lightbox-zoom-duration: 0ms zooms at once", async ({ page }) => {
     await page.addInitScript(() =>
       document.addEventListener("DOMContentLoaded", () => {

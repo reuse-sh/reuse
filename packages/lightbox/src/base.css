@@ -541,7 +541,7 @@
     .re-lightbox-stage > .re-lightbox-thumbnail-ring,
     .re-lightbox-toolbar-start,
     .re-lightbox-toolbar-end > :not(.re-lightbox-zoom, .re-lightbox-close),
-    .re-lightbox-footer > :not(:has(.re-lightbox-zoom))
+    .re-lightbox-footer > *
   ) {
   visibility: hidden;
   opacity: 0;

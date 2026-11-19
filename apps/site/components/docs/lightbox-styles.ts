@@ -160,7 +160,7 @@ const rules: readonly (readonly [(o: LightboxStyle) => boolean, string])[] = [
   ],
   [
     (o) => !o.zoomButton,
-    ".re-lightbox-style .re-lightbox-zoom { display: none; }",
+    '.re-lightbox-style:not([data-zoomed="true"]) .re-lightbox-zoom { display: none; }',
   ],
   [
     (o) => o.caption !== "Below",
@@ -177,7 +177,7 @@ const rules: readonly (readonly [(o: LightboxStyle) => boolean, string])[] = [
   ],
   [
     (o) => hasBar(o) && o.zoomButton,
-    ".re-lightbox-style .re-lightbox-toolbar .re-lightbox-zoom { display: none; }",
+    '.re-lightbox-style:not([data-zoomed="true"]) .re-lightbox-toolbar .re-lightbox-zoom { display: none; }',
   ],
   [
     hasBar,
@@ -197,12 +197,7 @@ const rules: readonly (readonly [(o: LightboxStyle) => boolean, string])[] = [
 .re-lightbox-style-toolbar .re-lightbox-button { position: static; box-shadow: none; background: transparent; }
 .re-lightbox-style-toolbar .re-lightbox-button:hover { background: rgb(0 0 0 / 5%); }
 .re-lightbox-style-toolbar .re-lightbox-counter { position: static; display: block; height: auto; min-width: 52px; padding: 0 6px; background: none; box-shadow: none; font-weight: 500; text-align: center; }
-.re-lightbox-style-toolbar-divider { width: 1px; height: 20px; margin: 0 4px; background: rgb(0 0 0 / 10%); }
-.re-lightbox-style-toolbar { transition: background-color 300ms ease, box-shadow 300ms ease; }
-.re-lightbox-style[data-zoomed="true"] .re-lightbox-style-toolbar { background: transparent; box-shadow: none; }
-.re-lightbox-style[data-zoomed="true"] .re-lightbox-style-toolbar > :not(.re-lightbox-zoom) { visibility: hidden; opacity: 0; }
-.re-lightbox-style[data-zoomed="true"] .re-lightbox-style-toolbar .re-lightbox-zoom { background: var(--re-lightbox-control); box-shadow: var(--re-lightbox-ring); }
-.re-lightbox-style[data-zoomed="true"] .re-lightbox-style-toolbar .re-lightbox-zoom:hover { background: var(--re-lightbox-control-hover); }`,
+.re-lightbox-style-toolbar-divider { width: 1px; height: 20px; margin: 0 4px; background: rgb(0 0 0 / 10%); }`,
   ],
   [
     (o) => o.caption === "Panel",
@@ -358,7 +353,6 @@ export function lightboxChrome(options: LightboxStyle) {
       divider.className = "re-lightbox-style-toolbar-divider";
       divider.setAttribute("aria-hidden", "true");
       const zoom = button("zoom", "Zoom in", () => lightbox.toggleZoom());
-      zoom.classList.add("re-lightbox-zoom");
       bar.append(divider, zoom);`
           : ""
       }

@@ -392,7 +392,7 @@ test("every control style shows an icon in each lightbox button", async ({
   }
 });
 
-test("the toolbar style's zoom button swaps to the site's zoom-out icon", async ({
+test("the toolbar style hides its bar while zoomed and zooms out from the button left of close", async ({
   page,
 }) => {
   await page.goto("/lightbox/controls/toolbar");
@@ -400,19 +400,32 @@ test("the toolbar style's zoom button swaps to the site's zoom-out icon", async 
   await expect(
     page.locator("dialog[open] .re-lightbox-image").first(),
   ).toBeVisible();
-  const zoom = page
-    .locator("dialog[open] .re-lightbox-style-toolbar button", {
-      has: page.locator("svg"),
-    })
-    .last();
-  const icon = () => zoom.evaluate((button) => button.innerHTML);
-  const zoomIn = await icon();
-  await zoom.click();
-  await expect(zoom).toHaveAttribute("aria-label", "Zoom out");
-  expect(await icon()).not.toBe(zoomIn);
-  await zoom.click();
-  await expect(zoom).toHaveAttribute("aria-label", "Zoom in");
-  expect(await icon()).toBe(zoomIn);
+  const bar = page.locator("dialog[open] .re-lightbox-style-toolbar");
+  const zoomIn = bar.getByRole("button", { name: "Zoom in" });
+  const icon = await zoomIn.evaluate((button) => button.innerHTML);
+  await zoomIn.click();
+  await expect(bar).toBeHidden();
+  await page.mouse.move(600, 400);
+  await page.mouse.move(660, 460, { steps: 4 });
+  const zoomOut = page.locator(
+    "dialog[open] .re-lightbox-toolbar .re-lightbox-zoom",
+  );
+  const close = page.locator("dialog[open] .re-lightbox-close");
+  await expect(zoomOut).toBeVisible();
+  await expect(zoomOut).toHaveAttribute("aria-label", "Zoom out");
+  expect(await zoomOut.evaluate((button) => button.innerHTML)).not.toBe(icon);
+  const [out, shut] = await Promise.all([
+    zoomOut.boundingBox(),
+    close.boundingBox(),
+  ]);
+  if (!out || !shut) throw new Error("Missing controls");
+  expect([out.width, out.height]).toEqual([shut.width, shut.height]);
+  expect(out.y).toBe(shut.y);
+  expect(shut.x - (out.x + out.width)).toBe(8);
+  await zoomOut.click();
+  await expect(bar).toBeVisible();
+  await expect(zoomOut).toBeHidden();
+  expect(await zoomIn.evaluate((button) => button.innerHTML)).toBe(icon);
 });
 
 test("every lightbox on the site uses the site's icons and font", async ({
