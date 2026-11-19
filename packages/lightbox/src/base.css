@@ -245,18 +245,6 @@
 .re-lightbox-caption:empty {
   display: none;
 }
-.re-lightbox-caption-roll {
-  display: block;
-  position: relative;
-  overflow: clip;
-}
-.re-lightbox-caption-line {
-  display: block;
-}
-.re-lightbox-caption-leaving {
-  position: absolute;
-  inset: 0 0 auto;
-}
 .re-lightbox-aside > .re-lightbox-caption {
   max-width: none;
   max-height: none;

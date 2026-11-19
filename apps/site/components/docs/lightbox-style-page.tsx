@@ -4,7 +4,6 @@ import { FrameworkOnly } from "../../lib/framework-context";
 import { photos } from "../../lib/photos";
 import { CodeBlock } from "../shell/code-block";
 import { Kbd } from "../ui/typography";
-import { CaptionMotionSwitch } from "./caption-motion-switch";
 import { LightboxLaunch } from "./lightbox-launch";
 import {
   lightboxCode,
@@ -22,7 +21,6 @@ export function LightboxStylePage({ style }: { style: string }) {
   return (
     <>
       <div className="space-y-4">
-        {options.caption === "Below" ? <CaptionMotionSwitch /> : null}
         <LightboxLaunch
           items={photos.map((photo) => ({
             src: photo.src,

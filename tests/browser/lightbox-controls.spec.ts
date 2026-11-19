@@ -1593,34 +1593,46 @@ test("a mouse press held on the outer edge of close, an arrow or zoom still pres
   await expect.poll(async () => (await lightbox(page)).isOpen).toBe(false);
 });
 
-// Records every text the caption shows and the caption's opacity on each frame.
+// Records every text the caption shows, and its opacity and vertical shift on each frame.
 async function watchCaption(page: Page) {
   await page.evaluate(() => {
     const caption = document.querySelector(".re-lightbox-caption") as Element;
     const texts: string[] = [];
     const opacities: number[] = [];
+    const shifts: [string, number][] = [];
     new MutationObserver(() => texts.push(caption.textContent ?? "")).observe(
       caption,
       { childList: true, characterData: true, subtree: true },
     );
     const sample = () => {
-      opacities.push(Number(getComputedStyle(caption).opacity));
+      const style = getComputedStyle(caption);
+      opacities.push(Number(style.opacity));
+      shifts.push([
+        caption.textContent ?? "",
+        Number.parseFloat(style.translate.split(" ")[1] ?? "0"),
+      ]);
       requestAnimationFrame(sample);
     };
     requestAnimationFrame(sample);
-    Object.assign(window, { texts, opacities });
+    Object.assign(window, { texts, opacities, shifts });
   });
 }
 
 const captionLog = (page: Page) =>
   page.evaluate(() => {
-    const { texts = [], opacities = [] } = window as unknown as {
+    const {
+      texts = [],
+      opacities = [],
+      shifts = [],
+    } = window as unknown as {
       texts?: string[];
       opacities?: number[];
+      shifts?: [string, number][];
     };
     const caption = document.querySelector(".re-lightbox-caption") as Element;
     return {
       texts,
+      shifts,
       lowest: Math.min(...opacities),
       text: caption.textContent,
       opacity: getComputedStyle(caption).opacity,
@@ -1641,6 +1653,34 @@ test("a page fades the caption out, swaps its text while hidden, and fades it ba
   expect(log.lowest).toBeLessThan(0.1);
   expect(log).toMatchObject({ text: "Caption 2", opacity: "1", running: 0 });
   expect(log.status).toBe("Image 2 of 5, Caption 2");
+});
+
+test("the caption leaves upward and the next one rises from below, and paging back reverses both", async ({
+  page,
+}) => {
+  await open(page, {}, { captions: true });
+  const shifts = async (key: string, text: string) => {
+    await watchCaption(page);
+    await page.keyboard.press(key);
+    await expect.poll(async () => (await captionLog(page)).text).toBe(text);
+    await expect.poll(async () => (await captionLog(page)).running).toBe(0);
+    const { shifts } = await captionLog(page);
+    const of = (shown: string) =>
+      shifts.filter(([t]) => t === shown).map(([, y]) => y);
+    return {
+      leaving: of(text === "Caption 2" ? "Caption 1" : "Caption 2"),
+      entering: of(text),
+    };
+  };
+  const next = await shifts("ArrowRight", "Caption 2");
+  expect(Math.min(...next.leaving)).toBeLessThan(-1);
+  expect(Math.max(...next.leaving)).toBeLessThanOrEqual(0);
+  expect(Math.max(...next.entering)).toBeGreaterThan(1);
+  expect(next.entering.at(-1)).toBe(0);
+  const back = await shifts("ArrowLeft", "Caption 1");
+  expect(Math.max(...back.leaving)).toBeGreaterThan(1);
+  expect(Math.min(...back.entering)).toBeLessThan(-1);
+  expect(back.entering.at(-1)).toBe(0);
 });
 
 test("fast repeated paging shows only the last caption and announces it once", async ({
