@@ -159,7 +159,7 @@ export const libraries: Library[] = [
       ],
       [
         "Change the caption with the photo",
-        "Each page fades the caption out and back in over --re-lightbox-fade-duration and swaps its text while it is hidden, so a caption of another height, or none, never jumps into view. A page during the fade goes on from the opacity on screen with the newest caption, and reduced motion swaps it at once. The announcement of the settled photo reads its number and its caption once.",
+        "Each page fades the caption out and back in over --re-lightbox-fade-duration and swaps its text while it is hidden, so a caption of another height, or none, never jumps into view. A page during the fade goes on from the opacity on screen with the newest caption, and reduced motion swaps it at once. The announcement of the settled photo reads its number and its caption once, through strings.slide(index, count, caption), so a translation sets the order and the separator.",
         "tests/browser/lightbox-controls.spec.ts",
       ],
       [

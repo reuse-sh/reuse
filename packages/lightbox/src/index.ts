@@ -2386,11 +2386,11 @@ export function createLightbox<Item extends LightboxItem = LightboxItem>(
     if (text === s.captionText) return;
     s.captionText = text;
     const shown = caption.textContent ?? "";
-    const from = Number(
-      caption.ownerDocument.defaultView?.getComputedStyle(caption).opacity ?? 1,
-    );
-    const share = s.captionFade ? from : 1;
-    s.captionFade?.cancel();
+    const win = caption.ownerDocument.defaultView;
+    const opacity = () => Number(win?.getComputedStyle(caption).opacity ?? 1);
+    const running = s.captionFade;
+    const at = running ? opacity() : 1;
+    running?.cancel();
     s.captionFade = undefined;
     const duration = s.timing.fade;
     if (
@@ -2402,6 +2402,9 @@ export function createLightbox<Item extends LightboxItem = LightboxItem>(
       caption.textContent = text;
       return;
     }
+    const rest = opacity();
+    const from = running ? at : rest;
+    const share = running && rest > 0 ? Math.min(at / rest, 1) : 1;
     const fadeIn = (start: number, share = 0) => {
       const animation = caption.animate([{ opacity: start, offset: 0 }], {
         duration: duration * 0.55 * (1 - share),

@@ -1774,3 +1774,26 @@ test("a list change from a change listener keeps the fade, and the fade ends on 
   );
   expect(highest).toBeLessThanOrEqual(0.6);
 });
+
+test("a page during the fade runs the rest of it at the fade's own speed over a dimmed caption", async ({
+  page,
+}) => {
+  await open(page, {}, { captions: true });
+  await page.addStyleTag({ content: ".re-lightbox-caption { opacity: 0.6; }" });
+  await page.keyboard.press("ArrowRight");
+  await page.waitForTimeout(60);
+  const fade = await page.evaluate(() => {
+    const caption = document.querySelector(".re-lightbox-caption") as Element;
+    const at = Number(getComputedStyle(caption).opacity);
+    (window as Window).lightbox.next();
+    const [animation] = caption.getAnimations();
+    return {
+      at,
+      duration: Number(animation?.effect?.getComputedTiming().duration),
+    };
+  });
+  expect(fade.at).toBeGreaterThan(0);
+  expect(fade.at).toBeLessThan(0.6);
+  const wholeFadeOut = 240 * 0.45;
+  expect(fade.duration).toBeCloseTo(wholeFadeOut * (fade.at / 0.6), 0);
+});
