@@ -1,5 +1,12 @@
 # @reuse-sh/lightbox
 
+## 0.2.0
+
+### Minor Changes
+
+- fb8b393: Listen for `beforechange` to read the upcoming index before the active slide changes.
+- 796e4e7: Show or hide configured thumbnails while the lightbox is open with `setOptions({ thumbnailsVisible: true })` or `false`. The current photo stays selected.
+
 ## 0.1.1
 
 ### Patch Changes
