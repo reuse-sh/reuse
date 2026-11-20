@@ -6,6 +6,7 @@ import {
   createCarousel,
 } from "@reuse-sh/carousel";
 import { bindCarouselControls } from "@reuse-sh/carousel/controls";
+import { createFadeEdge } from "@reuse-sh/gradients";
 import { photos } from "../../lib/photos";
 import { arrowPaths } from "../lucide-arrows";
 import { createSegmentHighlights } from "../segment-highlight";
@@ -296,7 +297,7 @@ const builders: Record<CarouselStyleName, (demo: HTMLElement) => Cleanup> = {
   },
 
   Arrows(demo) {
-    const { box, carousel } = carouselDemo(
+    const { box, viewport, carousel } = carouselDemo(
       demo,
       "edge",
       `<div class="cc-edge">
@@ -307,7 +308,9 @@ const builders: Record<CarouselStyleName, (demo: HTMLElement) => Cleanup> = {
       { loop: false, group: "page" },
     );
     const unbind = bindCarouselControls(box, carousel);
+    const fade = createFadeEdge(viewport, { size: 56 });
     return () => {
+      fade.destroy();
       unbind();
       carousel.destroy();
     };
