@@ -89,6 +89,49 @@ for (const viewport of viewports) {
   });
 }
 
+test("the toolbar preview's counter rolls its digit in the paging direction", async ({
+  page,
+}) => {
+  await page.goto("/lightbox/controls/toolbar");
+  await page.locator('main a[href^="/images/marble"]').nth(1).click();
+  const counter = page.locator(
+    ".re-lightbox-style-toolbar .re-lightbox-counter",
+  );
+  await expect(counter).toHaveText("2 / 8");
+  const roll = (key: string) =>
+    counter.evaluate((element, key) => {
+      document.activeElement?.dispatchEvent(
+        new KeyboardEvent("keydown", { key, bubbles: true }),
+      );
+      return element
+        .getAnimations({ subtree: true })
+        .map((animation) =>
+          (animation.effect as KeyframeEffect)
+            .getKeyframes()
+            .map((frame) => frame.translate)
+            .join(" > "),
+        )
+        .sort();
+    }, key);
+  expect(await roll("ArrowRight")).toEqual([
+    "0px 100% > 0px",
+    "0px > 0px -100%",
+  ]);
+  await expect(counter).toHaveText("3 / 8");
+  await expect
+    .poll(() =>
+      counter.evaluate(
+        (element) => element.getAnimations({ subtree: true }).length,
+      ),
+    )
+    .toBe(0);
+  expect(await roll("ArrowLeft")).toEqual([
+    "0px -100% > 0px",
+    "0px > 0px 100%",
+  ]);
+  await expect(counter).toHaveText("2 / 8");
+});
+
 test("the classic preview's corner counter reads 1 / 8 on one line", async ({
   page,
 }) => {

@@ -208,7 +208,7 @@
 .re-lightbox-footer > * {
   pointer-events: auto;
 }
-.re-lightbox-toolbar-start > .re-lightbox-counter {
+.re-lightbox-counter {
   white-space: pre;
   pointer-events: none;
 }

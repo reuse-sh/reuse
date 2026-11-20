@@ -324,7 +324,9 @@ export function lightboxChrome(options: LightboxStyle) {
       options.counter === "Toolbar" && "counter",
       options.arrows === "Toolbar" && "next",
     ].filter(Boolean);
-    slots.push(`    footer: ({ lightbox, document, icon }) => {
+    slots.push(`    footer: ({ lightbox, document, icon${
+      options.counter === "Toolbar" ? ", counter: createCounter" : ""
+    } }) => {
       const button = (name, label, action) => {
         const element = document.createElement("button");
         element.type = "button";
@@ -346,8 +348,7 @@ export function lightboxChrome(options: LightboxStyle) {
       }${
         options.counter === "Toolbar"
           ? `
-      const counter = document.createElement("span");
-      counter.className = "re-lightbox-counter";`
+      const counter = createCounter();`
           : ""
       }
       bar.append(${order.join(", ")});${
@@ -365,13 +366,15 @@ export function lightboxChrome(options: LightboxStyle) {
         update: (state) => {${
           options.arrows === "Toolbar"
             ? `
+          prev.hidden = state.count < 2;
+          next.hidden = state.count < 2;
           prev.disabled = !state.canPrev;
           next.disabled = !state.canNext;`
             : ""
         }${
-          options.counter === "Toolbar"
+          options.zoomButton
             ? `
-          counter.textContent = \`\${state.index + 1} / \${state.count}\`;`
+          divider.hidden = state.count < 2;`
             : ""
         }
         },

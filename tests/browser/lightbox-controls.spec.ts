@@ -643,6 +643,76 @@ test("in RTL the counter reads 2 / 3 for the second of three photos, and an Arab
   expect(await order({ arabic: true })).toEqual(["٣", "٢"]);
 });
 
+test("a slot's counter() shows the position, rolls its digits in the paging direction like the built-in one, and hides with one photo", async ({
+  page,
+}) => {
+  await mount(page, "", ["lightbox/base.css", "lightbox/theme.css"]);
+  const run = () =>
+    page.evaluate(async () => {
+      const { createLightbox } = await import("/modules/lightbox/index.js");
+      const lightbox = createLightbox({
+        history: false,
+        controls: { counter: false },
+        slots: {
+          footer: ({ document, counter }) => {
+            const node = document.createElement("div");
+            node.className = "slot";
+            node.append(counter());
+            return { node };
+          },
+        },
+      });
+      const photo = {
+        src: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='1200' height='800'/%3E",
+        width: 1200,
+        height: 800,
+      };
+      lightbox.open([photo, photo, photo], 0);
+      const counter = document.querySelector(".slot > .re-lightbox-counter");
+      const separator = counter?.querySelector(".re-lightbox-counter-text");
+      const width = () => separator?.getBoundingClientRect().width ?? 0;
+      const inline = width();
+      const flex = document.createElement("style");
+      flex.textContent = ".slot > .re-lightbox-counter { display: flex; }";
+      document.head.append(flex);
+      const spaced = inline > 0 && Math.abs(width() - inline) < 0.5;
+      flex.remove();
+      const roll = () =>
+        (counter?.getAnimations({ subtree: true }) ?? [])
+          .map((animation) =>
+            (animation.effect as KeyframeEffect)
+              .getKeyframes()
+              .map((frame) => frame.translate)
+              .join(" > "),
+          )
+          .sort();
+      const first = counter?.textContent;
+      lightbox.next();
+      const forward = roll();
+      for (const animation of counter?.getAnimations({ subtree: true }) ?? [])
+        animation.finish();
+      const second = counter?.textContent;
+      lightbox.prev();
+      const back = roll();
+      lightbox.setItems([photo], 0);
+      const single = (counter as HTMLElement | null)?.hidden;
+      const builtIn = document.querySelectorAll(".re-lightbox-counter").length;
+      lightbox.destroy();
+      return { first, second, forward, back, single, builtIn, spaced };
+    });
+  expect(await run()).toEqual({
+    first: "1 / 3",
+    second: "2 / 3",
+    forward: ["0px 100% > 0px", "0px > 0px -100%"],
+    back: ["0px -100% > 0px", "0px > 0px 100%"],
+    single: true,
+    builtIn: 1,
+    spaced: true,
+  });
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  expect(await run()).toMatchObject({ forward: [], back: [] });
+});
+
 test("a narrow right-to-left viewer with a side caption keeps next at its edge", async ({
   page,
 }) => {

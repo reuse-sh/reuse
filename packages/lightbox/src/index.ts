@@ -129,6 +129,8 @@ export type LightboxSlot<Item extends LightboxItem = LightboxItem> = (context: {
   document: Document;
   /** The icon a built-in control shows: yours from the icons option, else the package's. */
   icon: (name: LightboxIcon) => Node;
+  /** A new counter that shows the position and rolls its digits like the built-in one. */
+  counter: () => HTMLElement;
 }) => {
   node: Node;
   update?: (state: LightboxState<Item>) => void;
@@ -449,7 +451,7 @@ type Session = {
   restoreScroll: () => void;
   hiddenOrigin?: { element: HTMLElement; visibility: string };
   landing?: HTMLElement;
-  counter?: HTMLSpanElement;
+  counters: HTMLSpanElement[];
   counterText: string;
   status: HTMLDivElement;
   caption: HTMLParagraphElement;
@@ -589,6 +591,14 @@ function onScreen(origin: HTMLElement, rect: DOMRect, win: Window) {
     }
   }
   return right > left && bottom > top;
+}
+
+function counterNode(doc: Document) {
+  const counter = doc.createElement("span");
+  counter.className = "re-lightbox-counter";
+  counter.dir = "auto";
+  counter.setAttribute("aria-hidden", "true");
+  return counter;
 }
 
 function lockScroll(doc: Document) {
@@ -2464,10 +2474,18 @@ export function createLightbox<Item extends LightboxItem = LightboxItem>(
   }
 
   function renderCounter(s: Session, direction: 1 | -1 | 0) {
-    const counter = s.counter;
     const text = s.strings.counter(state.index, items.length);
-    if (!counter || text === s.counterText) return;
+    if (text === s.counterText) return;
     s.counterText = text;
+    for (const counter of s.counters) drawCounter(s, counter, text, direction);
+  }
+
+  function drawCounter(
+    s: Session,
+    counter: HTMLSpanElement,
+    text: string,
+    direction: 1 | -1 | 0,
+  ) {
     const doc = s.dialog.ownerDocument;
     const parts = text.match(/\p{Nd}+(?:[^\p{Nd}\s]\p{Nd}+)*|\P{Nd}+/gu) ?? [];
     const kind = (part: string) =>
@@ -2543,7 +2561,7 @@ export function createLightbox<Item extends LightboxItem = LightboxItem>(
     const item = items[state.index];
     showCaption(s, item.caption || "", direction);
     const single = items.length < 2;
-    for (const control of [s.prev, s.next, s.counter, s.slideshowButton])
+    for (const control of [s.prev, s.next, ...s.counters, s.slideshowButton])
       if (control) control.hidden = single;
     if (s.prev) s.prev.disabled = !looping() && state.index === 0;
     if (s.next)
@@ -4156,6 +4174,18 @@ export function createLightbox<Item extends LightboxItem = LightboxItem>(
           showIcon(holder, builtInIcons[name]);
           return holder.firstElementChild as Node;
         },
+        counter: () => {
+          const counter = counterNode(doc);
+          counter.hidden = items.length < 2;
+          s.counters.push(counter);
+          drawCounter(
+            s,
+            counter,
+            s.strings.counter(state.index, items.length),
+            0,
+          );
+          return counter;
+        },
       });
       places[name](instance.node);
       s.slots.push(instance as ReturnType<LightboxSlot>);
@@ -4274,10 +4304,7 @@ export function createLightbox<Item extends LightboxItem = LightboxItem>(
     };
     let counter: HTMLSpanElement | undefined;
     if (control("counter")) {
-      counter = doc.createElement("span");
-      counter.className = "re-lightbox-counter";
-      counter.dir = "auto";
-      counter.setAttribute("aria-hidden", "true");
+      counter = counterNode(doc);
       toolbarStart.append(counter);
     }
     const zoomButton = control("zoom")
@@ -4521,7 +4548,7 @@ export function createLightbox<Item extends LightboxItem = LightboxItem>(
       chromeRoots: [toolbar, footer, ...(prev && next ? [prev, next] : [])],
       openingFocus: closeButton ?? viewport,
       zoomed: false,
-      counter,
+      counters: counter ? [counter] : [],
       counterText: "",
       status,
       caption,
