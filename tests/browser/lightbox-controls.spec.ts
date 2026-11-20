@@ -854,18 +854,24 @@ test("a click on thumbnail 38 pages there without a fade and the strip ends with
 test("thumbnails clicked 60ms apart while the strip centers each one open every photo", {
   tag: "@desktop",
 }, async ({ page }) => {
+  await page.clock.install({ time: 0 });
+  await page.clock.pauseAt(10_000);
   await open(page, { thumbnails: "bottom" }, { count: 8 });
-  const opened: number[] = [];
+  await page.clock.runFor(500);
+  const strip = page.locator(".re-lightbox-thumbnails");
+  const scrollLeft = () => strip.evaluate((element) => element.scrollLeft);
   for (const index of [3, 1, 5, 2, 6]) {
     const box = await page
-      .getByRole("button", { name: `Show image ${index + 1}` })
+      .getByRole("button", { name: `Show image ${index + 1}`, exact: true })
       .boundingBox();
     if (!box) throw new Error(`Thumbnail ${index + 1} has no box.`);
+    const before = await scrollLeft();
     await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2);
-    opened.push((await lightbox(page)).index);
-    await page.waitForTimeout(60);
+    expect((await lightbox(page)).index).toBe(index);
+    await page.clock.runFor(60);
+    expect(await scrollLeft()).not.toBe(before);
+    expect(await offCenter(page)).toBeGreaterThan(2);
   }
-  expect(opened).toEqual([3, 1, 5, 2, 6]);
 });
 
 test("a second click on a thumbnail while the strip centers it still ends with it centered", {
