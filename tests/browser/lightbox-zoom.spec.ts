@@ -295,6 +295,12 @@ test.describe("lightbox zoom with a mouse, wheel and trackpad", {
       true,
     ],
     [
+      "after the default panel on a right-to-left page",
+      { width: 1440, height: 900 },
+      "",
+      true,
+    ],
+    [
       "above a sheet inset from the window's edges",
       { width: 600, height: 900 },
       ".re-lightbox-aside { right: 8px; bottom: 8px; left: 8px; width: auto; height: 200px; }",
@@ -304,7 +310,7 @@ test.describe("lightbox zoom with a mouse, wheel and trackpad", {
     test(`a photo ${name} fits the room the panel leaves`, async ({ page }) => {
       await page.setViewportSize(viewport);
       await open(page, [[4000, 3000]], { aside: true });
-      await page.addStyleTag({ content: inset });
+      if (inset) await page.addStyleTag({ content: inset });
       if (rtl)
         await page.evaluate(() => {
           document.documentElement.dir = "rtl";
@@ -319,7 +325,11 @@ test.describe("lightbox zoom with a mouse, wheel and trackpad", {
           return viewport.width < 720
             ? Math.round(box.y + box.height) <= Math.round(panel.y) &&
                 Math.round(box.width) === viewport.width - 64
-            : Math.round(box.x + box.width) <= Math.round(panel.x) &&
+            : panel.x + panel.width < viewport.width / 2
+              ? Math.round(box.x) >= Math.round(panel.x + panel.width) &&
+                Math.round(box.width) ===
+                  Math.round(viewport.width - panel.x - panel.width - 64)
+              : Math.round(box.x + box.width) <= Math.round(panel.x) &&
                 Math.round(box.width) === Math.round(panel.x - 64);
         })
         .toBe(true);
