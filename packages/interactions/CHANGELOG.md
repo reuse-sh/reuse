@@ -1,5 +1,12 @@
 # @reuse-sh/interactions
 
+## 0.1.1
+
+### Patch Changes
+
+- 27698f0: A floating tooltip follows only the pointer that opened it, and hold to confirm lets go only on the holding pointer's release. Another pointer on the page, such as a scripted demo cursor or a second touch, no longer moves or closes an open tooltip or cancels a hold in progress. A scripted pointer cannot take over a tooltip the visitor's pointer opened, while the visitor's pointer still takes over by entering another trigger.
+- 27698f0: A floating tooltip keeps rich content in place when `content` returns the node it already shows. Before, any scroll or page change re-inserted that node, which reset scroll positions and restarted animations inside live content.
+
 ## 0.1.0
 
 ### Minor Changes
