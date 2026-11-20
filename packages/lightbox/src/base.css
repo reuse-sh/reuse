@@ -271,6 +271,13 @@
 .re-lightbox-thumbnails > * {
   pointer-events: auto;
 }
+@media (hover: hover) {
+  /* WebKit routes native wheel scrolling through a hit-testable scroll container. */
+  .re-lightbox[data-thumbnails="bottom"]
+  .re-lightbox-thumbnails:has(> button:hover) {
+    pointer-events: auto;
+  }
+}
 .re-lightbox .re-lightbox-thumbnail-ring {
   position: absolute;
   z-index: 2;

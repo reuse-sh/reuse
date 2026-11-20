@@ -125,7 +125,7 @@ export const libraries: Library[] = [
       ],
       [
         "Scrub through the strip",
-        "A drag or a wheel on the thumbnail strip swaps the photo as each thumbnail reaches the ring, a scroll that ends in one frame too, with previews standing in until it stops, and reports and announces the photo it stops on once. Arrows, Home and End in the strip page the viewer, the arrows wrapping when loop is on, and focus and the tab stop follow the thumbnail under the ring. A thumbnail is at most three times as wide as it is tall.",
+        "A drag or a wheel on the thumbnail strip swaps the photo as each thumbnail reaches the ring, a scroll that ends in one frame too, with previews standing in until it stops, and reports and announces the photo it stops on once. A horizontal wheel over a bottom thumbnail uses native scrolling, and the empty ends of the strip pass pointer input through. Arrows, Home and End in the strip page the viewer, the arrows wrapping when loop is on, and focus and the tab stop follow the thumbnail under the ring. A thumbnail is at most three times as wide as it is tall.",
         "tests/browser/lightbox-controls.spec.ts",
       ],
       [
