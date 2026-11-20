@@ -275,22 +275,40 @@ test.describe("lightbox zoom with a mouse, wheel and trackpad", {
     expect(Math.round(box.x + box.width / 2 - panel.x / 2)).toBe(0);
   });
 
-  for (const [name, viewport, inset] of [
+  for (const [name, viewport, inset, rtl] of [
     [
       "beside a card inset from the window's edges",
       { width: 1440, height: 900 },
       ".re-lightbox-aside { top: 12px; right: 12px; bottom: 12px; height: auto; }",
+      false,
+    ],
+    [
+      "beside a short card sized to its content",
+      { width: 1440, height: 900 },
+      ".re-lightbox-aside { top: 0; bottom: auto; height: 150px; }",
+      false,
+    ],
+    [
+      "beside a card a right-to-left page keeps on the right",
+      { width: 1280, height: 800 },
+      ".re-lightbox-aside { top: 12px; right: 12px; bottom: 12px; left: auto; height: auto; }",
+      true,
     ],
     [
       "above a sheet inset from the window's edges",
       { width: 600, height: 900 },
       ".re-lightbox-aside { right: 8px; bottom: 8px; left: 8px; width: auto; height: 200px; }",
+      false,
     ],
   ] as const)
     test(`a photo ${name} fits the room the panel leaves`, async ({ page }) => {
       await page.setViewportSize(viewport);
       await open(page, [[4000, 3000]], { aside: true });
       await page.addStyleTag({ content: inset });
+      if (rtl)
+        await page.evaluate(() => {
+          document.documentElement.dir = "rtl";
+        });
       await page.setViewportSize({ ...viewport, height: viewport.height + 1 });
       await page.setViewportSize(viewport);
       const panel = await page.locator(".re-lightbox-aside").boundingBox();
@@ -299,7 +317,8 @@ test.describe("lightbox zoom with a mouse, wheel and trackpad", {
         .poll(async () => {
           const box = await photo(page);
           return viewport.width < 720
-            ? Math.round(box.y + box.height) <= Math.round(panel.y)
+            ? Math.round(box.y + box.height) <= Math.round(panel.y) &&
+                Math.round(box.width) === viewport.width - 64
             : Math.round(box.x + box.width) <= Math.round(panel.x) &&
                 Math.round(box.width) === Math.round(panel.x - 64);
         })
