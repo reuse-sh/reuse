@@ -1,5 +1,11 @@
 # @reuse-sh/lightbox
 
+## 0.1.1
+
+### Patch Changes
+
+- d4045cb: The bottom thumbnail strip scrolls with a horizontal wheel in WebKit. Its empty ends still pass pointer input through.
+
 ## 0.1.0
 
 ### Minor Changes
