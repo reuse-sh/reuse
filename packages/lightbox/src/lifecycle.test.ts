@@ -522,6 +522,37 @@ describe("lightbox lifecycle", () => {
     expect(label(".re-lightbox-close")).toBe("Schließen");
   });
 
+  it("toggles an open thumbnail strip without changing the current slide", () => {
+    const controller = create({
+      history: false,
+      thumbnails: "bottom",
+      thumbnailsVisible: false,
+    });
+    const change = vi.fn();
+    controller.on("change", change);
+    controller.open(gallery, 1);
+    const strip = () => dialog().querySelector(".re-lightbox-thumbnails");
+    const active = () =>
+      strip()?.querySelector<HTMLButtonElement>('[aria-current="true"]');
+
+    expect(strip()).toBeNull();
+    controller.setOptions({ thumbnailsVisible: true });
+    expect(active()?.getAttribute("aria-label")).toBe("Show image 2");
+    active()?.focus();
+    expect(document.activeElement).toBe(active());
+
+    controller.setOptions({ thumbnailsVisible: false });
+    expect(strip()).toBeNull();
+    expect(document.activeElement).toBe(
+      dialog().querySelector(".re-lightbox-viewport"),
+    );
+
+    controller.setOptions({ thumbnailsVisible: true });
+    expect(active()?.getAttribute("aria-label")).toBe("Show image 2");
+    expect(controller.getState().index).toBe(1);
+    expect(change).not.toHaveBeenCalled();
+  });
+
   it("labels thumbnails rebuilt by append and setItems from the current strings", () => {
     const controller = create({ history: false, thumbnails: "bottom" });
     controller.open(gallery.slice(0, 2), 0);

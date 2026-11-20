@@ -310,6 +310,7 @@ export interface LightboxOptions<Item extends LightboxItem = LightboxItem> {
   preload?: number;
   controls?: Partial<Record<LightboxControl, boolean>>;
   thumbnails?: false | "bottom" | "side";
+  thumbnailsVisible?: boolean;
   caption?: "bottom" | "side";
   slideshow?: { interval?: number };
   autoHide?: number | false;
@@ -3931,13 +3932,29 @@ export function createLightbox<Item extends LightboxItem = LightboxItem>(
     const side =
       settings.thumbnails === "side" &&
       !win?.matchMedia?.("(max-width: 719.98px)").matches;
-    const layout = side ? "side" : "bottom";
+    const layout =
+      settings.thumbnailsVisible === false
+        ? undefined
+        : side
+          ? "side"
+          : "bottom";
     if (s.dialog.dataset.thumbnails === layout) return;
-    s.dialog.dataset.thumbnails = layout;
     endScrub(s);
     s.thumbCarousel?.destroy();
     s.thumbCarousel = undefined;
     s.chromeRoots = s.chromeRoots.filter((root) => root !== strip);
+
+    if (!layout) {
+      if (strip.contains(strip.ownerDocument.activeElement)) {
+        s.viewport.focus({ preventScroll: true });
+      }
+      strip.remove();
+      s.thumbRing?.remove();
+      delete s.dialog.dataset.thumbnails;
+      return;
+    }
+
+    s.dialog.dataset.thumbnails = layout;
     if (side) {
       s.stage.append(strip);
       s.chromeRoots.push(strip);
@@ -5089,6 +5106,16 @@ export function createLightbox<Item extends LightboxItem = LightboxItem>(
         settings.strings = next.strings;
         if (s) relabel(s);
       }
+      if (
+        "thumbnailsVisible" in next &&
+        settings.thumbnailsVisible !== next.thumbnailsVisible
+      ) {
+        settings.thumbnailsVisible = next.thumbnailsVisible;
+        if (s?.thumbStrip && !state.isClosing) {
+          placeThumbs(s);
+          resized(s);
+        }
+      }
       if (!("loop" in next) || Boolean(next.loop) === loop) return;
       loop = Boolean(next.loop);
       publish({});
@@ -5278,6 +5305,7 @@ const MARKUP_OPTIONS = new Set([
   "preload",
   "controls",
   "thumbnails",
+  "thumbnailsVisible",
   "caption",
   "slideshow",
   "autoHide",
