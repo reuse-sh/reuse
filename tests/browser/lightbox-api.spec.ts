@@ -8,7 +8,10 @@ type Window = globalThis.Window &
       close(): Promise<void>;
       next(): void;
       append(items: unknown[]): void;
-      setOptions(options: { loop?: boolean }): void;
+      setOptions(options: {
+        loop?: boolean;
+        thumbnailsVisible?: boolean;
+      }): void;
       getState(): { index: number; count: number; isOpen: boolean };
     };
     destroyed: number;
@@ -73,6 +76,50 @@ test("loop pages from the last photo to the first, and turning it off disables n
   await expect(
     page.getByRole("button", { name: "Previous image" }),
   ).toBeEnabled();
+});
+
+test("showing thumbnails in the open viewer makes room and keeps its current photo", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1000, height: 720 });
+  await open(page, 5, 2, { thumbnails: "bottom", thumbnailsVisible: false });
+  const dialog = page.getByRole("dialog");
+  const strip = dialog.getByRole("group", { name: "Choose image" });
+  const current = strip.getByRole("button", {
+    name: "Show image 3",
+    exact: true,
+  });
+  const setVisible = (visible: boolean) =>
+    page.evaluate(
+      (value) =>
+        (window as Window).lightbox.setOptions({ thumbnailsVisible: value }),
+      visible,
+    );
+
+  const photoHeight = () =>
+    page
+      .locator('.re-lightbox-slide[aria-hidden="false"] .re-lightbox-image')
+      .evaluate((image) => image.getBoundingClientRect().height);
+
+  await expect(strip).toHaveCount(0);
+  const before = await photoHeight();
+  await setVisible(true);
+  await expect(dialog).toHaveAttribute("data-thumbnails", "bottom");
+  await expect(current).toBeVisible();
+  await expect.poll(photoHeight).toBeLessThan(before);
+  await expect(current).toHaveAttribute("aria-current", "true");
+  await current.focus();
+
+  await setVisible(false);
+  await expect(strip).toHaveCount(0);
+  await expect.poll(photoHeight).toBe(before);
+  await expect(dialog.locator(".re-lightbox-viewport")).toBeFocused();
+
+  await setVisible(true);
+  await expect(current).toBeVisible();
+  expect(
+    await page.evaluate(() => (window as Window).lightbox.getState().index),
+  ).toBe(2);
 });
 
 test("append keeps the current photo where it is and counts the new ones", async ({
