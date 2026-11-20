@@ -26,8 +26,13 @@ async function open(
     srcset = false,
     slots = false,
     styles = [] as string[],
+    manualClock = false,
   } = {},
 ) {
+  if (manualClock) {
+    await page.clock.install({ time: 0 });
+    await page.clock.pauseAt(10_000);
+  }
   await mount(page, "", ["lightbox/base.css", "lightbox/theme.css", ...styles]);
   await page.evaluate(
     async ([extra, total, start, captioned, widths, slotted]) => {
@@ -68,7 +73,8 @@ async function open(
     },
     [options, count, index, captions, srcset, slots] as const,
   );
-  await page.waitForTimeout(500);
+  if (manualClock) await page.clock.runFor(500);
+  else await page.waitForTimeout(500);
 }
 
 const lightbox = (page: Page) =>
@@ -854,10 +860,7 @@ test("a click on thumbnail 38 pages there without a fade and the strip ends with
 test("thumbnails clicked 60ms apart while the strip centers each one open every photo", {
   tag: "@desktop",
 }, async ({ page }) => {
-  await page.clock.install({ time: 0 });
-  await page.clock.pauseAt(10_000);
-  await open(page, { thumbnails: "bottom" }, { count: 8 });
-  await page.clock.runFor(500);
+  await open(page, { thumbnails: "bottom" }, { count: 8, manualClock: true });
   const strip = page.locator(".re-lightbox-thumbnails");
   const scrollLeft = () => strip.evaluate((element) => element.scrollLeft);
   for (const index of [3, 1, 5, 2, 6]) {
@@ -877,14 +880,16 @@ test("thumbnails clicked 60ms apart while the strip centers each one open every 
 test("a second click on a thumbnail while the strip centers it still ends with it centered", {
   tag: "@desktop",
 }, async ({ page }) => {
-  await open(page, { thumbnails: "bottom" }, { count: 40 });
-  const thumb = page.getByRole("button", { name: "Show image 6" });
-  await thumb.click();
-  await page.waitForTimeout(80);
+  await open(page, { thumbnails: "bottom" }, { count: 40, manualClock: true });
+  const thumb = page.getByRole("button", { name: "Show image 6", exact: true });
+  await thumb.click({ force: true, scroll: "none" });
+  await page.clock.runFor(80);
+  expect(await offCenter(page)).toBeGreaterThan(2);
   const box = await thumb.boundingBox();
   if (!box) throw new Error("Thumbnail 6 has no box.");
   await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2);
   expect((await lightbox(page)).index).toBe(5);
+  await page.clock.runFor(1_000);
   await expect.poll(() => offCenter(page)).toBeLessThanOrEqual(2);
 });
 
@@ -966,7 +971,11 @@ test("a mouse drag on the strip keeps the ring still, opens each photo at once a
     requested.push(route.request().url());
     return route.abort();
   });
-  await open(page, { thumbnails: "bottom" }, { count: 20, srcset: true });
+  await open(
+    page,
+    { thumbnails: "bottom" },
+    { count: 20, srcset: true, manualClock: true },
+  );
   await expect.poll(() => requested.length).toBeGreaterThan(0);
   const before = await ringBox(page);
   if (!before) throw new Error("No ring");
@@ -977,32 +986,35 @@ test("a mouse drag on the strip keeps the ring still, opens each photo at once a
   if (!first) throw new Error("Thumbnail 1 has no box.");
   const pitch = first.width + 8;
   requested.length = 0;
+  const scrollEvents = await page
+    .locator(".re-lightbox-thumbnails")
+    .evaluateHandle((strip) => {
+      const events = { count: 0 };
+      strip.addEventListener("scroll", () => events.count++);
+      return events;
+    });
+  const scrollCount = () => scrollEvents.evaluate(({ count }) => count);
   await page.mouse.move(first.x + first.width / 2, first.y + first.height / 2);
   await page.mouse.down();
-  const seen: number[] = [];
-  for (let step = 1; step <= 30; step++) {
+  expect((await lightbox(page)).index).toBe(0);
+  for (const index of [1, 2, 3]) {
+    const count = await scrollCount();
     await page.mouse.move(
-      first.x + first.width / 2 - (step * pitch * 3) / 30,
+      first.x + first.width / 2 - index * pitch,
       first.y + first.height / 2,
+      { steps: 10 },
     );
-    await page.evaluate(
-      () =>
-        new Promise<number>((resolve) =>
-          requestAnimationFrame(() => requestAnimationFrame(resolve)),
-        ),
-    );
-    const { index } = await lightbox(page);
-    if (seen.at(-1) !== index) {
-      seen.push(index);
-      expect(await slideOffset(page)).toBeLessThanOrEqual(1);
-    }
+    await expect.poll(scrollCount).toBeGreaterThan(count);
+    await page.clock.runFor(32);
+    expect((await lightbox(page)).index).toBe(index);
+    expect(await slideOffset(page)).toBeLessThanOrEqual(1);
     const ring = await ringBox(page);
     expect(ring?.left).toBeCloseTo(before.left, 0);
     expect(ring?.top).toBeCloseTo(before.top, 0);
   }
-  expect(seen).toEqual([0, 1, 2, 3]);
   expect(requested).toEqual([]);
   await page.mouse.up();
+  await page.clock.runFor(1_000);
   await expect
     .poll(async () => {
       const { index } = await lightbox(page);
