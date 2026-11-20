@@ -35,9 +35,6 @@ export function carouselMotion(): World {
   vi.stubGlobal("matchMedia", (query: string) =>
     Object.assign(new EventTarget(), { matches: query.includes("fine") }),
   );
-  const snapping = document.createElement("style");
-  snapping.textContent = ".re-carousel { scroll-snap-type: x mandatory; }";
-  document.head.append(snapping);
   const viewport = document.createElement("div");
   for (let index = 0; index < count; index++) {
     const slide = document.createElement("div");
@@ -194,8 +191,7 @@ export function carouselMotion(): World {
       ].join("|"),
     teardown: () => {
       carousel.destroy();
-      document.head.replaceChildren();
-      document.body.replaceChildren();
+      viewport.remove();
       vi.unstubAllGlobals();
       vi.useRealTimers();
     },
