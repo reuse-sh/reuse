@@ -1,5 +1,11 @@
 # @reuse-sh/gallery
 
+## 0.0.7
+
+### Patch Changes
+
+- f63bcde: A window resize lays out the justified gallery and masonry in the same frame, before it paints. Both laid out on the next frame, so every resize showed one frame of the previous width's layout: masonry items off by a few pixels, and at a column or row break items in the wrong place.
+
 ## 0.0.6
 
 ### Patch Changes
