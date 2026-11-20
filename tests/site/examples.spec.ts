@@ -662,6 +662,39 @@ test("the panel style rolls its position digit in the paging direction", async (
   await expect(count).toHaveText("2 / 8");
 });
 
+test("the panel style fits the photo beside its card and above its sheet", async ({
+  page,
+}) => {
+  for (const [width, height] of [
+    [1280, 800],
+    [390, 844],
+  ]) {
+    await page.setViewportSize({ width, height });
+    await page.goto("/lightbox/controls/panel");
+    await page.locator('main a[href^="/images/marble"]').nth(1).click();
+    const image = page.locator(".re-lightbox-image").nth(1);
+    await expect(image).toBeVisible();
+    await expect(page.locator("dialog[open]")).toHaveAttribute(
+      "data-phase",
+      "open",
+    );
+    const card = await page.locator(".re-lightbox-aside").boundingBox();
+    const photo = await image.boundingBox();
+    if (!card || !photo) throw new Error("Missing card or photo");
+    const sheet = width < 720;
+    const room = sheet ? { width, height: card.y } : { width: card.x, height };
+    const end = sheet ? photo.y + photo.height : photo.x + photo.width;
+    expect(
+      {
+        fills:
+          Math.max(photo.width / room.width, photo.height / room.height) > 0.75,
+        clear: end <= (sheet ? card.y : card.x) + 0.5,
+      },
+      `${width}px`,
+    ).toEqual({ fills: true, clear: true });
+  }
+});
+
 test("the panel style keeps a plain close button inside its card", async ({
   page,
 }) => {

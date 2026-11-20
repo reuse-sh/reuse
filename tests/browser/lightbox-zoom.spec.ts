@@ -275,6 +275,37 @@ test.describe("lightbox zoom with a mouse, wheel and trackpad", {
     expect(Math.round(box.x + box.width / 2 - panel.x / 2)).toBe(0);
   });
 
+  for (const [name, viewport, inset] of [
+    [
+      "beside a card inset from the window's edges",
+      { width: 1440, height: 900 },
+      ".re-lightbox-aside { top: 12px; right: 12px; bottom: 12px; height: auto; }",
+    ],
+    [
+      "above a sheet inset from the window's edges",
+      { width: 600, height: 900 },
+      ".re-lightbox-aside { right: 8px; bottom: 8px; left: 8px; width: auto; height: 200px; }",
+    ],
+  ] as const)
+    test(`a photo ${name} fits the room the panel leaves`, async ({ page }) => {
+      await page.setViewportSize(viewport);
+      await open(page, [[4000, 3000]], { aside: true });
+      await page.addStyleTag({ content: inset });
+      await page.setViewportSize({ ...viewport, height: viewport.height + 1 });
+      await page.setViewportSize(viewport);
+      const panel = await page.locator(".re-lightbox-aside").boundingBox();
+      if (!panel) throw new Error("Missing aside");
+      await expect
+        .poll(async () => {
+          const box = await photo(page);
+          return viewport.width < 720
+            ? Math.round(box.y + box.height) <= Math.round(panel.y)
+            : Math.round(box.x + box.width) <= Math.round(panel.x) &&
+                Math.round(box.width) === Math.round(panel.x - 64);
+        })
+        .toBe(true);
+    });
+
   test("a zoomed photo pans to the window's edges under the panel and the bottom room, with only close and zoom left", async ({
     page,
   }) => {
