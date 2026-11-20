@@ -495,6 +495,41 @@ describe("lightbox lifecycle", () => {
     expect(flags().canNext).toBe(true);
   });
 
+  it("notifies before a different photo becomes active", () => {
+    const controller = create({ history: false });
+    const transitions: number[][] = [];
+    controller.on("beforechange", (event) =>
+      transitions.push([
+        event.index,
+        event.nextIndex,
+        controller.getState().index,
+      ]),
+    );
+    controller.on("change", (event) => transitions.push([event.index]));
+    controller.open(gallery, 0);
+    controller.goTo(2);
+
+    expect(transitions).toEqual([[0, 2, 0], [2]]);
+  });
+
+  it("keeps the current photo when a beforechange listener closes the viewer", async () => {
+    const controller = create({ history: false });
+    const change = vi.fn();
+    let closing: Promise<void> | undefined;
+    controller.on("beforechange", () => {
+      closing = controller.close();
+    });
+    controller.on("change", change);
+    controller.open(gallery, 0);
+    controller.goTo(2);
+
+    expect(closing).toBeDefined();
+    expect(controller.getState().index).toBe(0);
+    await closing;
+    expect(controller.getState().isOpen).toBe(false);
+    expect(change).not.toHaveBeenCalled();
+  });
+
   it("copies its options, applies setOptions at the next open, and strings at once", async () => {
     const options: Parameters<typeof createLightbox>[0] = { history: false };
     const controller = createLightbox(options);

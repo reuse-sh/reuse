@@ -201,9 +201,14 @@ export interface LightboxCancelableEvent extends LightboxEvent {
   preventDefault(): void;
 }
 
+export interface LightboxBeforeChangeEvent extends LightboxEvent {
+  readonly nextIndex: number;
+}
+
 export interface LightboxEventMap {
   open: LightboxEvent;
   opened: LightboxEvent;
+  beforechange: LightboxBeforeChangeEvent;
   change: LightboxEvent;
   settle: LightboxEvent;
   beforeclose: LightboxCancelableEvent;
@@ -973,13 +978,25 @@ export function createLightbox<Item extends LightboxItem = LightboxItem>(
     for (const slot of session?.slots ?? []) slot.update?.(state);
   }
 
-  function emit(type: LightboxEventName, s: Session | null, cancelable = true) {
+  function emit(
+    type: LightboxEventName,
+    s: Session | null,
+    {
+      cancelable = true,
+      nextIndex,
+    }: { cancelable?: boolean; nextIndex?: number } = {},
+  ) {
     let prevented = false;
     const event: LightboxEvent = {
       type,
       index: state.index,
       slide: s?.slides[state.index] ?? null,
     };
+    if (type === "beforechange")
+      Object.defineProperty(event, "nextIndex", {
+        value: nextIndex,
+        enumerable: true,
+      });
     if (type === "beforeclose")
       Object.defineProperties(event, {
         cancelable: { value: cancelable, enumerable: true },
@@ -2360,8 +2377,29 @@ export function createLightbox<Item extends LightboxItem = LightboxItem>(
     startLoads(s);
   }
 
+  let notifyingBeforeChange = false;
+
+  function notifyBeforeChange(s: Session, nextIndex: number) {
+    if (notifyingBeforeChange) return true;
+    const previousIndex = state.index;
+    const previousItems = items;
+    notifyingBeforeChange = true;
+    try {
+      emit("beforechange", s, { nextIndex });
+    } finally {
+      notifyingBeforeChange = false;
+    }
+    return (
+      session === s &&
+      !state.isClosing &&
+      state.index === previousIndex &&
+      items === previousItems
+    );
+  }
+
   function activeChanged(s: Session, index: number, report = true) {
     if (session !== s || state.index === index || state.isClosing) return;
+    if (!notifyBeforeChange(s, index)) return;
     cancelAnimations(s);
     s.backdrop.style.opacity = "";
     const old = s.loaded.get(state.index);
@@ -4889,7 +4927,7 @@ export function createLightbox<Item extends LightboxItem = LightboxItem>(
     forcing = force;
     let prevented: boolean;
     try {
-      prevented = emit("beforeclose", s, !force) && !forcing;
+      prevented = emit("beforeclose", s, { cancelable: !force }) && !forcing;
     } finally {
       vetting = false;
       forcing = false;
@@ -4988,6 +5026,8 @@ export function createLightbox<Item extends LightboxItem = LightboxItem>(
       if (target < 0) target = from.indexOf(state.index - gap);
     }
     if (target < 0) target = clamp(state.index, 0, nextItems.length - 1);
+    if ((!kept || target !== state.index) && !notifyBeforeChange(s, target))
+      return;
     const slides = nextItems.map((item, j) => {
       const old = from[j];
       if (old < 0) return s.makeSlide();
