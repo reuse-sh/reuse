@@ -139,14 +139,20 @@ test("the classic preview's corner counter reads 1 / 8 on one line", async ({
   await page.locator('main a[href^="/images/marble"]').first().click();
   const counter = page.locator(".re-lightbox-counter");
   await expect(counter).toHaveText("1 / 8");
-  const parts = await counter.evaluate((element) =>
-    [...element.children].map((child) =>
-      Math.round(child.getBoundingClientRect().top),
-    ),
-  );
+  const parts = await counter.evaluate((element) => {
+    const bounds = element.getBoundingClientRect();
+    return [...element.children].map((child) => {
+      const { top, left, right } = child.getBoundingClientRect();
+      return {
+        top: Math.round(top),
+        leftInset: left - bounds.left,
+        rightInset: bounds.right - right,
+      };
+    });
+  });
   expect(parts).toHaveLength(3);
-  expect(new Set(parts).size).toBe(1);
+  expect(new Set(parts.map(({ top }) => top)).size).toBe(1);
   const box = await counter.boundingBox();
   expect(box?.height).toBe(40);
-  expect(box?.width).toBeGreaterThan(56);
+  expect([parts[0].leftInset, parts[2].rightInset]).toEqual([14, 14]);
 });

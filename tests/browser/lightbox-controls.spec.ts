@@ -979,6 +979,12 @@ test("a mouse drag on the strip keeps the ring still, opens each photo at once a
       first.x + first.width / 2 - (step * pitch * 3) / 30,
       first.y + first.height / 2,
     );
+    await page.evaluate(
+      () =>
+        new Promise<number>((resolve) =>
+          requestAnimationFrame(() => requestAnimationFrame(resolve)),
+        ),
+    );
     const { index } = await lightbox(page);
     if (seen.at(-1) !== index) {
       seen.push(index);
