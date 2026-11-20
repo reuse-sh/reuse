@@ -1283,10 +1283,15 @@ export function createLightbox<Item extends LightboxItem = LightboxItem>(
       bottom: Number.isFinite(room) ? room : 0,
     };
     const aside = s.aside && rendered(s.aside);
-    if (aside && aside.top > rect.top + 0.5)
-      kept.bottom = Math.max(kept.bottom, rect.bottom - aside.top);
-    else if (aside && rtl) kept.left = Math.max(0, aside.right - rect.left);
-    else if (aside) kept.right = Math.max(0, rect.right - aside.left);
+    if (aside) {
+      const above = width * Math.max(0, aside.top - rect.top);
+      const before = height * Math.max(0, aside.left - rect.left);
+      const after = height * Math.max(0, rect.right - aside.right);
+      if (above >= before && above >= after)
+        kept.bottom = Math.max(kept.bottom, rect.bottom - aside.top);
+      else if (after > before) kept.left = Math.max(0, aside.right - rect.left);
+      else kept.right = Math.max(0, rect.right - aside.left);
+    }
     s.room = kept;
     inset.left = Math.max(inset.left, kept.left);
     inset.right = Math.max(inset.right, kept.right);
