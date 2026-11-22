@@ -358,6 +358,7 @@ export function createCarousel(
   const observedSlides = new Set<HTMLElement>();
   const measured = new Map<Element, string | number>();
   let span = 0;
+  let gap = 0;
   let starts: number[] = [];
   let aligned: number[] = [];
   let anchor = 0;
@@ -1200,7 +1201,7 @@ export function createCarousel(
         const index =
           (current + direction * count + slides.length) % slides.length;
         const previous = (index - direction + slides.length) % slides.length;
-        distance += direction === 1 ? widths[previous] : widths[index];
+        distance += (direction === 1 ? widths[previous] : widths[index]) + gap;
         if (distance >= width) break;
         count++;
       }
@@ -1383,7 +1384,7 @@ export function createCarousel(
           : padding),
     );
     targets = aligned.map((target) => clamp(target, max));
-    const gap = Number.parseFloat(styles.columnGap) || 0;
+    gap = Number.parseFloat(styles.columnGap) || 0;
     const cycle = slides.length
       ? (starts.at(-1) ?? 0) - starts[0] + (widths.at(-1) ?? 0) + gap
       : 0;

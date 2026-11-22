@@ -155,6 +155,17 @@ describe("native carousel", () => {
     expect(carousel.getState().canNext).toBe(false);
   });
 
+  it("counts the gaps when a loop steps a page of variable widths", () => {
+    const { viewport } = fixture([300, 400, 400, 300, 300], 720, false, 24);
+    const carousel = createCarousel(viewport, { loop: true, group: "page" });
+    cleanups.push(carousel.destroy);
+    expect(carousel.getState().isLooping).toBe(true);
+    carousel.next();
+    expect(carousel.getState().index).toBe(2);
+    carousel.prev();
+    expect(carousel.getState().index).toBe(0);
+  });
+
   it("resolves percentage scroll padding against the scrollport", () => {
     const { viewport } = fixture([100, 100, 100, 100], 200);
     viewport.style.scrollPaddingInlineStart = "25%";
