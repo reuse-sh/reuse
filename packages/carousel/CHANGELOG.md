@@ -1,5 +1,11 @@
 # @reuse-sh/carousel
 
+## 0.2.1
+
+### Patch Changes
+
+- 3b28d2f: Count the gap between slides when a looping carousel with `group: "page"` steps a page, so slides of different widths are no longer skipped.
+
 ## 0.2.0
 
 ### Minor Changes
