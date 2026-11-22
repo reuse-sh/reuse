@@ -1,5 +1,12 @@
 # @reuse-sh/lightbox
 
+## 0.2.1
+
+### Patch Changes
+
+- Updated dependencies [3b28d2f]
+  - @reuse-sh/carousel@0.2.1
+
 ## 0.2.0
 
 ### Minor Changes
