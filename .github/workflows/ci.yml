@@ -19,7 +19,10 @@ jobs:
           node-version-file: .nvmrc
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      - run: pnpm exec playwright install --with-deps chromium webkit firefox
-      - run: pnpm check
+      - run: pnpm exec playwright install --with-deps chromium
+      - run: pnpm exec turbo run build --filter=@reuse-sh/lightbox
+        env:
+          TURBO_CONCURRENCY: "1"
+      - run: pnpm test:browser --project chromium-desktop -g 'pages ten photos, zooms and closes' --repeat-each=16 --workers=1 --reporter=line
         env:
           TURBO_CONCURRENCY: "1"

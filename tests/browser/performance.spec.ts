@@ -7,8 +7,25 @@ import {
   photo,
   safariPinch,
   swipe,
-  traceMainThread,
 } from "./harness";
+
+type Event = { name: string; ph: string; tid: number; pid: number; ts: number; dur?: number; tdur?: number; args?: { name?: string; data?: { type?: string } } };
+async function traceMainThread(page: Page) {
+  const browser = page.context().browser()!;
+  await browser.startTracing(page, { categories: ["disabled-by-default-devtools.timeline", "blink.user_timing"] });
+  return { stop: async () => {
+    const {traceEvents: events} = JSON.parse((await browser.stopTracing()).toString()) as { traceEvents: Event[] };
+    const main = events.filter(event => event.name === "thread_name" && event.args?.name === "CrRendererMain");
+    const tasks = events.filter(event => event.ph === "X" && event.name === "RunTask" && event.tdur !== undefined && main.some(thread => thread.pid === event.pid && thread.tid === event.tid));
+    const marks = events.filter(event => event.name.startsWith("probe:")).sort((a,b) => a.ts - b.ts);
+    for (const task of [...tasks].sort((a,b) => b.tdur! - a.tdur!).slice(0,5)) {
+      const children = events.filter(event => event.ph === "X" && event.name !== "RunTask" && event.tid === task.tid && event.pid === task.pid && event.ts >= task.ts && event.ts < task.ts + task.dur!);
+      console.log(JSON.stringify({ phase: marks.filter(mark => mark.ts <= task.ts).at(-1)?.name, task, children: children.sort((a,b) => (b.tdur ?? 0) - (a.tdur ?? 0)).slice(0, 12) }));
+    }
+    console.log("Peak renderer task:", Math.max(...tasks.map(event => event.tdur! / 1000)).toFixed(3), "ms");
+    return tasks.map(event => event.tdur! / 1000);
+  } };
+}
 
 const count = 11;
 const tiles = Array.from(
@@ -35,6 +52,7 @@ async function browseTenPhotos(
     Object.assign(window, { gallery });
   });
   await ready();
+  await page.evaluate(() => { performance.mark("probe:open"); });
   await page.locator("#gallery img").first().click();
   await page.waitForTimeout(500);
   const { width, height } = page.viewportSize() ?? { width: 0, height: 0 };
@@ -42,6 +60,7 @@ async function browseTenPhotos(
   // The swipe runs in the band above the 800px tall photo, where the next photo never passes
   // while the strip settles.
   const above = { x: middle.x, y: (height - 800) / 4 };
+  await page.evaluate(() => { performance.mark("probe:paging"); });
   for (let photo = 1; photo < count; photo++) {
     await swipe(
       page,
@@ -65,6 +84,7 @@ async function browseTenPhotos(
       { polling: "raf" },
     );
   }
+  await page.evaluate(() => { performance.mark("probe:zoom-in"); });
   const index = await page.evaluate(
     () =>
       (
@@ -84,11 +104,13 @@ async function browseTenPhotos(
         }
       ).gallery.getState().zoom.scale,
   );
+  await page.evaluate(() => { performance.mark("probe:zoom-out"); });
   for (let step = 0; step < 5; step++) {
     await ctrlWheel(page, middle, 40);
     await page.waitForTimeout(16);
   }
   await page.waitForTimeout(300);
+  await page.evaluate(() => { performance.mark("probe:close"); });
   await page.keyboard.press("Escape");
   await page.waitForTimeout(500);
   return { index, zoomed };

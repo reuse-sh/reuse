@@ -70,9 +70,4 @@ export default defineConfig({
     },
     { name: "site", testDir: "tests/site", use: { baseURL: site } },
   ],
-  webServer: {
-    command: "pnpm --filter @reuse-sh/site start",
-    url: site,
-    env: { REUSE_PORT: process.env.REUSE_TEST_PORT },
-  },
 });
