@@ -104,6 +104,7 @@ test.describe("lightbox performance", { tag: "@desktop" }, () => {
     );
     let tracing: Awaited<ReturnType<typeof traceMainThread>> | undefined;
     const { index, zoomed } = await browseTenPhotos(page, async () => {
+      await page.locator("#gallery img").first().hover();
       tracing = await traceMainThread(page);
     });
     const tasks = (await tracing?.stop()) ?? [];
