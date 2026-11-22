@@ -20,18 +20,15 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - run: pnpm exec playwright install --with-deps chromium webkit firefox
-      - run: pnpm lint && pnpm type-check && pnpm test && pnpm build
+      - id: prepare
+        run: pnpm lint && pnpm type-check && pnpm test && pnpm build
         env:
           TURBO_CONCURRENCY: "1"
       - name: Trace before ordinary browser tests
         run: pnpm test:browser tests/browser/performance.spec.ts --project chromium-desktop --grep @timing --repeat-each=3 --workers=1 --reporter=line
-        env:
-          REUSE_PROBE_HOVER: "1"
       - name: Run ordinary browser tests
-        if: always() && !cancelled()
+        if: always() && !cancelled() && steps.prepare.outcome == 'success'
         run: pnpm test:browser --grep-invert @timing
       - name: Trace after ordinary browser tests
-        if: always() && !cancelled()
+        if: always() && !cancelled() && steps.prepare.outcome == 'success'
         run: pnpm test:browser tests/browser/performance.spec.ts --project chromium-desktop --grep @timing --repeat-each=3 --workers=1 --reporter=line
-        env:
-          REUSE_PROBE_HOVER: "1"
