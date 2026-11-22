@@ -267,6 +267,7 @@ test.describe("lightbox performance", { tag: "@desktop" }, () => {
       },
       Array.from({ length: 1000 }, (_, index) => photo(index)),
     );
+    console.log("Opening elapsed:", opened.elapsed.toFixed(3), "ms");
     expect(opened.flying).toBe(true);
     expect(opened.elapsed).toBeLessThan(100);
     const { width, height } = page.viewportSize() ?? { width: 0, height: 0 };

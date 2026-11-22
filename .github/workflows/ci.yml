@@ -23,23 +23,31 @@ jobs:
       - run: pnpm exec turbo run build --filter=@reuse-sh/lightbox
         env:
           TURBO_CONCURRENCY: "1"
-      - name: Trace gesture order on the baseline
-        run: pnpm test:browser tests/browser/performance.spec.ts --project chromium-desktop --grep 'opens 1000 photos' --repeat-each=6 --workers=1 --reporter=line
-      - name: Move the gesture handler before carousel style writes
-        id: gesture_order
+      - name: Trace offset setup on the baseline
+        run: pnpm test:browser tests/browser/performance.spec.ts --project chromium-desktop --grep @timing --repeat-each=5 --workers=1 --reporter=line
+      - name: Configure the internal offset opt-out before creation
+        id: initial_offsets
         if: always() && !cancelled()
         run: |
           python3 - <<'PYCODE'
           from pathlib import Path
-          p = Path("packages/lightbox/src/index.ts")
-          s = p.read_text()
-          measure = s.index("        if (!s.pointers.size) measure(s);")
-          offset = s.index("      { signal },", measure)
-          p.write_text(s[:offset] + s[offset:].replace("      { signal },", "      { signal, capture: true },", 1))
+          carousel = Path("packages/carousel/src/index.ts")
+          source = carousel.read_text()
+          source = source.replace('  let publishesOffsets = true;', '  const publishesOffsets = Reflect.get(initialOptions, internalKey) !== "omitOffsets";')
+          start = source.index('    omitOffsets: () => {')
+          end = source.index('    },', start) + len('    },\n')
+          carousel.write_text(source[:start] + source[end:])
+          internal = Path("packages/carousel/src/internal.ts")
+          internal.write_text(internal.read_text().replace("  omitOffsets(): void;\n", ""))
+          lightbox = Path("packages/lightbox/src/index.ts")
+          source = lightbox.read_text()
+          start = source.index("  function connect(viewport:")
+          source = source[:start] + source[start:].replace("    const carousel = createCarousel(viewport, {", "    const options = {\n      [carouselInternals]: \"omitOffsets\",", 1).replace("    });", "    };\n    const carousel = createCarousel(viewport, options);", 1)
+          lightbox.write_text(source.replace("    internals?.omitOffsets?.();\n", ""))
           PYCODE
           pnpm exec turbo run build --filter=@reuse-sh/lightbox
         env:
           TURBO_CONCURRENCY: "1"
-      - name: Trace gesture order after capture
-        if: always() && !cancelled() && steps.gesture_order.outcome == 'success'
-        run: pnpm test:browser tests/browser/performance.spec.ts --project chromium-desktop --grep 'opens 1000 photos' --repeat-each=6 --workers=1 --reporter=line
+      - name: Trace opening with offsets disabled before creation
+        if: always() && !cancelled() && steps.initial_offsets.outcome == 'success'
+        run: pnpm test:browser tests/browser/performance.spec.ts --project chromium-desktop --grep @timing --repeat-each=5 --workers=1 --reporter=line
