@@ -30,7 +30,7 @@ jobs:
         if: always() && !cancelled()
         run: |
           sed -i '/await page.locator("#gallery img").first().hover();/a\      await page.evaluate(() => { const canvas = document.createElement("canvas").getContext("2d"); if (!canvas) throw new Error("Canvas unavailable"); canvas.font = "16px system-ui"; canvas.measureText("1 / 11"); });' tests/browser/performance.spec.ts
-          git diff --exit-code -- tests/browser/performance.spec.ts && exit 1
+          if git diff --quiet -- tests/browser/performance.spec.ts; then exit 1; fi
       - name: Trace opening after reading the fixture font
         if: always() && !cancelled() && steps.fixture_font.outcome == 'success'
         run: pnpm test:browser tests/browser/performance.spec.ts --project chromium-desktop -g 'pages ten photos, zooms and closes' --repeat-each=6 --workers=1 --reporter=line
