@@ -23,17 +23,14 @@ jobs:
       - run: pnpm exec turbo run build --filter=@reuse-sh/lightbox
         env:
           TURBO_CONCURRENCY: "1"
-      - name: Trace baseline pointer holds
-        run: pnpm test:browser tests/browser/performance.spec.ts --project chromium-desktop --grep @timing --repeat-each=5 --workers=1 --reporter=line
-      - name: Remove redundant pointer hold publication
-        id: pointer_hold
+      - name: Trace opening with a cold font
+        run: pnpm test:browser tests/browser/performance.spec.ts --project chromium-desktop -g 'pages ten photos, zooms and closes' --repeat-each=6 --workers=1 --reporter=line
+      - name: Prepare fixture font
+        id: fixture_font
         if: always() && !cancelled()
         run: |
-          sed -i '/^  function internalHold(/,/^  }/ s/^    schedule();$/    if (reason !== "pointer" || options.autoplay !== undefined) schedule();/' packages/carousel/src/index.ts
-          git diff --exit-code -- packages/carousel/src/index.ts && exit 1
-          pnpm exec turbo run build --filter=@reuse-sh/lightbox
-        env:
-          TURBO_CONCURRENCY: "1"
-      - name: Trace optimized pointer holds
-        if: always() && !cancelled() && steps.pointer_hold.outcome == 'success'
-        run: pnpm test:browser tests/browser/performance.spec.ts --project chromium-desktop --grep @timing --repeat-each=5 --workers=1 --reporter=line
+          sed -i '/await page.locator("#gallery img").first().hover();/a\      await page.evaluate(() => { const canvas = document.createElement("canvas").getContext("2d"); if (!canvas) throw new Error("Canvas unavailable"); canvas.font = "16px system-ui"; canvas.measureText("1 / 11"); });' tests/browser/performance.spec.ts
+          git diff --exit-code -- tests/browser/performance.spec.ts && exit 1
+      - name: Trace opening after reading the fixture font
+        if: always() && !cancelled() && steps.fixture_font.outcome == 'success'
+        run: pnpm test:browser tests/browser/performance.spec.ts --project chromium-desktop -g 'pages ten photos, zooms and closes' --repeat-each=6 --workers=1 --reporter=line
