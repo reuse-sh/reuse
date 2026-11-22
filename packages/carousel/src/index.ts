@@ -441,7 +441,8 @@ export function createCarousel(
   // Screen readers announce changes to a live region already in the page, not one inserted with its text.
   let silent = false;
   let catchesClicks = true;
-  let publishesOffsets = true;
+  const publishesOffsets =
+    Reflect.get(initialOptions, internalKey) !== "omitOffsets";
   const live = document.createElement("div");
   live.setAttribute("aria-live", "polite");
   live.setAttribute("aria-atomic", "true");
@@ -2082,11 +2083,6 @@ export function createCarousel(
     silence: () => {
       silent = true;
       live.remove();
-    },
-    omitOffsets: () => {
-      publishesOffsets = false;
-      for (const slide of slides)
-        slide.style.removeProperty("--re-carousel-offset");
     },
     passClicks: () => {
       catchesClicks = false;
