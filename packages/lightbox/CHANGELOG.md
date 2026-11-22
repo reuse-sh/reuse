@@ -1,5 +1,13 @@
 # @reuse-sh/lightbox
 
+## 0.2.2
+
+### Patch Changes
+
+- c3aec79: Keep large lightbox galleries responsive by skipping unused carousel effect offsets in the photo viewport.
+- Updated dependencies [c3aec79]
+  - @reuse-sh/carousel@0.2.2
+
 ## 0.2.1
 
 ### Patch Changes
