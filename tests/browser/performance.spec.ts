@@ -5,7 +5,6 @@ import {
   ctrlWheel,
   mount,
   photo,
-  recordFrames,
   safariPinch,
   swipe,
   traceMainThread,
@@ -96,16 +95,16 @@ async function browseTenPhotos(
 }
 
 test.describe("lightbox performance", { tag: "@desktop" }, () => {
-  test("pages ten photos, zooms and closes without a long frame or task", async ({
-    page,
-    browserName,
-  }) => {
+  test("pages ten photos, zooms and closes without a long main-thread task", {
+    tag: "@timing",
+  }, async ({ page, browserName }) => {
     test.skip(
       browserName !== "chromium",
       "Main-thread time is traced in Chromium.",
     );
     let tracing: Awaited<ReturnType<typeof traceMainThread>> | undefined;
     const { index, zoomed } = await browseTenPhotos(page, async () => {
+      await page.locator("#gallery img").first().hover();
       tracing = await traceMainThread(page);
     });
     const tasks = (await tracing?.stop()) ?? [];
@@ -115,13 +114,12 @@ test.describe("lightbox performance", { tag: "@desktop" }, () => {
     expect(tasks.filter((time) => time > 20)).toEqual([]);
   });
 
-  test("opens 1000 photos within 100ms, keeps at most 7 slide images and pages ten without a long frame or reading each slide", async ({
-    page,
-    browserName,
-  }) => {
+  test("opens 1000 photos within 100ms, keeps at most 7 slide images and pages ten without a long main-thread task or reading each slide", {
+    tag: "@timing",
+  }, async ({ page, browserName }) => {
     test.skip(
       browserName !== "chromium",
-      "Frame budgets are measured in Chromium.",
+      "Main-thread time is traced in Chromium.",
     );
     const reads = await countGeometryReads(page, ".re-lightbox-slide");
     await mount(
@@ -170,7 +168,7 @@ test.describe("lightbox performance", { tag: "@desktop" }, () => {
     // Chromium spends a 33-50ms frame on the first mouse move into a page, with 11 photos as with 1000.
     await page.mouse.move(above.x + 200, above.y);
     await page.waitForTimeout(600);
-    const recording = await recordFrames(page);
+    const tracing = await traceMainThread(page);
     await reads.start();
     for (let step = 0; step < 10; step++) {
       await swipe(
@@ -181,9 +179,9 @@ test.describe("lightbox performance", { tag: "@desktop" }, () => {
       );
       await page.waitForTimeout(400);
     }
-    const { frames } = await recording.stop();
+    const tasks = await tracing.stop();
     const slidesRead = await reads.read();
-    const { index, most } = await page.evaluate(() => {
+    const { index, most, offset } = await page.evaluate(() => {
       const scope = window as unknown as {
         lightbox: { getState(): { index: number } };
         record: { most: number; on: boolean };
@@ -192,13 +190,17 @@ test.describe("lightbox performance", { tag: "@desktop" }, () => {
       return {
         index: scope.lightbox.getState().index,
         most: scope.record.most,
+        offset: document
+          .querySelector<HTMLElement>(".re-lightbox-slide")
+          ?.style.getPropertyValue("--re-carousel-offset"),
       };
     });
     expect(index).toBe(10);
     expect(most).toBeLessThanOrEqual(7);
+    expect(offset).toBe("");
     expect(slidesRead.elements).toBeLessThanOrEqual(1);
-    expect(frames.length).toBeGreaterThan(100);
-    expect(frames.filter((frame) => frame > 20)).toEqual([]);
+    expect(tasks.length).toBeGreaterThan(100);
+    expect(tasks.filter((time) => time > 20)).toEqual([]);
   });
 
   test("pages ten photos and zooms with base.css alone", async ({ page }) => {

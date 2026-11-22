@@ -48,6 +48,7 @@ function dialog() {
 
 beforeEach(() => {
   reduced = false;
+  history.scrollRestoration = "auto";
   const styles = document.createElement("style");
   styles.textContent =
     ".re-lightbox-viewport { scroll-snap-type: x mandatory; }";
@@ -103,7 +104,8 @@ beforeEach(() => {
   });
 });
 
-afterEach(() => {
+afterEach(async () => {
+  vi.useRealTimers();
   for (const controller of controllers) controller.destroy();
   controllers = [];
   document.head.replaceChildren();
@@ -111,7 +113,10 @@ afterEach(() => {
   document.body.removeAttribute("style");
   vi.restoreAllMocks();
   vi.unstubAllGlobals();
-  vi.useRealTimers();
+  await vi.waitFor(() => {
+    expect(history.state?.reuseLightbox).toBeUndefined();
+    expect(history.scrollRestoration).toBe("auto");
+  });
 });
 
 describe("lightbox lifecycle", () => {
@@ -2008,8 +2013,6 @@ describe("lightbox public API", () => {
   });
 
   it("adds one history entry, closes on Back and goes back after another close", async () => {
-    // Earlier tests' destroy() sent backs that land on a later task.
-    await new Promise((resolve) => setTimeout(resolve, 10));
     const controller = create();
     controller.open(gallery, 0);
     const opened = history.length;
@@ -2036,7 +2039,6 @@ describe("lightbox public API", () => {
   });
 
   it("reports closed once the back lands, or before a new open, and stops when a closed listener destroys", async () => {
-    await new Promise((resolve) => setTimeout(resolve, 10));
     const controller = create();
     const events: string[] = [];
     for (const type of ["open", "closed"] as const)
@@ -2062,7 +2064,6 @@ describe("lightbox public API", () => {
   });
 
   it("waits for a back on its way instead of closing the next lightbox or going back twice", async () => {
-    await new Promise((resolve) => setTimeout(resolve, 10));
     const first = create();
     const second = create();
     first.open(gallery, 0);

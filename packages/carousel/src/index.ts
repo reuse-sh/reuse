@@ -441,6 +441,8 @@ export function createCarousel(
   // Screen readers announce changes to a live region already in the page, not one inserted with its text.
   let silent = false;
   let catchesClicks = true;
+  const publishesOffsets =
+    Reflect.get(initialOptions, internalKey) !== "omitOffsets";
   const live = document.createElement("div");
   live.setAttribute("aria-live", "polite");
   live.setAttribute("aria-atomic", "true");
@@ -493,15 +495,17 @@ export function createCarousel(
   }
 
   function render() {
+    if (!span && !publishesOffsets) return;
     const current = position() + stretch;
     slides.forEach((slide, index) => {
       const size = widths[index] ?? 0;
       const cycle = laps.get(slide) ?? lapOf(index, current);
-      const offset = size
-        ? Math.round(
-            ((aligned[index] + cycle * span - current) / size) * 1000,
-          ) / 1000
-        : 0;
+      const offset =
+        publishesOffsets && size
+          ? Math.round(
+              ((aligned[index] + cycle * span - current) / size) * 1000,
+            ) / 1000
+          : 0;
       const key = `${cycle}|${offset}`;
       if (rendered.get(slide) === key) return;
       rendered.set(slide, key);
@@ -512,7 +516,8 @@ export function createCarousel(
         );
         slide.setAttribute("data-re-cycle", String(cycle));
       }
-      slide.style.setProperty("--re-carousel-offset", String(offset));
+      if (publishesOffsets)
+        slide.style.setProperty("--re-carousel-offset", String(offset));
     });
   }
 

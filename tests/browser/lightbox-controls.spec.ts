@@ -862,18 +862,39 @@ test("thumbnails clicked 60ms apart while the strip centers each one open every 
 }, async ({ page }) => {
   await open(page, { thumbnails: "bottom" }, { count: 8, manualClock: true });
   const strip = page.locator(".re-lightbox-thumbnails");
-  const scrollLeft = () => strip.evaluate((element) => element.scrollLeft);
-  for (const index of [3, 1, 5, 2, 6]) {
-    const box = await page
+  for (const index of [2, 3, 4, 5, 7]) {
+    const motion = await strip.evaluateHandle((strip, index) => {
+      const thumb = strip.querySelectorAll("button")[index];
+      const offset = new Promise<number>((resolve) => {
+        thumb.addEventListener(
+          "click",
+          () => {
+            const before = strip.scrollLeft;
+            const scrolled = () => {
+              if (strip.scrollLeft === before) return;
+              strip.removeEventListener("scroll", scrolled);
+              const track = strip.getBoundingClientRect();
+              const item = thumb.getBoundingClientRect();
+              resolve(
+                Math.abs(
+                  item.left + item.width / 2 - (track.left + track.width / 2),
+                ),
+              );
+            };
+            strip.addEventListener("scroll", scrolled);
+          },
+          { once: true },
+        );
+      });
+      return { offset };
+    }, index);
+    await page
       .getByRole("button", { name: `Show image ${index + 1}`, exact: true })
-      .boundingBox();
-    if (!box) throw new Error(`Thumbnail ${index + 1} has no box.`);
-    const before = await scrollLeft();
-    await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2);
+      .click({ force: true, scroll: "none" });
     expect((await lightbox(page)).index).toBe(index);
     await page.clock.runFor(60);
-    expect(await scrollLeft()).not.toBe(before);
-    expect(await offCenter(page)).toBeGreaterThan(2);
+    expect(await motion.evaluate(({ offset }) => offset)).toBeGreaterThan(2);
+    await motion.dispose();
   }
 });
 
@@ -1002,7 +1023,9 @@ test("a mouse drag on the strip keeps the ring still, opens each photo at once a
     { thumbnails: "bottom" },
     { count: 20, srcset: true, manualClock: true },
   );
-  await expect.poll(() => requested.length).toBeGreaterThan(0);
+  await expect
+    .poll(() => requested.some((url) => url.includes("photo-1-")))
+    .toBe(true);
   const before = await ringBox(page);
   if (!before) throw new Error("No ring");
   expect(Math.abs(before.x)).toBeLessThanOrEqual(1);

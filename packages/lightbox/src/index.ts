@@ -3850,11 +3850,13 @@ export function createLightbox<Item extends LightboxItem = LightboxItem>(
   }
 
   function connect(viewport: HTMLDivElement, strings: LightboxStrings) {
-    const carousel = createCarousel(viewport, {
+    const options = {
+      [carouselInternals]: "omitOffsets",
       drag: true,
       loop: looping(),
       strings: { carouselRole: strings.carouselRole },
-    });
+    };
+    const carousel = createCarousel(viewport, options);
     carousel.subscribe((value) => {
       if (
         !syncingCarousel &&
