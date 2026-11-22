@@ -15,7 +15,7 @@
     "principles": "node scripts/sync-principles.mjs",
     "lint:fix": "biome check --write .",
     "test:browser": "playwright test",
-    "check": "pnpm lint && pnpm type-check && pnpm test && pnpm build && pnpm test:browser",
+    "check": "pnpm lint && pnpm type-check && pnpm test && pnpm build && pnpm test:browser --grep-invert @timing && pnpm test:browser --grep @timing --workers=1",
     "changeset": "changeset",
     "version-packages": "changeset version && pnpm install --lockfile-only",
     "release": "pnpm build && changeset publish"

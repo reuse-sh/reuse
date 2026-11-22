@@ -95,10 +95,9 @@ async function browseTenPhotos(
 }
 
 test.describe("lightbox performance", { tag: "@desktop" }, () => {
-  test("pages ten photos, zooms and closes without a long frame or task", async ({
-    page,
-    browserName,
-  }) => {
+  test("pages ten photos, zooms and closes without a long main-thread task", {
+    tag: "@timing",
+  }, async ({ page, browserName }) => {
     test.skip(
       browserName !== "chromium",
       "Main-thread time is traced in Chromium.",
@@ -114,10 +113,9 @@ test.describe("lightbox performance", { tag: "@desktop" }, () => {
     expect(tasks.filter((time) => time > 20)).toEqual([]);
   });
 
-  test("opens 1000 photos within 100ms, keeps at most 7 slide images and pages ten without a long main-thread task or reading each slide", async ({
-    page,
-    browserName,
-  }) => {
+  test("opens 1000 photos within 100ms, keeps at most 7 slide images and pages ten without a long main-thread task or reading each slide", {
+    tag: "@timing",
+  }, async ({ page, browserName }) => {
     test.skip(
       browserName !== "chromium",
       "Main-thread time is traced in Chromium.",
