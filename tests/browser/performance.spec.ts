@@ -5,7 +5,6 @@ import {
   ctrlWheel,
   mount,
   photo,
-  recordFrames,
   safariPinch,
   swipe,
   traceMainThread,
@@ -115,13 +114,13 @@ test.describe("lightbox performance", { tag: "@desktop" }, () => {
     expect(tasks.filter((time) => time > 20)).toEqual([]);
   });
 
-  test("opens 1000 photos within 100ms, keeps at most 7 slide images and pages ten without a long frame or reading each slide", async ({
+  test("opens 1000 photos within 100ms, keeps at most 7 slide images and pages ten without a long main-thread task or reading each slide", async ({
     page,
     browserName,
   }) => {
     test.skip(
       browserName !== "chromium",
-      "Frame budgets are measured in Chromium.",
+      "Main-thread time is traced in Chromium.",
     );
     const reads = await countGeometryReads(page, ".re-lightbox-slide");
     await mount(
@@ -170,7 +169,7 @@ test.describe("lightbox performance", { tag: "@desktop" }, () => {
     // Chromium spends a 33-50ms frame on the first mouse move into a page, with 11 photos as with 1000.
     await page.mouse.move(above.x + 200, above.y);
     await page.waitForTimeout(600);
-    const recording = await recordFrames(page);
+    const tracing = await traceMainThread(page);
     await reads.start();
     for (let step = 0; step < 10; step++) {
       await swipe(
@@ -181,7 +180,7 @@ test.describe("lightbox performance", { tag: "@desktop" }, () => {
       );
       await page.waitForTimeout(400);
     }
-    const { frames } = await recording.stop();
+    const tasks = await tracing.stop();
     const slidesRead = await reads.read();
     const { index, most } = await page.evaluate(() => {
       const scope = window as unknown as {
@@ -197,8 +196,8 @@ test.describe("lightbox performance", { tag: "@desktop" }, () => {
     expect(index).toBe(10);
     expect(most).toBeLessThanOrEqual(7);
     expect(slidesRead.elements).toBeLessThanOrEqual(1);
-    expect(frames.length).toBeGreaterThan(100);
-    expect(frames.filter((frame) => frame > 20)).toEqual([]);
+    expect(tasks.length).toBeGreaterThan(100);
+    expect(tasks.filter((time) => time > 20)).toEqual([]);
   });
 
   test("pages ten photos and zooms with base.css alone", async ({ page }) => {

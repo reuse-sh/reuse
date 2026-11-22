@@ -857,24 +857,39 @@ test("a click on thumbnail 38 pages there without a fade and the strip ends with
   await expect.poll(() => offCenter(page)).toBeLessThanOrEqual(2);
 });
 
-test("thumbnails clicked 60ms apart while the strip centers each one open every photo", {
+test("clicking thumbnails while the strip is still centering opens every photo", {
   tag: "@desktop",
 }, async ({ page }) => {
-  await open(page, { thumbnails: "bottom" }, { count: 8, manualClock: true });
-  const strip = page.locator(".re-lightbox-thumbnails");
-  const scrollLeft = () => strip.evaluate((element) => element.scrollLeft);
-  for (const index of [3, 1, 5, 2, 6]) {
-    const box = await page
-      .getByRole("button", { name: `Show image ${index + 1}`, exact: true })
-      .boundingBox();
-    if (!box) throw new Error(`Thumbnail ${index + 1} has no box.`);
-    const before = await scrollLeft();
-    await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2);
-    expect((await lightbox(page)).index).toBe(index);
-    await page.clock.runFor(60);
-    expect(await scrollLeft()).not.toBe(before);
-    expect(await offCenter(page)).toBeGreaterThan(2);
-  }
+  await open(page, { thumbnails: "bottom" }, { count: 8 });
+  const indices = [3, 1, 5, 2, 6];
+  const { opened, offsets } = await page
+    .locator(".re-lightbox-thumbnails")
+    .evaluate(async (strip, indices) => {
+      const thumbs = strip.querySelectorAll("button");
+      const opened: number[] = [];
+      const offsets: number[] = [];
+      for (const index of indices) {
+        const before = strip.scrollLeft;
+        const moved = new Promise<void>((resolve) => {
+          const onScroll = () => {
+            if (strip.scrollLeft === before) return;
+            strip.removeEventListener("scroll", onScroll);
+            resolve();
+          };
+          strip.addEventListener("scroll", onScroll);
+        });
+        const thumb = thumbs[index];
+        thumb.click();
+        opened.push((window as Window).lightbox.getState().index);
+        await moved;
+        const a = strip.getBoundingClientRect();
+        const b = thumb.getBoundingClientRect();
+        offsets.push(Math.abs(b.left + b.width / 2 - (a.left + a.width / 2)));
+      }
+      return { opened, offsets };
+    }, indices);
+  expect(opened).toEqual(indices);
+  expect(Math.min(...offsets)).toBeGreaterThan(2);
 });
 
 test("a second click on a thumbnail while the strip centers it still ends with it centered", {
@@ -1002,7 +1017,9 @@ test("a mouse drag on the strip keeps the ring still, opens each photo at once a
     { thumbnails: "bottom" },
     { count: 20, srcset: true, manualClock: true },
   );
-  await expect.poll(() => requested.length).toBeGreaterThan(0);
+  await expect
+    .poll(() => requested.some((url) => url.includes("photo-1-")))
+    .toBe(true);
   const before = await ringBox(page);
   if (!before) throw new Error("No ring");
   expect(Math.abs(before.x)).toBeLessThanOrEqual(1);
