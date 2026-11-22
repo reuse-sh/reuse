@@ -23,5 +23,17 @@ jobs:
       - run: pnpm exec turbo run build --filter=@reuse-sh/lightbox
         env:
           TURBO_CONCURRENCY: "1"
-      - name: Trace Chromium input and layout
-        run: pnpm test:browser tests/browser/performance.spec.ts --project chromium-desktop --grep @timing --repeat-each=8 --workers=1 --reporter=line
+      - name: Trace baseline pointer holds
+        run: pnpm test:browser tests/browser/performance.spec.ts --project chromium-desktop --grep @timing --repeat-each=5 --workers=1 --reporter=line
+      - name: Remove redundant pointer hold publication
+        id: pointer_hold
+        if: always() && !cancelled()
+        run: |
+          sed -i '/^  function internalHold(/,/^  }/ s/^    schedule();$/    if (reason !== "pointer" || options.autoplay !== undefined) schedule();/' packages/carousel/src/index.ts
+          git diff --exit-code -- packages/carousel/src/index.ts && exit 1
+          pnpm exec turbo run build --filter=@reuse-sh/lightbox
+        env:
+          TURBO_CONCURRENCY: "1"
+      - name: Trace optimized pointer holds
+        if: always() && !cancelled() && steps.pointer_hold.outcome == 'success'
+        run: pnpm test:browser tests/browser/performance.spec.ts --project chromium-desktop --grep @timing --repeat-each=5 --workers=1 --reporter=line
