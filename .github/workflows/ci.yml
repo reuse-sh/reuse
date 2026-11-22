@@ -23,14 +23,23 @@ jobs:
       - run: pnpm exec turbo run build --filter=@reuse-sh/lightbox
         env:
           TURBO_CONCURRENCY: "1"
-      - name: Trace opening with a cold font
-        run: pnpm test:browser tests/browser/performance.spec.ts --project chromium-desktop -g 'pages ten photos, zooms and closes' --repeat-each=6 --workers=1 --reporter=line
-      - name: Prepare fixture font
-        id: fixture_font
+      - name: Trace gesture order on the baseline
+        run: pnpm test:browser tests/browser/performance.spec.ts --project chromium-desktop --grep 'opens 1000 photos' --repeat-each=6 --workers=1 --reporter=line
+      - name: Move the gesture handler before carousel style writes
+        id: gesture_order
         if: always() && !cancelled()
         run: |
-          sed -i '/await page.locator("#gallery img").first().hover();/a\      await page.evaluate(() => { const canvas = document.createElement("canvas").getContext("2d"); if (!canvas) throw new Error("Canvas unavailable"); canvas.font = "16px system-ui"; canvas.measureText("1 / 11"); });' tests/browser/performance.spec.ts
-          if git diff --quiet -- tests/browser/performance.spec.ts; then exit 1; fi
-      - name: Trace opening after reading the fixture font
-        if: always() && !cancelled() && steps.fixture_font.outcome == 'success'
-        run: pnpm test:browser tests/browser/performance.spec.ts --project chromium-desktop -g 'pages ten photos, zooms and closes' --repeat-each=6 --workers=1 --reporter=line
+          python3 - <<'PYCODE'
+          from pathlib import Path
+          p = Path("packages/lightbox/src/index.ts")
+          s = p.read_text()
+          measure = s.index("        if (!s.pointers.size) measure(s);")
+          offset = s.index("      { signal },", measure)
+          p.write_text(s[:offset] + s[offset:].replace("      { signal },", "      { signal, capture: true },", 1))
+          PYCODE
+          pnpm exec turbo run build --filter=@reuse-sh/lightbox
+        env:
+          TURBO_CONCURRENCY: "1"
+      - name: Trace gesture order after capture
+        if: always() && !cancelled() && steps.gesture_order.outcome == 'success'
+        run: pnpm test:browser tests/browser/performance.spec.ts --project chromium-desktop --grep 'opens 1000 photos' --repeat-each=6 --workers=1 --reporter=line
