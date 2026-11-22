@@ -857,39 +857,45 @@ test("a click on thumbnail 38 pages there without a fade and the strip ends with
   await expect.poll(() => offCenter(page)).toBeLessThanOrEqual(2);
 });
 
-test("clicking thumbnails while the strip is still centering opens every photo", {
+test("thumbnails clicked 60ms apart while the strip centers each one open every photo", {
   tag: "@desktop",
 }, async ({ page }) => {
-  await open(page, { thumbnails: "bottom" }, { count: 8 });
-  const indices = [3, 1, 5, 2, 6];
-  const { opened, offsets } = await page
-    .locator(".re-lightbox-thumbnails")
-    .evaluate(async (strip, indices) => {
-      const thumbs = strip.querySelectorAll("button");
-      const opened: number[] = [];
-      const offsets: number[] = [];
-      for (const index of indices) {
-        const before = strip.scrollLeft;
-        const moved = new Promise<void>((resolve) => {
-          const onScroll = () => {
-            if (strip.scrollLeft === before) return;
-            strip.removeEventListener("scroll", onScroll);
-            resolve();
-          };
-          strip.addEventListener("scroll", onScroll);
-        });
-        const thumb = thumbs[index];
-        thumb.click();
-        opened.push((window as Window).lightbox.getState().index);
-        await moved;
-        const a = strip.getBoundingClientRect();
-        const b = thumb.getBoundingClientRect();
-        offsets.push(Math.abs(b.left + b.width / 2 - (a.left + a.width / 2)));
-      }
-      return { opened, offsets };
-    }, indices);
-  expect(opened).toEqual(indices);
-  expect(Math.min(...offsets)).toBeGreaterThan(2);
+  await open(page, { thumbnails: "bottom" }, { count: 8, manualClock: true });
+  const strip = page.locator(".re-lightbox-thumbnails");
+  for (const index of [2, 3, 4, 5, 7]) {
+    const motion = await strip.evaluateHandle((strip, index) => {
+      const thumb = strip.querySelectorAll("button")[index];
+      const offset = new Promise<number>((resolve) => {
+        thumb.addEventListener(
+          "click",
+          () => {
+            const before = strip.scrollLeft;
+            const scrolled = () => {
+              if (strip.scrollLeft === before) return;
+              strip.removeEventListener("scroll", scrolled);
+              const track = strip.getBoundingClientRect();
+              const item = thumb.getBoundingClientRect();
+              resolve(
+                Math.abs(
+                  item.left + item.width / 2 - (track.left + track.width / 2),
+                ),
+              );
+            };
+            strip.addEventListener("scroll", scrolled);
+          },
+          { once: true },
+        );
+      });
+      return { offset };
+    }, index);
+    await page
+      .getByRole("button", { name: `Show image ${index + 1}`, exact: true })
+      .click({ force: true, scroll: "none" });
+    expect((await lightbox(page)).index).toBe(index);
+    await page.clock.runFor(60);
+    expect(await motion.evaluate(({ offset }) => offset)).toBeGreaterThan(2);
+    await motion.dispose();
+  }
 });
 
 test("a second click on a thumbnail while the strip centers it still ends with it centered", {

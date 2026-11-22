@@ -182,7 +182,7 @@ test.describe("lightbox performance", { tag: "@desktop" }, () => {
     }
     const tasks = await tracing.stop();
     const slidesRead = await reads.read();
-    const { index, most } = await page.evaluate(() => {
+    const { index, most, offset } = await page.evaluate(() => {
       const scope = window as unknown as {
         lightbox: { getState(): { index: number } };
         record: { most: number; on: boolean };
@@ -191,10 +191,14 @@ test.describe("lightbox performance", { tag: "@desktop" }, () => {
       return {
         index: scope.lightbox.getState().index,
         most: scope.record.most,
+        offset: document
+          .querySelector<HTMLElement>(".re-lightbox-slide")
+          ?.style.getPropertyValue("--re-carousel-offset"),
       };
     });
     expect(index).toBe(10);
     expect(most).toBeLessThanOrEqual(7);
+    expect(offset).toBe("");
     expect(slidesRead.elements).toBeLessThanOrEqual(1);
     expect(tasks.length).toBeGreaterThan(100);
     expect(tasks.filter((time) => time > 20)).toEqual([]);

@@ -3863,7 +3863,9 @@ export function createLightbox<Item extends LightboxItem = LightboxItem>(
       )
         activeChanged(session, value.index);
     });
-    carouselInternalsOf(carousel)?.silence();
+    const internals = carouselInternalsOf(carousel);
+    internals?.silence();
+    internals?.omitOffsets?.();
     return carousel;
   }
 
