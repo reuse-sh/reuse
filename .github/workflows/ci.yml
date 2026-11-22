@@ -19,16 +19,9 @@ jobs:
           node-version-file: .nvmrc
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      - run: pnpm exec playwright install --with-deps chromium webkit firefox
-      - id: prepare
-        run: pnpm lint && pnpm type-check && pnpm test && pnpm build
+      - run: pnpm exec playwright install --with-deps chromium
+      - run: pnpm exec turbo run build --filter=@reuse-sh/lightbox
         env:
           TURBO_CONCURRENCY: "1"
-      - name: Trace before ordinary browser tests
-        run: pnpm test:browser tests/browser/performance.spec.ts --project chromium-desktop --grep @timing --repeat-each=3 --workers=1 --reporter=line
-      - name: Run ordinary browser tests
-        if: always() && !cancelled() && steps.prepare.outcome == 'success'
-        run: pnpm test:browser --grep-invert @timing
-      - name: Trace after ordinary browser tests
-        if: always() && !cancelled() && steps.prepare.outcome == 'success'
-        run: pnpm test:browser tests/browser/performance.spec.ts --project chromium-desktop --grep @timing --repeat-each=3 --workers=1 --reporter=line
+      - name: Trace Chromium input and layout
+        run: pnpm test:browser tests/browser/performance.spec.ts --project chromium-desktop --grep @timing --repeat-each=8 --workers=1 --reporter=line

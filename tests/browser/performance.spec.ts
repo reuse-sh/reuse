@@ -27,6 +27,11 @@ async function traceMainThread(page: Page) {
       "disabled-by-default-devtools.timeline",
       "blink.user_timing",
       "toplevel",
+      "devtools.timeline",
+      "v8.execute",
+      "input",
+      "blink",
+      "cc",
     ],
   });
   return {
@@ -271,6 +276,16 @@ test.describe("lightbox performance", { tag: "@desktop" }, () => {
     await page.waitForTimeout(600);
     const tracing = await traceMainThread(page);
     await reads.start();
+    await page.evaluate(() => {
+      performance.mark("probe:paging");
+      for (const type of ["pointerdown", "pointerup", "pointermove"]) {
+        document.addEventListener(
+          type,
+          () => performance.mark(`probe:${type}`),
+          { capture: true },
+        );
+      }
+    });
     for (let step = 0; step < 10; step++) {
       await swipe(
         page,
