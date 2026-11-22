@@ -23,6 +23,13 @@ jobs:
       - run: pnpm exec turbo run build --filter=@reuse-sh/lightbox
         env:
           TURBO_CONCURRENCY: "1"
-      - run: pnpm test:browser tests/browser/performance.spec.ts --project chromium-desktop -g 'pages ten photos, zooms and closes' --repeat-each=16 --workers=1 --reporter=line
+      - name: Trace first pointer input
+        run: pnpm test:browser tests/browser/performance.spec.ts --project chromium-desktop -g 'pages ten photos, zooms and closes' --repeat-each=10 --workers=1 --reporter=line
         env:
           TURBO_CONCURRENCY: "1"
+      - name: Trace after pointer hover
+        if: always() && !cancelled()
+        run: pnpm test:browser tests/browser/performance.spec.ts --project chromium-desktop -g 'pages ten photos, zooms and closes' --repeat-each=10 --workers=1 --reporter=line
+        env:
+          TURBO_CONCURRENCY: "1"
+          REUSE_PROBE_HOVER: "1"

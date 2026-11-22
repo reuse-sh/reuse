@@ -12,7 +12,7 @@ import {
 type Event = { name: string; ph: string; tid: number; pid: number; ts: number; dur?: number; tdur?: number; args?: { name?: string; data?: { type?: string } } };
 async function traceMainThread(page: Page) {
   const browser = page.context().browser()!;
-  await browser.startTracing(page, { categories: ["disabled-by-default-devtools.timeline", "blink.user_timing"] });
+  await browser.startTracing(page, { categories: ["disabled-by-default-devtools.timeline", "blink.user_timing", "toplevel"] });
   return { stop: async () => {
     const {traceEvents: events} = JSON.parse((await browser.stopTracing()).toString()) as { traceEvents: Event[] };
     const main = events.filter(event => event.name === "thread_name" && event.args?.name === "CrRendererMain");
@@ -51,9 +51,15 @@ async function browseTenPhotos(
     );
     Object.assign(window, { gallery });
   });
+  const tile = page.locator("#gallery img").first();
+  if (process.env.REUSE_PROBE_HOVER) await tile.hover();
+  await page.evaluate(() => {
+    document.addEventListener("pointermove", () => performance.mark("probe:first-move"), { once: true, capture: true });
+    document.addEventListener("click", () => performance.mark("probe:tile-click"), { once: true, capture: true });
+  });
   await ready();
   await page.evaluate(() => { performance.mark("probe:open"); });
-  await page.locator("#gallery img").first().click();
+  await tile.click();
   await page.waitForTimeout(500);
   const { width, height } = page.viewportSize() ?? { width: 0, height: 0 };
   const middle = { x: width / 2, y: height / 2 };
