@@ -19,17 +19,19 @@ jobs:
           node-version-file: .nvmrc
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      - run: pnpm exec playwright install --with-deps chromium
-      - run: pnpm exec turbo run build --filter=@reuse-sh/lightbox
+      - run: pnpm exec playwright install --with-deps chromium webkit firefox
+      - run: pnpm lint && pnpm type-check && pnpm test && pnpm build
         env:
           TURBO_CONCURRENCY: "1"
-      - name: Trace first pointer input
-        run: pnpm test:browser tests/browser/performance.spec.ts --project chromium-desktop -g 'pages ten photos, zooms and closes' --repeat-each=10 --workers=1 --reporter=line
+      - name: Trace before ordinary browser tests
+        run: pnpm test:browser tests/browser/performance.spec.ts --project chromium-desktop --grep @timing --repeat-each=3 --workers=1 --reporter=line
         env:
-          TURBO_CONCURRENCY: "1"
-      - name: Trace after pointer hover
+          REUSE_PROBE_HOVER: "1"
+      - name: Run ordinary browser tests
         if: always() && !cancelled()
-        run: pnpm test:browser tests/browser/performance.spec.ts --project chromium-desktop -g 'pages ten photos, zooms and closes' --repeat-each=10 --workers=1 --reporter=line
+        run: pnpm test:browser --grep-invert @timing
+      - name: Trace after ordinary browser tests
+        if: always() && !cancelled()
+        run: pnpm test:browser tests/browser/performance.spec.ts --project chromium-desktop --grep @timing --repeat-each=3 --workers=1 --reporter=line
         env:
-          TURBO_CONCURRENCY: "1"
           REUSE_PROBE_HOVER: "1"
