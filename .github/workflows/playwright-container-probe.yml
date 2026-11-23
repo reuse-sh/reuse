@@ -10,7 +10,7 @@ jobs:
     timeout-minutes: 5
     container:
       image: mcr.microsoft.com/playwright:v1.63.0-resolute
-      options: --ipc=host --user 1000:1000
+      options: --ipc=host
     steps:
       - uses: useblacksmith/checkout@v1
       - uses: pnpm/action-setup@v6
@@ -20,6 +20,7 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - run: |
+          chown "$(id -u):$(id -g)" /github/home
           id -u
           stat -c '%u' /github/home
           pnpm exec playwright screenshot --browser=firefox about:blank /tmp/reuse-firefox.png
