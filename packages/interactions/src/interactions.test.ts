@@ -264,6 +264,83 @@ describe("floating tooltip", () => {
     expect(popup.hidden).toBe(false);
     expect(popup.textContent).toBe("First");
   });
+  it("opens a delayed tooltip at the last point on its trigger", () => {
+    reduced = true;
+    const { first, popup } = setup();
+    pointer(first, "pointerover", 110, 100);
+    vi.advanceTimersByTime(20);
+    pointer(first, "pointermove", 170, 110);
+    vi.advanceTimersByTime(20);
+    expect(popup.hidden).toBe(false);
+    expect(popup.style.transform).toBe(
+      "translate3d(120px, 78px, 0) rotate(0deg)",
+    );
+  });
+  it.each(["hidden", "inert", "disabled", "reparented"])(
+    "never opens a delayed tooltip for a trigger that became %s",
+    (change) => {
+      reduced = true;
+      const { root, first, popup } = setup();
+      pointer(first, "pointerover", 160, 100);
+      if (change === "reparented") document.body.append(first);
+      else if (change === "disabled") first.disabled = true;
+      else root.setAttribute(change, "");
+      vi.advanceTimersByTime(40);
+      expect(popup.hidden).toBe(true);
+      expect(first.getAttribute("aria-describedby")).toBe("original");
+    },
+  );
+  it("hides a tooltip when its live trigger moves out of the group", async () => {
+    const { first, popup } = setup();
+    pointer(first, "pointerover", 160, 100);
+    vi.advanceTimersByTime(40);
+    expect(popup.hidden).toBe(false);
+    document.body.append(first);
+    await Promise.resolve();
+    expect(popup.hidden).toBe(true);
+    expect(first.getAttribute("aria-describedby")).toBe("original");
+  });
+  it("closes on time while the pointer crosses unrelated elements in the group", () => {
+    reduced = true;
+    const { root, first, popup } = setup();
+    const other = root.appendChild(document.createElement("span"));
+    pointer(first, "pointerover", 160, 80);
+    vi.advanceTimersByTime(40);
+    pointer(first, "pointerout");
+    vi.advanceTimersByTime(60);
+    pointer(other, "pointerout");
+    vi.advanceTimersByTime(20);
+    expect(popup.hidden).toBe(true);
+  });
+  it("refreshes the live hint when the content option changes", () => {
+    const { first, popup, controller } = setup();
+    pointer(first, "pointerover", 160, 100);
+    vi.advanceTimersByTime(40);
+    expect(popup.textContent).toBe("First");
+    controller.update({ content: () => "Updated" });
+    expect(popup.textContent).toBe("Updated");
+  });
+  it("gives a nested trigger one owner and returns it to the outer group on teardown", () => {
+    reduced = true;
+    const { root, first, second, popup } = setup();
+    const inner = root.appendChild(document.createElement("div"));
+    inner.append(second);
+    const group = createFloatingTooltip(inner, { delay: 0 });
+    controllers.push(group);
+    pointer(second, "pointerover");
+    vi.advanceTimersByTime(100);
+    const visible = document.querySelectorAll('[role="tooltip"]:not([hidden])');
+    expect(visible).toHaveLength(1);
+    expect(visible[0].textContent).toBe("Second");
+    expect(second.getAttribute("aria-describedby")).toBe(visible[0].id);
+    group.destroy();
+    expect(second.hasAttribute("aria-describedby")).toBe(false);
+    pointer(second, "pointerover");
+    vi.advanceTimersByTime(40);
+    expect(popup.hidden).toBe(false);
+    expect(popup.textContent).toBe("Second");
+    expect(first.getAttribute("aria-describedby")).toBe("original");
+  });
   it("anchors keyboard focus, clamps viewport edges, and dismisses on Escape", () => {
     reduced = true;
     const { first, popup } = setup();

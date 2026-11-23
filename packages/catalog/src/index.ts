@@ -1412,11 +1412,15 @@ export const libraries: Library[] = [
     principles: [
       [
         "Share one popup",
-        "Nearby triggers share one tooltip, so moving along a toolbar slides it across instead of closing and reopening it.",
+        "Nearby triggers share one tooltip, so moving along a toolbar slides it across instead of closing and reopening it. The closest group that matches a trigger owns it.",
       ],
       [
         "Follow the pointer on a spring",
         "It trails the pointer with a little weight, below and to the right, and never jumps.",
+      ],
+      [
+        "Fade out from the current tilt",
+        "When the pointer leaves, the tooltip fades as its tilt settles. Returning during the fade brings it back from its current opacity.",
       ],
       [
         "Anchor to keyboard focus",
@@ -1433,6 +1437,10 @@ export const libraries: Library[] = [
       [
         "Hold only a hint",
         "It describes its trigger through aria-describedby and never holds controls or required instructions.",
+      ],
+      [
+        "Release unavailable triggers",
+        "A trigger that becomes unavailable cannot open a delayed hint, and an already visible hint closes when its trigger is removed, hidden, or disabled.",
       ],
       [
         "Stay inside the window",
@@ -1462,7 +1470,7 @@ export const libraries: Library[] = [
       ],
       [
         "delay, closeDelay",
-        "The wait before the first hint shows, 150 ms, and before the last one hides, 80 ms. Moving between triggers swaps at once.",
+        "The wait before the first hint shows, 150 ms, and before the last one begins to fade, 80 ms. Moving between triggers swaps at once.",
       ],
       [
         "content(trigger)",
