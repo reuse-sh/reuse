@@ -1453,6 +1453,14 @@ export const libraries: Library[] = [
         "Binds every trigger inside root to one shared popup. Returns refresh, dismiss, update(options) and destroy.",
       ],
       [
+        "positionFloatingTooltip({ reference, size, viewport, side?, offset?, padding? })",
+        "Places a measured popup relative to a point and keeps it within the viewport. The point can combine the pointer on one axis with a toolbar edge on the other.",
+      ],
+      [
+        "createFloatingTooltipMotion(window, render)",
+        "Drives the same motion when your framework owns the popup and its events. setPosition(point, { snapX?, snapY?, tilt? }) sets the target. Pass tilt: { max, direction? } for pointer updates, resetTilt() for keyboard focus, and stop() when the popup closes.",
+      ],
+      [
         "data-re-tooltip, data-re-tooltip-template",
         "Marks a trigger. The first holds the hint as text, the second names the id of a template to clone.",
       ],

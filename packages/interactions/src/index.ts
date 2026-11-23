@@ -13,3 +13,5 @@ export {
   type FloatingTooltipOptions,
   type FloatingTooltipSide,
 } from "./tooltip.js";
+export { createFloatingTooltipMotion } from "./tooltip-motion.js";
+export { positionFloatingTooltip } from "./tooltip-position.js";

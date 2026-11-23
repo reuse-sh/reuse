@@ -1,3 +1,9 @@
+import { createFloatingTooltipMotion } from "./tooltip-motion.js";
+import {
+  clampTooltipPosition,
+  positionFloatingTooltip,
+} from "./tooltip-position.js";
+
 export type FloatingTooltipSide =
   | "top"
   | "bottom"
@@ -26,11 +32,6 @@ type Settings = Required<Omit<FloatingTooltipOptions, "track">> &
 type Point = { x: number; y: number };
 type Size = { width: number; height: number };
 
-const FOLLOW = { stiffness: 700, damping: 45, mass: 0.4 };
-const LEAN = { stiffness: 280, damping: 28, mass: 0.4 };
-const LEAN_SCALE = 0.45;
-const LEAN_DEADZONE = 0.45;
-const LEAN_SETTLE_MS = 40;
 const FADE_OUT_MS = 160;
 const MORPH_MS = 220;
 const SWAP_MS = 180;
@@ -78,9 +79,6 @@ function originFor(side: FloatingTooltipSide) {
   return { x, y };
 }
 
-const clamp = (value: number, limit: number) =>
-  Math.max(-limit, Math.min(limit, value));
-
 const sameContent = (a: Content, b: Content) =>
   typeof a === "string" || typeof b === "string" ? a === b : a.isEqualNode(b);
 
@@ -116,17 +114,9 @@ export function createFloatingTooltip(
   let displayedSize = size;
   let origin = originFor(opts.side);
   let point = { x: 0, y: 0 };
-  let current = { x: 0, y: 0 };
-  let velocity = { x: 0, y: 0 };
   let target = { x: 0, y: 0 };
-  let lean = 0;
-  let leanVelocity = 0;
-  let leanTarget = 0;
-  let frame = 0;
-  let lastTime = 0;
   let openTimer: number | undefined;
   let closeTimer: number | undefined;
-  let leanTimer: number | undefined;
   let destroyed = false;
   let swap: Animation | undefined;
   let morph: Animation | undefined;
@@ -153,12 +143,6 @@ export function createFloatingTooltip(
     !keyboard &&
     !reduced?.matches &&
     opts.track?.x !== "anchor";
-  const resetLean = () => {
-    view.clearTimeout(leanTimer);
-    lean = 0;
-    leanVelocity = 0;
-    leanTarget = 0;
-  };
   const restoreDescription = () => {
     if (!trigger) return;
     if (describedBy === null) trigger.removeAttribute("aria-describedby");
@@ -193,22 +177,12 @@ export function createFloatingTooltip(
     const style = view.getComputedStyle(element);
     return style.display !== "none" && style.visibility !== "hidden";
   };
-  const fit = ({ x, y }: Point, { width, height }: Size) => {
-    const padding = opts.viewportPadding;
-    return {
-      x: Math.min(
-        Math.max(padding, x),
-        Math.max(padding, view.innerWidth - width - padding),
-      ),
-      y: Math.min(
-        Math.max(padding, y),
-        Math.max(padding, view.innerHeight - height - padding),
-      ),
-    };
-  };
-  const render = () => {
+  const viewport = () => ({ width: view.innerWidth, height: view.innerHeight });
+  const fit = (position: Point, bounds: Size) =>
+    clampTooltipPosition(position, bounds, viewport(), opts.viewportPadding);
+  const render = ({ x, y, tilt } = motion.getFrame()) => {
     const { width, height } = displayedSize;
-    const radians = (lean * Math.PI) / 180;
+    const radians = (tilt * Math.PI) / 180;
     const sin = Math.sin(radians);
     const cos = Math.cos(radians);
     const ox = width * origin.x;
@@ -224,64 +198,24 @@ export function createFloatingTooltip(
       Math.min(0, width * sin) +
       Math.min(0, height * cos);
     const placed = fit(
-      { x: current.x + left, y: current.y + top },
+      { x: x + left, y: y + top },
       {
         width: width * Math.abs(cos) + height * Math.abs(sin),
         height: height * Math.abs(cos) + width * Math.abs(sin),
       },
     );
-    popup.style.transform = `translate3d(${placed.x - left}px, ${placed.y - top}px, 0) rotate(${lean}deg)`;
+    popup.style.transform = `translate3d(${placed.x - left}px, ${placed.y - top}px, 0) rotate(${tilt}deg)`;
   };
-  const unsettled = () =>
-    Math.abs(target.x - current.x) +
-      Math.abs(target.y - current.y) +
-      Math.abs(velocity.x) +
-      Math.abs(velocity.y) >
-      0.15 || Math.abs(leanTarget - lean) + Math.abs(leanVelocity) > 0.01;
-  const animate = (time: number) => {
-    frame = 0;
-    if (destroyed || popup.hidden) return;
+  const motion = createFloatingTooltipMotion(view, (next) => {
+    if (popup.hidden) return;
     if (
       !trigger?.isConnected ||
       !root.contains(trigger) ||
       trigger.closest("[hidden],[inert]")
     )
       return dismiss();
-    const elapsed = Math.min(0.032, (time - (lastTime || time - 16)) / 1000);
-    lastTime = time;
-    const steps = Math.ceil(elapsed / 0.005);
-    const step = elapsed / steps;
-    for (let index = 0; index < steps; index++) {
-      for (const axis of ["x", "y"] as const) {
-        const acceleration =
-          (FOLLOW.stiffness * (target[axis] - current[axis]) -
-            FOLLOW.damping * velocity[axis]) /
-          FOLLOW.mass;
-        velocity[axis] += acceleration * step;
-        current[axis] += velocity[axis] * step;
-      }
-      const leanAcceleration =
-        (LEAN.stiffness * (leanTarget - lean) - LEAN.damping * leanVelocity) /
-        LEAN.mass;
-      leanVelocity += leanAcceleration * step;
-      lean += leanVelocity * step;
-    }
-    if (unsettled()) {
-      render();
-      frame = view.requestAnimationFrame(animate);
-    } else {
-      current = { ...target };
-      velocity = { x: 0, y: 0 };
-      lean = leanTarget;
-      leanVelocity = 0;
-      render();
-    }
-  };
-  const run = () => {
-    if (frame || popup.hidden) return;
-    lastTime = 0;
-    frame = view.requestAnimationFrame(animate);
-  };
+    render(next);
+  });
   const measure = () => {
     if (morph) return size;
     const style = view.getComputedStyle(popup);
@@ -292,12 +226,10 @@ export function createFloatingTooltip(
     displayedSize = size;
     return size;
   };
-  const position = (snap = false) => {
+  const position = (snap = false, followsPointer = false) => {
     if (!trigger || popup.hidden) return;
     const rect = trigger.getBoundingClientRect();
     const side = opts.side;
-    const offset = opts.sideOffset;
-    const { width, height } = size;
     const anchor = {
       x: rect.left + rect.width / 2,
       y: rect.top + rect.height / 2,
@@ -310,41 +242,23 @@ export function createFloatingTooltip(
     }
     const x = keyboard || opts.track?.x === "anchor" ? anchor.x : point.x;
     const y = keyboard || opts.track?.y === "anchor" ? anchor.y : point.y;
-    const dx =
-      side === "left" || side.endsWith("-left")
-        ? -width - offset
-        : side === "right" || side.endsWith("-right")
-          ? offset
-          : -width / 2;
-    const dy = side.startsWith("top")
-      ? -height - offset
-      : side.startsWith("bottom")
-        ? offset
-        : -height / 2;
-    target = fit({ x: x + dx, y: y + dy }, size);
-    if (snap || reduced?.matches) {
-      view.cancelAnimationFrame(frame);
-      frame = 0;
-      velocity = { x: 0, y: 0 };
-      current = { ...target };
-      if (!tilting()) resetLean();
-      render();
-      if (unsettled()) run();
-    } else run();
-  };
-  const impulse = (deltaX: number) => {
-    if (Math.abs(deltaX) < LEAN_DEADZONE) return;
-    const sign = opts.side.startsWith("top") ? -1 : 1;
-    leanTarget = clamp(
-      lean * 0.35 + clamp(deltaX * LEAN_SCALE * sign, opts.tilt),
-      opts.tilt,
-    );
-    view.clearTimeout(leanTimer);
-    leanTimer = view.setTimeout(() => {
-      leanTarget = 0;
-      run();
-    }, LEAN_SETTLE_MS);
-    run();
+    target = positionFloatingTooltip({
+      reference: { x, y },
+      size,
+      viewport: viewport(),
+      side,
+      offset: opts.sideOffset,
+      padding: opts.viewportPadding,
+    });
+    const immediate = snap || reduced?.matches;
+    motion.setPosition(target, {
+      snapX: immediate,
+      snapY: immediate,
+      tilt:
+        followsPointer && tilting()
+          ? { max: opts.tilt, direction: side.startsWith("top") ? -1 : 1 }
+          : undefined,
+    });
   };
   const finishMorph = () => {
     morph = undefined;
@@ -416,14 +330,12 @@ export function createFloatingTooltip(
   const dismiss = () => {
     cancelOpen();
     view.clearTimeout(closeTimer);
-    view.cancelAnimationFrame(frame);
-    frame = 0;
+    motion.stop();
     swap?.cancel();
     morph?.cancel();
     fade?.animation.cancel();
     fade = undefined;
     finishMorph();
-    resetLean();
     popup.hidden = true;
     restoreDescription();
     trigger = null;
@@ -479,7 +391,7 @@ export function createFloatingTooltip(
       restoreDescription();
       trigger = next;
       keyboard = isKeyboard;
-      if (!tilting()) resetLean();
+      if (!tilting()) motion.resetTilt();
       describedBy = next.getAttribute("aria-describedby");
       next.setAttribute(
         "aria-describedby",
@@ -487,7 +399,7 @@ export function createFloatingTooltip(
       );
       popup.hidden = false;
       if (!wasOpen) {
-        resetLean();
+        motion.resetTilt();
         shown = null;
       }
       const changed = change(content, wasOpen);
@@ -538,9 +450,7 @@ export function createFloatingTooltip(
       return;
     point = { x: event.clientX, y: event.clientY };
     if (pending) return;
-    const previousX = target.x;
-    position();
-    if (tilting()) impulse(target.x - previousX);
+    position(false, true);
   };
   const scheduleClose = () => {
     if (popup.hidden) return dismiss();
@@ -652,7 +562,7 @@ export function createFloatingTooltip(
       opts = settle(given);
       applyClassName();
       applyPlacementStyles();
-      if (!tilting()) resetLean();
+      if (!tilting()) motion.resetTilt();
       refresh();
     },
     destroy() {
