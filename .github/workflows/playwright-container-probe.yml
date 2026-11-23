@@ -1,0 +1,26 @@
+name: Playwright container probe
+on:
+  push:
+    branches: [probe/playwright-container-user]
+permissions:
+  contents: read
+jobs:
+  launch:
+    runs-on: blacksmith-2vcpu-ubuntu-2604
+    timeout-minutes: 5
+    container:
+      image: mcr.microsoft.com/playwright:v1.63.0-resolute
+      options: --ipc=host --user 1000:1000
+    steps:
+      - uses: useblacksmith/checkout@v1
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: |
+          id -u
+          stat -c '%u' /github/home
+          pnpm exec playwright screenshot --browser=firefox about:blank /tmp/reuse-firefox.png
+          test -s /tmp/reuse-firefox.png
