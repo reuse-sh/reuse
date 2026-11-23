@@ -228,6 +228,25 @@ describe("floating tooltip", () => {
     popup.style.height = "20px";
     return { root, first, second, popup, controller };
   }
+  it("clears a live tilt when reduced motion is enabled", () => {
+    const media = new EventTarget();
+    Object.defineProperty(media, "matches", { get: () => reduced });
+    vi.stubGlobal("matchMedia", () => media);
+    const { first, popup } = setup();
+    pointer(first, "pointerover", 160, 80);
+    vi.advanceTimersByTime(40);
+    pointer(first, "pointermove", 200, 80);
+    vi.advanceTimersByTime(32);
+    expect(popup.style.transform).not.toContain("rotate(0deg)");
+
+    reduced = true;
+    media.dispatchEvent(new Event("change"));
+
+    expect(popup.style.transform).toBe(
+      "translate3d(150px, 48px, 0) rotate(0deg)",
+    );
+  });
+
   it("shares content across triggers, follows the pointer, and restores descriptions", () => {
     reduced = true;
     const { first, second, popup, controller } = setup();
