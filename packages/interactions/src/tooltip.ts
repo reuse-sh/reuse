@@ -23,17 +23,21 @@ export interface FloatingTooltipOptions {
 type Content = string | Node;
 type Settings = Required<Omit<FloatingTooltipOptions, "track">> &
   Pick<FloatingTooltipOptions, "track">;
+type Point = { x: number; y: number };
+type Size = { width: number; height: number };
 
 const FOLLOW = { stiffness: 700, damping: 45, mass: 0.4 };
 const LEAN = { stiffness: 280, damping: 28, mass: 0.4 };
 const LEAN_SCALE = 0.45;
 const LEAN_DEADZONE = 0.45;
 const LEAN_SETTLE_MS = 40;
+const FADE_OUT_MS = 160;
 const MORPH_MS = 220;
 const SWAP_MS = 180;
 const EASE = "cubic-bezier(0.33, 1, 0.68, 1)";
 
 let tooltipId = 0;
+const scopes = new WeakMap<Element, Set<() => string>>();
 
 function defaultContent(trigger: HTMLElement): Content {
   const id = trigger.getAttribute("data-re-tooltip-template");
@@ -66,16 +70,12 @@ function settle(options: FloatingTooltipOptions): Settings {
 function originFor(side: FloatingTooltipSide) {
   const x =
     side === "left" || side.endsWith("-left")
-      ? "right"
+      ? 1
       : side === "right" || side.endsWith("-right")
-        ? "left"
-        : "center";
-  const y = side.startsWith("top")
-    ? "bottom"
-    : side.startsWith("bottom")
-      ? "top"
-      : "center";
-  return `${x} ${y}`;
+        ? 0
+        : 0.5;
+  const y = side.startsWith("top") ? 1 : side.startsWith("bottom") ? 0 : 0.5;
+  return { x, y };
 }
 
 const clamp = (value: number, limit: number) =>
@@ -105,6 +105,7 @@ export function createFloatingTooltip(
   let extraClasses: string[] = [];
   const reduced = view.matchMedia?.("(prefers-reduced-motion: reduce)");
   let trigger: HTMLElement | null = null;
+  let pending: HTMLElement | null = null;
   let owner: number | undefined;
   const foreign = (event: PointerEvent) =>
     owner !== undefined && event.pointerId !== owner;
@@ -112,6 +113,8 @@ export function createFloatingTooltip(
   let keyboard = false;
   let shown: Content | null = null;
   let size = { width: 0, height: 0 };
+  let displayedSize = size;
+  let origin = originFor(opts.side);
   let point = { x: 0, y: 0 };
   let current = { x: 0, y: 0 };
   let velocity = { x: 0, y: 0 };
@@ -127,17 +130,23 @@ export function createFloatingTooltip(
   let destroyed = false;
   let swap: Animation | undefined;
   let morph: Animation | undefined;
+  let fade: { animation: Animation; closing: boolean } | undefined;
 
   const applyClassName = () => {
     popup.classList.remove(...extraClasses);
     extraClasses = opts.className.split(/\s+/).filter(Boolean);
     popup.classList.add(...extraClasses);
   };
-  const applyOrigin = () => {
-    popup.style.transformOrigin = originFor(opts.side);
+  const applyPlacementStyles = () => {
+    origin = originFor(opts.side);
+    popup.style.transformOrigin = `${origin.x * 100}% ${origin.y * 100}%`;
+    popup.style.setProperty(
+      "--re-tooltip-viewport-padding",
+      `${opts.viewportPadding}px`,
+    );
   };
   applyClassName();
-  applyOrigin();
+  applyPlacementStyles();
 
   const tilting = () =>
     opts.tilt > 0 &&
@@ -155,8 +164,73 @@ export function createFloatingTooltip(
     if (describedBy === null) trigger.removeAttribute("aria-describedby");
     else trigger.setAttribute("aria-describedby", describedBy);
   };
+  const findTrigger = (element: Element) => {
+    for (
+      let scope: Element | null = element;
+      scope && scope !== root;
+      scope = scope.parentElement
+    ) {
+      const selectors = scopes.get(scope);
+      if (!selectors) continue;
+      for (const selector of selectors) {
+        const nested = element.closest(selector());
+        if (nested && scope.contains(nested)) return null;
+      }
+    }
+    const next = element.closest<HTMLElement>(opts.selector);
+    return next && root.contains(next) ? next : null;
+  };
+  const canShow = (element: HTMLElement) => {
+    if (
+      !element.isConnected ||
+      findTrigger(element) !== element ||
+      element.matches(':disabled,[aria-disabled="true"]') ||
+      element.closest("[hidden],[inert]")
+    )
+      return false;
+    if (typeof element.checkVisibility === "function")
+      return element.checkVisibility({ visibilityProperty: true });
+    const style = view.getComputedStyle(element);
+    return style.display !== "none" && style.visibility !== "hidden";
+  };
+  const fit = ({ x, y }: Point, { width, height }: Size) => {
+    const padding = opts.viewportPadding;
+    return {
+      x: Math.min(
+        Math.max(padding, x),
+        Math.max(padding, view.innerWidth - width - padding),
+      ),
+      y: Math.min(
+        Math.max(padding, y),
+        Math.max(padding, view.innerHeight - height - padding),
+      ),
+    };
+  };
   const render = () => {
-    popup.style.transform = `translate3d(${current.x}px, ${current.y}px, 0) rotate(${lean}deg)`;
+    const { width, height } = displayedSize;
+    const radians = (lean * Math.PI) / 180;
+    const sin = Math.sin(radians);
+    const cos = Math.cos(radians);
+    const ox = width * origin.x;
+    const oy = height * origin.y;
+    const left =
+      ox * (1 - cos) +
+      oy * sin +
+      Math.min(0, width * cos) +
+      Math.min(0, -height * sin);
+    const top =
+      oy * (1 - cos) -
+      ox * sin +
+      Math.min(0, width * sin) +
+      Math.min(0, height * cos);
+    const placed = fit(
+      { x: current.x + left, y: current.y + top },
+      {
+        width: width * Math.abs(cos) + height * Math.abs(sin),
+        height: height * Math.abs(cos) + width * Math.abs(sin),
+      },
+    );
+    popup.style.transform = `translate3d(${placed.x - left}px, ${placed.y - top}px, 0) rotate(${lean}deg)`;
   };
   const unsettled = () =>
     Math.abs(target.x - current.x) +
@@ -167,7 +241,11 @@ export function createFloatingTooltip(
   const animate = (time: number) => {
     frame = 0;
     if (destroyed || popup.hidden) return;
-    if (!trigger?.isConnected || trigger.closest("[hidden],[inert]"))
+    if (
+      !trigger?.isConnected ||
+      !root.contains(trigger) ||
+      trigger.closest("[hidden],[inert]")
+    )
       return dismiss();
     const elapsed = Math.min(0.032, (time - (lastTime || time - 16)) / 1000);
     lastTime = time;
@@ -211,6 +289,7 @@ export function createFloatingTooltip(
       width: Number.parseFloat(style.width) || 0,
       height: Number.parseFloat(style.height) || 0,
     };
+    displayedSize = size;
     return size;
   };
   const position = (snap = false) => {
@@ -218,7 +297,6 @@ export function createFloatingTooltip(
     const rect = trigger.getBoundingClientRect();
     const side = opts.side;
     const offset = opts.sideOffset;
-    const padding = opts.viewportPadding;
     const { width, height } = size;
     const anchor = {
       x: rect.left + rect.width / 2,
@@ -243,16 +321,7 @@ export function createFloatingTooltip(
       : side.startsWith("bottom")
         ? offset
         : -height / 2;
-    target = {
-      x: Math.min(
-        Math.max(padding, x + dx),
-        Math.max(padding, view.innerWidth - width - padding),
-      ),
-      y: Math.min(
-        Math.max(padding, y + dy),
-        Math.max(padding, view.innerHeight - height - padding),
-      ),
-    };
+    target = fit({ x: x + dx, y: y + dy }, size);
     if (snap || reduced?.matches) {
       view.cancelAnimationFrame(frame);
       frame = 0;
@@ -279,6 +348,7 @@ export function createFloatingTooltip(
   };
   const finishMorph = () => {
     morph = undefined;
+    displayedSize = size;
     body.style.width = "";
   };
   const setContent = (content: Content) => {
@@ -311,6 +381,7 @@ export function createFloatingTooltip(
       (Math.abs(from.width - size.width) > 0.5 ||
         Math.abs(from.height - size.height) > 0.5)
     ) {
+      displayedSize = from;
       body.style.width = view.getComputedStyle(body).width;
       const animation = popup.animate(
         [
@@ -329,20 +400,28 @@ export function createFloatingTooltip(
       );
       morph = animation;
       const done = () => {
-        if (morph === animation) finishMorph();
+        if (morph !== animation) return;
+        finishMorph();
+        render();
       };
       animation.addEventListener("finish", done);
       animation.addEventListener("cancel", done);
     }
     return true;
   };
-  const dismiss = () => {
+  const cancelOpen = () => {
     view.clearTimeout(openTimer);
+    pending = null;
+  };
+  const dismiss = () => {
+    cancelOpen();
     view.clearTimeout(closeTimer);
     view.cancelAnimationFrame(frame);
     frame = 0;
     swap?.cancel();
     morph?.cancel();
+    fade?.animation.cancel();
+    fade = undefined;
     finishMorph();
     resetLean();
     popup.hidden = true;
@@ -350,27 +429,51 @@ export function createFloatingTooltip(
     trigger = null;
     owner = undefined;
   };
+  const keepOpen = () => {
+    view.clearTimeout(closeTimer);
+    if (fade?.closing) {
+      fade.closing = false;
+      fade.animation.reverse();
+    }
+  };
+  const close = () => {
+    if (popup.hidden || reduced?.matches || typeof popup.animate !== "function")
+      return dismiss();
+    if (fade) {
+      if (!fade.closing) {
+        fade.closing = true;
+        fade.animation.reverse();
+      }
+      return;
+    }
+    const animation = popup.animate(
+      [{ opacity: view.getComputedStyle(popup).opacity }, { opacity: 0 }],
+      { duration: FADE_OUT_MS, easing: "ease-out", fill: "forwards" },
+    );
+    fade = { animation, closing: true };
+    animation.onfinish = () => {
+      if (fade?.animation !== animation) return;
+      if (fade.closing) dismiss();
+      else {
+        fade = undefined;
+        animation.cancel();
+      }
+    };
+  };
   const open = (
     next: HTMLElement,
     isKeyboard: boolean,
     client?: { x: number; y: number },
   ) => {
-    if (
-      destroyed ||
-      next.matches(':disabled,[aria-disabled="true"]') ||
-      next.closest("[hidden],[inert]")
-    )
-      return;
-    view.clearTimeout(openTimer);
-    view.clearTimeout(closeTimer);
+    if (destroyed) return;
+    cancelOpen();
+    keepOpen();
     if (client) point = client;
     const show = () => {
-      if (!next.isConnected || destroyed) return;
+      pending = null;
+      if (!canShow(next)) return dismiss();
       const content = resolveContent(next);
-      if (content === null) {
-        if (!popup.hidden) dismiss();
-        return;
-      }
+      if (content === null) return dismiss();
       const wasOpen = !popup.hidden;
       const previous = { ...target };
       restoreDescription();
@@ -412,42 +515,48 @@ export function createFloatingTooltip(
         );
       }
     };
-    if (popup.hidden && !isKeyboard && opts.delay > 0)
+    if (popup.hidden && !isKeyboard && opts.delay > 0) {
+      pending = next;
       openTimer = view.setTimeout(show, opts.delay);
-    else show();
+    } else show();
   };
   const find = (event: Event) =>
-    event.target instanceof view.Element
-      ? event.target.closest<HTMLElement>(opts.selector)
-      : null;
+    event.target instanceof view.Element ? findTrigger(event.target) : null;
   const over = (event: PointerEvent) => {
     if (event.pointerType === "touch") return;
     if (foreign(event) && !event.isTrusted) return;
     const next = find(event);
-    if (!next || !root.contains(next)) return;
+    if (!next || next === pending || !canShow(next)) return;
     owner = event.pointerId;
-    if (next === trigger) view.clearTimeout(closeTimer);
+    if (next === trigger) keepOpen();
     else open(next, false, { x: event.clientX, y: event.clientY });
   };
   const move = (event: PointerEvent) => {
-    if (event.pointerType === "touch" || keyboard || !trigger) return;
-    if (foreign(event)) return;
+    if (event.pointerType === "touch" || foreign(event)) return;
+    const active = pending ?? (keyboard ? null : trigger);
+    if (!(event.target instanceof view.Node) || !active?.contains(event.target))
+      return;
     point = { x: event.clientX, y: event.clientY };
+    if (pending) return;
     const previousX = target.x;
     position();
     if (tilting()) impulse(target.x - previousX);
   };
   const scheduleClose = () => {
-    view.clearTimeout(openTimer);
+    if (popup.hidden) return dismiss();
+    cancelOpen();
     view.clearTimeout(closeTimer);
-    closeTimer = view.setTimeout(dismiss, opts.closeDelay);
+    closeTimer = view.setTimeout(close, opts.closeDelay);
   };
   const out = (event: PointerEvent) => {
-    if (foreign(event)) return;
+    if (event.pointerType === "touch" || foreign(event)) return;
+    const active = pending ?? trigger;
+    if (!(event.target instanceof view.Node) || !active?.contains(event.target))
+      return;
     const related = event.relatedTarget;
     if (
       related instanceof view.Node &&
-      (trigger?.contains(related) || popup.contains(related))
+      (active.contains(related) || popup.contains(related))
     )
       return;
     if (keyboard && trigger?.contains(document.activeElement)) return;
@@ -455,10 +564,14 @@ export function createFloatingTooltip(
   };
   const focus = (event: FocusEvent) => {
     const next = find(event);
-    if (next && root.contains(next) && next.matches(":focus-visible"))
-      open(next, true);
+    if (next?.matches(":focus-visible") && canShow(next)) open(next, true);
   };
   const blur = (event: FocusEvent) => {
+    if (
+      !(event.target instanceof view.Node) ||
+      !trigger?.contains(event.target)
+    )
+      return;
     if (
       event.relatedTarget instanceof view.Node &&
       trigger?.contains(event.relatedTarget)
@@ -470,20 +583,25 @@ export function createFloatingTooltip(
     if (event.key === "Escape") dismiss();
   };
   const refresh = () => {
+    if (pending && !canShow(pending)) return dismiss();
     if (!trigger) return;
-    if (
-      !trigger.isConnected ||
-      trigger.closest("[hidden],[inert]") ||
-      view.getComputedStyle(trigger).display === "none" ||
-      view.getComputedStyle(trigger).visibility === "hidden"
-    )
-      return dismiss();
+    if (!canShow(trigger)) return dismiss();
     const content = resolveContent(trigger);
     if (content === null) return dismiss();
     if (!change(content, false)) measure();
     position();
   };
-  const keepOpen = () => view.clearTimeout(closeTimer);
+  const onMotionPreferenceChange = () => {
+    if (reduced?.matches) {
+      if (fade?.closing) return dismiss();
+      fade?.animation.cancel();
+      fade = undefined;
+      swap?.cancel();
+      morph?.cancel();
+      finishMorph();
+    }
+    refresh();
+  };
   const observer = new view.MutationObserver((records) => {
     if (records.every((record) => popup.contains(record.target))) return;
     refresh();
@@ -495,10 +613,24 @@ export function createFloatingTooltip(
   });
   const resizeObserver =
     typeof view.ResizeObserver === "function"
-      ? new view.ResizeObserver(refresh)
+      ? new view.ResizeObserver((entries) => {
+          const entry = entries.find((entry) => entry.target === popup);
+          if (morph && entry) {
+            const box = entry.borderBoxSize?.[0];
+            displayedSize = box
+              ? { width: box.inlineSize, height: box.blockSize }
+              : { width: popup.offsetWidth, height: popup.offsetHeight };
+            render();
+          }
+          refresh();
+        })
       : null;
   resizeObserver?.observe(root);
-  resizeObserver?.observe(popup);
+  resizeObserver?.observe(popup, { box: "border-box" });
+  const selector = () => opts.selector;
+  const selectors = scopes.get(root) ?? new Set<() => string>();
+  selectors.add(selector);
+  scopes.set(root, selectors);
   root.addEventListener("pointerover", over);
   root.addEventListener("pointermove", move);
   root.addEventListener("pointerout", out);
@@ -510,7 +642,7 @@ export function createFloatingTooltip(
   view.addEventListener("scroll", refresh, true);
   view.addEventListener("resize", refresh);
   view.addEventListener("blur", dismiss);
-  reduced?.addEventListener("change", refresh);
+  reduced?.addEventListener("change", onMotionPreferenceChange);
   return {
     dismiss,
     refresh,
@@ -519,18 +651,16 @@ export function createFloatingTooltip(
       given = { ...given, ...partial };
       opts = settle(given);
       applyClassName();
-      applyOrigin();
+      applyPlacementStyles();
       if (!tilting()) resetLean();
-      if (trigger && !popup.hidden) {
-        if (!morph) measure();
-        position();
-        render();
-      }
+      refresh();
     },
     destroy() {
       if (destroyed) return;
       destroyed = true;
       dismiss();
+      selectors.delete(selector);
+      if (selectors.size === 0) scopes.delete(root);
       observer.disconnect();
       resizeObserver?.disconnect();
       root.removeEventListener("pointerover", over);
@@ -544,7 +674,7 @@ export function createFloatingTooltip(
       view.removeEventListener("scroll", refresh, true);
       view.removeEventListener("resize", refresh);
       view.removeEventListener("blur", dismiss);
-      reduced?.removeEventListener("change", refresh);
+      reduced?.removeEventListener("change", onMotionPreferenceChange);
       popup.remove();
     },
   };

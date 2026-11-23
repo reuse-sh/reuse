@@ -10,12 +10,14 @@ These are the rules the code keeps. An adaptation on any framework keeps them to
 
 ### Floating tooltip
 
-- **Share one popup.** Nearby triggers share one tooltip, so moving along a toolbar slides it across instead of closing and reopening it.
+- **Share one popup.** Nearby triggers share one tooltip, so moving along a toolbar slides it across instead of closing and reopening it. The closest group that matches a trigger owns it.
 - **Follow the pointer on a spring.** It trails the pointer with a little weight, below and to the right, and never jumps.
+- **Fade out from the current tilt.** When the pointer leaves, the tooltip fades as its tilt settles. Returning during the fade brings it back from its current opacity.
 - **Anchor to keyboard focus.** Keyboard focus places it on the element, and Escape hides it.
 - **Follow one pointer.** The pointer that opened it moves and closes it. A scripted pointer, such as a demo cursor, never moves, closes or takes over a tooltip the visitor's pointer opened. The visitor's pointer takes over by entering another trigger.
 - **Treat touch as touch.** A touch is not hover, so touch input never opens it.
 - **Hold only a hint.** It describes its trigger through aria-describedby and never holds controls or required instructions.
+- **Release unavailable triggers.** A trigger that becomes unavailable cannot open a delayed hint, and an already visible hint closes when its trigger is removed, hidden, or disabled.
 - **Stay inside the window.** It keeps a margin from every edge of the viewport.
 
 ### Moving highlight
