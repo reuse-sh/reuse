@@ -35,14 +35,15 @@ jobs:
     if: >-
       !cancelled() && (needs.plan.outputs.action == 'version' ||
       (needs.plan.outputs.action == 'publish' && needs.check.result == 'success'))
-    runs-on: blacksmith-2vcpu-ubuntu-2604
+    # npm Trusted Publishing requires a GitHub-hosted runner.
+    runs-on: ubuntu-latest
     timeout-minutes: 15
     permissions:
       contents: write
       pull-requests: write
       id-token: write
     steps:
-      - uses: useblacksmith/checkout@v1
+      - uses: actions/checkout@v7
       - uses: pnpm/action-setup@v6
       - uses: actions/setup-node@v7
         with:
