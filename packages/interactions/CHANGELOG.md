@@ -1,5 +1,11 @@
 # @reuse-sh/interactions
 
+## 0.2.0
+
+### Minor Changes
+
+- 976cc88: Expose the floating tooltip's positioning and motion for applications that render their own popup. Resolve a position from any reference point, snap either axis to a shared anchor, and keep the same spring and tilt with framework-owned content.
+
 ## 0.1.2
 
 ### Patch Changes
