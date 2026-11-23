@@ -10,6 +10,9 @@ permissions:
 jobs:
   check:
     runs-on: blacksmith-2vcpu-ubuntu-2604
+    container:
+      image: mcr.microsoft.com/playwright:v1.63.0-resolute
+      options: --ipc=host
     timeout-minutes: 30
     steps:
       - uses: useblacksmith/checkout@v1
@@ -19,7 +22,9 @@ jobs:
           node-version-file: .nvmrc
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      - run: pnpm exec playwright install --with-deps chromium webkit firefox
-      - run: pnpm check
+      - run: |
+          # Firefox requires the container user to own the home directory mounted by GitHub.
+          chown "$(id -u):$(id -g)" /github/home
+          pnpm check
         env:
           TURBO_CONCURRENCY: "1"
