@@ -509,6 +509,7 @@ export function createFloatingTooltip(
       swap?.cancel();
       morph?.cancel();
       finishMorph();
+      motion.resetTilt();
     }
     refresh();
   };
