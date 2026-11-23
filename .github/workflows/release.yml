@@ -13,12 +13,12 @@ permissions:
 
 jobs:
   plan:
-    runs-on: ubuntu-latest
+    runs-on: blacksmith-2vcpu-ubuntu-2604
     timeout-minutes: 5
     outputs:
       action: ${{ steps.plan.outputs.action }}
     steps:
-      - uses: actions/checkout@v7
+      - uses: useblacksmith/checkout@v1
       - uses: actions/setup-node@v7
         with:
           node-version-file: .nvmrc
@@ -35,14 +35,14 @@ jobs:
     if: >-
       !cancelled() && (needs.plan.outputs.action == 'version' ||
       (needs.plan.outputs.action == 'publish' && needs.check.result == 'success'))
-    runs-on: ubuntu-latest
+    runs-on: blacksmith-2vcpu-ubuntu-2604
     timeout-minutes: 15
     permissions:
       contents: write
       pull-requests: write
       id-token: write
     steps:
-      - uses: actions/checkout@v7
+      - uses: useblacksmith/checkout@v1
       - uses: pnpm/action-setup@v6
       - uses: actions/setup-node@v7
         with:
