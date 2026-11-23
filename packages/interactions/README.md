@@ -389,6 +389,38 @@ button.hidden = true;
 - Moving highlight: https://reuse.sh/moving-highlight, agent guide https://reuse.sh/moving-highlight/guide.md
 - Hold to confirm: https://reuse.sh/hold-to-confirm, agent guide https://reuse.sh/hold-to-confirm/guide.md
 
+## Use your own popup
+
+Use the motion and positioning helpers when your framework owns the tooltip
+element, its events, and its accessible description. Resolve each axis from
+the appropriate reference. This example follows the pointer horizontally and
+stays above a shared toolbar.
+
+```javascript
+import {
+  createFloatingTooltipMotion,
+  positionFloatingTooltip,
+} from "@reuse-sh/interactions";
+
+const motion = createFloatingTooltipMotion(window, ({ x, y, tilt }) => {
+  popup.style.transform = `translate(${x}px, ${y}px) rotate(${tilt}deg)`;
+});
+
+function followPointer(event) {
+  const next = positionFloatingTooltip({
+    reference: { x: event.clientX, y: toolbar.getBoundingClientRect().top },
+    size: { width: popup.offsetWidth, height: popup.offsetHeight },
+    viewport: { width: window.innerWidth, height: window.innerHeight },
+    side: "top",
+  });
+  motion.setPosition(next, { snapY: true, tilt: { max: 5 } });
+}
+```
+
+Snap both axes on first show and with reduced motion. Omit the tilt on keyboard
+updates and use `resetTilt()` when switching from pointer to keyboard. Call
+`stop()` when the popup is hidden or removed to cancel pending frames and timers.
+
 ## License
 
 MIT
