@@ -162,8 +162,10 @@ test("keeps a wide rich hint inside a narrow viewport", async ({ page }) => {
     content: `import { createFloatingTooltip } from "@reuse-sh/interactions";
       createFloatingTooltip(document.querySelector("#root"), { delay: 0, side: "right" });`,
   });
+  const tip = page.getByRole("tooltip", { includeHidden: true });
+  await expect(tip).toHaveCount(1);
+  await page.mouse.move(319, 639);
   await page.getByRole("button", { name: "Reply" }).hover();
-  const tip = page.getByRole("tooltip");
   await expect(tip).toBeVisible();
   const box = await tip.boundingBox();
   if (!box) throw new Error("Tooltip has no viewport box");
@@ -189,7 +191,8 @@ test("keeps the viewport margin while content grows at the edge", async ({
       createFloatingTooltip(document.querySelector("#root"), { delay: 0, tilt: 0 });`,
   });
   const first = page.getByRole("button", { name: "A", exact: true });
-  const tip = page.getByRole("tooltip");
+  const tip = page.getByRole("tooltip", { includeHidden: true });
+  await expect(tip).toHaveCount(1);
   await rememberPointerId(first);
   await first.hover();
   await expect(tip).toHaveText("Open");
