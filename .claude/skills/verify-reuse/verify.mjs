@@ -567,6 +567,9 @@ async function check(args) {
   await context.route("https://cdn.visitors.now/**", (route) =>
     route.fulfill({ contentType: "application/javascript", body: "" }),
   );
+  await context.route("https://cloud.umami.is/**", (route) =>
+    route.fulfill({ contentType: "application/javascript", body: "" }),
+  );
   for (const glob of blocks)
     await context.route(glob, (route) => route.abort("failed"));
   let failures = 0;
