@@ -12,6 +12,9 @@ async function problems(context: BrowserContext, path: string) {
   await page.route("https://cdn.visitors.now/v.js", (route) =>
     route.fulfill({ contentType: "application/javascript", body: "" }),
   );
+  await page.route("https://cloud.umami.is/script.js", (route) =>
+    route.fulfill({ contentType: "application/javascript", body: "" }),
+  );
   await serveExampleImages(page);
   const found: string[] = [];
   page.on("console", (message) => {
@@ -56,6 +59,9 @@ test("unavailable analytics does not prevent page navigation", async ({
   page,
 }) => {
   await page.route("https://cdn.visitors.now/v.js", (route) => route.abort());
+  await page.route("https://cloud.umami.is/script.js", (route) =>
+    route.abort(),
+  );
   await page.goto("/");
   await page.getByRole("link", { name: "Start with Lightbox" }).click();
   await expect(page).toHaveURL("/lightbox");

@@ -1342,6 +1342,9 @@ test("every library preview plays its real scene and keeps the menu open", async
   const errors: string[] = [];
   page.on("pageerror", (error) => errors.push(error.message));
   await page.route("https://cdn.visitors.now/v.js", (route) => route.abort());
+  await page.route("https://cloud.umami.is/script.js", (route) =>
+    route.abort(),
+  );
   await page.goto("/");
   await page.getByRole("button", { name: "Libraries" }).click();
   await page.mouse.move(1200, 700);

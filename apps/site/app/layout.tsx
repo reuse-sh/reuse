@@ -39,6 +39,13 @@ export default function RootLayout({ children }: { children: ReactNode }) {
             strategy="afterInteractive"
           />
         )}
+        {process.env.NODE_ENV !== "development" && (
+          <Script
+            src="https://cloud.umami.is/script.js"
+            data-website-id="6f4fda54-25e2-4b29-adab-cb9bbbfd51fb"
+            strategy="afterInteractive"
+          />
+        )}
         <a
           className="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-50 focus:rounded-control focus:bg-card focus:px-3 focus:py-2 focus:shadow-raised"
           href="#main"
