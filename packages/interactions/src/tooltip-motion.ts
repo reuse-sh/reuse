@@ -11,7 +11,7 @@ type Clock = Pick<
 type MotionTarget = {
   snapX?: boolean;
   snapY?: boolean;
-  tilt?: { max: number; direction?: 1 | -1 };
+  tilt?: { max: number; direction?: 1 | -1; axis?: "x" | "y" };
 };
 
 const FOLLOW = { stiffness: 700, damping: 45, mass: 0.4 };
@@ -87,7 +87,7 @@ export function createFloatingTooltipMotion(
   return {
     getFrame,
     setPosition(next: Point, { snapX, snapY, tilt }: MotionTarget = {}) {
-      const deltaX = next.x - target.x;
+      const delta = tilt?.axis === "y" ? next.y - target.y : next.x - target.x;
       target.x = next.x;
       target.y = next.y;
       if (snapX) {
@@ -99,9 +99,9 @@ export function createFloatingTooltipMotion(
         velocity.y = 0;
       }
 
-      if (tilt && tilt.max > 0 && Math.abs(deltaX) >= LEAN_DEADZONE) {
+      if (tilt && tilt.max > 0 && Math.abs(delta) >= LEAN_DEADZONE) {
         const impulse = clamp(
-          deltaX * LEAN_SCALE * (tilt.direction ?? 1),
+          delta * LEAN_SCALE * (tilt.direction ?? 1),
           tilt.max,
         );
         target.tilt = clamp(current.tilt * 0.35 + impulse, tilt.max);

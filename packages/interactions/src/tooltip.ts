@@ -79,6 +79,14 @@ function originFor(side: FloatingTooltipSide) {
   return { x, y };
 }
 
+// The free end trails the pointer, swinging from the edge the popup hangs on.
+function leanFor(side: FloatingTooltipSide, axis: "x" | "y", max: number) {
+  if (axis === "x")
+    return { max, axis, direction: side.startsWith("top") ? -1 : 1 } as const;
+  const hangsLeft = side === "left" || side.endsWith("-left");
+  return { max, axis, direction: hangsLeft ? 1 : -1 } as const;
+}
+
 const sameContent = (a: Content, b: Content) =>
   typeof a === "string" || typeof b === "string" ? a === b : a.isEqualNode(b);
 
@@ -142,7 +150,7 @@ export function createFloatingTooltip(
     opts.tilt > 0 &&
     !keyboard &&
     !reduced?.matches &&
-    opts.track?.x !== "anchor";
+    (opts.track?.x !== "anchor" || opts.track?.y !== "anchor");
   const restoreDescription = () => {
     if (!trigger) return;
     if (describedBy === null) trigger.removeAttribute("aria-describedby");
@@ -256,7 +264,7 @@ export function createFloatingTooltip(
       snapY: immediate,
       tilt:
         followsPointer && tilting()
-          ? { max: opts.tilt, direction: side.startsWith("top") ? -1 : 1 }
+          ? leanFor(side, opts.track?.x === "anchor" ? "y" : "x", opts.tilt)
           : undefined,
     });
   };
