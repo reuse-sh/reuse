@@ -66,6 +66,26 @@ it("ignores a sub-pixel movement for tilt and preserves the current angle until 
   motion.stop();
 });
 
+it("leans with vertical travel when x holds to a rail", () => {
+  const motion = createFloatingTooltipMotion(window, () => {});
+  motion.setPosition({ x: 300, y: 40 }, { snapX: true, snapY: true });
+  motion.setPosition(
+    { x: 300, y: 120 },
+    { snapX: true, tilt: { max: 5, axis: "y", direction: -1 } },
+  );
+  vi.advanceTimersByTime(32);
+  expect(motion.getFrame().x).toBe(300);
+  expect(motion.getFrame().tilt).toBeLessThan(0);
+
+  motion.setPosition(
+    { x: 300, y: 120 },
+    { snapX: true, tilt: { max: 5, axis: "y" } },
+  );
+  vi.advanceTimersByTime(900);
+  expect(motion.getFrame().tilt).toBe(0);
+  motion.stop();
+});
+
 it("places a floating tooltip against an arbitrary point and clamps each edge", () => {
   const size = { width: 100, height: 30 };
   const viewport = { width: 300, height: 250 };

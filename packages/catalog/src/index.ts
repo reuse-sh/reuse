@@ -1419,6 +1419,10 @@ export const libraries: Library[] = [
         "It trails the pointer with a little weight, below and to the right, and never jumps.",
       ],
       [
+        "Lean from the edge it hangs on",
+        "Its free end trails the pointer. Held to a rail on one axis, it leans as the pointer moves along the other.",
+      ],
+      [
         "Fade out from the current tilt",
         "When the pointer leaves, the tooltip fades as its tilt settles. Returning during the fade brings it back from its current opacity.",
       ],
@@ -1458,7 +1462,7 @@ export const libraries: Library[] = [
       ],
       [
         "createFloatingTooltipMotion(window, render)",
-        "Drives the same motion when your framework owns the popup and its events. setPosition(point, { snapX?, snapY?, tilt? }) sets the target. Pass tilt: { max, direction? } for pointer updates, resetTilt() for keyboard focus, and stop() when the popup closes.",
+        'Drives the same motion when your framework owns the popup and its events. setPosition(point, { snapX?, snapY?, tilt? }) sets the target. Pass tilt: { max, direction?, axis? } for pointer updates, with axis: "y" when x holds to an anchor, resetTilt() for keyboard focus, and stop() when the popup closes.',
       ],
       [
         "data-re-tooltip, data-re-tooltip-template",
@@ -1474,7 +1478,7 @@ export const libraries: Library[] = [
       ],
       [
         "tilt",
-        "Leans the popup by up to this many degrees while the pointer moves. 5 by default, 0 turns it off.",
+        "Leans the popup by up to this many degrees while the pointer moves, along the free axis when track holds the other to the trigger. 5 by default, 0 turns it off.",
       ],
       [
         "delay, closeDelay",

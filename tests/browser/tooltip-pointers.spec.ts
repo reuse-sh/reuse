@@ -267,3 +267,53 @@ test("the visitor's pointer takes a tooltip over from a scripted one", async ({
   await page.mouse.move(visitor.x + 10, visitor.y + 10, { steps: 4 });
   await expect(tip).toHaveText("Visitor");
 });
+
+test("a rail tooltip leans with vertical pointer travel from the edge it hangs on", async ({
+  page,
+}) => {
+  await mount(
+    page,
+    '<div id="root" style="position:fixed;top:40px;right:20px;display:flex;flex-direction:column;gap:2px"><button style="width:40px;height:40px" data-re-tooltip="Customer">C</button><button style="width:40px;height:40px" data-re-tooltip="Sales">S</button><button style="width:40px;height:40px" data-re-tooltip="Tickets">T</button></div>',
+    ["interactions/styles.css"],
+  );
+  await page.addScriptTag({
+    type: "module",
+    content: `import { createFloatingTooltip } from "@reuse-sh/interactions";
+      createFloatingTooltip(document.querySelector("#root"), { delay: 0, closeDelay: 0, side: "left", track: { x: "anchor" } });
+      window.__ready = true;`,
+  });
+  await expect.poll(() => page.evaluate(() => "__ready" in window)).toBe(true);
+  const first = page.getByRole("button", { name: "C" });
+  await first.hover({ position: { x: 20, y: 6 } });
+  await expect(page.getByRole("tooltip")).toHaveText("Customer");
+  const box = await first.boundingBox();
+  if (!box) throw new Error("Trigger has no box");
+  const angles: number[] = [];
+  for (let y = box.y + 10; y < box.y + 110; y += 8) {
+    await page.mouse.move(box.x + 20, y);
+    angles.push(
+      await page.evaluate(() =>
+        Number(
+          /rotate\(([^d]+)deg\)/.exec(
+            document.querySelector<HTMLElement>('[role="tooltip"]')?.style
+              .transform ?? "",
+          )?.[1] ?? 0,
+        ),
+      ),
+    );
+  }
+  expect(Math.max(...angles)).toBeGreaterThan(0.5);
+  await page.mouse.move(box.x + 20, box.y + 100);
+  await expect
+    .poll(() =>
+      page.evaluate(() =>
+        Number(
+          /rotate\(([^d]+)deg\)/.exec(
+            document.querySelector<HTMLElement>('[role="tooltip"]')?.style
+              .transform ?? "",
+          )?.[1] ?? 1,
+        ),
+      ),
+    )
+    .toBe(0);
+});

@@ -12,6 +12,7 @@ These are the rules the code keeps. An adaptation on any framework keeps them to
 
 - **Share one popup.** Nearby triggers share one tooltip, so moving along a toolbar slides it across instead of closing and reopening it. The closest group that matches a trigger owns it.
 - **Follow the pointer on a spring.** It trails the pointer with a little weight, below and to the right, and never jumps.
+- **Lean from the edge it hangs on.** Its free end trails the pointer. Held to a rail on one axis, it leans as the pointer moves along the other.
 - **Fade out from the current tilt.** When the pointer leaves, the tooltip fades as its tilt settles. Returning during the fade brings it back from its current opacity.
 - **Anchor to keyboard focus.** Keyboard focus places it on the element, and Escape hides it.
 - **Follow one pointer.** The pointer that opened it moves and closes it. A scripted pointer, such as a demo cursor, never moves, closes or takes over a tooltip the visitor's pointer opened. The visitor's pointer takes over by entering another trigger.
