@@ -1,6 +1,6 @@
 {
   "name": "@reuse-sh/stage",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "A scripted cursor that drives real interface components in a scaled scene, for live product demos.",
   "keywords": [
     "reuse",
