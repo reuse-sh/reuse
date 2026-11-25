@@ -54,12 +54,13 @@ test("a scripted drag keeps pointer capture outside the control", async ({
 test("two cursors capture independent controls and cancel together on takeover", async ({
   page,
 }) => {
+  await page.mouse.move(450, 140);
   const errors: string[] = [];
   page.on("pageerror", (error) => errors.push(error.message));
   await mount(
     page,
     `
-    <div id="demo" style="width:300px;height:100px">
+    <div id="demo" style="width:300px;height:100px;margin:80px">
       <button data-stage-target="left" style="position:absolute;left:12px;top:20px">Left</button>
       <button data-stage-target="right" style="position:absolute;right:12px;top:20px">Right</button>
       <output style="position:absolute;bottom:0"></output>
@@ -95,7 +96,8 @@ test("two cursors capture independent controls and cancel together on takeover",
   );
   await expect(page.locator("output")).toHaveText("Both pressed");
   await expect(page.locator(".re-stage-cursor[data-pressed]")).toHaveCount(2);
-  await page.mouse.move(150, 60);
+  await page.locator("#demo").hover();
+  await expect(page.locator("#demo")).toHaveAttribute("data-visitor", "");
   await expect(page.locator("output")).toHaveText("Left and Right");
   await expect(page.locator(".re-stage-cursor[data-pressed]")).toHaveCount(0);
   expect(errors).toEqual([]);
