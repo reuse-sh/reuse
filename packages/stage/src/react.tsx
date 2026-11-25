@@ -20,6 +20,8 @@ export function Stage({
   still,
   rest,
   interactive,
+  additionalCursors,
+  enabled,
   delay,
   className,
   children,
@@ -30,6 +32,7 @@ export function Stage({
   latest.current = { script, reset, still };
   const restX = rest?.x;
   const restY = rest?.y;
+  const cursorPositions = JSON.stringify(additionalCursors ?? []);
   useEffect(() => {
     if (!root.current) return;
     const stage = createStage(root.current, {
@@ -37,17 +40,31 @@ export function Stage({
       height,
       label,
       interactive,
+      enabled,
+      additionalCursors: JSON.parse(cursorPositions) as NonNullable<
+        StageOptions["additionalCursors"]
+      >,
       delay,
       rest:
         restX === undefined || restY === undefined
           ? undefined
           : { x: restX, y: restY },
-      script: (act) => latest.current.script(act),
+      script: (act, others) => latest.current.script(act, others),
       reset: () => latest.current.reset?.(),
       still: () => (latest.current.still ?? latest.current.reset)?.(),
     });
     return () => stage.destroy();
-  }, [width, height, label, interactive, delay, restX, restY]);
+  }, [
+    width,
+    height,
+    label,
+    interactive,
+    enabled,
+    cursorPositions,
+    delay,
+    restX,
+    restY,
+  ]);
   return (
     <div
       {...props}

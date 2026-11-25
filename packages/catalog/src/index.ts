@@ -1301,7 +1301,7 @@ export const libraries: Library[] = [
     principles: [
       [
         "Drive the real component",
-        "The cursor sends pointer events to the element under it, so hover, press, drag and release run the component's own code instead of a drawing of it.",
+        "The cursor sends pointer events to the element under it, so hover, press, drag and release run the component's own code. A control can capture the scripted pointer during its handlers and keep receiving drag events when the cursor leaves it.",
       ],
       [
         "Mark its events",
@@ -1318,6 +1318,10 @@ export const libraries: Library[] = [
       [
         "Land on a moving target",
         "A move measures its target on every frame, so it lands even when the layout shifts or the stage resizes mid-move.",
+      ],
+      [
+        "Keep cursors independent",
+        "Several cursors can use one scene and one clock. Each has its own pointer identity, press and capture. They stop together when the pass ends.",
       ],
       [
         "Start every pass from the first frame",
@@ -1337,7 +1341,7 @@ export const libraries: Library[] = [
       ],
       [
         "Hand over to the visitor",
-        "An interactive stage stops when a mouse enters it or a touch lands on it, and lets the visitor use the real component. It plays again from the first frame 1.2 s after the mouse leaves or 4 s after the last touch, and never while focus is inside the scene.",
+        "An interactive stage hands the real component to the visitor on hover or touch. A press-to-interact stage hands it over on mouse press or touch tap. It plays again from the first frame 1.2 s after the mouse leaves or 4 s after the last touch, and never while focus is inside the scene.",
       ],
       [
         "Fail loud",
@@ -1350,8 +1354,8 @@ export const libraries: Library[] = [
     ],
     api: [
       [
-        "createStage(root, { width, height, label, script, reset?, still?, rest?, interactive?, delay? })",
-        "Turns root into a stage. Its content is the scene, designed at width by height and scaled to the root's width. script plays one pass and runs again after it ends.",
+        "createStage(root, { width, height, label, script, reset?, still?, rest?, additionalCursors?, interactive?, enabled?, delay? })",
+        "Turns root into a stage. Its content is the scene, designed at width by height and scaled to the root's width. script receives the primary cursor and an array of additional cursor controls. One pass runs again after it ends.",
       ],
       [
         "act.move(target), act.click(target?), act.press(target?), act.release()",
@@ -1374,8 +1378,8 @@ export const libraries: Library[] = [
         "True for an event the cursor sent. Page code that closes something on an outside press can skip these.",
       ],
       [
-        "status, restart(), destroy()",
-        "Read whether the stage is waiting, playing, handed to the visitor or still, play again from the first frame, or remove the stage.",
+        "status, cursors, restart(), destroy()",
+        "Read whether the stage is waiting, playing, handed to the visitor or still, get its cursor elements, play again from the first frame, or remove the stage.",
       ],
       [
         "Stage",
@@ -1386,7 +1390,7 @@ export const libraries: Library[] = [
       "Mark the controls a script aims at with data-stage-target, so the script reads as a list of beats.",
       "End a pass where it began. The cursor returns to rest on its own, and the scene should look like reset() left it.",
       "A scripted click runs the component's real handler. Stop it in the scene before it writes to the clipboard, navigates or opens a modal dialog.",
-      "Components that capture the pointer with setPointerCapture cannot be dragged by the cursor. Drive them through their own API.",
+      "For a slider, press the thumb, move to a point on the track, then release. Pointer capture is supported inside the scene’s pointer handlers.",
       "A page handler that delegates from document.body, such as a site-wide tooltip, sees the scene's events too. Give scene controls attributes the page does not delegate on, or skip isStageEvent there.",
       "A layout your scene resizes from script, such as a gallery, lays out in that frame only when you call its refresh() right after the change.",
     ],
