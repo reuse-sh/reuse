@@ -1,4 +1,5 @@
 import { arc, moveDuration, moveEasing, type StagePoint } from "./path.js";
+import { dispatchWithCapture } from "./pointer-capture.js";
 
 export { arc, cubicBezier, moveDuration, type StagePoint } from "./path.js";
 
@@ -37,7 +38,10 @@ export interface StageOptions {
   /** What the scene shows, for assistive technology. */
   label: string;
   /** One pass of the scene. It plays again from reset() until the stage stops. */
-  script: (act: StageAct) => void | Promise<void>;
+  script: (
+    act: StageAct,
+    additionalCursors: StageAct[],
+  ) => void | Promise<void>;
   /** Puts the scene back in its first frame. Runs before every pass. */
   reset?: () => void;
   /** Shows the frame reduced motion keeps. Defaults to reset. */
@@ -45,7 +49,11 @@ export interface StageOptions {
   /** Where the cursor waits between passes, in scene units. */
   rest?: StagePoint;
   /** Lets a pointer that enters the stage take over the scene. */
-  interactive?: boolean;
+  interactive?: boolean | "press";
+  /** Starting positions of the other cursors, in the same scene units as rest. */
+  additionalCursors?: readonly StagePoint[];
+  /** False keeps the scene interactive and prevents autoplay. */
+  enabled?: boolean;
   /** How long the first frame holds before the cursor appears, in ms. */
   delay?: number;
 }
@@ -53,6 +61,7 @@ export interface StageOptions {
 export type StageStatus = "waiting" | "playing" | "visitor" | "still";
 
 export interface Stage {
+  readonly cursors: readonly HTMLElement[];
   readonly status: StageStatus;
   /** Ends the current pass and plays from the first frame. */
   restart(): void;
@@ -65,7 +74,7 @@ class Aborted extends Error {
   }
 }
 
-const POINTER_ID = 1931;
+let nextPointerId = 1931;
 const NATIVE =
   "a[href], area[href], button, input, select, textarea, summary, iframe, [contenteditable]";
 const FOCUSABLE = `${NATIVE}, [tabindex]`;
@@ -87,108 +96,43 @@ function positive(value: number, name: string) {
   return value;
 }
 
-export function createStage(root: HTMLElement, options: StageOptions): Stage {
+function createActor(
+  root: HTMLElement,
+  scene: HTMLElement,
+  view: Window & typeof globalThis,
+  width: number,
+  height: number,
+  rest: StagePoint,
+  getScale: () => number,
+  mark: (
+    element: Element | null,
+    attr: "data-stage-hover" | "data-stage-active",
+    change: 1 | -1,
+  ) => void,
+) {
   const document = root.ownerDocument;
-  const window = document.defaultView;
-  if (!window) throw new Error("The stage root must belong to a window.");
-  const view = window;
-  const width = positive(options.width, "width");
-  const height = positive(options.height, "height");
-  if (!options.label.trim())
-    throw new TypeError("Describe the scene in label.");
-  const delay = Math.max(0, options.delay ?? 400);
-  const rest = options.rest ?? { x: width * 0.82, y: height * 0.86 };
-
-  const original = {
-    style: root.getAttribute("style"),
-    role: root.getAttribute("role"),
-    label: root.getAttribute("aria-label"),
-    hadClass: root.classList.contains("re-stage"),
-  };
-  const first = root.firstElementChild;
-  const ownScene =
-    root.childElementCount === 1 && first?.classList.contains("re-stage-scene");
-  const scene = ownScene
-    ? (first as HTMLElement)
-    : document.createElement("div");
-  const sceneHidden = scene.getAttribute("aria-hidden");
-  if (!ownScene) {
-    scene.className = "re-stage-scene";
-    scene.append(...root.childNodes);
-    root.append(scene);
-  }
-  scene.setAttribute("aria-hidden", "true");
-  root.classList.add("re-stage");
-  root.setAttribute("role", "img");
-  root.setAttribute("aria-label", options.label);
-  root.style.setProperty("--re-stage-width", `${width}px`);
-  root.style.setProperty("--re-stage-height", `${height}px`);
-  root.style.setProperty("--re-stage-ratio", `${width} / ${height}`);
-
-  const shield = document.createElement("div");
-  shield.className = "re-stage-shield";
+  const pointerId = nextPointerId++;
   const cursor = document.createElement("div");
   cursor.className = "re-stage-cursor";
   cursor.innerHTML = `${CURSOR}<span class="re-stage-ring"></span>`;
   const ring = cursor.lastElementChild as HTMLElement;
-  root.append(shield, cursor);
-
-  let scale = 1;
-  const measure = () => {
-    const next = root.clientWidth / width;
-    scale = next > 0 ? next : 1;
-    root.style.setProperty("--re-stage-scale", String(scale));
-    draw();
-  };
-
-  const silenced = new Map<Element, string | null>();
-  const restore = (element: Element, value: string | null) => {
-    if (value === null) element.removeAttribute("tabindex");
-    else element.setAttribute("tabindex", value);
-  };
-  const silence = () => {
-    for (const [element, value] of silenced)
-      if (!scene.contains(element)) {
-        restore(element, value);
-        silenced.delete(element);
-      }
-    for (const element of scene.querySelectorAll(FOCUSABLE)) {
-      if (!silenced.has(element))
-        silenced.set(element, element.getAttribute("tabindex"));
-      if (!element.matches(NATIVE)) element.removeAttribute("tabindex");
-      else if (element.getAttribute("tabindex") !== "-1")
-        element.setAttribute("tabindex", "-1");
-    }
-  };
-  const mutations = new view.MutationObserver(silence);
-  mutations.observe(scene, {
-    subtree: true,
-    childList: true,
-    attributes: true,
-    attributeFilter: ["tabindex", "href", "contenteditable"],
-  });
-  silence();
-  const keepFocus = (event: FocusEvent) => {
-    if (visitor) return;
-    const previous = event.relatedTarget;
-    if (previous instanceof view.HTMLElement && !scene.contains(previous))
-      previous.focus({ preventScroll: true });
-    else (event.target as HTMLElement).blur();
-  };
-  scene.addEventListener("focusin", keepFocus);
+  root.append(cursor);
 
   let position = { ...rest };
   let over: Element | null = null;
   let hovered: Element | null = null;
   let active: Element | null = null;
   let pressed: Element | null = null;
+  let captured: Element | null = null;
 
   function draw() {
+    const scale = getScale();
     cursor.style.transform = `translate(${position.x * scale}px, ${position.y * scale}px) scale(${scale})`;
   }
 
   /** Scene units to window coordinates, through the scene's measured box. */
   function client(point: StagePoint) {
+    const scale = getScale();
     const box = scene.getBoundingClientRect();
     return {
       x: box.left + box.width / 2 + (point.x - width / 2) * scale,
@@ -197,6 +141,7 @@ export function createStage(root: HTMLElement, options: StageOptions): Stage {
   }
 
   function centerOf(element: Element): StagePoint {
+    const scale = getScale();
     const box = scene.getBoundingClientRect();
     const rect = element.getBoundingClientRect();
     return {
@@ -235,7 +180,7 @@ export function createStage(root: HTMLElement, options: StageOptions): Stage {
   ) {
     const at = client(position);
     const Event =
-      (type.startsWith("pointer") || type === "click") && view.PointerEvent
+      (type.includes("pointer") || type === "click") && view.PointerEvent
         ? view.PointerEvent
         : view.MouseEvent;
     const event = new Event(type, {
@@ -249,7 +194,7 @@ export function createStage(root: HTMLElement, options: StageOptions): Stage {
       button: init.button ?? -1,
       buttons: pressed ? 1 : 0,
       detail: type === "click" ? 1 : 0,
-      pointerId: POINTER_ID,
+      pointerId,
       pointerType: "mouse",
       isPrimary: true,
       width: 1,
@@ -257,7 +202,31 @@ export function createStage(root: HTMLElement, options: StageOptions): Stage {
       pressure: pressed ? 0.5 : 0,
     } as PointerEventInit);
     scripted.add(event);
-    target.dispatchEvent(event);
+    if (type.startsWith("pointer") && (pressed || captured)) {
+      const previous = captured;
+      const path = chain(target);
+      dispatchWithCapture(event, path.length ? path : [target], pointerId, {
+        setPointerCapture(element) {
+          if (pressed) captured = element;
+        },
+        hasPointerCapture: (element) => captured === element,
+        releasePointerCapture(element) {
+          if (captured === element) captured = null;
+        },
+      });
+      if (previous !== captured) {
+        if (previous) emit("lostpointercapture", previous);
+        if (captured) emit("gotpointercapture", captured);
+      }
+    } else {
+      target.dispatchEvent(event);
+    }
+  }
+
+  function releaseCapture() {
+    const previous = captured;
+    captured = null;
+    if (previous) emit("lostpointercapture", previous);
   }
 
   const chain = (from: Element | null) => {
@@ -297,13 +266,17 @@ export function createStage(root: HTMLElement, options: StageOptions): Stage {
     const target = next?.closest(HOVERABLE) ?? null;
     const hover = target && scene.contains(target) ? target : null;
     if (hover !== hovered) {
-      hovered?.removeAttribute("data-stage-hover");
+      mark(hovered, "data-stage-hover", -1);
       hovered = hover;
-      hovered?.setAttribute("data-stage-hover", "");
+      mark(hovered, "data-stage-hover", 1);
     }
   }
 
   function hit() {
+    if (captured) {
+      if (scene.contains(captured)) return captured;
+      releaseCapture();
+    }
     const at = client(position);
     const stack = document.elementsFromPoint?.(at.x, at.y) ?? [];
     return stack.find((node) => scene.contains(node)) ?? null;
@@ -399,7 +372,7 @@ export function createStage(root: HTMLElement, options: StageOptions): Stage {
       pressed = on;
       cursor.setAttribute("data-pressed", "");
       active = hovered;
-      active?.setAttribute("data-stage-active", "");
+      mark(active, "data-stage-active", 1);
       ring.animate?.(
         [
           { opacity: 0.32, transform: "translate(-50%, -50%) scale(0.3)" },
@@ -415,14 +388,16 @@ export function createStage(root: HTMLElement, options: StageOptions): Stage {
       check();
       const down = pressed;
       if (!down) return;
+      const wasCaptured = captured !== null;
       const up = under();
       pressed = null;
       cursor.removeAttribute("data-pressed");
-      active?.removeAttribute("data-stage-active");
+      mark(active, "data-stage-active", -1);
       active = null;
       emit("pointerup", up, { button: 0 });
+      releaseCapture();
       emit("mouseup", up, { button: 0 });
-      let common: Element | null = down;
+      let common: Element | null = wasCaptured ? up : down;
       while (common && !common.contains(up)) common = common.parentElement;
       if (common && scene.contains(common))
         emit("click", common, { button: 0 });
@@ -501,6 +476,142 @@ export function createStage(root: HTMLElement, options: StageOptions): Stage {
     };
   }
 
+  const showCursor = (shown: boolean) =>
+    cursor.toggleAttribute("data-visible", shown);
+
+  function letGo() {
+    if (pressed) {
+      const target = captured ?? pressed;
+      pressed = null;
+      emit("pointercancel", target, { button: 0 });
+      releaseCapture();
+    }
+    cursor.removeAttribute("data-pressed");
+    mark(active, "data-stage-active", -1);
+    active = null;
+    enter(null);
+  }
+
+  function park() {
+    position = { ...rest };
+    draw();
+  }
+
+  return { cursor, rest, draw, park, showCursor, letGo, makeAct };
+}
+
+export function createStage(root: HTMLElement, options: StageOptions): Stage {
+  const document = root.ownerDocument;
+  const window = document.defaultView;
+  if (!window) throw new Error("The stage root must belong to a window.");
+  const view = window;
+  const width = positive(options.width, "width");
+  const height = positive(options.height, "height");
+  if (!options.label.trim())
+    throw new TypeError("Describe the scene in label.");
+  const delay = Math.max(0, options.delay ?? 400);
+  const rests = [
+    options.rest ?? { x: width * 0.82, y: height * 0.86 },
+    ...(options.additionalCursors ?? []),
+  ];
+
+  const original = {
+    style: root.getAttribute("style"),
+    role: root.getAttribute("role"),
+    label: root.getAttribute("aria-label"),
+    hadClass: root.classList.contains("re-stage"),
+  };
+  const first = root.firstElementChild;
+  const ownScene =
+    root.childElementCount === 1 && first?.classList.contains("re-stage-scene");
+  const scene = ownScene
+    ? (first as HTMLElement)
+    : document.createElement("div");
+  const sceneHidden = scene.getAttribute("aria-hidden");
+  if (!ownScene) {
+    scene.className = "re-stage-scene";
+    scene.append(...root.childNodes);
+    root.append(scene);
+  }
+  scene.setAttribute("aria-hidden", "true");
+  root.classList.add("re-stage");
+  root.setAttribute("role", "img");
+  root.setAttribute("aria-label", options.label);
+  root.style.setProperty("--re-stage-width", `${width}px`);
+  root.style.setProperty("--re-stage-height", `${height}px`);
+  root.style.setProperty("--re-stage-ratio", `${width} / ${height}`);
+
+  const shield = document.createElement("div");
+  shield.className = "re-stage-shield";
+  shield.toggleAttribute("data-on-press", options.interactive === "press");
+  root.append(shield);
+
+  let scale = 1;
+  const measure = () => {
+    const next = root.clientWidth / width;
+    scale = next > 0 ? next : 1;
+    root.style.setProperty("--re-stage-scale", String(scale));
+    for (const actor of actors) actor.draw();
+  };
+
+  const silenced = new Map<Element, string | null>();
+  const restore = (element: Element, value: string | null) => {
+    if (value === null) element.removeAttribute("tabindex");
+    else element.setAttribute("tabindex", value);
+  };
+  const silence = () => {
+    for (const [element, value] of silenced)
+      if (!scene.contains(element)) {
+        restore(element, value);
+        silenced.delete(element);
+      }
+    for (const element of scene.querySelectorAll(FOCUSABLE)) {
+      if (!silenced.has(element))
+        silenced.set(element, element.getAttribute("tabindex"));
+      if (!element.matches(NATIVE)) element.removeAttribute("tabindex");
+      else if (element.getAttribute("tabindex") !== "-1")
+        element.setAttribute("tabindex", "-1");
+    }
+  };
+  const mutations = new view.MutationObserver(silence);
+  mutations.observe(scene, {
+    subtree: true,
+    childList: true,
+    attributes: true,
+    attributeFilter: ["tabindex", "href", "contenteditable"],
+  });
+  silence();
+  const keepFocus = (event: FocusEvent) => {
+    if (visitor) return;
+    const previous = event.relatedTarget;
+    if (previous instanceof view.HTMLElement && !scene.contains(previous))
+      previous.focus({ preventScroll: true });
+    else (event.target as HTMLElement).blur();
+  };
+  scene.addEventListener("focusin", keepFocus);
+
+  const marks = {
+    "data-stage-hover": new WeakMap<Element, number>(),
+    "data-stage-active": new WeakMap<Element, number>(),
+  };
+  const actors = rests.map((rest) =>
+    createActor(
+      root,
+      scene,
+      view,
+      width,
+      height,
+      rest,
+      () => scale,
+      (element, attr, change) => {
+        if (!element) return;
+        const count = (marks[attr].get(element) ?? 0) + change;
+        if (count > 0) marks[attr].set(element, count);
+        else marks[attr].delete(element);
+        element.toggleAttribute(attr, count > 0);
+      },
+    ),
+  );
   let controller: AbortController | null = null;
   let status: StageStatus = "waiting";
   let destroyed = false;
@@ -510,45 +621,36 @@ export function createStage(root: HTMLElement, options: StageOptions): Stage {
   let resume: number | undefined;
   const reduced = view.matchMedia?.("(prefers-reduced-motion: reduce)");
 
-  const showCursor = (shown: boolean) =>
-    cursor.toggleAttribute("data-visible", shown);
-
-  function letGo() {
-    if (pressed) {
-      emit("pointercancel", pressed, { button: 0 });
-      pressed = null;
-    }
-    cursor.removeAttribute("data-pressed");
-    active?.removeAttribute("data-stage-active");
-    active = null;
-    enter(null);
-  }
-
   function stop(next: StageStatus, after?: () => void) {
     controller?.abort();
     controller = null;
-    letGo();
-    showCursor(false);
+    for (const actor of actors) {
+      actor.letGo();
+      actor.showCursor(false);
+    }
     status = next;
     after?.();
   }
 
   async function play(own: AbortController) {
-    const act = makeAct(own.signal);
+    const [act, ...others] = actors.map((actor) => actor.makeAct(own.signal));
     let firstPass = true;
     for (;;) {
       options.reset?.();
       await act.run(() => {});
       if (firstPass) {
-        position = { ...rest };
-        draw();
+        for (const actor of actors) actor.park();
         await act.wait(delay);
-        showCursor(true);
+        for (const actor of actors) actor.showCursor(true);
         firstPass = false;
       }
-      await options.script(act);
-      await act.release();
-      await act.move(rest);
+      await options.script(act, others);
+      await Promise.all(
+        [act, ...others].map(async (cursorAct, index) => {
+          await cursorAct.release();
+          await cursorAct.move(actors[index].rest);
+        }),
+      );
       await act.wait(500);
     }
   }
@@ -564,7 +666,12 @@ export function createStage(root: HTMLElement, options: StageOptions): Stage {
       if (status !== "visitor") stop("visitor");
       return;
     }
-    if (!visible || document.visibilityState === "hidden" || failed) {
+    if (
+      options.enabled === false ||
+      !visible ||
+      document.visibilityState === "hidden" ||
+      failed
+    ) {
       if (controller) stop("waiting", () => options.reset?.());
       else status = "waiting";
       return;
@@ -602,13 +709,13 @@ export function createStage(root: HTMLElement, options: StageOptions): Stage {
   resize?.observe(root);
   measure();
 
-  const takeOver = (event: PointerEvent) => {
+  const takeOver = (event: Event, isTouch = false) => {
     if (scripted.has(event)) return;
     view.clearTimeout(resume);
     visitor = true;
     root.setAttribute("data-visitor", "");
     update();
-    if (event.pointerType === "touch") giveBack(4000);
+    if (isTouch) giveBack(4000);
   };
   const giveBack = (ms: number) => {
     view.clearTimeout(resume);
@@ -620,10 +727,26 @@ export function createStage(root: HTMLElement, options: StageOptions): Stage {
     }, ms);
   };
   const enterRoot = (event: PointerEvent) => {
-    if (event.pointerType !== "touch") takeOver(event);
+    if (options.interactive === true && event.pointerType !== "touch")
+      takeOver(event);
   };
+  let isTouchPress = false;
   const downRoot = (event: PointerEvent) => {
-    if (event.pointerType === "touch") takeOver(event);
+    if (scripted.has(event)) return;
+    const isTouch = event.pointerType === "touch";
+    if (options.interactive === true && isTouch) takeOver(event, true);
+    if (options.interactive === "press") {
+      isTouchPress = isTouch;
+      if (!isTouch) takeOver(event);
+    }
+  };
+  const cancelRoot = (event: PointerEvent) => {
+    if (!scripted.has(event)) isTouchPress = false;
+  };
+  const tapRoot = (event: MouseEvent) => {
+    if (scripted.has(event) || !isTouchPress) return;
+    isTouchPress = false;
+    takeOver(event, true);
   };
   const leaveRoot = (event: PointerEvent) => {
     if (!scripted.has(event) && event.pointerType !== "touch" && visitor)
@@ -633,6 +756,10 @@ export function createStage(root: HTMLElement, options: StageOptions): Stage {
     root.addEventListener("pointerenter", enterRoot);
     root.addEventListener("pointerdown", downRoot);
     root.addEventListener("pointerleave", leaveRoot);
+    if (options.interactive === "press") {
+      root.addEventListener("pointercancel", cancelRoot);
+      root.addEventListener("click", tapRoot, true);
+    }
   }
   const onPage = () => update();
   document.addEventListener("visibilitychange", onPage);
@@ -640,6 +767,7 @@ export function createStage(root: HTMLElement, options: StageOptions): Stage {
   update();
 
   return {
+    cursors: actors.map((actor) => actor.cursor),
     get status() {
       return status;
     },
@@ -663,9 +791,11 @@ export function createStage(root: HTMLElement, options: StageOptions): Stage {
       root.removeEventListener("pointerenter", enterRoot);
       root.removeEventListener("pointerdown", downRoot);
       root.removeEventListener("pointerleave", leaveRoot);
+      root.removeEventListener("pointercancel", cancelRoot);
+      root.removeEventListener("click", tapRoot, true);
       for (const [node, value] of silenced) restore(node, value);
       shield.remove();
-      cursor.remove();
+      for (const actor of actors) actor.cursor.remove();
       if (sceneHidden === null) scene.removeAttribute("aria-hidden");
       else scene.setAttribute("aria-hidden", sceneHidden);
       if (!ownScene) {
