@@ -119,6 +119,9 @@ test("keeps a single popup through rapid one-line and two-line swaps", async ({
   await ticket.hover();
   await expect(tip).toHaveText("Open ticket");
   const id = await tip.getAttribute("id");
+  await expect
+    .poll(() => tip.evaluate((popup) => popup.style.transform))
+    .not.toContain("scale(");
   const first = await tip.boundingBox();
   await reply.hover();
   await expect(tip).toHaveAttribute("id", id ?? "");
@@ -316,4 +319,103 @@ test("a rail tooltip leans with vertical pointer travel from the edge it hangs o
       ),
     )
     .toBe(0);
+});
+
+test("grows in from the pointer corner and rolls the next hint in from the direction of travel", async ({
+  page,
+}) => {
+  await page.mouse.move(2, 2);
+  await mount(
+    page,
+    `<div id="root" style="display:flex;gap:8px;padding:80px">
+      <button data-re-tooltip="Open ticket">Ticket</button>
+      <button data-re-tooltip="Archive">Archive</button>
+    </div>`,
+    ["interactions/styles.css"],
+  );
+  await page.addScriptTag({
+    type: "module",
+    content: `import { createFloatingTooltip } from "@reuse-sh/interactions";
+      createFloatingTooltip(document.querySelector("#root"), { delay: 0 });
+      window.__ready = true;`,
+  });
+  await expect.poll(() => page.evaluate(() => "__ready" in window)).toBe(true);
+  const ticket = page.getByRole("button", { name: "Ticket" });
+  const archive = page.getByRole("button", { name: "Archive" });
+  const tip = page.getByRole("tooltip");
+
+  const sampleGrow = page.evaluate(
+    () =>
+      new Promise<number[]>((resolve) => {
+        const scales: number[] = [];
+        const start = performance.now();
+        const sample = () => {
+          const popup = document.querySelector<HTMLElement>('[role="tooltip"]');
+          if (popup && !popup.hidden)
+            scales.push(
+              Number(/scale\(([\d.]+)\)/.exec(popup.style.transform)?.[1] ?? 1),
+            );
+          if (performance.now() - start < 500) requestAnimationFrame(sample);
+          else resolve(scales);
+        };
+        sample();
+      }),
+  );
+  await ticket.hover();
+  const scales = await sampleGrow;
+  expect(Math.min(...scales)).toBeLessThan(0.99);
+  expect(scales.at(-1)).toBe(1);
+  await expect(tip).toHaveText("Open ticket");
+
+  const sampleReel = page.evaluate(
+    () =>
+      new Promise<
+        Array<{
+          leaving: string | null;
+          hidden: string | null;
+          x: number;
+          opacity: number;
+        }>
+      >((resolve) => {
+        const out: Array<{
+          leaving: string | null;
+          hidden: string | null;
+          x: number;
+          opacity: number;
+        }> = [];
+        const start = performance.now();
+        const sample = () => {
+          const body = document.querySelector<HTMLElement>(
+            '[role="tooltip"] .re-floating-tooltip-content:not(.re-floating-tooltip-leaving)',
+          );
+          const leaving = document.querySelector<HTMLElement>(
+            ".re-floating-tooltip-leaving",
+          );
+          if (body)
+            out.push({
+              leaving: leaving?.textContent ?? null,
+              hidden: leaving?.getAttribute("aria-hidden") ?? null,
+              x: Number.parseFloat(getComputedStyle(body).translate) || 0,
+              opacity: Number(getComputedStyle(body).opacity),
+            });
+          if (performance.now() - start < 700) requestAnimationFrame(sample);
+          else resolve(out);
+        };
+        sample();
+      }),
+  );
+  await archive.hover();
+  const frames = await sampleReel;
+  const rolling = frames.filter((frame) => frame.leaving !== null);
+  expect(rolling.length).toBeGreaterThan(0);
+  expect(rolling.every((frame) => frame.leaving === "Open ticket")).toBe(true);
+  expect(rolling.every((frame) => frame.hidden === "true")).toBe(true);
+  expect(Math.max(...rolling.map((frame) => frame.x))).toBeGreaterThan(4);
+  expect(frames.at(-1)).toEqual({
+    leaving: null,
+    hidden: null,
+    x: 0,
+    opacity: 1,
+  });
+  await expect(tip).toHaveText("Archive");
 });
