@@ -1376,6 +1376,9 @@ test("a playing demo stage leaves the visitor's tooltip where the pointer is", a
   });
   const tip = page.getByRole("tooltip").filter({ hasText: "GitHub" });
   await expect(tip).toBeVisible();
+  await expect
+    .poll(() => tip.evaluate((popup) => popup.style.transform))
+    .not.toContain("scale(");
   const first = await tip.boundingBox();
   await page.waitForTimeout(2000);
   await expect(tip).toBeVisible();

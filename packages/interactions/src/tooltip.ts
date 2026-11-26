@@ -32,10 +32,18 @@ type Settings = Required<Omit<FloatingTooltipOptions, "track">> &
 type Point = { x: number; y: number };
 type Size = { width: number; height: number };
 
-const FADE_OUT_MS = 160;
+const FADE_IN_MS = 140;
+const GROW_MS = 220;
+const FADE_OUT_MS = 140;
 const MORPH_MS = 220;
-const SWAP_MS = 180;
+const REEL_MS = 420;
+const REEL_SHIFT = "34%";
+const TRAVEL_MS = 100;
+const MAX_LEAVING = 3;
 const EASE = "cubic-bezier(0.33, 1, 0.68, 1)";
+const GROW_FROM = 0.92;
+const SHRINK_TO = 0.96;
+const EASE_REEL = "cubic-bezier(0.22, 1, 0.36, 1)";
 
 let tooltipId = 0;
 const scopes = new WeakMap<Element, Set<() => string>>();
@@ -126,9 +134,23 @@ export function createFloatingTooltip(
   let openTimer: number | undefined;
   let closeTimer: number | undefined;
   let destroyed = false;
-  let swap: Animation | undefined;
+  type Visible = { opacity: string; translate: string };
+  type Leaving = { element: HTMLElement; content: Content; from: Visible };
+  let rolling: Animation | undefined;
+  let outgoing: Leaving | null = null;
+  let leavings: Array<Leaving & { animation: Animation }> = [];
+  const trail: Array<Point & { t: number }> = [];
+  let entrance: Animation | undefined;
+  let grow: { start?: number; from: number } | undefined;
+  let held = 1;
+  let effects: number | undefined;
+  let lastEffect = 0;
+  let pivot: Point | null = null;
+  let reference: Point | null = null;
   let morph: Animation | undefined;
-  let fade: { animation: Animation; closing: boolean } | undefined;
+  let fade:
+    | { animation: Animation; closing: boolean; from: string }
+    | undefined;
 
   const applyClassName = () => {
     popup.classList.remove(...extraClasses);
@@ -188,6 +210,43 @@ export function createFloatingTooltip(
   const viewport = () => ({ width: view.innerWidth, height: view.innerHeight });
   const fit = (position: Point, bounds: Size) =>
     clampTooltipPosition(position, bounds, viewport(), opts.viewportPadding);
+  const growScale = () => {
+    if (!grow) return held;
+    const progress =
+      grow.start === undefined
+        ? 0
+        : Math.min(1, (lastEffect - grow.start) / GROW_MS);
+    return grow.from + (1 - grow.from) * (1 - (1 - progress) ** 4);
+  };
+  const effectScale = () => {
+    let scale = growScale();
+    if (fade) {
+      const progress = Number(fade.animation.currentTime ?? 0) / FADE_OUT_MS;
+      scale *= 1 - (1 - SHRINK_TO) * Math.min(1, Math.max(0, progress));
+    }
+    return scale;
+  };
+  const tickEffects = (time: number) => {
+    effects = undefined;
+    lastEffect = time;
+    if (grow) {
+      grow.start ??= time;
+      if (time - grow.start >= GROW_MS) grow = undefined;
+    }
+    if (!popup.hidden) render();
+    if (grow || fade) effects = view.requestAnimationFrame(tickEffects);
+  };
+  const runEffects = () => {
+    effects ??= view.requestAnimationFrame(tickEffects);
+  };
+  const stopEffects = () => {
+    if (effects !== undefined) view.cancelAnimationFrame(effects);
+    effects = undefined;
+    grow = undefined;
+    held = 1;
+    entrance?.cancel();
+    entrance = undefined;
+  };
   const render = ({ x, y, tilt } = motion.getFrame()) => {
     const { width, height } = displayedSize;
     const radians = (tilt * Math.PI) / 180;
@@ -212,7 +271,14 @@ export function createFloatingTooltip(
         height: height * Math.abs(cos) + width * Math.abs(sin),
       },
     );
-    popup.style.transform = `translate3d(${placed.x - left}px, ${placed.y - top}px, 0) rotate(${tilt}deg)`;
+    const scale = effectScale();
+    let scaling = "";
+    if (scale !== 1) {
+      const px = Math.min(width, Math.max(0, pivot?.x ?? ox)) - ox;
+      const py = Math.min(height, Math.max(0, pivot?.y ?? oy)) - oy;
+      scaling = ` translate(${px}px, ${py}px) scale(${scale}) translate(${-px}px, ${-py}px)`;
+    }
+    popup.style.transform = `translate3d(${placed.x - left}px, ${placed.y - top}px, 0) rotate(${tilt}deg)${scaling}`;
   };
   const motion = createFloatingTooltipMotion(view, (next) => {
     if (popup.hidden) return;
@@ -273,6 +339,45 @@ export function createFloatingTooltip(
     displayedSize = size;
     body.style.width = "";
   };
+  const dropLeaving = () => {
+    rolling?.cancel();
+    rolling = undefined;
+    outgoing?.element.remove();
+    outgoing = null;
+    for (const entry of leavings) {
+      entry.animation.cancel();
+      entry.element.remove();
+    }
+    leavings = [];
+  };
+  const visibleState = (element: HTMLElement): Visible => {
+    const style = view.getComputedStyle(element);
+    return {
+      opacity: style.opacity || "1",
+      translate:
+        !style.translate || style.translate === "none"
+          ? "0 0"
+          : style.translate,
+    };
+  };
+  const holdLeaving = () => {
+    const from = visibleState(body);
+    rolling?.cancel();
+    rolling = undefined;
+    outgoing?.element.remove();
+    outgoing = null;
+    if (shown === null || !body.firstChild) return;
+    const element = document.createElement("span");
+    element.className =
+      "re-floating-tooltip-content re-floating-tooltip-leaving";
+    element.setAttribute("aria-hidden", "true");
+    element.style.left = `${body.offsetLeft}px`;
+    element.style.top = `${body.offsetTop}px`;
+    element.style.width = `${body.offsetWidth}px`;
+    element.append(...[...body.childNodes].map((node) => node.cloneNode(true)));
+    popup.append(element);
+    outgoing = { element, content: shown, from };
+  };
   const setContent = (content: Content) => {
     if (typeof content === "string") {
       shown = content;
@@ -296,6 +401,8 @@ export function createFloatingTooltip(
       : { ...size };
     morph?.cancel();
     finishMorph();
+    if (animated) holdLeaving();
+    else dropLeaving();
     setContent(content);
     measure();
     if (
@@ -339,7 +446,8 @@ export function createFloatingTooltip(
     cancelOpen();
     view.clearTimeout(closeTimer);
     motion.stop();
-    swap?.cancel();
+    dropLeaving();
+    stopEffects();
     morph?.cancel();
     fade?.animation.cancel();
     fade = undefined;
@@ -351,10 +459,25 @@ export function createFloatingTooltip(
   };
   const keepOpen = () => {
     view.clearTimeout(closeTimer);
-    if (fade?.closing) {
-      fade.closing = false;
-      fade.animation.reverse();
+    if (!fade?.closing) return;
+    if (Number(fade.animation.currentTime ?? 0) <= 0) {
+      const { from } = fade;
+      fade.animation.cancel();
+      fade = undefined;
+      entrance = popup.animate(
+        { opacity: [from, "1"] },
+        { duration: FADE_IN_MS, easing: "ease-out" },
+      );
+      entrance.startTime = document.timeline.currentTime;
+      if (held < 1) {
+        grow = { from: held };
+        held = 1;
+        runEffects();
+      }
+      return;
     }
+    fade.closing = false;
+    fade.animation.reverse();
   };
   const close = () => {
     if (popup.hidden || reduced?.matches || typeof popup.animate !== "function")
@@ -366,17 +489,35 @@ export function createFloatingTooltip(
       }
       return;
     }
-    const animation = popup.animate(
-      [{ opacity: view.getComputedStyle(popup).opacity }, { opacity: 0 }],
-      { duration: FADE_OUT_MS, easing: "ease-out", fill: "forwards" },
-    );
-    fade = { animation, closing: true };
+    const from = view.getComputedStyle(popup).opacity;
+    entrance?.cancel();
+    entrance = undefined;
+    held = growScale();
+    grow = undefined;
+    const animation = popup.animate([{ opacity: from }, { opacity: 0 }], {
+      duration: FADE_OUT_MS,
+      easing: "ease-in",
+      fill: "forwards",
+    });
+    fade = { animation, closing: true, from };
+    runEffects();
     animation.onfinish = () => {
       if (fade?.animation !== animation) return;
       if (fade.closing) dismiss();
       else {
+        const start = fade.from;
         fade = undefined;
         animation.cancel();
+        if (Number(start) < 1)
+          entrance = popup.animate(
+            { opacity: [start, "1"] },
+            { duration: FADE_IN_MS, easing: "ease-out" },
+          );
+        if (held < 1) {
+          grow = { from: held };
+          held = 1;
+          runEffects();
+        }
       }
     };
   };
@@ -395,7 +536,19 @@ export function createFloatingTooltip(
       const content = resolveContent(next);
       if (content === null) return dismiss();
       const wasOpen = !popup.hidden;
-      const previous = { ...target };
+      const box = next.getBoundingClientRect();
+      const here = isKeyboard
+        ? { x: box.left + box.width / 2, y: box.top + box.height / 2 }
+        : { ...point };
+      const last = trail.at(-1);
+      const since = isKeyboard
+        ? undefined
+        : last && trail.find((sample) => last.t - sample.t <= TRAVEL_MS);
+      const previous =
+        since && (since.x !== here.x || since.y !== here.y)
+          ? since
+          : (reference ?? here);
+      reference = here;
       restoreDescription();
       trigger = next;
       keyboard = isKeyboard;
@@ -413,32 +566,84 @@ export function createFloatingTooltip(
       const changed = change(content, wasOpen);
       if (!changed) measure();
       position(!wasOpen);
-      if (
-        wasOpen &&
-        changed &&
-        !reduced?.matches &&
-        typeof body.animate === "function"
-      ) {
-        swap?.cancel();
-        const dx = target.x - previous.x;
-        const dy = target.y - previous.y;
-        const translate =
-          Math.abs(dy) > Math.abs(dx)
-            ? `0 ${dy >= 0 ? 8 : -8}px`
-            : `${dx >= 0 ? 8 : -8}px 0`;
-        swap = body.animate(
-          [
-            { opacity: 0.4, translate },
-            { opacity: 1, translate: "0 0" },
-          ],
-          { duration: SWAP_MS, easing: EASE },
+      const animated = !reduced?.matches && typeof popup.animate === "function";
+      if (!wasOpen && animated) {
+        entrance = popup.animate(
+          { opacity: [0, 1] },
+          { duration: FADE_IN_MS, easing: "ease-out" },
         );
+        grow = { from: GROW_FROM };
+        const at = popup.getBoundingClientRect();
+        pivot = isKeyboard
+          ? null
+          : {
+              x: Math.min(at.width, Math.max(0, here.x - at.left)),
+              y: Math.min(at.height, Math.max(0, here.y - at.top)),
+            };
+        render();
+        runEffects();
+      }
+      if (wasOpen && changed && animated) {
+        const dx = here.x - previous.x;
+        const dy = here.y - previous.y;
+        const vertical = Math.abs(dy) > Math.abs(dx);
+        const sign = (vertical ? dy : dx) >= 0 ? "" : "-";
+        const shift = (to: string) =>
+          vertical ? `0 ${to}${REEL_SHIFT}` : `${to}${REEL_SHIFT} 0`;
+        const timing = { duration: REEL_MS, easing: EASE_REEL };
+        const match = leavings.find(
+          (entry) => shown !== null && sameContent(entry.content, shown),
+        );
+        let start: Visible = { opacity: "0", translate: shift(sign) };
+        if (match) {
+          start = visibleState(match.element);
+          match.animation.cancel();
+          match.element.remove();
+          leavings = leavings.filter((entry) => entry !== match);
+        }
+        rolling = body.animate(
+          [start, { opacity: "1", translate: "0 0" }],
+          timing,
+        );
+        const leaving = outgoing;
+        outgoing = null;
+        if (leaving) {
+          const animation = leaving.element.animate(
+            [leaving.from, { opacity: "0", translate: shift(sign ? "" : "-") }],
+            { ...timing, fill: "forwards" },
+          );
+          const entry = { ...leaving, animation };
+          leavings.push(entry);
+          animation.finished.then(
+            () => {
+              entry.element.remove();
+              leavings = leavings.filter((other) => other !== entry);
+            },
+            () => {},
+          );
+        }
+        while (leavings.length > MAX_LEAVING) {
+          const faintest = leavings.reduce((least, entry) =>
+            Number(visibleState(entry.element).opacity) <
+            Number(visibleState(least.element).opacity)
+              ? entry
+              : least,
+          );
+          faintest.animation.cancel();
+          faintest.element.remove();
+          leavings = leavings.filter((entry) => entry !== faintest);
+        }
       }
     };
     if (popup.hidden && !isKeyboard && opts.delay > 0) {
       pending = next;
       openTimer = view.setTimeout(show, opts.delay);
     } else show();
+  };
+  const remember = (event: PointerEvent) => {
+    trail.push({ x: event.clientX, y: event.clientY, t: event.timeStamp });
+    while (trail.length > 1 && event.timeStamp - trail[0].t > TRAVEL_MS * 2)
+      trail.shift();
   };
   const find = (event: Event) =>
     event.target instanceof view.Element ? findTrigger(event.target) : null;
@@ -448,6 +653,7 @@ export function createFloatingTooltip(
     const next = find(event);
     if (!next || next === pending || !canShow(next)) return;
     owner = event.pointerId;
+    remember(event);
     if (next === trigger) keepOpen();
     else open(next, false, { x: event.clientX, y: event.clientY });
   };
@@ -457,6 +663,7 @@ export function createFloatingTooltip(
     if (!(event.target instanceof view.Node) || !active?.contains(event.target))
       return;
     point = { x: event.clientX, y: event.clientY };
+    remember(event);
     if (pending) return;
     position(false, true);
   };
@@ -514,7 +721,8 @@ export function createFloatingTooltip(
       if (fade?.closing) return dismiss();
       fade?.animation.cancel();
       fade = undefined;
-      swap?.cancel();
+      dropLeaving();
+      stopEffects();
       morph?.cancel();
       finishMorph();
       motion.resetTilt();

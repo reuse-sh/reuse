@@ -42,6 +42,10 @@
 .re-floating-tooltip-content {
   display: block;
 }
+.re-floating-tooltip-leaving {
+  position: absolute;
+  pointer-events: none;
+}
 .re-moving-highlight {
   pointer-events: none;
   position: absolute;

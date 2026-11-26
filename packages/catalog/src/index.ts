@@ -1421,8 +1421,16 @@ export const libraries: Library[] = [
         "Nearby triggers share one tooltip, so moving along a toolbar slides it across instead of closing and reopening it. The closest group that matches a trigger owns it.",
       ],
       [
+        "Grow from the pointer",
+        "The first hint fades in and grows from 92% out of the point nearest the pointer, so it seems to come from where you point.",
+      ],
+      [
         "Follow the pointer on a spring",
         "It trails the pointer with a little weight, below and to the right, and never jumps.",
+      ],
+      [
+        "Roll between hints",
+        "Moving to the next trigger rolls the old hint out and the new one in from the direction of travel while the box resizes. It never dims, and only the new hint describes the trigger.",
       ],
       [
         "Lean from the edge it hangs on",
@@ -1430,7 +1438,7 @@ export const libraries: Library[] = [
       ],
       [
         "Fade out from the current tilt",
-        "When the pointer leaves, the tooltip fades as its tilt settles. Returning during the fade brings it back from its current opacity.",
+        "When the pointer leaves, the tooltip fades and shrinks a little as its tilt settles. Returning during the fade brings it back from its current opacity.",
       ],
       [
         "Anchor to keyboard focus",

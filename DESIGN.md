@@ -42,7 +42,7 @@ Code blocks use an outer frame containing a quiet language label and copy action
 
 ## Motion
 
-Moving highlights follow Poise: they appear with a scale from 0.97 to 1, slide in 150ms and fade in 100ms. Tooltips are dark pills placed bottom-right of the pointer, 10px away, leaning up to 5 degrees with pointer speed. Native scroll snap owns carousel and lightbox paging, with a spring glide after release. CSS, WAAPI and rAF explain actual state changes. There is no page entrance choreography. Shared button transitions include scale and transform for press and release; color-only transitions must not override the copy controller's press feedback. Animations stop offscreen or when the document is hidden and use static alternatives under reduced motion. Each controller restores its owned styles and listeners on destroy.
+Moving highlights follow Poise: they appear with a scale from 0.97 to 1, slide in 150ms and fade in 100ms. Tooltips are dark pills placed bottom-right of the pointer, 10px away, leaning up to 5 degrees with pointer speed. They grow in from the pointer corner and roll from one hint to the next in the direction of travel. Native scroll snap owns carousel and lightbox paging, with a spring glide after release. CSS, WAAPI and rAF explain actual state changes. There is no page entrance choreography. Shared button transitions include scale and transform for press and release; color-only transitions must not override the copy controller's press feedback. Animations stop offscreen or when the document is hidden and use static alternatives under reduced motion. Each controller restores its owned styles and listeners on destroy.
 
 ## Media
 
