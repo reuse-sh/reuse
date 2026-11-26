@@ -4,7 +4,11 @@
     @apply grid gap-8 sm:grid-cols-3 sm:gap-6;
   }
   .re-preview-timeline li {
-    @apply relative grid content-start gap-2 border-l border-dashed border-border pl-5 sm:border-t sm:border-l-0 sm:pt-5 sm:pl-0;
+    @apply relative grid content-start gap-2 border-dashed border-border pl-5 sm:pt-5 sm:pl-0;
+    border-width: 0 0 0 1px;
+    @variant sm {
+      border-width: 1px 0 0;
+    }
   }
   .re-preview-timeline li::before {
     @apply absolute top-0 -left-px h-4 w-px bg-foreground sm:-top-px sm:left-0 sm:h-px sm:w-4;
