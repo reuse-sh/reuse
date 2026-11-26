@@ -137,13 +137,55 @@ test("comes back when the pointer returns to a gap during the exit", async ({
   expect(await shown()).toBe(picture("#e07a5f"));
 });
 
-test("fits a tall picture into a short window", async ({ page }) => {
+test("keeps a leaning card inside a short window while it moves", async ({
+  page,
+}) => {
   await page.setViewportSize({ width: 900, height: 280 });
   const { popup, shown } = await setup(page);
-  await page.mouse.move(200, 150, { steps: 3 });
+  await page.mouse.move(520, 150, { steps: 3 });
   await expect.poll(shown).toBe(picture("#e07a5f"));
   await page.waitForTimeout(600);
-  const box = await popup.boundingBox();
-  expect(box?.y).toBeGreaterThanOrEqual(0);
-  expect((box?.y ?? 0) + (box?.height ?? 0)).toBeLessThanOrEqual(280);
+  let worst = { top: 0, bottom: 280, left: 0, right: 900 };
+  for (const x of [440, 340, 240, 140, 300, 520, 380, 160]) {
+    await page.mouse.move(x, 150);
+    const box = await popup
+      .locator(".re-cursor-preview-frame")
+      .evaluate((frame) => frame.getBoundingClientRect().toJSON());
+    worst = {
+      top: Math.min(worst.top, box.top),
+      bottom: Math.max(worst.bottom, box.bottom),
+      left: Math.min(worst.left, box.left),
+      right: Math.max(worst.right, box.right),
+    };
+  }
+  expect(worst.top).toBeGreaterThanOrEqual(0);
+  expect(worst.bottom).toBeLessThanOrEqual(280);
+});
+
+test("stays closed over a gap after an item without a picture closed it", async ({
+  page,
+}) => {
+  await page.mouse.move(2, 2);
+  await mount(
+    page,
+    `<ul id="list" style="margin:120px 0 0 120px;padding:0;width:420px;list-style:none">
+      <li data-re-preview="${picture("#e07a5f")}" style="height:60px">Coral sky</li>
+      <li data-re-preview-template="missing" style="height:60px">No picture</li>
+      <li class="gap" style="height:40px"></li>
+    </ul>`,
+    ["interactions/styles.css"],
+  );
+  await page.addScriptTag({
+    type: "module",
+    content: `import { createCursorPreview } from "@reuse-sh/interactions";
+      createCursorPreview(document.querySelector("#list"), { delay: 0 });
+      window.__ready = true;`,
+  });
+  await expect.poll(() => page.evaluate(() => "__ready" in window)).toBe(true);
+  const popup = page.locator(".re-cursor-preview");
+  await page.mouse.move(200, 150, { steps: 3 });
+  await expect(popup).toHaveAttribute("data-state", "open");
+  await page.mouse.move(200, 210, { steps: 2 });
+  await page.mouse.move(200, 260, { steps: 2 });
+  await expect(popup).toBeHidden();
 });

@@ -116,8 +116,17 @@ export function createCursorPreview(
   };
   applyClassName();
 
-  let layers = new WeakMap<HTMLElement, Layer>();
+  let itemLayers = new WeakMap<HTMLElement, Layer>();
+  let nodeLayers = new WeakMap<Node, Layer>();
   const fades = new WeakMap<HTMLElement, Animation>();
+  const owned = new Set<Animation>();
+  const own = (animation: Animation) => {
+    owned.add(animation);
+    const release = () => owned.delete(animation);
+    animation.addEventListener("finish", release);
+    animation.addEventListener("cancel", release);
+    return animation;
+  };
   let requested: HTMLElement | null = null;
   let shown: Layer | null = null;
   let shownItem: HTMLElement | null = null;
@@ -158,10 +167,9 @@ export function createCursorPreview(
     return item && root.contains(item) && canShow(item) ? item : null;
   };
 
-  const lean = () => (reduced?.matches ? 0 : opts.tilt);
-  const overhang = () => {
+  const overhang = (degrees: number) => {
     const { width, height } = size;
-    const angle = (lean() * Math.PI) / 180;
+    const angle = (degrees * Math.PI) / 180;
     const ox = origin.x * width;
     const oy = origin.y * height;
     const reach = { left: 0, right: 0, top: 0, bottom: 0 };
@@ -184,10 +192,23 @@ export function createCursorPreview(
     }
     return reach;
   };
+  const lean = () => {
+    if (reduced?.matches || opts.tilt <= 0) return 0;
+    const reach = overhang(opts.tilt);
+    const pad = opts.viewportPadding;
+    const roomX = Math.max(0, view.innerWidth - 2 * pad - size.width);
+    const roomY = Math.max(0, view.innerHeight - 2 * pad - size.height);
+    const needX = reach.left + reach.right;
+    const needY = reach.top + reach.bottom;
+    return (
+      opts.tilt *
+      Math.min(1, needX > 0 ? roomX / needX : 1, needY > 0 ? roomY / needY : 1)
+    );
+  };
   const target = () => {
     const pad = opts.viewportPadding;
     const { width, height } = size;
-    const reach = overhang();
+    const reach = overhang(lean());
     const viewport = { width: view.innerWidth, height: view.innerHeight };
     let x: number;
     let y: number;
@@ -230,27 +251,36 @@ export function createCursorPreview(
       lean: lean(),
     });
 
-  const layerFor = (item: HTMLElement) => {
-    const key = given.content
-      ? undefined
-      : `${item.getAttribute("data-re-preview-template")} ${item.getAttribute("data-re-preview")}`;
-    const cached = layers.get(item);
-    if (
-      cached &&
-      cached.key === key &&
-      (cached.content.parentNode === cached.element ||
-        cached.content.nodeType === Node.DOCUMENT_FRAGMENT_NODE)
-    )
-      return cached;
-    const content = opts.content(item);
-    if (!content) return null;
+  const build = (content: Node, key?: string) => {
     const element = document.createElement("div");
     element.className = "re-cursor-preview-layer";
     if (!given.content) element.inert = true;
     element.append(content);
-    const layer = { element, content, ready: decoded(element), key };
-    layers.set(item, layer);
+    return { element, content, ready: decoded(element), key };
+  };
+  const layerFor = (item: HTMLElement) => {
+    if (!given.content) {
+      const key = `${item.getAttribute("data-re-preview-template")} ${item.getAttribute("data-re-preview")}`;
+      const cached = itemLayers.get(item);
+      if (cached?.key === key) return cached;
+      const content = opts.content(item);
+      if (!content) return null;
+      const layer = build(content, key);
+      itemLayers.set(item, layer);
+      return layer;
+    }
+    const content = opts.content(item);
+    if (!content) return null;
+    const cached = nodeLayers.get(content);
+    if (cached && content.parentNode === cached.element) return cached;
+    const layer = build(content);
+    nodeLayers.set(content, layer);
     return layer;
+  };
+  const forget = (item: HTMLElement, layer: Layer) => {
+    if (itemLayers.get(item) === layer) itemLayers.delete(item);
+    if (nodeLayers.get(layer.content) === layer)
+      nodeLayers.delete(layer.content);
   };
   const measure = (layer: Layer) => {
     const attached = layer.element.parentElement === frame;
@@ -273,20 +303,24 @@ export function createCursorPreview(
       (Math.abs(from.width - next.width) > 0.5 ||
         Math.abs(from.height - next.height) > 0.5)
     )
-      frame.animate(
-        [
-          { width: `${from.width}px`, height: `${from.height}px` },
-          { width: `${next.width}px`, height: `${next.height}px` },
-        ],
-        { duration: MORPH_MS, easing: EASE_MORPH },
+      own(
+        frame.animate(
+          [
+            { width: `${from.width}px`, height: `${from.height}px` },
+            { width: `${next.width}px`, height: `${next.height}px` },
+          ],
+          { duration: MORPH_MS, easing: EASE_MORPH },
+        ),
       );
   };
   const fade = (element: HTMLElement, to: number) => {
     const from = view.getComputedStyle(element).opacity || "1";
     fades.get(element)?.cancel();
-    const animation = element.animate(
-      { opacity: [from, String(to)] },
-      { duration: SWAP_MS, easing: "ease", fill: "forwards" },
+    const animation = own(
+      element.animate(
+        { opacity: [from, String(to)] },
+        { duration: SWAP_MS, easing: "ease", fill: "forwards" },
+      ),
     );
     fades.set(element, animation);
     return animation;
@@ -315,12 +349,13 @@ export function createCursorPreview(
     owner = undefined;
     hide();
   };
-  const close = () => {
+  const close = (resumable = false) => {
     ticket++;
     view.clearTimeout(openTimer);
     openTimer = undefined;
     requested = null;
     owner = undefined;
+    if (!resumable) shownItem = null;
     if (popup.hidden || popup.dataset.state === "closing") return;
     popup.dataset.state = "closing";
     const exit =
@@ -345,7 +380,7 @@ export function createCursorPreview(
     view.clearTimeout(openTimer);
     openTimer = undefined;
     view.clearTimeout(closeTimer);
-    closeTimer = view.setTimeout(close, opts.closeDelay);
+    closeTimer = view.setTimeout(() => close(true), opts.closeDelay);
   };
 
   const switchTo = (layer: Layer) => {
@@ -363,10 +398,11 @@ export function createCursorPreview(
     if (element.parentElement === frame) rising = fade(element, 1);
     else {
       frame.prepend(element);
-      element.firstElementChild?.animate(
+      const settling = element.firstElementChild?.animate(
         { scale: ["1.06", "1"] },
         { duration: SETTLE_MS, easing: EASE_OUT },
       );
+      if (settling) own(settling);
     }
     resize(measure(layer), true);
     for (const other of [...frame.children] as HTMLElement[]) {
@@ -422,8 +458,8 @@ export function createCursorPreview(
       if (destroyed || current !== ticket || !inside || !enabled()) return;
       if (!canShow(item)) return close();
       if (ok) return present(layer, item);
-      if (layers.get(item) === layer) layers.delete(item);
-      if (popup.hidden) requested = null;
+      forget(item, layer);
+      requested = popup.hidden ? null : shownItem;
     });
   };
 
@@ -464,7 +500,7 @@ export function createCursorPreview(
     if (item === requested) return;
     if (popup.hidden && opts.delay > 0) {
       requested = item;
-      layerFor(item);
+      if (!given.content) layerFor(item);
       view.clearTimeout(openTimer);
       openTimer = view.setTimeout(() => {
         openTimer = undefined;
@@ -484,6 +520,7 @@ export function createCursorPreview(
     inside = false;
     ticket++;
     if (popup.hidden) return dismiss();
+    requested = shownItem;
     scheduleClose();
   };
   const onScroll = () => {
@@ -514,9 +551,7 @@ export function createCursorPreview(
     if (popup.hidden) return;
     if (reduced?.matches) {
       if (popup.dataset.state === "closing") return hide();
-      if (typeof frame.getAnimations === "function")
-        for (const animation of frame.getAnimations({ subtree: true }))
-          if (!("transitionProperty" in animation)) animation.cancel();
+      for (const animation of [...owned]) animation.cancel();
       for (const other of [...frame.children] as HTMLElement[])
         if (other !== shown?.element) drop(other);
     }
@@ -553,7 +588,6 @@ export function createCursorPreview(
     dismiss,
     refresh() {
       if (requested && !canShow(requested)) return close();
-      if (given.content) layers = new WeakMap();
       if (requested && !popup.hidden) request(requested);
       relayout(false);
     },
@@ -566,7 +600,8 @@ export function createCursorPreview(
       applyPadding();
       if (opts.content !== content) {
         dismiss();
-        layers = new WeakMap();
+        itemLayers = new WeakMap();
+        nodeLayers = new WeakMap();
       }
       if (media?.media !== view.matchMedia?.(opts.media).media) {
         media?.removeEventListener("change", onMedia);

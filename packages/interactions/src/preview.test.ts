@@ -408,3 +408,72 @@ it("keeps a margin from the top edge while a corner-hung card leans", async () =
   }
   expect(highest).toBeGreaterThanOrEqual(15.5);
 });
+
+it("switches to the item the pointer comes back to after leaving mid-decode", async () => {
+  const { root, a, b, shownSrc } = setup({ delay: 0 });
+  pointer(a, "pointerover");
+  decodes.find((decode) => decode.src === "/a.webp")?.resolve();
+  await flush();
+  pointer(b, "pointerover");
+  pointer(root, "pointerleave");
+  pointer(b, "pointerover");
+  await decodeAll();
+  expect(shownSrc()).toBe("/b.webp");
+});
+
+it("retries a failed picture when the pointer returns to it across a gap", async () => {
+  const { a, gap, b, shownSrc } = setup({ delay: 0 });
+  pointer(a, "pointerover");
+  decodes.find((decode) => decode.src === "/a.webp")?.resolve();
+  decodes.find((decode) => decode.src === "/b.webp")?.reject();
+  await flush();
+  pointer(b, "pointerover");
+  await flush();
+  expect(shownSrc()).toBe("/a.webp");
+  decodes.length = 0;
+  pointer(gap, "pointerover");
+  pointer(b, "pointerover");
+  expect(decodes.map((decode) => decode.src)).toEqual(["/b.webp"]);
+  await decodeAll();
+  expect(shownSrc()).toBe("/b.webp");
+});
+
+it("asks for custom content on every visit, and keeps a node it returns again in place", async () => {
+  const root = document.createElement("div");
+  root.innerHTML = '<a data-row="a">A</a>';
+  document.body.append(root);
+  const [a] = [...root.children] as HTMLElement[];
+  let price = "10";
+  const stable = document.createElement("b");
+  let fresh = true;
+  const preview = createCursorPreview(root, {
+    selector: "[data-row]",
+    delay: 0,
+    content: () => {
+      if (!fresh) return stable;
+      const node = document.createElement("span");
+      node.textContent = price;
+      return node;
+    },
+  });
+  const popup = document.querySelector<HTMLElement>(".re-cursor-preview");
+  pointer(a, "pointerover");
+  await flush();
+  expect(popup?.textContent).toBe("10");
+  pointer(root, "pointerleave");
+  vi.advanceTimersByTime(80);
+  price = "20";
+  pointer(a, "pointerover");
+  await flush();
+  expect(popup?.textContent).toBe("20");
+
+  fresh = false;
+  preview.refresh();
+  await flush();
+  const frame = popup?.querySelector<HTMLElement>(".re-cursor-preview-frame");
+  preview.refresh();
+  expect(frame?.style.width).toBe("200px");
+  await flush();
+  expect(frame?.style.width).toBe("200px");
+  expect(popup?.querySelector(".re-cursor-preview-layer > b")).toBe(stable);
+});
