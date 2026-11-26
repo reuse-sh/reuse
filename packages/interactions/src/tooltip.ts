@@ -591,8 +591,8 @@ export function createFloatingTooltip(
         const shift = (to: string) =>
           vertical ? `0 ${to}${REEL_SHIFT}` : `${to}${REEL_SHIFT} 0`;
         const timing = { duration: REEL_MS, easing: EASE_REEL };
-        const match = leavings.find((entry) =>
-          sameContent(entry.content, content),
+        const match = leavings.find(
+          (entry) => shown !== null && sameContent(entry.content, shown),
         );
         let start: Visible = { opacity: "0", translate: shift(sign) };
         if (match) {
@@ -623,9 +623,15 @@ export function createFloatingTooltip(
           );
         }
         while (leavings.length > MAX_LEAVING) {
-          const oldest = leavings.shift();
-          oldest?.animation.cancel();
-          oldest?.element.remove();
+          const faintest = leavings.reduce((least, entry) =>
+            Number(visibleState(entry.element).opacity) <
+            Number(visibleState(least.element).opacity)
+              ? entry
+              : least,
+          );
+          faintest.animation.cancel();
+          faintest.element.remove();
+          leavings = leavings.filter((entry) => entry !== faintest);
         }
       }
     };

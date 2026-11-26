@@ -726,3 +726,52 @@ test("rolls a slow sweep sideways and brings a hint back from where it is leavin
   expect(visibleA).toHaveLength(1);
   expect(layers.every((layer) => layer.text !== "")).toBe(true);
 });
+
+test("brings a template hint back from where it is leaving instead of showing it twice", async ({
+  page,
+}) => {
+  await page.mouse.move(2, 2);
+  await mount(
+    page,
+    `<div id="people" style="display:flex;padding:80px">
+      <button style="width:80px" data-re-tooltip-template="mara">Mara</button>
+      <button style="width:80px" data-re-tooltip-template="jonas">Jonas</button>
+    </div>
+    <template id="mara"><b>Mara Lind</b><small>Design</small></template>
+    <template id="jonas"><b>Jonas Weber</b><small>Support</small></template>`,
+    ["interactions/styles.css"],
+  );
+  await page.addScriptTag({
+    type: "module",
+    content: `import { createFloatingTooltip } from "@reuse-sh/interactions";
+      createFloatingTooltip(document.querySelector("#people"), { delay: 0 });
+      window.__ready = true;`,
+  });
+  await expect.poll(() => page.evaluate(() => "__ready" in window)).toBe(true);
+  const mara = await page.getByRole("button", { name: "Mara" }).boundingBox();
+  const jonas = await page.getByRole("button", { name: "Jonas" }).boundingBox();
+  if (!mara || !jonas) throw new Error("No triggers.");
+  await page.mouse.move(mara.x + 20, mara.y + 8);
+  await page.waitForTimeout(400);
+  await page.mouse.move(jonas.x + 20, jonas.y + 8, { steps: 2 });
+  await page.waitForTimeout(40);
+  await page.mouse.move(mara.x + 60, mara.y + 8, { steps: 2 });
+  const copies = await page.evaluate(async () => {
+    let most = 0;
+    for (let i = 0; i < 8; i++) {
+      await new Promise((resolve) => requestAnimationFrame(resolve));
+      const visible = [
+        ...document.querySelectorAll<HTMLElement>(
+          '[role="tooltip"]:not([hidden]) .re-floating-tooltip-content',
+        ),
+      ].filter(
+        (element) =>
+          element.textContent?.includes("Mara Lind") &&
+          Number(getComputedStyle(element).opacity) > 0.05,
+      );
+      most = Math.max(most, visible.length);
+    }
+    return most;
+  });
+  expect(copies).toBe(1);
+});
