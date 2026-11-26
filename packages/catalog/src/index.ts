@@ -1618,7 +1618,7 @@ export const libraries: Library[] = [
       ],
       [
         "content(item)",
-        "Returns a node for an item, in place of the attributes. Images inside it are decoded before they show.",
+        "Returns a node for an item, in place of the attributes. Images inside it load eagerly and decode before they show. Template clones are made inert; nodes you return stay as you give them, so keep links and buttons out of them. Call refresh() when an item's content changes.",
       ],
       [
         "placement, offset",

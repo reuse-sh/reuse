@@ -322,3 +322,89 @@ it("swaps a placeholder for the real content on refresh, and reuses a node it wa
   await flush();
   expect(popup?.querySelector(".re-cursor-preview-layer > *")).toBe(scene);
 });
+
+it("stays closed when the page scrolls or a decode lands after the pointer left", async () => {
+  const { root, a, b, shownSrc } = setup({ delay: 0 });
+  pointer(a, "pointerover");
+  decodes.find((decode) => decode.src === "/a.webp")?.resolve();
+  await flush();
+  pointer(b, "pointerover");
+  pointer(root, "pointerleave");
+  document.elementFromPoint = () => a;
+  window.dispatchEvent(new Event("scroll"));
+  await decodeAll();
+  vi.advanceTimersByTime(80);
+  await flush();
+  expect(shownSrc()).toBeNull();
+  vi.advanceTimersByTime(1000);
+  await flush();
+  expect(shownSrc()).toBeNull();
+});
+
+it("keeps its spring and lean through refresh and update", async () => {
+  const { a, popup, preview } = setup({ delay: 0 });
+  pointer(a, "pointerover", 100, 100);
+  await decodeAll();
+  pointer(a, "pointermove", 500, 100);
+  vi.advanceTimersByTime(32);
+  const before = position(popup);
+  preview.update({ tilt: 8 });
+  preview.refresh();
+  const after = position(popup);
+  expect(after.x).toBeCloseTo(before.x, 0);
+  expect(after.tilt).toBeCloseTo(before.tilt, 1);
+  expect(after.x).toBeLessThan(524);
+});
+
+it("loads a lazy image in a template eagerly, and retries one that failed", async () => {
+  const root = document.createElement("div");
+  root.innerHTML =
+    '<a data-re-preview-template="card">card</a><a data-re-preview="/retry.webp">retry</a>' +
+    '<template id="card"><img loading="lazy" src="/lazy.webp" alt=""></template>';
+  document.body.append(root);
+  const [card, retry] = [...root.children] as HTMLElement[];
+  createCursorPreview(root, { delay: 0 });
+  pointer(card, "pointerover");
+  const lazy = decodes.find((decode) => decode.src === "/lazy.webp");
+  expect(lazy).toBeDefined();
+  lazy?.resolve();
+  await flush();
+  const shown = document.querySelector<HTMLImageElement>(
+    ".re-cursor-preview img",
+  );
+  expect(shown?.getAttribute("src")).toBe("/lazy.webp");
+  expect(shown?.loading).toBe("eager");
+
+  decodes.find((decode) => decode.src === "/retry.webp")?.reject();
+  pointer(retry, "pointerover");
+  await flush();
+  pointer(card, "pointerover");
+  await flush();
+  decodes.length = 0;
+  pointer(retry, "pointerover");
+  expect(decodes.map((decode) => decode.src)).toEqual(["/retry.webp"]);
+});
+
+it("cancels a pending open when Escape is pressed", async () => {
+  const { a, shownSrc } = setup();
+  pointer(a, "pointerover");
+  window.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" }));
+  vi.advanceTimersByTime(100);
+  await decodeAll();
+  expect(shownSrc()).toBeNull();
+});
+
+it("keeps a margin from the top edge while a corner-hung card leans", async () => {
+  const { a, popup } = setup({ delay: 0 });
+  pointer(a, "pointerover", 900, 0);
+  await decodeAll();
+  let highest = Number.POSITIVE_INFINITY;
+  for (let x = 860; x >= 100; x -= 60) {
+    pointer(a, "pointermove", x, 0);
+    vi.advanceTimersByTime(16);
+    const { y, tilt } = position(popup);
+    const rise = 200 * Math.sin((Math.abs(tilt) * Math.PI) / 180);
+    highest = Math.min(highest, y - rise);
+  }
+  expect(highest).toBeGreaterThanOrEqual(15.5);
+});

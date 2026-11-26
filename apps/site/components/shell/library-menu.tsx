@@ -102,6 +102,7 @@ export function LibraryMenu({
     loading.setAttribute("aria-hidden", "true");
     const created = createCursorPreview(root, {
       selector: "[data-peek]",
+      media: "(any-hover: hover) and (any-pointer: fine)",
       offset: 18,
       tilt: 5,
       delay: 90,

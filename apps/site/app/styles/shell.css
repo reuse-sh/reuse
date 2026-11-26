@@ -60,6 +60,7 @@
     background: var(--muted);
   }
   .f-peek-tip .pk {
+    pointer-events: auto;
     --re-stage-cursor-size: 15px;
     --re-stage-ring: rgb(0 0 0 / 0.35);
     border-radius: 10px;

@@ -19,7 +19,12 @@ export interface CursorPreviewOptions {
 
 type Settings = Required<CursorPreviewOptions>;
 type Size = { width: number; height: number };
-type Layer = { element: HTMLElement; ready: Promise<boolean> };
+type Layer = {
+  element: HTMLElement;
+  content: Node;
+  ready: Promise<boolean>;
+  key?: string;
+};
 
 const SWAP_MS = 200;
 const SETTLE_MS = 700;
@@ -64,14 +69,15 @@ function settle(options: CursorPreviewOptions): Settings {
 
 const decoded = (element: HTMLElement) =>
   Promise.all(
-    [...element.querySelectorAll("img")].map((image) =>
-      typeof image.decode === "function"
+    [...element.querySelectorAll("img")].map((image) => {
+      image.loading = "eager";
+      return typeof image.decode === "function"
         ? image.decode().then(
             () => true,
             () => false,
           )
-        : true,
-    ),
+        : true;
+    }),
   ).then((results) => results.every(Boolean));
 
 export function createCursorPreview(
@@ -96,6 +102,12 @@ export function createCursorPreview(
   frame.className = "re-cursor-preview-frame";
   popup.append(frame);
   document.body.append(popup);
+  const applyPadding = () =>
+    popup.style.setProperty(
+      "--re-preview-viewport-padding",
+      `${opts.viewportPadding}px`,
+    );
+  applyPadding();
   let extraClasses: string[] = [];
   const applyClassName = () => {
     popup.classList.remove(...extraClasses);
@@ -104,10 +116,14 @@ export function createCursorPreview(
   };
   applyClassName();
 
-  let layers = new WeakMap<Node, Layer & { key?: string }>();
+  let layers = new WeakMap<HTMLElement, Layer>();
   const fades = new WeakMap<HTMLElement, Animation>();
   let requested: HTMLElement | null = null;
   let shown: Layer | null = null;
+  let shownItem: HTMLElement | null = null;
+  let inside = false;
+  let ticket = 0;
+  let origin = { x: 0, y: 0 };
   let owner: number | undefined;
   let point = { x: 0, y: 0 };
   let size: Size = { width: 0, height: 0 };
@@ -142,64 +158,98 @@ export function createCursorPreview(
     return item && root.contains(item) && canShow(item) ? item : null;
   };
 
+  const lean = () => (reduced?.matches ? 0 : opts.tilt);
+  const overhang = () => {
+    const { width, height } = size;
+    const angle = (lean() * Math.PI) / 180;
+    const ox = origin.x * width;
+    const oy = origin.y * height;
+    const reach = { left: 0, right: 0, top: 0, bottom: 0 };
+    for (const sign of [-1, 1]) {
+      const cos = Math.cos(angle);
+      const sin = Math.sin(angle) * sign;
+      for (const [x, y] of [
+        [0, 0],
+        [width, 0],
+        [0, height],
+        [width, height],
+      ]) {
+        const rx = ox + (x - ox) * cos - (y - oy) * sin;
+        const ry = oy + (x - ox) * sin + (y - oy) * cos;
+        reach.left = Math.max(reach.left, -rx);
+        reach.top = Math.max(reach.top, -ry);
+        reach.right = Math.max(reach.right, rx - width);
+        reach.bottom = Math.max(reach.bottom, ry - height);
+      }
+    }
+    return reach;
+  };
   const target = () => {
     const pad = opts.viewportPadding;
     const { width, height } = size;
-    const angle = (opts.tilt * Math.PI) / 180;
-    const extraX = Math.max(
-      0,
-      (width * Math.cos(angle) + height * Math.sin(angle) - width) / 2,
-    );
-    const extraY = Math.max(
-      0,
-      (height * Math.cos(angle) + width * Math.sin(angle) - height) / 2,
-    );
+    const reach = overhang();
     const viewport = { width: view.innerWidth, height: view.innerHeight };
     let x: number;
     let y: number;
+    let flipX = false;
+    let flipY = false;
     if (opts.placement === "center") {
       x = point.x - width / 2;
       y = point.y - height / 2;
     } else {
       x = point.x + opts.offset;
       y = point.y + opts.offset;
-      if (x + width > viewport.width - pad - extraX)
-        x = point.x - opts.offset - width;
-      if (y + height > viewport.height - pad - extraY)
-        y = point.y - opts.offset - height;
+      flipX = x + width > viewport.width - pad - reach.right;
+      flipY = y + height > viewport.height - pad - reach.bottom;
+      if (flipX) x = point.x - opts.offset - width;
+      if (flipY) y = point.y - opts.offset - height;
     }
+    const fit = (
+      at: number,
+      size: number,
+      room: number,
+      before: number,
+      after: number,
+    ) => {
+      const low = pad + before;
+      const high = room - size - pad - after;
+      return high < low
+        ? Math.max(pad, (room - size) / 2)
+        : Math.min(Math.max(low, at), high);
+    };
     return {
-      x: Math.min(
-        Math.max(pad + extraX, x),
-        Math.max(pad + extraX, viewport.width - width - pad - extraX),
-      ),
-      y: Math.min(
-        Math.max(pad + extraY, y),
-        Math.max(pad + extraY, viewport.height - height - pad - extraY),
-      ),
+      x: fit(x, width, viewport.width, reach.left, reach.right),
+      y: fit(y, height, viewport.height, reach.top, reach.bottom),
+      flipX,
+      flipY,
     };
   };
   const aim = (snap = false) =>
     motion.setTarget(target(), {
       snap: snap || Boolean(reduced?.matches),
-      lean: reduced?.matches ? 0 : opts.tilt,
+      lean: lean(),
     });
 
   const layerFor = (item: HTMLElement) => {
     const key = given.content
       ? undefined
       : `${item.getAttribute("data-re-preview-template")} ${item.getAttribute("data-re-preview")}`;
-    const cached = key === undefined ? undefined : layers.get(item);
-    if (cached?.key === key && cached) return cached;
+    const cached = layers.get(item);
+    if (
+      cached &&
+      cached.key === key &&
+      (cached.content.parentNode === cached.element ||
+        cached.content.nodeType === Node.DOCUMENT_FRAGMENT_NODE)
+    )
+      return cached;
     const content = opts.content(item);
     if (!content) return null;
-    const known = key === undefined ? layers.get(content) : undefined;
-    if (known) return known;
     const element = document.createElement("div");
     element.className = "re-cursor-preview-layer";
+    if (!given.content) element.inert = true;
     element.append(content);
-    const layer = { element, ready: decoded(element), key };
-    layers.set(key === undefined ? content : item, layer);
+    const layer = { element, content, ready: decoded(element), key };
+    layers.set(item, layer);
     return layer;
   };
   const measure = (layer: Layer) => {
@@ -253,10 +303,12 @@ export function createCursorPreview(
     motion.stop();
     for (const element of [...frame.children] as HTMLElement[]) drop(element);
     shown = null;
+    shownItem = null;
     popup.hidden = true;
     delete popup.dataset.state;
   };
   const dismiss = () => {
+    ticket++;
     view.clearTimeout(openTimer);
     openTimer = undefined;
     requested = null;
@@ -264,6 +316,7 @@ export function createCursorPreview(
     hide();
   };
   const close = () => {
+    ticket++;
     view.clearTimeout(openTimer);
     openTimer = undefined;
     requested = null;
@@ -331,21 +384,25 @@ export function createCursorPreview(
     }
   };
 
-  const present = (layer: Layer) => {
+  const present = (layer: Layer, item: HTMLElement) => {
     view.clearTimeout(closeTimer);
     closeTimer = undefined;
+    shownItem = item;
     if (popup.hidden) {
       for (const other of [...frame.children] as HTMLElement[]) drop(other);
       frame.append(layer.element);
       shown = layer;
       popup.hidden = false;
       resize(measure(layer), false);
+      origin = { x: 0, y: 0 };
       const at = target();
-      const originX = Math.min(1, Math.max(0, (point.x - at.x) / size.width));
-      const originY = Math.min(1, Math.max(0, (point.y - at.y) / size.height));
-      const origin = `${(originX || 0) * 100}% ${(originY || 0) * 100}%`;
-      popup.style.transformOrigin = origin;
-      frame.style.transformOrigin = origin;
+      origin =
+        opts.placement === "center"
+          ? { x: 0.5, y: 0.5 }
+          : { x: at.flipX ? 1 : 0, y: at.flipY ? 1 : 0 };
+      const css = `${origin.x * 100}% ${origin.y * 100}%`;
+      popup.style.transformOrigin = css;
+      frame.style.transformOrigin = css;
       aim(true);
       void frame.offsetWidth;
       popup.dataset.state = "open";
@@ -358,13 +415,15 @@ export function createCursorPreview(
 
   const request = (item: HTMLElement) => {
     requested = item;
+    const current = ++ticket;
     const layer = layerFor(item);
     if (!layer) return close();
     layer.ready.then((ok) => {
-      if (destroyed || requested !== item || !enabled()) return;
+      if (destroyed || current !== ticket || !inside || !enabled()) return;
       if (!canShow(item)) return close();
-      if (ok) present(layer);
-      else if (popup.hidden) requested = null;
+      if (ok) return present(layer, item);
+      if (layers.get(item) === layer) layers.delete(item);
+      if (popup.hidden) requested = null;
     });
   };
 
@@ -385,9 +444,22 @@ export function createCursorPreview(
     view.clearTimeout(closeTimer);
     closeTimer = undefined;
     point = { x: event.clientX, y: event.clientY };
+    inside = true;
     preload();
     const item = itemAt(event.target);
-    if (!item) return;
+    if (!item) {
+      if (
+        popup.dataset.state === "closing" &&
+        shownItem &&
+        canShow(shownItem)
+      ) {
+        owner = event.pointerId;
+        requested = shownItem;
+        popup.dataset.state = "open";
+        aim();
+      }
+      return;
+    }
     owner = event.pointerId;
     if (item === requested) return;
     if (popup.hidden && opts.delay > 0) {
@@ -409,30 +481,46 @@ export function createCursorPreview(
   };
   const leave = (event: PointerEvent) => {
     if (ignored(event) || foreign(event)) return;
+    inside = false;
+    ticket++;
     if (popup.hidden) return dismiss();
     scheduleClose();
   };
   const onScroll = () => {
-    if (popup.hidden && openTimer === undefined) return;
+    if (!inside || (popup.hidden && openTimer === undefined)) return;
     const under = document.elementFromPoint(point.x, point.y);
     if (!under || !root.contains(under)) return close();
     const item = itemAt(under);
     if (item && item !== requested) request(item);
   };
-  const onResize = () => {
+  const relayout = (snap: boolean) => {
     if (!popup.hidden && shown) {
       resize(measure(shown), false);
-      aim(true);
+      aim(snap);
     }
   };
+  const onResize = () => relayout(true);
   const onKey = (event: KeyboardEvent) => {
-    if (event.key === "Escape" && !popup.hidden) dismiss();
+    if (
+      event.key === "Escape" &&
+      (!popup.hidden || openTimer !== undefined || requested)
+    )
+      dismiss();
   };
   const onMedia = () => {
     if (!enabled()) dismiss();
   };
   const onReduced = () => {
-    if (!popup.hidden) aim(true);
+    if (popup.hidden) return;
+    if (reduced?.matches) {
+      if (popup.dataset.state === "closing") return hide();
+      if (typeof frame.getAnimations === "function")
+        for (const animation of frame.getAnimations({ subtree: true }))
+          if (!("transitionProperty" in animation)) animation.cancel();
+      for (const other of [...frame.children] as HTMLElement[])
+        if (other !== shown?.element) drop(other);
+    }
+    relayout(true);
   };
   const observer = new view.MutationObserver(() => {
     if (requested && !canShow(requested)) close();
@@ -465,8 +553,9 @@ export function createCursorPreview(
     dismiss,
     refresh() {
       if (requested && !canShow(requested)) return close();
+      if (given.content) layers = new WeakMap();
       if (requested && !popup.hidden) request(requested);
-      onResize();
+      relayout(false);
     },
     update(partial: CursorPreviewOptions = {}) {
       if (destroyed) return;
@@ -474,6 +563,7 @@ export function createCursorPreview(
       given = { ...given, ...partial };
       opts = settle(given);
       applyClassName();
+      applyPadding();
       if (opts.content !== content) {
         dismiss();
         layers = new WeakMap();
@@ -484,7 +574,7 @@ export function createCursorPreview(
         media?.addEventListener("change", onMedia);
       }
       if (!enabled()) dismiss();
-      else onResize();
+      else relayout(false);
     },
     destroy() {
       if (destroyed) return;

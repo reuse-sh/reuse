@@ -203,6 +203,9 @@
   top: 0;
   left: 0;
   width: max-content;
+  max-width: calc(100vw - 2 * var(--re-preview-viewport-padding, 16px));
+  max-height: calc(100vh - 2 * var(--re-preview-viewport-padding, 16px));
+  overflow: hidden;
   background: inherit;
 }
 .re-cursor-preview-layer > * {
@@ -210,7 +213,10 @@
 }
 .re-cursor-preview-image {
   width: var(--re-preview-width, 16rem);
+  max-width: 100%;
   height: auto;
+  max-height: calc(100vh - 2 * var(--re-preview-viewport-padding, 16px));
+  object-fit: cover;
 }
 @media (prefers-reduced-motion: reduce) {
   .re-cursor-preview-frame,

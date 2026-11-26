@@ -181,7 +181,7 @@ import { CursorPreview } from "@reuse-sh/interactions/react";
 
 export function Collections() {
   return <CursorPreview placement="center">
-    <nav aria-label="Collections">
+    <nav id="collections" aria-label="Collections">
       <a href="/collections/autumn" data-re-preview="/autumn.webp">
         <b>The autumn run</b>
         <span>Coral and sand, in a small run.</span>
@@ -211,7 +211,7 @@ import { CursorPreview } from "@reuse-sh/interactions/react";
 
 export function Timeline() {
   return <CursorPreview>
-    <ol>
+    <ol id="timeline">
       <li data-re-preview="/2019.webp">
         <time>2019</time>
         <h3>A borrowed tray</h3>
@@ -236,7 +236,7 @@ export function Timeline() {
     options: 'document.querySelector("#timeline")',
   }),
   "cursor-preview/examples/menu": previewRecipe("examples/menu", {
-    lead: "Give each row a template with a picture and a line of context. A shorter lean and a short delay suit a menu that is crossed on the way somewhere else.",
+    lead: "Give each row a template with a picture and a line of context. React renders a template's children outside its content, so fill it with markup. A shorter lean and a short delay suit a menu that is crossed on the way somewhere else.",
     react: `"use client";
 
 import { CursorPreview } from "@reuse-sh/interactions/react";
@@ -251,9 +251,10 @@ export function ShopMenu() {
         </a>
       </nav>
     </CursorPreview>
-    <template id="card-prints">
-      <span className="card"><img src="/prints.webp" alt="" width="2250" height="1500" /><b>Prints</b></span>
-    </template>
+    <template
+      id="card-prints"
+      dangerouslySetInnerHTML={{ __html: '<span class="card"><img src="/prints.webp" alt="" width="2250" height="1500"><b>Prints</b></span>' }}
+    />
   </>;
 }`,
     markup: `<nav id="menu" aria-label="Menu">

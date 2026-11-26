@@ -121,3 +121,29 @@ test("holds over a gap, closes after leaving, and comes back mid-exit", async ({
   await page.mouse.move(700, 600, { steps: 2 });
   await expect(popup).toBeHidden();
 });
+
+test("comes back when the pointer returns to a gap during the exit", async ({
+  page,
+}) => {
+  const { popup, shown } = await setup(page);
+  await page.mouse.move(200, 150, { steps: 3 });
+  await expect.poll(shown).toBe(picture("#e07a5f"));
+  await page.mouse.move(700, 160, { steps: 2 });
+  await page.waitForTimeout(120);
+  await expect(popup).toHaveAttribute("data-state", "closing");
+  await page.mouse.move(200, 200, { steps: 2 });
+  await expect(popup).toHaveAttribute("data-state", "open");
+  await page.waitForTimeout(400);
+  expect(await shown()).toBe(picture("#e07a5f"));
+});
+
+test("fits a tall picture into a short window", async ({ page }) => {
+  await page.setViewportSize({ width: 900, height: 280 });
+  const { popup, shown } = await setup(page);
+  await page.mouse.move(200, 150, { steps: 3 });
+  await expect.poll(shown).toBe(picture("#e07a5f"));
+  await page.waitForTimeout(600);
+  const box = await popup.boundingBox();
+  expect(box?.y).toBeGreaterThanOrEqual(0);
+  expect((box?.y ?? 0) + (box?.height ?? 0)).toBeLessThanOrEqual(280);
+});
