@@ -1,5 +1,12 @@
 # @reuse-sh/interactions
 
+## 0.3.0
+
+### Minor Changes
+
+- b825cc3: Add Cursor preview: a picture of each item that follows the pointer, leans with its speed and crossfades between items. Use `createCursorPreview` or the `CursorPreview` React component.
+- 9982302: Floating tooltip grows in from the pointer corner, rolls the next hint in from the direction of travel instead of dimming it, and shrinks slightly as it fades out.
+
 ## 0.2.1
 
 ### Patch Changes
