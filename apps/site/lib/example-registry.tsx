@@ -39,14 +39,18 @@ import { Example as Example36 } from "../examples/loaders-figures/example";
 import { Example as Example37 } from "../examples/loaders-start/example";
 import { Example as Example38 } from "../examples/masonry-spans/example";
 import { Example as Example39 } from "../examples/masonry-start/example";
-import { Example as Example40 } from "../examples/shadows-cards/example";
-import { Example as Example41 } from "../examples/shadows-scale/example";
-import { Example as Example42 } from "../examples/shadows-start/example";
-import { Example as Example43 } from "../examples/stage-start/example";
-import { Example as Example44 } from "../examples/tooltip-links/example";
-import { Example as Example45 } from "../examples/tooltip-people/example";
-import { Example as Example46 } from "../examples/tooltip-shortcuts/example";
-import { Example as Example47 } from "../examples/tooltip-start/example";
+import { Example as Example40 } from "../examples/preview-collections/example";
+import { Example as Example41 } from "../examples/preview-menu/example";
+import { Example as Example42 } from "../examples/preview-start/example";
+import { Example as Example43 } from "../examples/preview-timeline/example";
+import { Example as Example44 } from "../examples/shadows-cards/example";
+import { Example as Example45 } from "../examples/shadows-scale/example";
+import { Example as Example46 } from "../examples/shadows-start/example";
+import { Example as Example47 } from "../examples/stage-start/example";
+import { Example as Example48 } from "../examples/tooltip-links/example";
+import { Example as Example49 } from "../examples/tooltip-people/example";
+import { Example as Example50 } from "../examples/tooltip-shortcuts/example";
+import { Example as Example51 } from "../examples/tooltip-start/example";
 
 export const examples: Record<string, ComponentType> = {
   "annotations-data-format": Example0,
@@ -89,12 +93,16 @@ export const examples: Record<string, ComponentType> = {
   "loaders-start": Example37,
   "masonry-spans": Example38,
   "masonry-start": Example39,
-  "shadows-cards": Example40,
-  "shadows-scale": Example41,
-  "shadows-start": Example42,
-  "stage-start": Example43,
-  "tooltip-links": Example44,
-  "tooltip-people": Example45,
-  "tooltip-shortcuts": Example46,
-  "tooltip-start": Example47,
+  "preview-collections": Example40,
+  "preview-menu": Example41,
+  "preview-start": Example42,
+  "preview-timeline": Example43,
+  "shadows-cards": Example44,
+  "shadows-scale": Example45,
+  "shadows-start": Example46,
+  "stage-start": Example47,
+  "tooltip-links": Example48,
+  "tooltip-people": Example49,
+  "tooltip-shortcuts": Example50,
+  "tooltip-start": Example51,
 };

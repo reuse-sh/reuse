@@ -1,6 +1,276 @@
-import type { UsageRecipe } from "./usage-types.js";
+import type { UsageRecipe, UsageSection } from "./usage-types.js";
+
+const previewIntegration =
+  "The preview repeats what each item already shows and stays hidden from assistive technology, so keep names and links on the items. Touch and keyboard focus never open it; show the inline picture where the media query is off.";
+
+function previewRecipe(
+  path: string,
+  {
+    lead,
+    react,
+    markup,
+    css,
+    options,
+  }: {
+    lead: string;
+    react: string;
+    markup: string;
+    css: string;
+    options: string;
+  },
+): UsageRecipe {
+  const id = `cursor-preview-${path.replaceAll("/", "-")}`;
+  const styles = (layer: boolean): UsageSection => ({
+    title: layer ? "Package styles" : "Styles",
+    blocks: [
+      {
+        kind: "prose",
+        text: layer
+          ? "Import the package stylesheet once in your main CSS. The components layer lets Tailwind utilities adapt its presentation."
+          : "Import the package stylesheet once. The rule below hides the inline picture wherever the preview takes over.",
+      },
+      {
+        kind: "code",
+        id: `${id}-${layer ? "package-styles" : "css"}`,
+        language: "css",
+        code: layer
+          ? '@import "@reuse-sh/interactions/styles.css" layer(components);'
+          : `@import "@reuse-sh/interactions/styles.css";\n\n${css}`,
+        role: layer ? "setup" : "usage",
+      },
+    ],
+  });
+  return {
+    react: [
+      styles(true),
+      {
+        title: "Usage",
+        blocks: [
+          { kind: "prose", text: lead },
+          {
+            kind: "code",
+            id: `${id}-react`,
+            language: "tsx",
+            code: react,
+            role: "usage",
+          },
+        ],
+      },
+      {
+        title: "Styles",
+        blocks: [
+          {
+            kind: "prose",
+            text: "Hide the inline picture wherever the preview takes over.",
+          },
+          {
+            kind: "code",
+            id: `${id}-react-css`,
+            language: "css",
+            code: css,
+            role: "usage",
+          },
+        ],
+      },
+      {
+        title: "Integration",
+        blocks: [
+          {
+            kind: "prose",
+            text: `${previewIntegration} The React wrapper owns cleanup.`,
+          },
+        ],
+      },
+    ],
+    html: [
+      {
+        title: "Usage",
+        blocks: [
+          { kind: "prose", text: lead },
+          {
+            kind: "code",
+            id: `${id}-markup`,
+            language: "html",
+            code: markup,
+            role: "usage",
+          },
+        ],
+      },
+      styles(false),
+      {
+        title: "Initialize",
+        blocks: [
+          {
+            kind: "prose",
+            text: "Run this after the markup exists. Keep the returned controller for the lifetime of this content.",
+          },
+          {
+            kind: "code",
+            id: `${id}-initialize`,
+            language: "javascript",
+            code: `import { createCursorPreview } from "@reuse-sh/interactions";\n\nconst preview = createCursorPreview(${options});`,
+            role: "setup",
+          },
+        ],
+      },
+      {
+        title: "Integration",
+        blocks: [{ kind: "prose", text: previewIntegration }],
+      },
+      {
+        title: "Cleanup",
+        blocks: [
+          {
+            kind: "prose",
+            text: "Run this when the view is removed, before mounting another controller on the same element.",
+          },
+          {
+            kind: "code",
+            id: `${id}-cleanup`,
+            language: "javascript",
+            code: "preview.destroy();",
+            role: "cleanup",
+          },
+        ],
+      },
+    ],
+  };
+}
 
 export const interfaceUsage: Readonly<Record<string, UsageRecipe>> = {
+  "cursor-preview/getting-started": previewRecipe("getting-started", {
+    lead: "Put data-re-preview with an image URL on each item inside one CursorPreview. Keep a small inline picture for touch screens.",
+    react: `"use client";
+
+import { CursorPreview } from "@reuse-sh/interactions/react";
+
+export function Prints() {
+  return <CursorPreview>
+    <ul>
+      <li><a href="/prints/coral" data-re-preview="/coral.webp">
+        <img className="thumb" src="/coral.webp" alt="" width="1350" height="1800" />
+        Coral sky
+      </a></li>
+      <li><a href="/prints/mint" data-re-preview="/mint.webp">
+        <img className="thumb" src="/mint.webp" alt="" width="1350" height="1800" />
+        Mint and ember
+      </a></li>
+    </ul>
+  </CursorPreview>;
+}`,
+    markup: `<ul id="prints">
+  <li><a href="/prints/coral" data-re-preview="/coral.webp">
+    <img class="thumb" src="/coral.webp" alt="" width="1350" height="1800">
+    Coral sky
+  </a></li>
+  <li><a href="/prints/mint" data-re-preview="/mint.webp">
+    <img class="thumb" src="/mint.webp" alt="" width="1350" height="1800">
+    Mint and ember
+  </a></li>
+</ul>`,
+    css: `@media (hover: hover) and (pointer: fine) {
+  .thumb { display: none; }
+}`,
+    options: 'document.querySelector("#prints")',
+  }),
+  "cursor-preview/examples/collections": previewRecipe("examples/collections", {
+    lead: "Center the photo on the pointer for large rows. The rows give their inline photo column back on devices with a mouse.",
+    react: `"use client";
+
+import { CursorPreview } from "@reuse-sh/interactions/react";
+
+export function Collections() {
+  return <CursorPreview placement="center">
+    <nav aria-label="Collections">
+      <a href="/collections/autumn" data-re-preview="/autumn.webp">
+        <b>The autumn run</b>
+        <span>Coral and sand, in a small run.</span>
+        <img src="/autumn.webp" alt="" width="1350" height="1800" />
+      </a>
+    </nav>
+  </CursorPreview>;
+}`,
+    markup: `<nav id="collections" aria-label="Collections">
+  <a href="/collections/autumn" data-re-preview="/autumn.webp">
+    <b>The autumn run</b>
+    <span>Coral and sand, in a small run.</span>
+    <img src="/autumn.webp" alt="" width="1350" height="1800">
+  </a>
+</nav>`,
+    css: `.re-cursor-preview { --re-preview-width: 15rem; }
+@media (hover: hover) and (pointer: fine) {
+  #collections img { display: none; }
+}`,
+    options: 'document.querySelector("#collections"), { placement: "center" }',
+  }),
+  "cursor-preview/examples/timeline": previewRecipe("examples/timeline", {
+    lead: "Mark whole entries as items, so the photo stays while the pointer reads across one. The photo hangs off the pointer and leaves the text readable.",
+    react: `"use client";
+
+import { CursorPreview } from "@reuse-sh/interactions/react";
+
+export function Timeline() {
+  return <CursorPreview>
+    <ol>
+      <li data-re-preview="/2019.webp">
+        <time>2019</time>
+        <h3>A borrowed tray</h3>
+        <p>Marbling on a kitchen table, one sheet at a time.</p>
+        <img src="/2019.webp" alt="" width="1350" height="1800" />
+      </li>
+    </ol>
+  </CursorPreview>;
+}`,
+    markup: `<ol id="timeline">
+  <li data-re-preview="/2019.webp">
+    <time>2019</time>
+    <h3>A borrowed tray</h3>
+    <p>Marbling on a kitchen table, one sheet at a time.</p>
+    <img src="/2019.webp" alt="" width="1350" height="1800">
+  </li>
+</ol>`,
+    css: `.re-cursor-preview { --re-preview-width: 12rem; }
+@media (hover: hover) and (pointer: fine) {
+  #timeline img { display: none; }
+}`,
+    options: 'document.querySelector("#timeline")',
+  }),
+  "cursor-preview/examples/menu": previewRecipe("examples/menu", {
+    lead: "Give each row a template with a picture and a line of context. A shorter lean and a short delay suit a menu that is crossed on the way somewhere else.",
+    react: `"use client";
+
+import { CursorPreview } from "@reuse-sh/interactions/react";
+
+export function ShopMenu() {
+  return <>
+    <CursorPreview offset={18} tilt={5} delay={90}>
+      <nav aria-label="Menu">
+        <a href="/prints" data-re-preview-template="card-prints">
+          <b>Prints</b>
+          <small>Single sheets, signed on the back</small>
+        </a>
+      </nav>
+    </CursorPreview>
+    <template id="card-prints">
+      <span className="card"><img src="/prints.webp" alt="" width="2250" height="1500" /><b>Prints</b></span>
+    </template>
+  </>;
+}`,
+    markup: `<nav id="menu" aria-label="Menu">
+  <a href="/prints" data-re-preview-template="card-prints">
+    <b>Prints</b>
+    <small>Single sheets, signed on the back</small>
+  </a>
+</nav>
+<template id="card-prints">
+  <span class="card"><img src="/prints.webp" alt="" width="2250" height="1500"><b>Prints</b></span>
+</template>`,
+    css: `.re-cursor-preview { --re-preview-background: #fff; --re-preview-radius: 16px; }
+.card { display: grid; width: 15rem; padding: 6px; }`,
+    options:
+      'document.querySelector("#menu"), { offset: 18, tilt: 5, delay: 90 }',
+  }),
+
   "floating-tooltip/getting-started": {
     react: [
       {

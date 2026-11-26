@@ -1,7 +1,7 @@
 "use client";
 
 import {
-  createFloatingTooltip,
+  createCursorPreview,
   createMovingHighlight,
 } from "@reuse-sh/interactions";
 import { type Ref, useEffect, useRef } from "react";
@@ -73,7 +73,7 @@ export function LibraryMenu({
 }) {
   const rows = useRef<HTMLElement>(null);
   const peek = useRef<ReturnType<typeof createLibraryPeek> | null>(null);
-  const tooltip = useRef<ReturnType<typeof createFloatingTooltip> | null>(null);
+  const preview = useRef<ReturnType<typeof createCursorPreview> | null>(null);
 
   useEffect(() => {
     if (!open || peek.current) return;
@@ -84,7 +84,7 @@ export function LibraryMenu({
       (module) => {
         if (!current || peek.current) return;
         peek.current = module.createLibraryPeek();
-        tooltip.current?.refresh();
+        preview.current?.refresh();
       },
       (error) => reportError(error),
     );
@@ -100,24 +100,21 @@ export function LibraryMenu({
     const loading = document.createElement("div");
     loading.className = "f-peek-loading";
     loading.setAttribute("aria-hidden", "true");
-    const created = createFloatingTooltip(root, {
+    const created = createCursorPreview(root, {
       selector: "[data-peek]",
-      side: "bottom-right",
-      sideOffset: 18,
+      offset: 18,
       tilt: 5,
       delay: 90,
-      className: "f-tip f-peek-tip",
+      className: "f-peek-tip",
       content: (row) =>
-        row.matches(":focus-visible")
-          ? null
-          : (peek.current?.pane(row.dataset.peek as MenuSlug) ?? loading),
+        peek.current?.pane(row.dataset.peek as MenuSlug) ?? loading,
     });
-    tooltip.current = created;
+    preview.current = created;
     root.addEventListener("keydown", moveFocus);
     return () => {
       root.removeEventListener("keydown", moveFocus);
       created.destroy();
-      tooltip.current = null;
+      preview.current = null;
       peek.current?.destroy();
       peek.current = null;
       highlight.destroy();

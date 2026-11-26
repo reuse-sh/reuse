@@ -1,0 +1,123 @@
+import { expect, type Page, test } from "@playwright/test";
+import { mount } from "./harness";
+
+const picture = (color: string) =>
+  `data:image/svg+xml,${encodeURIComponent(
+    `<svg xmlns="http://www.w3.org/2000/svg" width="300" height="400"><rect width="300" height="400" fill="${color}"/></svg>`,
+  )}`;
+
+async function setup(page: Page) {
+  await page.mouse.move(2, 2);
+  await mount(
+    page,
+    `<ul id="list" style="margin:120px 0 0 120px;padding:0;width:420px;list-style:none">
+      <li data-re-preview="${picture("#e07a5f")}" style="height:60px">Coral sky</li>
+      <li class="gap" style="height:40px"></li>
+      <li data-re-preview="${picture("#81b29a")}" style="height:60px">Mint and ember</li>
+    </ul>`,
+    ["interactions/styles.css"],
+  );
+  await page.addScriptTag({
+    type: "module",
+    content: `import { createCursorPreview } from "@reuse-sh/interactions";
+      createCursorPreview(document.querySelector("#list"), { delay: 0 });
+      window.__ready = true;`,
+  });
+  await expect.poll(() => page.evaluate(() => "__ready" in window)).toBe(true);
+  const popup = page.locator(".re-cursor-preview");
+  const shown = () =>
+    popup.evaluate((element) =>
+      (element as HTMLElement).hidden
+        ? null
+        : (element
+            .querySelector(".re-cursor-preview-layer:first-child img")
+            ?.getAttribute("src") ?? null),
+    );
+  return { popup, shown };
+}
+
+const angle = (page: Page) =>
+  page.evaluate(() =>
+    Number(
+      /rotate\(([-\d.e]+)deg\)/.exec(
+        document.querySelector<HTMLElement>(".re-cursor-preview")?.style
+          .transform ?? "",
+      )?.[1],
+    ),
+  );
+
+test("arrives at the pointer, leans while it travels and settles upright", async ({
+  page,
+}) => {
+  const { popup, shown } = await setup(page);
+  await page.mouse.move(160, 150, { steps: 4 });
+  await expect.poll(shown).toBe(picture("#e07a5f"));
+  await expect(popup).toHaveAttribute("data-state", "open");
+  const start = await popup.boundingBox();
+  expect(start?.x).toBeGreaterThan(150);
+  expect(start?.y).toBeGreaterThan(140);
+
+  let deepest = 0;
+  for (let x = 170; x <= 500; x += 30) {
+    await page.mouse.move(x, 150);
+    deepest = Math.max(deepest, await angle(page));
+  }
+  expect(deepest).toBeGreaterThan(1);
+  expect(deepest).toBeLessThanOrEqual(8);
+  await expect.poll(() => angle(page)).toBe(0);
+});
+
+test("switches from under, so the frame never shows the page", async ({
+  page,
+}) => {
+  const { shown } = await setup(page);
+  await page.mouse.move(200, 150, { steps: 3 });
+  await expect.poll(shown).toBe(picture("#e07a5f"));
+  await page.waitForTimeout(600);
+  await page.mouse.move(200, 250, { steps: 3 });
+  const samples = await page.evaluate(
+    () =>
+      new Promise<Array<{ layers: number; bottom: string }>>((resolve) => {
+        const out: Array<{ layers: number; bottom: string }> = [];
+        const start = performance.now();
+        const sample = () => {
+          const layers = document.querySelectorAll<HTMLElement>(
+            ".re-cursor-preview-layer",
+          );
+          out.push({
+            layers: layers.length,
+            bottom: layers[0] ? getComputedStyle(layers[0]).opacity : "none",
+          });
+          if (performance.now() - start < 320) requestAnimationFrame(sample);
+          else resolve(out);
+        };
+        sample();
+      }),
+  );
+  expect(samples.some((sample) => sample.layers === 2)).toBe(true);
+  expect(samples.every((sample) => sample.bottom === "1")).toBe(true);
+  expect(samples.at(-1)?.layers).toBe(1);
+  expect(await shown()).toBe(picture("#81b29a"));
+});
+
+test("holds over a gap, closes after leaving, and comes back mid-exit", async ({
+  page,
+}) => {
+  const { popup, shown } = await setup(page);
+  await page.mouse.move(200, 150, { steps: 3 });
+  await expect.poll(shown).toBe(picture("#e07a5f"));
+  await page.mouse.move(200, 200, { steps: 3 });
+  await page.waitForTimeout(300);
+  expect(await shown()).toBe(picture("#e07a5f"));
+
+  await page.mouse.move(700, 600, { steps: 2 });
+  await page.waitForTimeout(120);
+  await expect(popup).toHaveAttribute("data-state", "closing");
+  await page.mouse.move(200, 150, { steps: 2 });
+  await expect(popup).toHaveAttribute("data-state", "open");
+  await page.waitForTimeout(300);
+  expect(await shown()).toBe(picture("#e07a5f"));
+
+  await page.mouse.move(700, 600, { steps: 2 });
+  await expect(popup).toBeHidden();
+});

@@ -17,7 +17,7 @@ export const menuGroups = [
   ],
   [
     "Motion and style",
-    ["loaders", "shadows", "easing-gradients", "demo-stage"],
+    ["loaders", "shadows", "easing-gradients", "cursor-preview", "demo-stage"],
   ],
 ] as const;
 
@@ -37,6 +37,7 @@ export const shortLines: Record<MenuSlug, string> = {
   loaders: "Dot figures that change shape",
   shadows: "Two-layer depth with a fine edge",
   "easing-gradients": "Fades without a hard edge",
+  "cursor-preview": "A picture that rides with the pointer",
   "demo-stage": "Live demos with a scripted cursor",
 };
 

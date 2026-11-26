@@ -51,6 +51,18 @@ const icons: Record<string, DocIconName[]> = {
     "doc",
     "resize",
   ],
+  "cursor-preview": [
+    "doc",
+    "cursor",
+    "feather",
+    "layers",
+    "zoom",
+    "minus",
+    "timer",
+    "resize",
+    "touch",
+    "keyboard",
+  ],
   "copy-button": ["timer", "resize", "doc", "share", "keyboard", "layers"],
   "moving-highlight": [
     "resize",
@@ -107,6 +119,13 @@ function Hint({ slug }: { slug: string }) {
       <Keys>
         Move along the toolbar, or use <Kbd>Tab</Kbd> to reach it and{" "}
         <Kbd>Esc</Kbd> to hide the hint.
+      </Keys>
+    );
+  if (slug === "cursor-preview")
+    return (
+      <Keys>
+        Move down the list with a mouse or trackpad. On a touch screen each row
+        shows its own picture.
       </Keys>
     );
   if (slug === "justified-gallery")

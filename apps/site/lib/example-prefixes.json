@@ -5,5 +5,6 @@
   "copy-button": "copy",
   "easing-gradients": "gradients",
   "justified-gallery": "justified",
-  "demo-stage": "stage"
+  "demo-stage": "stage",
+  "cursor-preview": "preview"
 }

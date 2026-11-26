@@ -1,6 +1,6 @@
 # @reuse-sh/interactions
 
-Four small interactions: a floating tooltip shared by nearby triggers, a moving highlight that follows hover and keyboard focus, a hold-to-confirm button, and a copy button. Each works on plain DOM and has a React wrapper.
+Five small interactions: a floating tooltip shared by nearby triggers, a cursor preview that carries a picture of each item with the pointer, a moving highlight that follows hover and keyboard focus, a hold-to-confirm button, and a copy button. Each works on plain DOM and has a React wrapper.
 
 <!-- principles:start -->
 
@@ -20,6 +20,19 @@ These are the rules the code keeps. An adaptation on any framework keeps them to
 - **Hold only a hint.** It describes its trigger through aria-describedby and never holds controls or required instructions.
 - **Release unavailable triggers.** A trigger that becomes unavailable cannot open a delayed hint, and an already visible hint closes when its trigger is removed, hidden, or disabled.
 - **Stay inside the window.** It keeps a margin from every edge of the viewport.
+
+### Cursor preview
+
+- **Repeat, never replace.** The picture repeats what its item already says and stays hidden from assistive technology. Anything a visitor needs stays on the item.
+- **Arrive where the pointer is.** The first frame sits at the pointer and drops in there, instead of flying across the page to reach it.
+- **Follow on a spring, lean with speed.** It trails the pointer on a spring stepped by elapsed time, so it moves the same at 60 and 120 frames per second. It leans with horizontal speed up to a cap, then settles upright.
+- **Switch without a gap.** The next picture lies under the current one before the current one fades, so the page never shows through the frame. Returning mid-fade brings a picture back from where it is.
+- **Never show an empty frame.** An image switches in only once it has decoded. Until then, or if it fails, the current picture stays. The first pointer over the group starts loading every image in it.
+- **Hold between items.** A gap between items keeps the picture. Only leaving the group closes it, and coming back during the exit brings it back from where it is.
+- **Leave faster than it arrives.** The exit is a short fade with no spin. Escape hides it at once.
+- **Stay inside the window.** It keeps a margin from every edge, rotated corners included, and hangs on the pointer's other side near the right and bottom edges.
+- **Follow one mouse.** Touch never opens it, and the pointer that opened it is the only one that moves it. Where the media query does not match, such as a phone, it stays off.
+- **Snap under reduced motion.** No spring, lean or drop-in. The picture still shows, at the pointer.
 
 ### Moving highlight
 
@@ -135,6 +148,112 @@ Run this when the view is removed, before mounting another controller on the sam
 
 ```javascript
 tooltip.destroy();
+```
+
+### Cursor preview
+
+[Documentation](https://reuse.sh/cursor-preview/getting-started)
+
+#### React
+
+#### Package styles
+
+Import the package stylesheet once in your main CSS. The components layer lets Tailwind utilities adapt its presentation.
+
+```css
+@import "@reuse-sh/interactions/styles.css" layer(components);
+```
+
+#### Usage
+
+Put data-re-preview with an image URL on each item inside one CursorPreview. Keep a small inline picture for touch screens.
+
+```tsx
+"use client";
+
+import { CursorPreview } from "@reuse-sh/interactions/react";
+
+export function Prints() {
+  return <CursorPreview>
+    <ul>
+      <li><a href="/prints/coral" data-re-preview="/coral.webp">
+        <img className="thumb" src="/coral.webp" alt="" width="1350" height="1800" />
+        Coral sky
+      </a></li>
+      <li><a href="/prints/mint" data-re-preview="/mint.webp">
+        <img className="thumb" src="/mint.webp" alt="" width="1350" height="1800" />
+        Mint and ember
+      </a></li>
+    </ul>
+  </CursorPreview>;
+}
+```
+
+#### Styles
+
+Hide the inline picture wherever the preview takes over.
+
+```css
+@media (hover: hover) and (pointer: fine) {
+  .thumb { display: none; }
+}
+```
+
+#### Integration
+
+The preview repeats what each item already shows and stays hidden from assistive technology, so keep names and links on the items. Touch and keyboard focus never open it; show the inline picture where the media query is off. The React wrapper owns cleanup.
+
+#### HTML + JavaScript
+
+#### Usage
+
+Put data-re-preview with an image URL on each item inside one CursorPreview. Keep a small inline picture for touch screens.
+
+```html
+<ul id="prints">
+  <li><a href="/prints/coral" data-re-preview="/coral.webp">
+    <img class="thumb" src="/coral.webp" alt="" width="1350" height="1800">
+    Coral sky
+  </a></li>
+  <li><a href="/prints/mint" data-re-preview="/mint.webp">
+    <img class="thumb" src="/mint.webp" alt="" width="1350" height="1800">
+    Mint and ember
+  </a></li>
+</ul>
+```
+
+#### Styles
+
+Import the package stylesheet once. The rule below hides the inline picture wherever the preview takes over.
+
+```css
+@import "@reuse-sh/interactions/styles.css";
+
+@media (hover: hover) and (pointer: fine) {
+  .thumb { display: none; }
+}
+```
+
+#### Initialize
+
+Run this after the markup exists. Keep the returned controller for the lifetime of this content.
+
+```javascript
+import { createCursorPreview } from "@reuse-sh/interactions";
+
+const preview = createCursorPreview(document.querySelector("#prints"));
+```
+
+#### Integration
+
+The preview repeats what each item already shows and stays hidden from assistive technology, so keep names and links on the items. Touch and keyboard focus never open it; show the inline picture where the media query is off.
+
+#### Cleanup
+
+Run this when the view is removed, before mounting another controller on the same element.
+
+```javascript
+preview.destroy();
 ```
 
 ### Moving highlight
