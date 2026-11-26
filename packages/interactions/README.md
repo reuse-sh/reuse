@@ -11,7 +11,7 @@ These are the rules the code keeps. An adaptation on any framework keeps them to
 ### Floating tooltip
 
 - **Share one popup.** Nearby triggers share one tooltip, so moving along a toolbar slides it across instead of closing and reopening it. The closest group that matches a trigger owns it.
-- **Grow from the pointer.** The first hint fades in and grows from 92% out of the corner nearest the pointer, so it seems to come from where you point.
+- **Grow from the pointer.** The first hint fades in and grows from 92% out of the point nearest the pointer, so it seems to come from where you point.
 - **Follow the pointer on a spring.** It trails the pointer with a little weight, below and to the right, and never jumps.
 - **Roll between hints.** Moving to the next trigger rolls the old hint out and the new one in from the direction of travel while the box resizes. It never dims, and only the new hint describes the trigger.
 - **Lean from the edge it hangs on.** Its free end trails the pointer. Held to a rail on one axis, it leans as the pointer moves along the other.

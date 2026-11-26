@@ -269,8 +269,8 @@ export function createFloatingTooltip(
     const scale = effectScale();
     let scaling = "";
     if (scale !== 1) {
-      const px = (pivot?.x ?? ox) - ox;
-      const py = (pivot?.y ?? oy) - oy;
+      const px = Math.min(width, Math.max(0, pivot?.x ?? ox)) - ox;
+      const py = Math.min(height, Math.max(0, pivot?.y ?? oy)) - oy;
       scaling = ` translate(${px}px, ${py}px) scale(${scale}) translate(${-px}px, ${-py}px)`;
     }
     popup.style.transform = `translate3d(${placed.x - left}px, ${placed.y - top}px, 0) rotate(${tilt}deg)${scaling}`;
@@ -340,15 +340,30 @@ export function createFloatingTooltip(
     leaving?.remove();
     leaving = null;
   };
-  const holdLeaving = () => {
-    const style = view.getComputedStyle(body);
-    leavingFrom = {
+  const visibleState = (element: HTMLElement) => {
+    const style = view.getComputedStyle(element);
+    return {
       opacity: style.opacity || "1",
       translate:
         !style.translate || style.translate === "none"
           ? "0 0"
           : style.translate,
     };
+  };
+  const holdLeaving = () => {
+    const current = visibleState(body);
+    const previous = leaving;
+    if (
+      previous &&
+      Number(visibleState(previous).opacity) > Number(current.opacity)
+    ) {
+      leavingFrom = visibleState(previous);
+      for (const animation of swap) animation.cancel();
+      swap = [];
+      body.replaceChildren();
+      return;
+    }
+    leavingFrom = current;
     dropLeaving();
     const outgoing = document.createElement("span");
     outgoing.className =
@@ -443,7 +458,7 @@ export function createFloatingTooltip(
   const keepOpen = () => {
     view.clearTimeout(closeTimer);
     if (!fade?.closing) return;
-    if (!fade.animation.currentTime) {
+    if (Number(fade.animation.currentTime ?? 0) <= 0) {
       const { from } = fade;
       fade.animation.cancel();
       fade = undefined;
@@ -451,6 +466,7 @@ export function createFloatingTooltip(
         { opacity: [from, "1"] },
         { duration: FADE_IN_MS, easing: "ease-out" },
       );
+      entrance.startTime = document.timeline.currentTime;
       if (held < 1) {
         grow = { from: held };
         held = 1;
@@ -617,6 +633,7 @@ export function createFloatingTooltip(
       return;
     point = { x: event.clientX, y: event.clientY };
     if (pending) return;
+    if (!keyboard) reference = { ...point };
     position(false, true);
   };
   const scheduleClose = () => {

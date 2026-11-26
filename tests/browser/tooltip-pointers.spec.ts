@@ -467,10 +467,13 @@ test("an interrupted roll and an early exit continue from what is on screen", as
       new Promise((resolve) => requestAnimationFrame(resolve));
     over(archive);
     for (let i = 0; i < 4; i++) await frame();
-    const body = document.querySelector<HTMLElement>(
-      '[role="tooltip"] .re-floating-tooltip-content:not(.re-floating-tooltip-leaving)',
-    );
-    const before = Number(getComputedStyle(body as HTMLElement).opacity);
+    const layers = () =>
+      [
+        ...document.querySelectorAll<HTMLElement>(
+          '[role="tooltip"] .re-floating-tooltip-content',
+        ),
+      ].map((element) => Number(getComputedStyle(element).opacity));
+    const before = Math.max(...layers());
     over(remove);
     await frame();
     const leaving = document.querySelector<HTMLElement>(
@@ -478,12 +481,11 @@ test("an interrupted roll and an early exit continue from what is on screen", as
     );
     return {
       before,
+      after: Math.max(...layers()),
       leaving: Number(getComputedStyle(leaving as HTMLElement).opacity),
-      text: leaving?.textContent,
     };
   });
-  expect(flash.text).toBe("Archive");
-  expect(flash.before).toBeLessThan(1);
+  expect(flash.after).toBeGreaterThan(flash.before * 0.8);
   expect(flash.leaving).toBeLessThanOrEqual(flash.before + 0.01);
 
   await page.keyboard.press("Escape");
@@ -511,14 +513,125 @@ test("an interrupted roll and an early exit continue from what is on screen", as
     event("pointerover");
     await frame();
     await frame();
+    const before = scale();
     event("pointerout");
-    const out: number[] = [];
+    const out: number[] = [before];
     for (let i = 0; i < 12 && popup && !popup.hidden; i++) {
       await frame();
       out.push(scale());
     }
     return out;
   });
+  expect(scales[0]).toBeLessThan(1);
   for (let i = 1; i < scales.length; i++)
     expect(scales[i]).toBeLessThanOrEqual(scales[i - 1] + 0.001);
+});
+
+test("rolls with the latest travel, keeps its margin and never blinks on a quick return", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1000, height: 700 });
+  await page.mouse.move(2, 2);
+  await mount(
+    page,
+    `<div id="rows" style="display:grid;width:400px;margin:80px">
+      <button style="height:28px" data-re-tooltip="Inbox">Inbox</button>
+      <button style="height:28px" data-re-tooltip="Drafts">Drafts</button>
+    </div>
+    <div id="edge" style="position:absolute;right:0;top:300px;display:flex;flex-direction:column;align-items:end">
+      <button data-re-tooltip="A much longer hint that reaches the edge">Long</button>
+      <button data-re-tooltip="Hi">Short</button>
+    </div>`,
+    ["interactions/styles.css"],
+  );
+  await page.addScriptTag({
+    type: "module",
+    content: `import { createFloatingTooltip } from "@reuse-sh/interactions";
+      createFloatingTooltip(document.querySelector("#rows"), { delay: 0, closeDelay: 0 });
+      createFloatingTooltip(document.querySelector("#edge"), { delay: 0, closeDelay: 0 });
+      window.__ready = true;`,
+  });
+  await expect.poll(() => page.evaluate(() => "__ready" in window)).toBe(true);
+
+  const inbox = await page.getByRole("button", { name: "Inbox" }).boundingBox();
+  const drafts = await page
+    .getByRole("button", { name: "Drafts" })
+    .boundingBox();
+  if (!inbox || !drafts) throw new Error("Rows are not on screen.");
+  await page.mouse.move(inbox.x + 10, inbox.y + 4);
+  await page.waitForTimeout(400);
+  await page.mouse.move(inbox.x + 260, inbox.y + 6, { steps: 6 });
+  await page.mouse.move(inbox.x + 260, drafts.y + 6);
+  const keyframe = await page.evaluate(() => {
+    const body = document.querySelector<HTMLElement>(
+      '[role="tooltip"]:not([hidden]) .re-floating-tooltip-content:not(.re-floating-tooltip-leaving)',
+    );
+    const reel = body?.getAnimations()[0]?.effect as KeyframeEffect | undefined;
+    return String(reel?.getKeyframes()[0]?.translate ?? "");
+  });
+  expect(keyframe.startsWith("0")).toBe(true);
+  await page.keyboard.press("Escape");
+
+  const long = await page.getByRole("button", { name: "Long" }).boundingBox();
+  const short = await page.getByRole("button", { name: "Short" }).boundingBox();
+  if (!long || !short) throw new Error("Edge buttons are not on screen.");
+  await page.mouse.move(long.x + long.width - 2, long.y + 6);
+  await page.waitForTimeout(400);
+  await page.mouse.move(short.x + short.width - 2, short.y + 6);
+  await page.waitForTimeout(600);
+  const right = await page.evaluate(async () => {
+    const popup = [
+      ...document.querySelectorAll<HTMLElement>('[role="tooltip"]'),
+    ].find((element) => !element.hidden);
+    const short = [...document.querySelectorAll("#edge button")][1];
+    short.dispatchEvent(
+      new PointerEvent("pointerout", {
+        bubbles: true,
+        pointerId: 1,
+        pointerType: "mouse",
+        relatedTarget: document.body,
+      }),
+    );
+    let worst = 0;
+    for (let i = 0; i < 14 && popup && !popup.hidden; i++) {
+      await new Promise((resolve) => requestAnimationFrame(resolve));
+      worst = Math.max(worst, popup.getBoundingClientRect().right);
+    }
+    return worst;
+  });
+  expect(right).toBeLessThanOrEqual(1000 - 12 + 0.5);
+
+  await page.keyboard.press("Escape");
+  await page.mouse.move(inbox.x + 10, inbox.y + 6);
+  await page.waitForTimeout(500);
+  const lowest = await page.evaluate(async () => {
+    const inboxButton = document.querySelector<HTMLElement>("#rows button");
+    const popup = [
+      ...document.querySelectorAll<HTMLElement>('[role="tooltip"]'),
+    ].find((element) => !element.hidden);
+    const event = (type: string) =>
+      inboxButton?.dispatchEvent(
+        new PointerEvent(type, {
+          bubbles: true,
+          pointerId: 1,
+          pointerType: "mouse",
+          clientX: inboxButton.getBoundingClientRect().x + 10,
+          clientY: inboxButton.getBoundingClientRect().y + 6,
+          relatedTarget: type === "pointerout" ? document.body : null,
+        }),
+      );
+    event("pointerout");
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    event("pointerover");
+    let low = 1;
+    for (let i = 0; i < 12; i++) {
+      await new Promise((resolve) => requestAnimationFrame(resolve));
+      low = Math.min(
+        low,
+        Number(getComputedStyle(popup as HTMLElement).opacity),
+      );
+    }
+    return low;
+  });
+  expect(lowest).toBeGreaterThan(0.9);
 });

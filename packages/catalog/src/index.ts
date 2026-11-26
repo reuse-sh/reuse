@@ -1422,7 +1422,7 @@ export const libraries: Library[] = [
       ],
       [
         "Grow from the pointer",
-        "The first hint fades in and grows from 92% out of the corner nearest the pointer, so it seems to come from where you point.",
+        "The first hint fades in and grows from 92% out of the point nearest the pointer, so it seems to come from where you point.",
       ],
       [
         "Follow the pointer on a spring",
