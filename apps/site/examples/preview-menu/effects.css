@@ -7,7 +7,11 @@
     @apply px-2.5 pt-2 pb-1.5 text-caption font-medium text-subtle-foreground;
   }
   .re-preview-menu a {
-    @apply grid rounded-control px-2.5 py-2 text-foreground hover:bg-accent;
+    grid-template-columns: 3rem minmax(0, 1fr);
+    @apply grid items-center gap-x-3 rounded-control px-2.5 py-2 text-foreground hover:bg-accent;
+  }
+  .re-preview-menu-thumb {
+    @apply row-span-2 aspect-3/2 w-full rounded-control object-cover;
   }
   .re-preview-menu b {
     @apply text-ui font-medium;
@@ -18,6 +22,14 @@
   .re-cursor-preview.re-preview-menu-popup {
     --re-preview-background: var(--popover);
     --re-preview-radius: 1rem;
+  }
+  @media (hover: hover) and (pointer: fine) {
+    .re-preview-menu a {
+      grid-template-columns: minmax(0, 1fr);
+    }
+    .re-preview-menu-thumb {
+      display: none;
+    }
   }
   .re-preview-menu-card {
     @apply grid w-60 gap-0.5 p-1.5 pb-2.5 text-label text-popover-foreground;

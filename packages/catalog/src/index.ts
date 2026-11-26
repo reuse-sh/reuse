@@ -1618,7 +1618,7 @@ export const libraries: Library[] = [
       ],
       [
         "content(item)",
-        "Returns a node for an item, in place of the attributes. Images inside it load eagerly and decode before they show. Template clones are made inert; nodes you return stay as you give them, so keep links and buttons out of them. Call refresh() when an item's content changes.",
+        "Returns a node for an item, in place of the attributes. Images inside it load eagerly and decode before they show. It is called on each visit. Return the same node for an item to keep a return mid-fade smooth; a new node is decoded and crossfaded in. Template clones are made inert; nodes you return stay as you give them, so keep links and buttons out of them. Call refresh() to show new content while the preview is open.",
       ],
       [
         "placement, offset",

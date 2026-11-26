@@ -128,6 +128,7 @@ export function createCursorPreview(
     return animation;
   };
   let requested: HTMLElement | null = null;
+  let prepared: { item: HTMLElement; layer: Layer | null } | null = null;
   let shown: Layer | null = null;
   let shownItem: HTMLElement | null = null;
   let inside = false;
@@ -272,7 +273,15 @@ export function createCursorPreview(
     const content = opts.content(item);
     if (!content) return null;
     const cached = nodeLayers.get(content);
-    if (cached && content.parentNode === cached.element) return cached;
+    if (
+      cached &&
+      (content.parentNode === cached.element ||
+        (content.nodeType === Node.DOCUMENT_FRAGMENT_NODE &&
+          !content.firstChild))
+    ) {
+      cached.ready = decoded(cached.element);
+      return cached;
+    }
     const layer = build(content);
     nodeLayers.set(content, layer);
     return layer;
@@ -343,6 +352,7 @@ export function createCursorPreview(
   };
   const dismiss = () => {
     ticket++;
+    prepared = null;
     view.clearTimeout(openTimer);
     openTimer = undefined;
     requested = null;
@@ -351,6 +361,7 @@ export function createCursorPreview(
   };
   const close = (resumable = false) => {
     ticket++;
+    prepared = null;
     view.clearTimeout(openTimer);
     openTimer = undefined;
     requested = null;
@@ -452,14 +463,15 @@ export function createCursorPreview(
   const request = (item: HTMLElement) => {
     requested = item;
     const current = ++ticket;
-    const layer = layerFor(item);
+    const layer = prepared?.item === item ? prepared.layer : layerFor(item);
+    prepared = null;
     if (!layer) return close();
     layer.ready.then((ok) => {
       if (destroyed || current !== ticket || !inside || !enabled()) return;
       if (!canShow(item)) return close();
       if (ok) return present(layer, item);
       forget(item, layer);
-      requested = popup.hidden ? null : shownItem;
+      if (popup.hidden) requested = null;
     });
   };
 
@@ -484,6 +496,7 @@ export function createCursorPreview(
     preload();
     const item = itemAt(event.target);
     if (!item) {
+      if (isOpen()) requested = shownItem;
       if (
         popup.dataset.state === "closing" &&
         shownItem &&
@@ -500,7 +513,7 @@ export function createCursorPreview(
     if (item === requested) return;
     if (popup.hidden && opts.delay > 0) {
       requested = item;
-      if (!given.content) layerFor(item);
+      prepared = { item, layer: layerFor(item) };
       view.clearTimeout(openTimer);
       openTimer = view.setTimeout(() => {
         openTimer = undefined;

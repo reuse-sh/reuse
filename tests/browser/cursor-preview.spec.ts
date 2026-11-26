@@ -189,3 +189,66 @@ test("stays closed over a gap after an item without a picture closed it", async 
   await page.mouse.move(200, 260, { steps: 2 });
   await expect(popup).toBeHidden();
 });
+
+test("reduced motion stops the preview's own animations and leaves the content's", async ({
+  page,
+}) => {
+  await page.mouse.move(2, 2);
+  await mount(
+    page,
+    `<ul id="list" style="margin:120px 0 0 120px;padding:0;width:420px;list-style:none">
+      <li data-row style="height:60px">Coral sky</li>
+      <li data-row style="height:60px">Mint and ember</li>
+    </ul>`,
+    ["interactions/styles.css"],
+  );
+  await page.addScriptTag({
+    type: "module",
+    content: `import { createCursorPreview } from "@reuse-sh/interactions";
+      window.__inner = [];
+      createCursorPreview(document.querySelector("#list"), {
+        selector: "[data-row]",
+        delay: 0,
+        content: () => {
+          const box = document.createElement("div");
+          box.style.cssText = "width:200px;height:150px;background:#81b29a";
+          window.__inner.push(box.animate([{ opacity: 1 }, { opacity: 0.6 }], { duration: 10000, fill: "forwards" }));
+          return box;
+        },
+      });
+      window.__ready = true;`,
+  });
+  await expect.poll(() => page.evaluate(() => "__ready" in window)).toBe(true);
+  const popup = page.locator(".re-cursor-preview");
+  await page.mouse.move(200, 150, { steps: 3 });
+  await expect(popup).toHaveAttribute("data-state", "open");
+  await page.waitForTimeout(400);
+  await page.mouse.move(200, 210, { steps: 2 });
+  await page.evaluate(() => {
+    const inner = (window as unknown as { __inner: Animation[] }).__inner;
+    (window as unknown as { __sample: Promise<unknown> }).__sample =
+      new Promise((resolve) =>
+        matchMedia("(prefers-reduced-motion: reduce)").addEventListener(
+          "change",
+          () => {
+            const frame = document.querySelector(".re-cursor-preview-frame");
+            const running = frame?.getAnimations({ subtree: true }) ?? [];
+            resolve({
+              own: running.filter((animation) => !inner.includes(animation))
+                .length,
+              layers: document.querySelectorAll(".re-cursor-preview-layer")
+                .length,
+              content: inner.at(-1)?.playState,
+            });
+          },
+          { once: true },
+        ),
+      );
+  });
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  expect(
+    await page.evaluate(
+      () => (window as unknown as { __sample: Promise<unknown> }).__sample,
+    ),
+  ).toEqual({ own: 0, layers: 1, content: "running" });
+});

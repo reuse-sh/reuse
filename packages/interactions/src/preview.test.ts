@@ -470,10 +470,116 @@ it("asks for custom content on every visit, and keeps a node it returns again in
   fresh = false;
   preview.refresh();
   await flush();
-  const frame = popup?.querySelector<HTMLElement>(".re-cursor-preview-frame");
+  const layer = popup?.querySelector(".re-cursor-preview-layer");
   preview.refresh();
-  expect(frame?.style.width).toBe("200px");
   await flush();
-  expect(frame?.style.width).toBe("200px");
-  expect(popup?.querySelector(".re-cursor-preview-layer > b")).toBe(stable);
+  expect(popup?.querySelectorAll(".re-cursor-preview-layer")).toHaveLength(1);
+  expect(popup?.querySelector(".re-cursor-preview-layer")).toBe(layer);
+  expect(layer?.firstElementChild).toBe(stable);
+
+  const lazy = document.createElement("img");
+  lazy.loading = "lazy";
+  lazy.src = "/changed.webp";
+  stable.replaceChildren(lazy);
+  preview.refresh();
+  expect(decodes.map((decode) => decode.src)).toContain("/changed.webp");
+  expect(lazy.loading).toBe("eager");
+});
+
+it("does not ask again for a failed picture while the pointer rests on it", async () => {
+  const { a, b, shownSrc } = setup({ delay: 0 });
+  b.innerHTML = "<span>Mint</span> <span>and ember</span>";
+  pointer(a, "pointerover");
+  decodes.find((decode) => decode.src === "/a.webp")?.resolve();
+  decodes.find((decode) => decode.src === "/b.webp")?.reject();
+  await flush();
+  pointer(b, "pointerover");
+  await flush();
+  decodes.length = 0;
+  document.elementFromPoint = () => b;
+  for (let event = 0; event < 10; event++)
+    window.dispatchEvent(new Event("scroll"));
+  for (const child of b.children) pointer(child, "pointerover");
+  await flush();
+  expect(decodes).toHaveLength(0);
+  expect(shownSrc()).toBe("/a.webp");
+});
+
+it("shows the hovered item when refreshed after its picture failed", async () => {
+  const root = document.createElement("div");
+  root.innerHTML = '<a data-row="a">A</a><a data-row="b">B</a>';
+  document.body.append(root);
+  const [a, b] = [...root.children] as HTMLElement[];
+  const sources: Record<string, string> = { a: "/a.webp", b: "/broken.webp" };
+  const preview = createCursorPreview(root, {
+    selector: "[data-row]",
+    delay: 0,
+    content: (row) => {
+      const image = document.createElement("img");
+      image.src = sources[row.dataset.row ?? ""];
+      return image;
+    },
+  });
+  const shown = () =>
+    document.querySelector(".re-cursor-preview img")?.getAttribute("src");
+  pointer(a, "pointerover");
+  await decodeAll();
+  pointer(b, "pointerover");
+  decodes.splice(0)[0]?.reject();
+  await flush();
+  expect(shown()).toBe("/a.webp");
+  sources.b = "/b.webp";
+  preview.refresh();
+  await decodeAll();
+  expect(shown()).toBe("/b.webp");
+});
+
+it("keeps showing content from a fragment it is handed again", async () => {
+  const root = document.createElement("div");
+  root.innerHTML = '<a data-row="a">A</a><a data-row="b">B</a>';
+  document.body.append(root);
+  const [a, b] = [...root.children] as HTMLElement[];
+  const fragments = new Map<string, DocumentFragment>();
+  for (const key of ["a", "b"]) {
+    const fragment = document.createDocumentFragment();
+    fragment.append(key.toUpperCase());
+    fragments.set(key, fragment);
+  }
+  createCursorPreview(root, {
+    selector: "[data-row]",
+    delay: 0,
+    content: (row) => fragments.get(row.dataset.row ?? "") ?? null,
+  });
+  const popup = document.querySelector(".re-cursor-preview");
+  for (const row of [a, b, a]) {
+    pointer(row, "pointerover");
+    await flush();
+  }
+  expect(popup?.textContent).toBe("A");
+});
+
+it("starts building custom content during the open delay, once", async () => {
+  const root = document.createElement("div");
+  root.innerHTML = '<a data-row="a">A</a>';
+  document.body.append(root);
+  const [a] = [...root.children] as HTMLElement[];
+  let calls = 0;
+  createCursorPreview(root, {
+    selector: "[data-row]",
+    delay: 90,
+    content: () => {
+      calls++;
+      const image = document.createElement("img");
+      image.src = "/custom.webp";
+      return image;
+    },
+  });
+  pointer(a, "pointerover");
+  expect(decodes.map((decode) => decode.src)).toEqual(["/custom.webp"]);
+  vi.advanceTimersByTime(90);
+  await decodeAll();
+  expect(calls).toBe(1);
+  expect(
+    document.querySelector(".re-cursor-preview img")?.getAttribute("src"),
+  ).toBe("/custom.webp");
 });

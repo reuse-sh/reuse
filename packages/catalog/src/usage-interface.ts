@@ -246,6 +246,7 @@ export function ShopMenu() {
     <CursorPreview offset={18} tilt={5} delay={90}>
       <nav aria-label="Menu">
         <a href="/prints" data-re-preview-template="card-prints">
+          <img className="thumb" src="/prints.webp" alt="" width="2250" height="1500" />
           <b>Prints</b>
           <small>Single sheets, signed on the back</small>
         </a>
@@ -259,6 +260,7 @@ export function ShopMenu() {
 }`,
     markup: `<nav id="menu" aria-label="Menu">
   <a href="/prints" data-re-preview-template="card-prints">
+    <img class="thumb" src="/prints.webp" alt="" width="2250" height="1500">
     <b>Prints</b>
     <small>Single sheets, signed on the back</small>
   </a>
@@ -267,7 +269,10 @@ export function ShopMenu() {
   <span class="card"><img src="/prints.webp" alt="" width="2250" height="1500"><b>Prints</b></span>
 </template>`,
     css: `.re-cursor-preview { --re-preview-background: #fff; --re-preview-radius: 16px; }
-.card { display: grid; width: 15rem; padding: 6px; }`,
+.card { display: grid; width: 15rem; padding: 6px; }
+@media (hover: hover) and (pointer: fine) {
+  .thumb { display: none; }
+}`,
     options:
       'document.querySelector("#menu"), { offset: 18, tilt: 5, delay: 90 }',
   }),

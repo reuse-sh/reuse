@@ -46,13 +46,21 @@ export function PreviewMenu() {
           {groups.map(([title, rows]) => (
             <div key={title}>
               <p>{title}</p>
-              {rows.map(([id, name, line]) => (
+              {rows.map(([id, name, line, photo]) => (
                 <a
                   key={id}
                   href={`#${id}`}
                   id={id}
                   data-re-preview-template={`menu-card-${id}`}
                 >
+                  {/* biome-ignore lint/performance/noImgElement: standalone examples use native images. */}
+                  <img
+                    className="re-preview-menu-thumb"
+                    src={`/images/marble-${photo}-2250x1500.webp`}
+                    alt=""
+                    width="2250"
+                    height="1500"
+                  />
                   <b>{name}</b>
                   <small>{line}</small>
                 </a>
