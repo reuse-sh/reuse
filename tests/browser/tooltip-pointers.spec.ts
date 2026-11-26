@@ -419,3 +419,106 @@ test("grows in from the pointer corner and rolls the next hint in from the direc
   });
   await expect(tip).toHaveText("Archive");
 });
+
+test("an interrupted roll and an early exit continue from what is on screen", async ({
+  page,
+}) => {
+  await page.mouse.move(2, 2);
+  await mount(
+    page,
+    `<div id="root" style="display:flex;gap:8px;padding:80px">
+      <button data-re-tooltip="Open ticket">Ticket</button>
+      <button data-re-tooltip="Archive">Archive</button>
+      <button data-re-tooltip="Delete forever">Delete</button>
+    </div>`,
+    ["interactions/styles.css"],
+  );
+  await page.addScriptTag({
+    type: "module",
+    content: `import { createFloatingTooltip } from "@reuse-sh/interactions";
+      createFloatingTooltip(document.querySelector("#root"), { delay: 0, closeDelay: 0 });
+      window.__ready = true;`,
+  });
+  await expect.poll(() => page.evaluate(() => "__ready" in window)).toBe(true);
+  const ticket = page.getByRole("button", { name: "Ticket" });
+  await ticket.hover();
+  await expect(page.getByRole("tooltip")).toHaveText("Open ticket");
+  await page.waitForTimeout(500);
+
+  const flash = await page.evaluate(async () => {
+    const [, archive, remove] = [
+      ...document.querySelectorAll<HTMLElement>("#root button"),
+    ];
+    const at = (element: HTMLElement) => {
+      const box = element.getBoundingClientRect();
+      return { x: box.x + box.width / 2, y: box.y + box.height / 2 };
+    };
+    const over = (element: HTMLElement) =>
+      element.dispatchEvent(
+        new PointerEvent("pointerover", {
+          bubbles: true,
+          pointerId: 1,
+          pointerType: "mouse",
+          clientX: at(element).x,
+          clientY: at(element).y,
+        }),
+      );
+    const frame = () =>
+      new Promise((resolve) => requestAnimationFrame(resolve));
+    over(archive);
+    for (let i = 0; i < 4; i++) await frame();
+    const body = document.querySelector<HTMLElement>(
+      '[role="tooltip"] .re-floating-tooltip-content:not(.re-floating-tooltip-leaving)',
+    );
+    const before = Number(getComputedStyle(body as HTMLElement).opacity);
+    over(remove);
+    await frame();
+    const leaving = document.querySelector<HTMLElement>(
+      ".re-floating-tooltip-leaving",
+    );
+    return {
+      before,
+      leaving: Number(getComputedStyle(leaving as HTMLElement).opacity),
+      text: leaving?.textContent,
+    };
+  });
+  expect(flash.text).toBe("Archive");
+  expect(flash.before).toBeLessThan(1);
+  expect(flash.leaving).toBeLessThanOrEqual(flash.before + 0.01);
+
+  await page.keyboard.press("Escape");
+  await expect(page.getByRole("tooltip")).toBeHidden();
+  const scales = await page.evaluate(async () => {
+    const [ticketButton] =
+      document.querySelectorAll<HTMLElement>("#root button");
+    const box = ticketButton.getBoundingClientRect();
+    const event = (type: string) =>
+      ticketButton.dispatchEvent(
+        new PointerEvent(type, {
+          bubbles: true,
+          pointerId: 1,
+          pointerType: "mouse",
+          clientX: box.x + 10,
+          clientY: box.y + 8,
+          relatedTarget: type === "pointerout" ? document.body : null,
+        }),
+      );
+    const frame = () =>
+      new Promise((resolve) => requestAnimationFrame(resolve));
+    const popup = document.querySelector<HTMLElement>('[role="tooltip"]');
+    const scale = () =>
+      Number(/scale\(([\d.]+)\)/.exec(popup?.style.transform ?? "")?.[1] ?? 1);
+    event("pointerover");
+    await frame();
+    await frame();
+    event("pointerout");
+    const out: number[] = [];
+    for (let i = 0; i < 12 && popup && !popup.hidden; i++) {
+      await frame();
+      out.push(scale());
+    }
+    return out;
+  });
+  for (let i = 1; i < scales.length; i++)
+    expect(scales[i]).toBeLessThanOrEqual(scales[i - 1] + 0.001);
+});

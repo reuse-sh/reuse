@@ -135,9 +135,13 @@ export function createFloatingTooltip(
   let swap: Animation[] = [];
   let leaving: HTMLElement | null = null;
   let entrance: Animation | undefined;
-  let grow: { start?: number } | undefined;
+  let grow: { start?: number; from: number } | undefined;
+  let held = 1;
   let effects: number | undefined;
   let lastEffect = 0;
+  let pivot: Point | null = null;
+  let reference: Point | null = null;
+  let leavingFrom = { opacity: "1", translate: "0 0" };
   let morph: Animation | undefined;
   let fade:
     | { animation: Animation; closing: boolean; from: string }
@@ -201,15 +205,16 @@ export function createFloatingTooltip(
   const viewport = () => ({ width: view.innerWidth, height: view.innerHeight });
   const fit = (position: Point, bounds: Size) =>
     clampTooltipPosition(position, bounds, viewport(), opts.viewportPadding);
+  const growScale = () => {
+    if (!grow) return held;
+    const progress =
+      grow.start === undefined
+        ? 0
+        : Math.min(1, (lastEffect - grow.start) / GROW_MS);
+    return grow.from + (1 - grow.from) * (1 - (1 - progress) ** 4);
+  };
   const effectScale = () => {
-    let scale = 1;
-    if (grow) {
-      const progress =
-        grow.start === undefined
-          ? 0
-          : Math.min(1, (lastEffect - grow.start) / GROW_MS);
-      scale *= GROW_FROM + (1 - GROW_FROM) * (1 - (1 - progress) ** 4);
-    }
+    let scale = growScale();
     if (fade) {
       const progress = Number(fade.animation.currentTime ?? 0) / FADE_OUT_MS;
       scale *= 1 - (1 - SHRINK_TO) * Math.min(1, Math.max(0, progress));
@@ -233,6 +238,7 @@ export function createFloatingTooltip(
     if (effects !== undefined) view.cancelAnimationFrame(effects);
     effects = undefined;
     grow = undefined;
+    held = 1;
     entrance?.cancel();
     entrance = undefined;
   };
@@ -261,7 +267,13 @@ export function createFloatingTooltip(
       },
     );
     const scale = effectScale();
-    popup.style.transform = `translate3d(${placed.x - left}px, ${placed.y - top}px, 0) rotate(${tilt}deg)${scale === 1 ? "" : ` scale(${scale})`}`;
+    let scaling = "";
+    if (scale !== 1) {
+      const px = (pivot?.x ?? ox) - ox;
+      const py = (pivot?.y ?? oy) - oy;
+      scaling = ` translate(${px}px, ${py}px) scale(${scale}) translate(${-px}px, ${-py}px)`;
+    }
+    popup.style.transform = `translate3d(${placed.x - left}px, ${placed.y - top}px, 0) rotate(${tilt}deg)${scaling}`;
   };
   const motion = createFloatingTooltipMotion(view, (next) => {
     if (popup.hidden) return;
@@ -329,6 +341,14 @@ export function createFloatingTooltip(
     leaving = null;
   };
   const holdLeaving = () => {
+    const style = view.getComputedStyle(body);
+    leavingFrom = {
+      opacity: style.opacity || "1",
+      translate:
+        !style.translate || style.translate === "none"
+          ? "0 0"
+          : style.translate,
+    };
     dropLeaving();
     const outgoing = document.createElement("span");
     outgoing.className =
@@ -431,6 +451,11 @@ export function createFloatingTooltip(
         { opacity: [from, "1"] },
         { duration: FADE_IN_MS, easing: "ease-out" },
       );
+      if (held < 1) {
+        grow = { from: held };
+        held = 1;
+        runEffects();
+      }
       return;
     }
     fade.closing = false;
@@ -446,9 +471,11 @@ export function createFloatingTooltip(
       }
       return;
     }
-    const style = view.getComputedStyle(popup);
-    const from = style.opacity;
-    stopEffects();
+    const from = view.getComputedStyle(popup).opacity;
+    entrance?.cancel();
+    entrance = undefined;
+    held = growScale();
+    grow = undefined;
     const animation = popup.animate([{ opacity: from }, { opacity: 0 }], {
       duration: FADE_OUT_MS,
       easing: "ease-in",
@@ -460,8 +487,19 @@ export function createFloatingTooltip(
       if (fade?.animation !== animation) return;
       if (fade.closing) dismiss();
       else {
+        const start = fade.from;
         fade = undefined;
         animation.cancel();
+        if (Number(start) < 1)
+          entrance = popup.animate(
+            { opacity: [start, "1"] },
+            { duration: FADE_IN_MS, easing: "ease-out" },
+          );
+        if (held < 1) {
+          grow = { from: held };
+          held = 1;
+          runEffects();
+        }
       }
     };
   };
@@ -480,7 +518,12 @@ export function createFloatingTooltip(
       const content = resolveContent(next);
       if (content === null) return dismiss();
       const wasOpen = !popup.hidden;
-      const previous = { ...target };
+      const box = next.getBoundingClientRect();
+      const here = isKeyboard
+        ? { x: box.left + box.width / 2, y: box.top + box.height / 2 }
+        : { ...point };
+      const previous = reference ?? here;
+      reference = here;
       restoreDescription();
       trigger = next;
       keyboard = isKeyboard;
@@ -504,13 +547,20 @@ export function createFloatingTooltip(
           { opacity: [0, 1] },
           { duration: FADE_IN_MS, easing: "ease-out" },
         );
-        grow = {};
+        grow = { from: GROW_FROM };
+        const at = popup.getBoundingClientRect();
+        pivot = isKeyboard
+          ? null
+          : {
+              x: Math.min(at.width, Math.max(0, here.x - at.left)),
+              y: Math.min(at.height, Math.max(0, here.y - at.top)),
+            };
         render();
         runEffects();
       }
       if (wasOpen && changed && animated) {
-        const dx = target.x - previous.x;
-        const dy = target.y - previous.y;
+        const dx = here.x - previous.x;
+        const dy = here.y - previous.y;
         const vertical = Math.abs(dy) > Math.abs(dx);
         const sign = (vertical ? dy : dx) >= 0 ? "" : "-";
         const shift = (to: string) =>
@@ -528,10 +578,7 @@ export function createFloatingTooltip(
         const outgoing = leaving;
         if (outgoing) {
           const out = outgoing.animate(
-            [
-              { opacity: 1, translate: "0 0" },
-              { opacity: 0, translate: shift(sign ? "" : "-") },
-            ],
+            [leavingFrom, { opacity: 0, translate: shift(sign ? "" : "-") }],
             { ...timing, fill: "forwards" },
           );
           swap.push(out);
