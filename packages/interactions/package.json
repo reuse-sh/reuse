@@ -1,10 +1,12 @@
 {
   "name": "@reuse-sh/interactions",
   "version": "0.2.1",
-  "description": "A floating tooltip, a moving highlight, a hold-to-confirm button, and a copy button for native and React interfaces.",
+  "description": "A floating tooltip, a cursor preview, a moving highlight, a hold-to-confirm button, and a copy button for native and React interfaces.",
   "keywords": [
     "reuse",
     "tooltip",
+    "cursor-preview",
+    "hover-preview",
     "highlight",
     "hold-to-confirm",
     "copy-button",

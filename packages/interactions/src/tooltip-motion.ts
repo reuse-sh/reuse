@@ -14,7 +14,7 @@ type MotionTarget = {
   tilt?: { max: number; direction?: 1 | -1; axis?: "x" | "y" };
 };
 
-const FOLLOW = { stiffness: 700, damping: 45, mass: 0.4 };
+export const FOLLOW = { stiffness: 700, damping: 45, mass: 0.4 };
 const LEAN = { stiffness: 280, damping: 28, mass: 0.4 };
 const LEAN_SCALE = 0.45;
 const LEAN_DEADZONE = 0.45;

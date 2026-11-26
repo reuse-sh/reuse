@@ -1,0 +1,38 @@
+@reference "../../app/globals.css";
+@layer components {
+  .re-preview-collections {
+    @apply border-t border-border;
+  }
+  .re-preview-collections a {
+    grid-template-columns: 2rem minmax(0, 1fr) 4.5rem;
+    @apply grid items-center gap-x-4 gap-y-1 border-b border-border py-6 text-foreground sm:py-8;
+  }
+  .re-preview-collections small {
+    @apply col-start-1 row-span-2 self-start pt-2 text-caption text-subtle-foreground tabular-nums;
+  }
+  .re-preview-collections b {
+    @apply col-start-2 font-display text-3xl leading-9 font-normal tracking-tight text-balance sm:text-4xl sm:leading-11;
+    transition: translate 500ms ease-out;
+  }
+  .re-preview-collections span {
+    @apply col-start-2 text-label text-muted-foreground;
+  }
+  .re-preview-collections img {
+    @apply col-start-3 row-span-2 row-start-1 aspect-3/4 w-full rounded-control object-cover;
+  }
+  .re-cursor-preview.re-preview-collections-photo {
+    --re-preview-width: 15rem;
+    --re-preview-radius: 1.25rem;
+  }
+  @media (hover: hover) and (pointer: fine) {
+    .re-preview-collections a:hover b {
+      translate: 0.75rem 0;
+    }
+    .re-preview-collections a {
+      grid-template-columns: 2rem minmax(0, 1fr);
+    }
+    .re-preview-collections img {
+      display: none;
+    }
+  }
+}

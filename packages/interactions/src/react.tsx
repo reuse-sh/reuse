@@ -13,7 +13,9 @@ import {
 } from "react";
 import {
   type CopyButtonOptions,
+  type CursorPreviewOptions,
   createCopyButton,
+  createCursorPreview,
   createFloatingTooltip,
   createHoldToConfirm,
   createMovingHighlight,
@@ -231,5 +233,69 @@ export function CopyButton({
       {/* A string child is updated through textContent, which would drop the icon. */}
       {children == null ? null : <span>{children}</span>}
     </button>
+  );
+}
+
+export interface CursorPreviewProps
+  extends Omit<HTMLAttributes<HTMLDivElement>, "content">,
+    Omit<CursorPreviewOptions, "className"> {
+  previewClassName?: string;
+}
+
+export function CursorPreview({
+  children,
+  selector,
+  content,
+  placement,
+  offset,
+  tilt,
+  delay,
+  closeDelay,
+  viewportPadding,
+  media,
+  previewClassName,
+  ...props
+}: CursorPreviewProps) {
+  const ref = useRef<HTMLDivElement>(null);
+  const controller = useRef<ReturnType<typeof createCursorPreview> | null>(
+    null,
+  );
+  const contentRef = useRef(content);
+  contentRef.current = content;
+  const hasContent = Boolean(content);
+  const settings: CursorPreviewOptions = {
+    selector,
+    placement,
+    offset,
+    tilt,
+    delay,
+    closeDelay,
+    viewportPadding,
+    media,
+    className: previewClassName,
+  };
+  const settingsRef = useRef(settings);
+  settingsRef.current = settings;
+  useEffect(() => {
+    if (!ref.current) return;
+    const created = createCursorPreview(ref.current, {
+      ...settingsRef.current,
+      content: hasContent
+        ? (item) => contentRef.current?.(item) ?? null
+        : undefined,
+    });
+    controller.current = created;
+    return () => {
+      created.destroy();
+      controller.current = null;
+    };
+  }, [hasContent]);
+  useEffect(() => {
+    controller.current?.update(settingsRef.current);
+  });
+  return (
+    <div {...props} ref={ref}>
+      {children}
+    </div>
   );
 }

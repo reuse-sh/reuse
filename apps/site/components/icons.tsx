@@ -19,6 +19,7 @@ import FavouriteIcon from "@hugeicons/core-free-icons/FavouriteIcon";
 import FullScreenIcon from "@hugeicons/core-free-icons/FullScreenIcon";
 import GithubIcon from "@hugeicons/core-free-icons/GithubIcon";
 import Image02Icon from "@hugeicons/core-free-icons/Image02Icon";
+import ImageCompositionIcon from "@hugeicons/core-free-icons/ImageCompositionIcon";
 import InformationCircleIcon from "@hugeicons/core-free-icons/InformationCircleIcon";
 import JavaScriptIcon from "@hugeicons/core-free-icons/JavaScriptIcon";
 import Layers01Icon from "@hugeicons/core-free-icons/Layers01Icon";
@@ -55,6 +56,7 @@ export const iconData = {
   avatars: UserGroupIcon,
   "easing-gradients": BlendIcon,
   "copy-button": ClipboardCopyIcon,
+  "cursor-preview": ImageCompositionIcon,
   "demo-stage": Presentation01Icon,
   book: BookOpen01Icon,
   code: CodeIcon,

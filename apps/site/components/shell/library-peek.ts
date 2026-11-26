@@ -835,6 +835,76 @@ function gradients(): Scene {
   };
 }
 
+function cursorPreview(): Scene {
+  const names = ["Coral sky", "Mint and ember", "Lilac bloom"];
+  const rows = names.map((name, i) =>
+    target(
+      el(
+        "span",
+        "pk-cp-row",
+        el("small", "", String(i + 1).padStart(2, "0")),
+        el("b", "", name),
+      ),
+      `row-${i}`,
+    ),
+  );
+  const pictures = names.map((_, i) => img(i, "1350x1800"));
+  const photo = el("span", "pk-cp-photo", ...pictures);
+  const list = el("div", "pk-cp-list", ...rows);
+  const root = el("div", "pk pk-cp", list, photo);
+  let lastX = 0;
+  const place = (event: PointerEvent) => {
+    const box = root.getBoundingClientRect();
+    const scale = box.width / WIDTH || 1;
+    const x = (event.clientX - box.left) / scale;
+    const y = (event.clientY - box.top) / scale;
+    const lean = Math.max(-8, Math.min(8, (x - lastX) * 0.5));
+    lastX = x;
+    photo.style.translate = `${x + 12}px ${y - 20}px`;
+    photo.style.rotate = `${lean}deg`;
+  };
+  const show = (event: PointerEvent) => {
+    const row = (event.target as Element).closest(".pk-cp-row");
+    if (!(row instanceof HTMLElement)) return;
+    const index = rows.indexOf(row);
+    for (const [i, picture] of pictures.entries())
+      picture.toggleAttribute("data-on", i === index);
+    if (!root.hasAttribute("data-open")) {
+      photo.style.transition = "none";
+      place(event);
+      void photo.offsetWidth;
+      photo.style.transition = "";
+    }
+    root.setAttribute("data-open", "");
+  };
+  list.addEventListener("pointerover", show);
+  root.addEventListener("pointermove", place);
+  list.addEventListener("pointerleave", () =>
+    root.removeAttribute("data-open"),
+  );
+  const reset = () => {
+    root.removeAttribute("data-open");
+    for (const picture of pictures) picture.removeAttribute("data-on");
+  };
+  return {
+    root,
+    label:
+      "A pointer moves down a list, and a picture of each row rides beside it and swaps as it goes.",
+    rest: { x: 206, y: 136 },
+    reset,
+    async script(act) {
+      await act.move("row-0");
+      await act.wait(700);
+      await act.move("row-1", { duration: 520 });
+      await act.wait(600);
+      await act.move("row-2", { duration: 520 });
+      await act.wait(800);
+      await act.move({ x: 206, y: 136 });
+      await act.wait(500);
+    },
+  };
+}
+
 function demoStage(): Scene {
   const share = target(
     el("button", "pk-ds-share", iconNode("share", 12), "Share"),
@@ -902,6 +972,7 @@ const scenes: Record<MenuSlug, () => Scene> = {
   loaders,
   shadows,
   "easing-gradients": gradients,
+  "cursor-preview": cursorPreview,
   "demo-stage": demoStage,
 };
 

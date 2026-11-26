@@ -52,6 +52,8 @@ const carouselDescription =
   "A scroll-snap strip with drag, loop and autoplay, built on your own markup.";
 const tooltipDescription =
   "One shared hint that follows the pointer and slides between triggers.";
+const previewDescription =
+  "A picture of where a link leads, carried by the pointer and swapped as it moves down the list.";
 const annotationsDescription =
   "Areas, arrows and notes on an image, kept in one format your tools can share.";
 const loadersDescription =
@@ -1541,6 +1543,151 @@ export const libraries: Library[] = [
         path: "api",
         title: "API",
         lead: "The browser module exports createFloatingTooltip. The React package adds FloatingTooltip for one trigger and FloatingTooltipGroup for many.",
+      },
+    ],
+  },
+  {
+    slug: "cursor-preview",
+    name: "Cursor preview",
+    description: previewDescription,
+    packageName: "@reuse-sh/interactions",
+    principles: [
+      [
+        "Repeat, never replace",
+        "The picture repeats what its item already says and stays hidden from assistive technology. Anything a visitor needs stays on the item.",
+        "packages/interactions/src/preview.test.ts",
+      ],
+      [
+        "Arrive where the pointer is",
+        "The first frame sits at the pointer and drops in there, instead of flying across the page to reach it.",
+        "packages/interactions/src/preview.test.ts",
+      ],
+      [
+        "Follow on a spring, lean with speed",
+        "It trails the pointer on a spring stepped by elapsed time, so it moves the same at 60 and 120 frames per second. It leans with horizontal speed up to a cap, then settles upright.",
+        "packages/interactions/src/preview-motion.test.ts",
+      ],
+      [
+        "Switch without a gap",
+        "The next picture lies under the current one before the current one fades, so the page never shows through the frame. Returning mid-fade brings a picture back from where it is.",
+        "tests/browser/cursor-preview.spec.ts",
+      ],
+      [
+        "Never show an empty frame",
+        "An image switches in only once it has decoded. Until then, or if it fails, the current picture stays. The first pointer over the group starts loading every image in it.",
+        "packages/interactions/src/preview.test.ts",
+      ],
+      [
+        "Hold between items",
+        "A gap between items keeps the picture. Only leaving the group closes it, and coming back during the exit brings it back from where it is.",
+        "packages/interactions/src/preview-lifecycle.model.test.ts",
+      ],
+      [
+        "Leave faster than it arrives",
+        "The exit is a short fade with no spin. Escape hides it at once.",
+        "packages/interactions/src/preview.test.ts",
+      ],
+      [
+        "Stay inside the window",
+        "It keeps a margin from every edge, rotated corners included, and hangs on the pointer's other side near the right and bottom edges.",
+        "packages/interactions/src/preview.test.ts",
+      ],
+      [
+        "Follow one mouse",
+        "Touch never opens it, and the pointer that opened it is the only one that moves it. Where the media query does not match, such as a phone, it stays off.",
+        "packages/interactions/src/preview.test.ts",
+      ],
+      [
+        "Snap under reduced motion",
+        "No spring, lean or drop-in. The picture still shows, at the pointer.",
+        "packages/interactions/src/preview.test.ts",
+      ],
+    ],
+    api: [
+      [
+        "createCursorPreview(root, options?)",
+        "Gives every item inside root one shared preview at the pointer. Returns refresh, dismiss, update(options) and destroy.",
+      ],
+      [
+        "data-re-preview, data-re-preview-template",
+        "Marks an item. The first holds an image URL, the second names the id of a template to clone.",
+      ],
+      [
+        "selector",
+        "Which elements count as items. Both attributes above by default.",
+      ],
+      [
+        "content(item)",
+        "Returns a node for an item, in place of the attributes. Images inside it load eagerly and decode before they show. It is called on each visit. Return the same node for an item to keep a return mid-fade smooth; a new node is decoded and crossfaded in. Template clones are made inert; nodes you return stay as you give them, so keep links and buttons out of them. Call refresh() to show new content while the preview is open.",
+      ],
+      [
+        "placement, offset",
+        '"corner" hangs the picture offset px below and right of the pointer, 24 by default. "center" centers it on the pointer.',
+      ],
+      [
+        "tilt",
+        "The most it leans, in degrees, while the pointer moves. 8 by default, 0 turns it off.",
+      ],
+      [
+        "delay, closeDelay",
+        "The wait before the first picture shows, 60 ms, and before it leaves once the pointer is out of the group, 80 ms. Moving between items switches at once.",
+      ],
+      [
+        "media",
+        'The media query that turns it on. "(hover: hover) and (pointer: fine)" by default. Add a width to keep it off on small screens.',
+      ],
+      [
+        "className, viewportPadding",
+        "Added to the preview, for your own styles, and the margin kept from the window edges, 16 px.",
+      ],
+      [
+        "--re-preview-width, --re-preview-radius, --re-preview-background, --re-preview-shadow",
+        "Style the frame. The width applies to data-re-preview images. --re-preview-z-index sets its layer.",
+      ],
+      [
+        "CursorPreview",
+        "The React component: a div that takes the same options. previewClassName sets the preview's class.",
+      ],
+    ],
+    notes: [
+      "Mark items with data-re-preview for an image, or data-re-preview-template for richer content.",
+      "The preview is decoration. Keep names, prices and links on the item itself, and show an inline picture where the media query is off.",
+      "Touch and keyboard focus never open it.",
+    ],
+    pages: [
+      { path: "", title: "Overview", lead: previewDescription },
+      {
+        path: "getting-started",
+        title: "Getting started",
+        lead: "Install the package, import the stylesheet once, then bind the preview to the list that holds your items.",
+      },
+      {
+        title: "Examples",
+        pages: [
+          {
+            path: "examples/collections",
+            title: "Collections",
+            lead: "Large numbered rows, each leading to a collection. Its photo rides centered on the pointer and swaps as you move down.",
+            build: "a collection list with a photo that follows the pointer",
+          },
+          {
+            path: "examples/timeline",
+            title: "Timeline",
+            lead: "Years across a line. Each entry's photo hangs off the pointer, so the text stays readable.",
+            build: "a timeline whose photos hang off the pointer",
+          },
+          {
+            path: "examples/menu",
+            title: "Menu cards",
+            lead: "A menu whose rows show a card with a picture and a line of context, cloned from a template per row.",
+            build: "a menu with a preview card for each row",
+          },
+        ],
+      },
+      {
+        path: "api",
+        title: "API",
+        lead: "The browser module exports createCursorPreview. The React package adds CursorPreview.",
       },
     ],
   },

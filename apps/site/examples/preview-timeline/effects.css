@@ -1,0 +1,38 @@
+@reference "../../app/globals.css";
+@layer components {
+  .re-preview-timeline {
+    @apply grid gap-8 sm:grid-cols-3 sm:gap-6;
+  }
+  .re-preview-timeline li {
+    @apply relative grid content-start gap-2 border-dashed border-border pl-5 sm:pt-5 sm:pl-0;
+    border-width: 0 0 0 1px;
+    @variant sm {
+      border-width: 1px 0 0;
+    }
+  }
+  .re-preview-timeline li::before {
+    @apply absolute top-0 -left-px h-4 w-px bg-foreground sm:-top-px sm:left-0 sm:h-px sm:w-4;
+    content: "";
+  }
+  .re-preview-timeline time {
+    @apply text-label text-muted-foreground tabular-nums;
+  }
+  .re-preview-timeline h3 {
+    @apply mt-4 text-ui font-medium text-foreground;
+  }
+  .re-preview-timeline p {
+    @apply text-label leading-6 text-muted-foreground text-pretty;
+  }
+  .re-preview-timeline img {
+    @apply mt-2 aspect-4/3 w-full max-w-64 rounded-control object-cover;
+  }
+  .re-cursor-preview.re-preview-timeline-photo {
+    --re-preview-width: 12rem;
+    --re-preview-radius: 1rem;
+  }
+  @media (hover: hover) and (pointer: fine) {
+    .re-preview-timeline img {
+      display: none;
+    }
+  }
+}

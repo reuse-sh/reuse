@@ -1350,7 +1350,7 @@ test("every library preview plays its real scene and keeps the menu open", async
   await page.mouse.move(1200, 700);
   const rows = page.locator("[data-peek]");
   const count = await rows.count();
-  expect(count).toBe(14);
+  expect(count).toBe(15);
   for (let index = 0; index < count; index++) {
     await rows.nth(index).hover();
     await expect(
