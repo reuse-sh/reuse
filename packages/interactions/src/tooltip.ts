@@ -38,6 +38,8 @@ const FADE_OUT_MS = 140;
 const MORPH_MS = 220;
 const REEL_MS = 420;
 const REEL_SHIFT = "34%";
+const TRAVEL_MS = 100;
+const MAX_LEAVING = 3;
 const EASE = "cubic-bezier(0.33, 1, 0.68, 1)";
 const GROW_FROM = 0.92;
 const SHRINK_TO = 0.96;
@@ -132,8 +134,12 @@ export function createFloatingTooltip(
   let openTimer: number | undefined;
   let closeTimer: number | undefined;
   let destroyed = false;
-  let swap: Animation[] = [];
-  let leaving: HTMLElement | null = null;
+  type Visible = { opacity: string; translate: string };
+  type Leaving = { element: HTMLElement; content: Content; from: Visible };
+  let rolling: Animation | undefined;
+  let outgoing: Leaving | null = null;
+  let leavings: Array<Leaving & { animation: Animation }> = [];
+  const trail: Array<Point & { t: number }> = [];
   let entrance: Animation | undefined;
   let grow: { start?: number; from: number } | undefined;
   let held = 1;
@@ -141,7 +147,6 @@ export function createFloatingTooltip(
   let lastEffect = 0;
   let pivot: Point | null = null;
   let reference: Point | null = null;
-  let leavingFrom = { opacity: "1", translate: "0 0" };
   let morph: Animation | undefined;
   let fade:
     | { animation: Animation; closing: boolean; from: string }
@@ -335,12 +340,17 @@ export function createFloatingTooltip(
     body.style.width = "";
   };
   const dropLeaving = () => {
-    for (const animation of swap) animation.cancel();
-    swap = [];
-    leaving?.remove();
-    leaving = null;
+    rolling?.cancel();
+    rolling = undefined;
+    outgoing?.element.remove();
+    outgoing = null;
+    for (const entry of leavings) {
+      entry.animation.cancel();
+      entry.element.remove();
+    }
+    leavings = [];
   };
-  const visibleState = (element: HTMLElement) => {
+  const visibleState = (element: HTMLElement): Visible => {
     const style = view.getComputedStyle(element);
     return {
       opacity: style.opacity || "1",
@@ -351,30 +361,22 @@ export function createFloatingTooltip(
     };
   };
   const holdLeaving = () => {
-    const current = visibleState(body);
-    const previous = leaving;
-    if (
-      previous &&
-      Number(visibleState(previous).opacity) > Number(current.opacity)
-    ) {
-      leavingFrom = visibleState(previous);
-      for (const animation of swap) animation.cancel();
-      swap = [];
-      body.replaceChildren();
-      return;
-    }
-    leavingFrom = current;
-    dropLeaving();
-    const outgoing = document.createElement("span");
-    outgoing.className =
+    const from = visibleState(body);
+    rolling?.cancel();
+    rolling = undefined;
+    outgoing?.element.remove();
+    outgoing = null;
+    if (shown === null || !body.firstChild) return;
+    const element = document.createElement("span");
+    element.className =
       "re-floating-tooltip-content re-floating-tooltip-leaving";
-    outgoing.setAttribute("aria-hidden", "true");
-    outgoing.style.left = `${body.offsetLeft}px`;
-    outgoing.style.top = `${body.offsetTop}px`;
-    outgoing.style.width = `${body.offsetWidth}px`;
-    outgoing.append(...body.childNodes);
-    popup.append(outgoing);
-    leaving = outgoing;
+    element.setAttribute("aria-hidden", "true");
+    element.style.left = `${body.offsetLeft}px`;
+    element.style.top = `${body.offsetTop}px`;
+    element.style.width = `${body.offsetWidth}px`;
+    element.append(...[...body.childNodes].map((node) => node.cloneNode(true)));
+    popup.append(element);
+    outgoing = { element, content: shown, from };
   };
   const setContent = (content: Content) => {
     if (typeof content === "string") {
@@ -538,7 +540,14 @@ export function createFloatingTooltip(
       const here = isKeyboard
         ? { x: box.left + box.width / 2, y: box.top + box.height / 2 }
         : { ...point };
-      const previous = reference ?? here;
+      const last = trail.at(-1);
+      const since = isKeyboard
+        ? undefined
+        : last && trail.find((sample) => last.t - sample.t <= TRAVEL_MS);
+      const previous =
+        since && (since.x !== here.x || since.y !== here.y)
+          ? since
+          : (reference ?? here);
       reference = here;
       restoreDescription();
       trigger = next;
@@ -582,31 +591,41 @@ export function createFloatingTooltip(
         const shift = (to: string) =>
           vertical ? `0 ${to}${REEL_SHIFT}` : `${to}${REEL_SHIFT} 0`;
         const timing = { duration: REEL_MS, easing: EASE_REEL };
-        swap = [
-          body.animate(
-            [
-              { opacity: 0, translate: shift(sign) },
-              { opacity: 1, translate: "0 0" },
-            ],
-            timing,
-          ),
-        ];
-        const outgoing = leaving;
-        if (outgoing) {
-          const out = outgoing.animate(
-            [leavingFrom, { opacity: 0, translate: shift(sign ? "" : "-") }],
+        const match = leavings.find((entry) =>
+          sameContent(entry.content, content),
+        );
+        let start: Visible = { opacity: "0", translate: shift(sign) };
+        if (match) {
+          start = visibleState(match.element);
+          match.animation.cancel();
+          match.element.remove();
+          leavings = leavings.filter((entry) => entry !== match);
+        }
+        rolling = body.animate(
+          [start, { opacity: "1", translate: "0 0" }],
+          timing,
+        );
+        const leaving = outgoing;
+        outgoing = null;
+        if (leaving) {
+          const animation = leaving.element.animate(
+            [leaving.from, { opacity: "0", translate: shift(sign ? "" : "-") }],
             { ...timing, fill: "forwards" },
           );
-          swap.push(out);
-          out.finished.then(
+          const entry = { ...leaving, animation };
+          leavings.push(entry);
+          animation.finished.then(
             () => {
-              if (leaving === outgoing) {
-                leaving = null;
-                outgoing.remove();
-              }
+              entry.element.remove();
+              leavings = leavings.filter((other) => other !== entry);
             },
             () => {},
           );
+        }
+        while (leavings.length > MAX_LEAVING) {
+          const oldest = leavings.shift();
+          oldest?.animation.cancel();
+          oldest?.element.remove();
         }
       }
     };
@@ -614,6 +633,11 @@ export function createFloatingTooltip(
       pending = next;
       openTimer = view.setTimeout(show, opts.delay);
     } else show();
+  };
+  const remember = (event: PointerEvent) => {
+    trail.push({ x: event.clientX, y: event.clientY, t: event.timeStamp });
+    while (trail.length > 1 && event.timeStamp - trail[0].t > TRAVEL_MS * 2)
+      trail.shift();
   };
   const find = (event: Event) =>
     event.target instanceof view.Element ? findTrigger(event.target) : null;
@@ -623,6 +647,7 @@ export function createFloatingTooltip(
     const next = find(event);
     if (!next || next === pending || !canShow(next)) return;
     owner = event.pointerId;
+    remember(event);
     if (next === trigger) keepOpen();
     else open(next, false, { x: event.clientX, y: event.clientY });
   };
@@ -632,8 +657,8 @@ export function createFloatingTooltip(
     if (!(event.target instanceof view.Node) || !active?.contains(event.target))
       return;
     point = { x: event.clientX, y: event.clientY };
+    remember(event);
     if (pending) return;
-    if (!keyboard) reference = { ...point };
     position(false, true);
   };
   const scheduleClose = () => {

@@ -485,7 +485,7 @@ test("an interrupted roll and an early exit continue from what is on screen", as
       leaving: Number(getComputedStyle(leaving as HTMLElement).opacity),
     };
   });
-  expect(flash.after).toBeGreaterThan(flash.before * 0.8);
+  expect(flash.after).toBeGreaterThan(0.25);
   expect(flash.leaving).toBeLessThanOrEqual(flash.before + 0.01);
 
   await page.keyboard.press("Escape");
@@ -561,7 +561,8 @@ test("rolls with the latest travel, keeps its margin and never blinks on a quick
   await page.mouse.move(inbox.x + 10, inbox.y + 4);
   await page.waitForTimeout(400);
   await page.mouse.move(inbox.x + 260, inbox.y + 6, { steps: 6 });
-  await page.mouse.move(inbox.x + 260, drafts.y + 6);
+  await page.waitForTimeout(200);
+  await page.mouse.move(inbox.x + 260, drafts.y + 6, { steps: 3 });
   const keyframe = await page.evaluate(() => {
     const body = document.querySelector<HTMLElement>(
       '[role="tooltip"]:not([hidden]) .re-floating-tooltip-content:not(.re-floating-tooltip-leaving)',
@@ -593,45 +594,135 @@ test("rolls with the latest travel, keeps its margin and never blinks on a quick
       }),
     );
     let worst = 0;
+    let shrinking = 0;
     for (let i = 0; i < 14 && popup && !popup.hidden; i++) {
       await new Promise((resolve) => requestAnimationFrame(resolve));
+      if (popup.style.transform.includes("scale(")) shrinking++;
       worst = Math.max(worst, popup.getBoundingClientRect().right);
     }
-    return worst;
+    return { worst, shrinking };
   });
-  expect(right).toBeLessThanOrEqual(1000 - 12 + 0.5);
+  expect(right.shrinking).toBeGreaterThan(0);
+  expect(right.worst).toBeLessThanOrEqual(1000 - 12 + 0.5);
 
   await page.keyboard.press("Escape");
-  await page.mouse.move(inbox.x + 10, inbox.y + 6);
-  await page.waitForTimeout(500);
-  const lowest = await page.evaluate(async () => {
+  const returning = await page.evaluate(async () => {
     const inboxButton = document.querySelector<HTMLElement>("#rows button");
-    const popup = [
-      ...document.querySelectorAll<HTMLElement>('[role="tooltip"]'),
-    ].find((element) => !element.hidden);
+    const box = inboxButton?.getBoundingClientRect();
     const event = (type: string) =>
       inboxButton?.dispatchEvent(
         new PointerEvent(type, {
           bubbles: true,
           pointerId: 1,
           pointerType: "mouse",
-          clientX: inboxButton.getBoundingClientRect().x + 10,
-          clientY: inboxButton.getBoundingClientRect().y + 6,
+          clientX: (box?.x ?? 0) + 10,
+          clientY: (box?.y ?? 0) + 6,
           relatedTarget: type === "pointerout" ? document.body : null,
         }),
       );
+    const frame = () =>
+      new Promise((resolve) => requestAnimationFrame(resolve));
+    event("pointerover");
+    await frame();
+    await frame();
+    const popup = [
+      ...document.querySelectorAll<HTMLElement>('[role="tooltip"]'),
+    ].find((element) => !element.hidden);
+    const opacity = () =>
+      Number(getComputedStyle(popup as HTMLElement).opacity);
+    const before = opacity();
     event("pointerout");
     await new Promise((resolve) => setTimeout(resolve, 0));
     event("pointerover");
     let low = 1;
     for (let i = 0; i < 12; i++) {
-      await new Promise((resolve) => requestAnimationFrame(resolve));
-      low = Math.min(
-        low,
-        Number(getComputedStyle(popup as HTMLElement).opacity),
-      );
+      await frame();
+      low = Math.min(low, opacity());
     }
-    return low;
+    return { before, low };
   });
-  expect(lowest).toBeGreaterThan(0.9);
+  expect(returning.before).toBeLessThan(1);
+  expect(returning.low).toBeGreaterThanOrEqual(returning.before - 0.05);
+});
+
+test("rolls a slow sweep sideways and brings a hint back from where it is leaving", async ({
+  page,
+}) => {
+  await page.mouse.move(2, 2);
+  await mount(
+    page,
+    `<div id="bar" style="display:flex;padding:80px">
+      <button style="width:80px;height:32px" data-re-tooltip="Bold">Bold</button>
+      <button style="width:80px;height:32px" data-re-tooltip="Italic">Italic</button>
+    </div>
+    <div id="live" style="display:flex;padding:80px">
+      <button style="width:80px" data-live="a">A</button>
+      <button style="width:80px" data-live="b">B</button>
+    </div>`,
+    ["interactions/styles.css"],
+  );
+  await page.addScriptTag({
+    type: "module",
+    content: `import { createFloatingTooltip } from "@reuse-sh/interactions";
+      createFloatingTooltip(document.querySelector("#bar"), { delay: 0, selector: "[data-re-tooltip]" });
+      const nodes = {};
+      for (const key of ["a", "b"]) {
+        const node = document.createElement("span");
+        node.textContent = "Hint " + key.toUpperCase();
+        nodes[key] = node;
+      }
+      createFloatingTooltip(document.querySelector("#live"), {
+        delay: 0,
+        selector: "[data-live]",
+        content: (trigger) => nodes[trigger.dataset.live],
+      });
+      window.__ready = true;`,
+  });
+  await expect.poll(() => page.evaluate(() => "__ready" in window)).toBe(true);
+  const bold = await page.getByRole("button", { name: "Bold" }).boundingBox();
+  if (!bold) throw new Error("No toolbar.");
+  await page.mouse.move(bold.x + 4, bold.y + 16);
+  await page.waitForTimeout(400);
+  for (let x = 5; x <= 79; x++) await page.mouse.move(bold.x + x, bold.y + 16);
+  await page.mouse.move(bold.x + 81, bold.y + 19);
+  const sideways = await page.evaluate(() => {
+    const body = [
+      ...document.querySelectorAll<HTMLElement>(
+        '[role="tooltip"]:not([hidden]) .re-floating-tooltip-content:not(.re-floating-tooltip-leaving)',
+      ),
+    ][0];
+    const reel = body?.getAnimations()[0]?.effect as KeyframeEffect | undefined;
+    return String(reel?.getKeyframes()[0]?.translate ?? "");
+  });
+  expect(sideways, `keyframe ${sideways}`).toMatch(/%$|% 0(px)?$/);
+  await page.keyboard.press("Escape");
+
+  const a = await page
+    .getByRole("button", { name: "A", exact: true })
+    .boundingBox();
+  const b = await page
+    .getByRole("button", { name: "B", exact: true })
+    .boundingBox();
+  if (!a || !b) throw new Error("No live triggers.");
+  await page.mouse.move(a.x + 20, a.y + 8);
+  await page.waitForTimeout(400);
+  await page.mouse.move(b.x + 20, b.y + 8, { steps: 2 });
+  await page.waitForTimeout(60);
+  await page.mouse.move(a.x + 60, a.y + 8, { steps: 2 });
+  const layers = await page.evaluate(async () => {
+    await new Promise((resolve) => requestAnimationFrame(resolve));
+    return [
+      ...document.querySelectorAll<HTMLElement>(
+        '[role="tooltip"]:not([hidden]) .re-floating-tooltip-content',
+      ),
+    ].map((element) => ({
+      text: element.textContent,
+      opacity: Number(getComputedStyle(element).opacity),
+    }));
+  });
+  const visibleA = layers.filter(
+    (layer) => layer.text === "Hint A" && layer.opacity > 0.05,
+  );
+  expect(visibleA).toHaveLength(1);
+  expect(layers.every((layer) => layer.text !== "")).toBe(true);
 });
