@@ -1,6 +1,9 @@
 "use client";
 
-import { createMovingHighlight } from "@reuse-sh/interactions";
+import {
+  createFloatingTooltip,
+  createMovingHighlight,
+} from "@reuse-sh/interactions";
 import { isStageEvent } from "@reuse-sh/stage";
 import { usePathname } from "next/navigation";
 import { type MouseEvent, useEffect, useRef, useState } from "react";
@@ -32,6 +35,19 @@ export function SiteHeader() {
     return () => {
       for (const controller of controllers) controller.destroy();
     };
+  }, []);
+
+  useEffect(() => {
+    const logo = brand.current?.querySelector<HTMLElement>("[data-re-tooltip]");
+    if (!brand.current || !logo) return;
+    const tooltip = createFloatingTooltip(brand.current, {
+      selector: "[data-re-tooltip]",
+      track: { y: "anchor" },
+      sideOffset: logo.offsetHeight / 2 + 10,
+      tilt: 5,
+      className: "f-tip",
+    });
+    return () => tooltip.destroy();
   }, []);
 
   useEffect(() => {
