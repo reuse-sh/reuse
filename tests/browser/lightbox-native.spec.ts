@@ -29,7 +29,7 @@ async function open(
   await mount(
     page,
     '<meta name="viewport" content="width=device-width, initial-scale=1">',
-    ["lightbox/base.css", "lightbox/theme.css"],
+    ["lightbox/base.css"],
   );
   await page.evaluate(
     async ([options, index, count]) => {

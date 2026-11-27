@@ -108,7 +108,7 @@ test("reference prompts keep the exact page and selected platform", async ({
   await context.grantPermissions(["clipboard-read", "clipboard-write"]);
   for (const path of [
     "/lightbox/guides/media",
-    "/lightbox/controls/classic",
+    "/lightbox/looks",
     "/lightbox/api",
   ]) {
     await page.goto(`${path}?framework=html`);
@@ -144,18 +144,89 @@ test("general agent prompts stay independent of the documentation platform", asy
   }
 });
 
-test("no lightbox theme or preset snippet imports a file the page does not show", async ({
+test("every look's setup imports only files the page shows beside it", async ({
   page,
 }) => {
-  await page.goto("/lightbox/themes");
-  const snippets = await page
-    .locator("main pre")
-    .evaluateAll((blocks) => blocks.map((block) => block.textContent ?? ""));
-  expect(snippets.join("\n")).toContain("createLightbox");
-  const relative = snippets.flatMap((code) =>
-    [...code.matchAll(/(?:from|import)\s*["'](\.[^"']*)["']/g)].map(
-      (match) => match[1],
-    ),
+  await page.goto("/lightbox/looks?framework=html");
+  const seen: string[] = [];
+  for (const group of ["Themes", "Layouts", "Recipes"]) {
+    await page.getByRole("tab", { name: group, exact: true }).click();
+    const looks = page.getByRole("tablist", { name: group });
+    for (const name of await looks.getByRole("tab").allTextContents()) {
+      await looks.getByRole("tab", { name, exact: true }).click();
+      const panel = page.locator(
+        '[role="tabpanel"][id^="look-panel-"]:not([hidden])',
+      );
+      const { setup, missing } = await panel.evaluate((root) => {
+        const blocks = [...root.querySelectorAll("[data-snippet-id]")];
+        const code = blocks.map(
+          (block) => block.querySelector("pre")?.textContent ?? "",
+        );
+        const labels = blocks.map((block) => {
+          const copy = block.cloneNode(true) as Element;
+          copy.querySelector("pre")?.remove();
+          return copy.textContent ?? "";
+        });
+        const files = code.flatMap((text) =>
+          [...text.matchAll(/(?:from|import)\s*["']\.\/([^"']*)["']/g)].map(
+            (match) => match[1],
+          ),
+        );
+        return {
+          setup: code.some((text) => text.includes("createLightbox")),
+          missing: files.filter(
+            (file) => !labels.some((label) => label.includes(file)),
+          ),
+        };
+      });
+      expect({ setup, missing }, name).toEqual({ setup: true, missing: [] });
+      seen.push(name);
+    }
+  }
+  expect(seen).toEqual([
+    "Dark",
+    "Light",
+    "Page",
+    "Photos",
+    "Classic",
+    "Filmstrip",
+    "Toolbar",
+    "Panel",
+    "Immersive",
+    "Photos app",
+    "Social feed",
+    "Cloud library",
+    "Minimal",
+  ]);
+});
+
+test("the old themes and control styles pages move to Looks for good", async ({
+  request,
+}) => {
+  for (const path of [
+    "/lightbox/themes",
+    "/lightbox/controls/classic",
+    "/lightbox/controls/minimal",
+  ]) {
+    const response = await request.get(path, { maxRedirects: 0 });
+    expect([response.status(), response.headers().location], path).toEqual([
+      308,
+      "/lightbox/looks",
+    ]);
+  }
+});
+
+test("the look viewer stays out of the index and the sitemap", async ({
+  page,
+  request,
+}) => {
+  await page.goto("/lightbox/looks/panel");
+  await expect(page.locator('meta[name="robots"]')).toHaveAttribute(
+    "content",
+    /noindex/,
   );
-  expect(relative).toEqual([]);
+  const sitemap = await (await request.get("/sitemap.xml")).text();
+  expect(sitemap).toContain("https://reuse.sh/lightbox/looks<");
+  expect(sitemap).not.toContain("https://reuse.sh/lightbox/looks/");
+  expect((await request.get("/carousel/looks/panel")).status()).toBe(404);
 });

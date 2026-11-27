@@ -5,8 +5,7 @@ import { CodeBlock } from "../shell/code-block";
 import { DeviceCheck } from "./device-check";
 import type { DocIconName } from "./doc-icon";
 import { LightboxGesturesPage } from "./lightbox-gestures-page";
-import { LightboxStylePage } from "./lightbox-style-page";
-import { LightboxThemesPage } from "./lightbox-themes-page";
+import { LightboxLooksPage } from "./lightbox-looks-page";
 import { ApiTable, C, Keys, Principles, Section, Text } from "./parts";
 
 const icons: Record<string, DocIconName[]> = {
@@ -178,14 +177,12 @@ export function docBody(
       </>
     );
   if (path === "api") return <ApiTable rows={library.api} />;
-  if (path === "themes" && library.slug === "lightbox")
-    return <LightboxThemesPage />;
+  if (path === "looks" && library.slug === "lightbox")
+    return <LightboxLooksPage />;
   if (path === "gestures" && library.slug === "lightbox")
     return <LightboxGesturesPage />;
   if (path === "examples/device-check" && library.slug === "lightbox")
     return <DeviceCheck />;
-  if (path.startsWith("controls/") && library.slug === "lightbox")
-    return <LightboxStylePage style={path.slice(9)} />;
   if (!path)
     return (
       <>

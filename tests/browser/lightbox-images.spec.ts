@@ -143,7 +143,7 @@ test("shows the spinner only after 300ms of loading, and never for a cached file
     await page
       .locator(".re-lightbox-frame")
       .evaluate((frame) => getComputedStyle(frame).backgroundColor),
-  ).toBe("rgba(255, 255, 255, 0.06)");
+  ).toBe("rgba(0, 0, 0, 0.05)");
   await expect(page.locator(".re-lightbox-loading")).toHaveCount(0, {
     timeout: 3000,
   });
@@ -263,7 +263,7 @@ test("the open flight shows the tile's pixels on every frame when the item has n
 test("without a size the frame fits the screen at the tile's proportions, then takes the file's around the same center", async ({
   page,
 }) => {
-  await mount(page, "", ["lightbox/base.css", "lightbox/theme.css"]);
+  await mount(page, "", ["lightbox/base.css"]);
   let release = () => {};
   const arrived = new Promise<void>((resolve) => {
     release = resolve;
@@ -379,7 +379,7 @@ test.describe("sizes from a srcset on a 1440px screen", () => {
   test("a srcset photo without a size opened from a small tile fits the screen and skips the tile-sized file", async ({
     page,
   }) => {
-    await mount(page, "", ["lightbox/base.css", "lightbox/theme.css"]);
+    await mount(page, "", ["lightbox/base.css"]);
     const requests = await serveImages(page, () => ({}));
     await page.evaluate(async () => {
       const tile = document.createElement("img");
@@ -410,7 +410,7 @@ test.describe("sizes from a srcset on a 1440px screen", () => {
   test("a srcset photo whose sizes picks a small candidate still takes its size from the widest one", async ({
     page,
   }) => {
-    await mount(page, "", ["lightbox/base.css", "lightbox/theme.css"]);
+    await mount(page, "", ["lightbox/base.css"]);
     await serveImages(page, () => ({}));
     await create(page);
     await open(page, [{ ...responsive, sizes: "300px" }]);

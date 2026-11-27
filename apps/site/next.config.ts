@@ -3,10 +3,13 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   poweredByHeader: false,
-  // The themes page renders per request and reads the theme files that the build copies here.
-  outputFileTracingIncludes: {
-    "/[library]/themes": ["./public/modules/lightbox/themes/*.css"],
-  },
+  redirects: async () => [
+    {
+      source: "/lightbox/:page(themes|controls/.*)",
+      destination: "/lightbox/looks",
+      permanent: true,
+    },
+  ],
 };
 export default withCn(nextConfig, {
   cwd: import.meta.dirname,

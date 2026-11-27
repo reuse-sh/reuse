@@ -22,7 +22,7 @@ for (const [name, options] of Object.entries(lightboxStyles)) {
       }),
     );
     await page.reload();
-    await page.addStyleTag({ content: code.css });
+    if (code.css) await page.addStyleTag({ content: code.css });
     const setup = code.js
       .replace(/^import ["'][^"']+\.css["'];\n?/gm, "")
       .replace(/^import \{ [^}]+ \} from "\.\/lightbox-chrome\.js";\n?/m, "");
@@ -60,7 +60,7 @@ for (const [name, options] of Object.entries(lightboxStyles)) {
   }) => {
     const code = lightboxCode(options);
     await mount(page, "", ["lightbox/base.css", "lightbox/theme.css"]);
-    await page.addStyleTag({ content: code.css });
+    if (code.css) await page.addStyleTag({ content: code.css });
     await page.evaluate(
       async ([className, src]) => {
         const { createLightbox } = await import("/modules/lightbox/index.js");
@@ -106,7 +106,7 @@ test("published panel layout lists only the photos when the gallery holds a text
     }),
   );
   await page.reload();
-  await page.addStyleTag({ content: code.css });
+  if (code.css) await page.addStyleTag({ content: code.css });
   const setup = code.js
     .replace(/^import ["'][^"']+\.css["'];\n?/gm, "")
     .replace(/^import \{ [^}]+ \} from "\.\/lightbox-chrome\.js";\n?/m, "");

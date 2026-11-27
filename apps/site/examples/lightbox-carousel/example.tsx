@@ -4,7 +4,6 @@ import { connectCarousel } from "@reuse-sh/lightbox/carousel";
 import { useLightbox } from "@reuse-sh/lightbox/react";
 import { useEffect, useRef } from "react";
 import { ArrowIcon } from "@/components/lucide-arrows";
-import { siteLightbox } from "@/components/site-lightbox";
 import { Button } from "@/components/ui/button";
 import { photos } from "@/lib/photos";
 import "./strip.css";
@@ -21,7 +20,7 @@ const items = photos.map((photo) => ({
 
 export function Example() {
   const images = useRef<(HTMLImageElement | null)[]>([]);
-  const viewer = useLightbox({ ...siteLightbox, thumbnails: "bottom" });
+  const viewer = useLightbox({ thumbnails: "bottom" });
   const opened = items.map((item, index) => ({
     ...item,
     origin: () => images.current[index] ?? null,

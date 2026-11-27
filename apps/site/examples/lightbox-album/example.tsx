@@ -1,7 +1,6 @@
 "use client";
 import { useLightbox } from "@reuse-sh/lightbox/react";
 import { useRef } from "react";
-import { siteLightbox } from "@/components/site-lightbox";
 import { galleryPhotos } from "@/lib/photos";
 import { cn } from "@/lib/utils";
 
@@ -47,7 +46,7 @@ const items = sequence.map((photo) => ({
 
 export function Example() {
   const tiles = useRef<(HTMLButtonElement | null)[]>([]);
-  const viewer = useLightbox({ ...siteLightbox, thumbnails: "bottom" });
+  const viewer = useLightbox({ thumbnails: "bottom" });
   const opened = items.map((item, index) => ({
     ...item,
     origin: () => tiles.current[index] ?? null,

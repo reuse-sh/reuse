@@ -1,5 +1,5 @@
 export interface LightboxStyle {
-  arrows: "Sides" | "Toolbar" | "None";
+  arrows: "Sides" | "Toolbar";
   counter: "Corner" | "Toolbar" | "None";
   thumbnails: boolean;
   caption: "Below" | "Panel" | "None";
@@ -27,133 +27,20 @@ const style = (
 });
 
 export const lightboxStyles: Record<string, LightboxStyle> = {
-  minimal: style("None", "None", false, "None", "Light", false, false),
   classic: style("Sides", "Corner", false, "Below", "Light", false, true),
   filmstrip: style("Sides", "None", true, "None", "Light", false, true),
+  toolbar: style("Toolbar", "Toolbar", false, "Below", "Light", false, true),
   panel: style("Sides", "None", false, "Panel", "Light", false, false),
   immersive: style("Sides", "Corner", false, "Below", "Dark", true, false),
-  toolbar: style("Toolbar", "Toolbar", false, "Below", "Light", false, true),
 };
 
 export const LIGHTBOX_STYLE_CLASS = "re-lightbox-style";
-
-/** The look every lightbox on the site shares. A style adds only its differences on top. */
-export const lightboxLookCss = [
-  `.re-lightbox-style {
-  --re-lightbox-pad: 16px;
-  --re-lightbox-padding: 24px;
-  --re-lightbox-inset: var(--re-lightbox-pad);
-  --re-lightbox-gap: 8px;
-  --re-lightbox-side: 0px;
-  --re-lightbox-caption: 0px;
-  --re-lightbox-strip: 0px;
-  --re-lightbox-bar: 0px;
-  --re-lightbox-under: 0px;
-  --re-lightbox-bottom: calc(var(--re-lightbox-caption) + var(--re-lightbox-strip) + var(--re-lightbox-bar) + var(--re-lightbox-under));
-  --re-lightbox-bottom-room: var(--re-lightbox-bottom);
-  --re-lightbox-ring: 0 0 0 0.5px rgb(0 0 0 / 10%), 0 1px 2px rgb(0 0 0 / 6%), 0 2px 6px rgb(0 0 0 / 4%);
-  --re-lightbox-background: #fcfcfc;
-  --re-lightbox-foreground: #1f1f1f;
-  --re-lightbox-control: #fff;
-  --re-lightbox-control-hover: #f4f4f4;
-  --re-lightbox-placeholder: rgb(0 0 0 / 5%);
-  --re-lightbox-press-scale: 0.95;
-}
-.re-lightbox-style *, .re-lightbox-style *::before, .re-lightbox-style *::after { box-sizing: border-box; }
-.re-lightbox-style .re-lightbox-button {
-  width: 40px;
-  height: 40px;
-  padding: 0;
-  color: inherit;
-  box-shadow: var(--re-lightbox-ring);
-  backdrop-filter: none;
-  transition: background-color 150ms ease, scale 160ms cubic-bezier(0.23, 1, 0.32, 1), opacity 300ms ease;
-}
-.re-lightbox-style .re-lightbox-button svg { width: 18px; height: 18px; }
-.re-lightbox-style .re-lightbox-retry { box-shadow: var(--re-lightbox-ring); }
-.re-lightbox-style .re-lightbox-button:hover { background: #f4f4f4; }
-.re-lightbox-style .re-lightbox-button:disabled { opacity: 0.3; }
-.re-lightbox-style .re-lightbox-footer {
-  right: calc(var(--re-lightbox-side) + var(--re-lightbox-pad));
-  bottom: calc(var(--re-lightbox-under) + var(--re-lightbox-pad));
-  left: var(--re-lightbox-pad);
-  gap: 10px;
-}
-.re-lightbox-style .re-lightbox-counter {
-  padding: 0;
-  background: none;
-  backdrop-filter: none;
-  font-size: 13px;
-}`,
-  `.re-lightbox-style .re-lightbox-prev,
-.re-lightbox-style .re-lightbox-next { top: calc((100% - var(--re-lightbox-bottom)) / 2 - 20px); }
-.re-lightbox-style .re-lightbox-prev { left: var(--re-lightbox-pad); }
-.re-lightbox-style .re-lightbox-next { right: calc(var(--re-lightbox-side) + var(--re-lightbox-pad)); }`,
-  `.re-lightbox-style .re-lightbox-counter {
-  position: fixed;
-  z-index: 2;
-  top: var(--re-lightbox-pad);
-  left: var(--re-lightbox-pad);
-  display: flex;
-  height: 40px;
-  padding: 0 14px;
-  align-items: center;
-  border-radius: 999px;
-  background: #fff;
-  box-shadow: var(--re-lightbox-ring);
-  font-weight: 500;
-}
-.re-lightbox-style .re-lightbox-counter[hidden] { display: none; }`,
-  `.re-lightbox-style { --re-lightbox-caption: 30px; }
-.re-lightbox-style .re-lightbox-caption {
-  order: 1;
-  padding: 0;
-  background: none;
-  color: #4a4a4a;
-  font-size: 14px;
-  line-height: 20px;
-}`,
-  `.re-lightbox-style[data-thumbnails="bottom"] { --re-lightbox-strip: 64px; }
-.re-lightbox-style[data-thumbnails="bottom"] .re-lightbox-thumbnails { order: 2; max-width: 100%; margin: 0; gap: 6px; padding: 5px 50%; scrollbar-width: none; }
-.re-lightbox-style[data-thumbnails="bottom"] .re-lightbox-thumbnails::-webkit-scrollbar { display: none; }
-.re-lightbox-style[data-thumbnails="bottom"] .re-lightbox-thumbnails button {
-  flex: 0 0 60px;
-  width: 60px;
-  height: 44px;
-  border: 0;
-  border-radius: 8px;
-  background: #e6e6e3;
-  opacity: 0.45;
-  transition: opacity 200ms ease;
-}
-.re-lightbox-style[data-thumbnails="bottom"] .re-lightbox-thumbnails button[aria-current="true"] { opacity: 1; }
-.re-lightbox-style[data-thumbnails="bottom"] .re-lightbox-thumbnail-ring {
-  border-radius: 8px;
-  outline: 0;
-  box-shadow: 0 0 0 2px var(--re-lightbox-background), 0 0 0 3.5px var(--re-lightbox-foreground);
-}`,
-  `@media (max-width: 559px) {
-  .re-lightbox-style { --re-lightbox-pad: 12px; --re-lightbox-padding: 12px; }
-}`,
-  `@media (max-width: 559px) {
-  .re-lightbox-style[data-thumbnails="bottom"] { --re-lightbox-strip: 56px; }
-  .re-lightbox-style[data-thumbnails="bottom"] .re-lightbox-thumbnails button { flex-basis: 48px; width: 48px; height: 36px; }
-}`,
-  `@media (prefers-reduced-motion: reduce) {
-  .re-lightbox-style, .re-lightbox-style * { transition-duration: 0ms !important; }
-}`,
-].join("\n\n");
 
 const hasBar = (o: LightboxStyle) =>
   o.arrows === "Toolbar" || o.counter === "Toolbar";
 const dark = (o: LightboxStyle) => o.backdrop === "Dark";
 
 const rules: readonly (readonly [(o: LightboxStyle) => boolean, string])[] = [
-  [
-    (o) => o.arrows === "None",
-    `.re-lightbox-style .re-lightbox-prev,
-.re-lightbox-style .re-lightbox-next { display: none; }`,
-  ],
   [
     (o) => o.counter === "None",
     ".re-lightbox-style .re-lightbox-counter { display: none; }",
@@ -166,7 +53,7 @@ const rules: readonly (readonly [(o: LightboxStyle) => boolean, string])[] = [
   ],
   [
     (o) => o.caption !== "Below",
-    `.re-lightbox-style { --re-lightbox-caption: 0px; }
+    `.re-lightbox-style { --re-lightbox-caption-room: 0px; }
 .re-lightbox-style .re-lightbox-caption { display: none; }`,
   ],
   [
@@ -185,7 +72,9 @@ const rules: readonly (readonly [(o: LightboxStyle) => boolean, string])[] = [
   ],
   [
     hasBar,
-    `.re-lightbox-style { --re-lightbox-bar: 58px; }
+    `.re-lightbox-style {
+  --re-lightbox-bottom-room: calc(var(--re-lightbox-caption-room) + var(--re-lightbox-strip-room) + 58px);
+}
 .re-lightbox-style-toolbar {
   order: 3;
   display: flex;
@@ -200,7 +89,7 @@ const rules: readonly (readonly [(o: LightboxStyle) => boolean, string])[] = [
 }
 .re-lightbox-style-toolbar .re-lightbox-button { position: static; box-shadow: none; background: transparent; }
 .re-lightbox-style-toolbar .re-lightbox-button:hover { background: rgb(0 0 0 / 5%); }
-.re-lightbox-style-toolbar .re-lightbox-counter { position: static; display: block; height: auto; min-width: 52px; padding: 0 6px; background: none; box-shadow: none; font-weight: 500; text-align: center; }
+.re-lightbox-style-toolbar .re-lightbox-counter:not([hidden]) { position: static; display: block; height: auto; min-width: 52px; padding: 0 6px; background: none; box-shadow: none; font-weight: 500; text-align: center; }
 .re-lightbox-style-toolbar-divider { width: 1px; height: 20px; margin: 0 4px; background: rgb(0 0 0 / 10%); }`,
   ],
   [
@@ -208,8 +97,7 @@ const rules: readonly (readonly [(o: LightboxStyle) => boolean, string])[] = [
     `.re-lightbox-style {
   --re-lightbox-panel-width: 320px;
   --re-lightbox-panel-inset: 12px;
-  --re-lightbox-side: calc(var(--re-lightbox-panel-width) + var(--re-lightbox-panel-inset));
-  --re-lightbox-aside-width: var(--re-lightbox-side);
+  --re-lightbox-aside-width: calc(var(--re-lightbox-panel-width) + var(--re-lightbox-panel-inset));
   --re-lightbox-panel-background: #fff;
   --re-lightbox-panel-foreground: #1f1f1f;
   --re-lightbox-panel-muted: #5f5f5f;
@@ -332,8 +220,9 @@ const rules: readonly (readonly [(o: LightboxStyle) => boolean, string])[] = [
     `.re-lightbox-style .re-lightbox-counter {
   height: auto;
   padding: 0;
-  top: calc(var(--re-lightbox-pad) + 12px);
-  left: calc(var(--re-lightbox-pad) + 4px);
+  position: relative;
+  top: 12px;
+  inset-inline-start: 4px;
   background: none;
   color: rgb(255 255 255 / 60%);
   font-family: ui-monospace, monospace;
@@ -367,10 +256,10 @@ const rules: readonly (readonly [(o: LightboxStyle) => boolean, string])[] = [
     (o) => o.caption === "Panel",
     `@media (max-width: 719.98px) {
   .re-lightbox-style {
-    --re-lightbox-side: 0px;
+    --re-lightbox-aside-width: 0px;
     --re-lightbox-panel-inset: 8px;
     --re-lightbox-panel-sheet: calc(72px + env(safe-area-inset-bottom));
-    --re-lightbox-under: calc(var(--re-lightbox-panel-sheet) + var(--re-lightbox-panel-inset));
+    --re-lightbox-bottom-room: calc(var(--re-lightbox-panel-sheet) + var(--re-lightbox-panel-inset));
   }
   .re-lightbox-style .re-lightbox-close { margin: 0; }
   .re-lightbox-style .re-lightbox-aside {
@@ -422,12 +311,14 @@ const rules: readonly (readonly [(o: LightboxStyle) => boolean, string])[] = [
   ],
 ];
 
-/** What one style changes on top of lightboxLookCss, written against the re-lightbox-style class. */
+const reducedMotion = `@media (prefers-reduced-motion: reduce) {
+  .re-lightbox-style, .re-lightbox-style * { transition-duration: 0ms !important; }
+}`;
+
+/** What one style changes on top of the package's theme.css, written against the re-lightbox-style class. */
 export function lightboxStyleCss(options: LightboxStyle) {
-  return rules
-    .filter(([when]) => when(options))
-    .map(([, css]) => css)
-    .join("\n\n");
+  const css = rules.filter(([when]) => when(options)).map(([, rule]) => rule);
+  return css.length ? [...css, reducedMotion].join("\n\n") : "";
 }
 
 /**
@@ -658,7 +549,7 @@ export function lightboxChrome(options: LightboxStyle) {
       };
     },`);
   if (slots.length)
-    modules.push(`export function chromeSlots(getItems, icons = {}) {
+    modules.push(`export function chromeSlots(getItems) {
   return {
 ${slots.join("\n")}
   };
@@ -675,14 +566,14 @@ export function lightboxPreviewModule(options: LightboxStyle) {
 export default (createLightbox, icons, getItems) =>
   createLightbox({
     className: "${LIGHTBOX_STYLE_CLASS}",
-    icons,
     thumbnails: ${options.thumbnails ? '"bottom"' : "false"},${options.autoHide ? "\n    autoHide: 2000," : ""}
-    strings: { dialog: "Photos" },${slots ? "\n    slots: chromeSlots(getItems, icons)," : ""}
+    strings: { dialog: "Photos" },${slots ? "\n    slots: chromeSlots(getItems)," : ""}
   });
 `;
 }
 
 export function lightboxCode(options: LightboxStyle) {
+  const css = lightboxStyleCss(options);
   const thumbnailed = options.thumbnails || options.caption === "Panel";
   const chromeSource = lightboxChrome(options);
   const slots = chromeSource?.includes("chromeSlots") ?? false;
@@ -690,16 +581,17 @@ export function lightboxCode(options: LightboxStyle) {
   const lines = (items: string) => [
     ...(options.thumbnails ? ['thumbnails: "bottom",'] : []),
     ...(options.autoHide ? ["autoHide: 2000,"] : []),
-    `className: "${LIGHTBOX_STYLE_CLASS}",`,
+    ...(css ? [`className: "${LIGHTBOX_STYLE_CLASS}",`] : []),
     ...(slots ? [`slots: chromeSlots(${items}),`] : []),
   ];
-  const body = (indent: string, items: string) =>
-    lines(items)
-      .map((line) => `${indent}${line}`)
-      .join("\n");
+  const call = (indent: string, items: string) =>
+    lines(items).length
+      ? `({\n${lines(items)
+          .map((line) => `${indent}${line}`)
+          .join("\n")}\n${indent.slice(2)}})`
+      : "()";
   const imports = `import "@reuse-sh/lightbox/base.css";
-import "@reuse-sh/lightbox/theme.css";
-import "./lightbox-style.css";${names.length ? `\nimport { ${names.join(", ")} } from "./lightbox-chrome.js";` : ""}`;
+import "@reuse-sh/lightbox/theme.css";${css ? '\nimport "./lightbox-style.css";' : ""}${names.length ? `\nimport { ${names.join(", ")} } from "./lightbox-chrome.js";` : ""}`;
   return {
     html: `<div data-gallery>
   <a href="/photos/coast.jpg">
@@ -722,9 +614,7 @@ const item = (trigger) => {
 };`
         : "\nconst item = lightboxItemFromElement;"
     }${slots ? `\nconst items = () => [...gallery.querySelectorAll("a")].map(item);` : ""}
-const lightbox = createLightbox({
-${body("  ", "items")}
-});
+const lightbox = createLightbox${call("  ", "items")};
 const unbind = bindLightboxGallery(gallery, lightbox, { item });`,
     react: `"use client";
 
@@ -739,9 +629,7 @@ const photos: LightboxItem[] = [
 ];
 
 export function Gallery() {
-  const lightbox = useLightbox({
-${body("    ", "() => photos")}
-  });
+  const lightbox = useLightbox${call("    ", "() => photos")};
   const root = useRef<HTMLDivElement>(null);
   const open = (index: number) => {
     const images = root.current?.querySelectorAll<HTMLImageElement>("img");
@@ -762,9 +650,7 @@ ${body("    ", "() => photos")}
     </div>
   );
 }`,
-    css: [lightboxLookCss, lightboxStyleCss(options)]
-      .filter(Boolean)
-      .join("\n\n"),
+    css,
     chrome: chromeSource,
     cleanup: "unbind();\nlightbox.destroy();",
   };

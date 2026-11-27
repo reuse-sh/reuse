@@ -16,8 +16,6 @@
     "/[library]/guide.md": "Markdown agent guide, checked by tests/site/content.spec.ts",
     "/agent.md": "Markdown agent guide, checked by tests/site/content.spec.ts",
     "/llms.txt": "Plain-text index, checked by tests/site/content.spec.ts",
-    "/[library]/controls/[page]/frame": "Iframe document embedded by the controls pages, checked through them",
-    "/[library]/themes/[theme]/frame": "Iframe document embedded by the themes page, checked through it",
     "/sitemap.xml": "Generated sitemap"
   },
   "features": [
@@ -118,18 +116,6 @@
       ]
     },
     {
-      "id": "controls",
-      "title": "Lightbox controls style",
-      "expand": "^/(?<library>[^/]+)/controls/(?<page>[^/]+)$",
-      "route": "/[library]/controls/[page]",
-      "proof": "role=heading[level=1]",
-      "code": [
-        "apps/site/app/[library]/controls/**",
-        "apps/site/app/[library]/layout.tsx",
-        "apps/site/components/docs/**"
-      ]
-    },
-    {
       "id": "guide",
       "title": "Guide",
       "expand": "^/(?<library>[^/]+)/guides/(?<page>[^/]+)$",
@@ -142,17 +128,32 @@
       ]
     },
     {
-      "id": "themes",
-      "title": "Lightbox themes",
-      "expand": "^/(?<library>[^/]+)/themes$",
-      "route": "/[library]/themes",
-      "proof": "role=heading[level=1][name=\"Themes\"]",
+      "id": "looks",
+      "title": "Lightbox looks",
+      "expand": "^/(?<library>[^/]+)/looks$",
+      "route": "/[library]/looks",
+      "proof": "role=heading[level=1][name=\"Looks\"]",
       "code": [
-        "apps/site/app/[library]/themes/**",
+        "apps/site/app/[library]/looks/page.tsx",
         "apps/site/app/[library]/layout.tsx",
         "apps/site/components/docs/**",
         "packages/lightbox/src/theme.css",
         "packages/lightbox/src/themes/**"
+      ]
+    },
+    {
+      "id": "look-viewer",
+      "title": "Lightbox look viewer",
+      "path": "/lightbox/looks/panel",
+      "route": "/[library]/looks/[look]",
+      "url": "^/lightbox/looks/[^/]+$",
+      "proof": "role=main >> role=link >> nth=0",
+      "code": [
+        "apps/site/app/[library]/looks/[look]/**",
+        "apps/site/components/docs/lightbox-look*",
+        "apps/site/components/docs/lightbox-launch.tsx",
+        "apps/site/components/docs/lightbox-styles.ts",
+        "apps/site/components/docs/lightbox-themes.ts"
       ]
     },
     {
