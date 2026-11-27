@@ -16,7 +16,7 @@ export function PreviewStart() {
     <CursorPreview previewClassName="re-preview-start-photo">
       <ol className="re-preview-start-list">
         {prints.map(([id, colors, picture], index) => {
-          const { src, srcSet, width, height, caption } = photo(picture);
+          const { src, width, height, caption } = photo(picture);
           return (
             <li key={id} id={`print-${id}`}>
               <a href={`#print-${id}`} data-re-preview={src}>
@@ -27,8 +27,6 @@ export function PreviewStart() {
                 <img
                   className="re-preview-start-thumb"
                   src={src}
-                  srcSet={srcSet}
-                  sizes="(max-width: 48rem) 40vw, 160px"
                   alt=""
                   width={width}
                   height={height}
