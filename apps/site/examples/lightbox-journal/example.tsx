@@ -39,11 +39,7 @@ function PhotoLink({
 
 export function Example() {
   const root = useRef<HTMLElement>(null);
-  const lightbox = useLightbox({
-    thumbnails: "bottom",
-    imageClick: "close",
-    doubleTapZoom: false,
-  });
+  const lightbox = useLightbox({ thumbnails: "bottom" });
   useEffect(() => {
     if (root.current) return bindLightboxGallery(root.current, lightbox);
   }, [lightbox]);

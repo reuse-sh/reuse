@@ -480,7 +480,7 @@ lightbox.destroy();`,
         blocks: [
           {
             kind: "prose",
-            text: "Bind the article image sequence and make image clicks close the viewer. Disable double-tap zoom for the same reading-oriented interaction.",
+            text: "Bind the article's photos as one sequence, in reading order, with thumbnails to jump between them. The viewer keeps its default gestures: a click on the photo zooms it and a click beside it closes. On a phone a tap shows or hides the controls and a double tap zooms.",
           },
           {
             kind: "code",
@@ -494,7 +494,7 @@ import { useEffect, useRef } from "react";
 
 export function Journal() {
   const article = useRef<HTMLElement>(null);
-  const lightbox = useLightbox({ thumbnails: "bottom", imageClick: "close", doubleTapZoom: false });
+  const lightbox = useLightbox({ thumbnails: "bottom" });
   useEffect(() => {
     if (article.current) return bindLightboxGallery(article.current, lightbox);
   }, [lightbox]);
@@ -526,7 +526,7 @@ export function Journal() {
         blocks: [
           {
             kind: "prose",
-            text: "Bind the article image sequence and make image clicks close the viewer. Disable double-tap zoom for the same reading-oriented interaction.",
+            text: "Bind the article's photos as one sequence, in reading order, with thumbnails to jump between them. The viewer keeps its default gestures: a click on the photo zooms it and a click beside it closes. On a phone a tap shows or hides the controls and a double tap zooms.",
           },
           {
             kind: "code",
@@ -571,7 +571,7 @@ export function Journal() {
             language: "javascript",
             code: `import { bindLightboxGallery, createLightbox } from "@reuse-sh/lightbox";
 
-const lightbox = createLightbox({ thumbnails: "bottom", imageClick: "close", doubleTapZoom: false });
+const lightbox = createLightbox({ thumbnails: "bottom" });
 const unbind = bindLightboxGallery(document.querySelector("#gallery"), lightbox);`,
             role: "setup",
           },

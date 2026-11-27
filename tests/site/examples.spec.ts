@@ -940,6 +940,34 @@ test("gallery examples give the photo paged to its own tile", async ({
   }
 });
 
+test("the journal keeps the default click: on the open photo it zooms, beside it it closes", async ({
+  page,
+}) => {
+  await page.goto("/lightbox/examples/journal");
+  const dialog = page.locator("dialog.re-lightbox[open]");
+  const open = async () => {
+    await expect(async () => {
+      await page.locator(`${preview} a`).first().click();
+      await expect(dialog.locator(".re-lightbox-image").first()).toBeVisible({
+        timeout: 1000,
+      });
+    }).toPass();
+    await expect(dialog).toHaveAttribute("data-phase", "open");
+    const box = await dialog
+      .locator(".re-lightbox-image")
+      .first()
+      .boundingBox();
+    if (!box) throw new Error("Missing open photo");
+    return box;
+  };
+  const photo = await open();
+  await page.mouse.click(photo.x + photo.width / 2, photo.y / 2);
+  await closed(page);
+  const again = await open();
+  await page.mouse.click(again.x + again.width / 2, again.y + again.height / 2);
+  await expect(dialog).toHaveAttribute("data-zoomed", "true");
+});
+
 test("only the press to grab example shrinks its slides during a mouse drag", async ({
   page,
 }) => {
