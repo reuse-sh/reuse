@@ -12,7 +12,7 @@ const notes: Annotation[] = [
   {
     kind: "pointer",
     point: [93.5, 52.7],
-    label: "Values align right",
+    label: "Right-aligned",
     side: "auto",
   },
 ];
