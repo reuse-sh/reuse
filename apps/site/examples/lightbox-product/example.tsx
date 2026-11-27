@@ -100,8 +100,7 @@ export function Example() {
         </div>
       </Gallery>
       <div className="flex flex-col self-center p-8 max-sm:p-6">
-        <p className="text-label text-subtle-foreground">Prints</p>
-        <h2 className="mt-1.5 text-2xl leading-8 font-semibold tracking-tight">
+        <h2 className="text-2xl leading-8 font-semibold tracking-tight">
           {cover.caption} print
         </h2>
         <p className="mt-3 text-ui leading-6 text-muted-foreground text-pretty">
