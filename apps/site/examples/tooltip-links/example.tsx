@@ -21,22 +21,22 @@ function Template({ id, html }: { id: string; html: string }) {
 
 const prints = [
   [
-    "coral",
+    "summit",
     photos[0],
-    "Coral sky",
-    "The first sheet pulled from the tray. Coral and sand over a cool blue.",
+    photos[0].caption,
+    "Shot above the clouds at dawn, pink haze over a quiet peak.",
   ],
   [
-    "mint",
+    "sea",
     photos[1],
-    "Mint and ember",
-    "Pulled an hour later, after the orange had sunk to the bottom.",
+    photos[1].caption,
+    "Taken from the ferry an hour later, deep blue under a pale sky.",
   ],
   [
-    "lilac",
+    "dunes",
     photos[2],
-    "Lilac bloom",
-    "The last sheet of the day, once the colors had softened.",
+    photos[2].caption,
+    "The last frame of the day, once the light had softened.",
   ],
 ] as const;
 
@@ -61,14 +61,16 @@ export function TooltipLinks() {
             Print series · October 2026
           </p>
           <h2 className="mt-1.5 text-2xl leading-8 font-semibold tracking-tight text-balance">
-            Three prints from one tray
+            Three prints from one trip
           </h2>
           <p className="max-w-140 mt-4 text-lead leading-7 text-muted-foreground text-pretty">
-            The series opens with <PrintLink id="coral">Coral sky</PrintLink>,
-            the first sheet we pulled.{" "}
-            <PrintLink id="mint">Mint and ember</PrintLink> came from the same
-            water an hour later. <PrintLink id="lilac">Lilac bloom</PrintLink>{" "}
-            was the last, once the colors had softened.
+            The series opens with{" "}
+            <PrintLink id="summit">{photos[0].caption}</PrintLink>, shot above
+            the clouds at dawn.{" "}
+            <PrintLink id="sea">{photos[1].caption}</PrintLink> came from the
+            ferry an hour later.{" "}
+            <PrintLink id="dunes">{photos[2].caption}</PrintLink> was the last,
+            once the light had softened.
           </p>
           <p
             className="max-w-140 mt-4 text-lead leading-7 text-muted-foreground text-pretty"
@@ -82,7 +84,7 @@ export function TooltipLinks() {
         <Template
           key={id}
           id={`tt-print-${id}`}
-          html={`<span class="grid grid-cols-[auto_minmax(0,1fr)] gap-3 w-72 max-w-full text-label leading-4.5 [&>img]:size-21 [&>img]:rounded-control [&>img]:object-cover"><img src="${escapeHtml(photo.src)}" alt="" width="${photo.width}" height="${photo.height}"><span class="grid grid-cols-[minmax(0,1fr)] min-w-0 content-center gap-0.5 pr-1.5 [&>b]:font-semibold [&>b]:overflow-x-clip [&>b]:text-ellipsis [&>b]:whitespace-nowrap [&>b]:[text-box:trim-start_cap_alphabetic] [&>span]:line-clamp-2 [&>span]:text-muted-foreground [&>small]:overflow-x-clip [&>small]:text-ellipsis [&>small]:whitespace-nowrap [&>small]:text-caption [&>small]:text-subtle-foreground [&>small]:[text-box:trim-end_cap_alphabetic]"><b>${escapeHtml(name)}</b><span>${escapeHtml(text)}</span><small>prints.example.com</small></span></span>`}
+          html={`<span class="grid grid-cols-[auto_minmax(0,1fr)] gap-3 w-72 max-w-full text-label leading-4.5 [&>img]:size-21 [&>img]:rounded-control [&>img]:object-cover"><img src="${escapeHtml(photo.src)}" srcset="${escapeHtml(photo.srcSet ?? "")}" sizes="84px" alt="" width="${photo.width}" height="${photo.height}"><span class="grid grid-cols-[minmax(0,1fr)] min-w-0 content-center gap-0.5 pr-1.5 [&>b]:font-semibold [&>b]:overflow-x-clip [&>b]:text-ellipsis [&>b]:whitespace-nowrap [&>b]:[text-box:trim-start_cap_alphabetic] [&>span]:line-clamp-2 [&>span]:text-muted-foreground [&>small]:overflow-x-clip [&>small]:text-ellipsis [&>small]:whitespace-nowrap [&>small]:text-caption [&>small]:text-subtle-foreground [&>small]:[text-box:trim-end_cap_alphabetic]"><b>${escapeHtml(name)}</b><span>${escapeHtml(text)}</span><small>prints.example.com</small></span></span>`}
         />
       ))}
     </>

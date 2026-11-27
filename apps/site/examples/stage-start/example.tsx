@@ -85,6 +85,8 @@ export function Example() {
               <img
                 key={id}
                 src={photo(id).src}
+                srcSet={photo(id).srcSet}
+                sizes="160px"
                 alt=""
                 width={photo(id).width}
                 height={photo(id).height}

@@ -2,6 +2,7 @@ export interface Photo {
   id: string;
   src: string;
   srcSet?: string;
+  avifSrcSet?: string;
   width: number;
   height: number;
   alt: string;
@@ -229,7 +230,7 @@ const unsplash = [
     2560,
     1707,
     "Evening sail",
-    "A small sailboat on a calm sea at sunset",
+    "A small sailboat on a calm, deep blue sea at sunset",
     "Benoît Deschasaux",
     "XA8xxmPdMZY",
   ],
@@ -371,7 +372,8 @@ const registry: Photo[] = [
   ...unsplash.map(([id, width, height, caption, alt, author, slug]) => ({
     id,
     src: `/photos/${id}-1280.jpg`,
-    srcSet: files(id, "avif"),
+    srcSet: files(id, "jpg"),
+    avifSrcSet: files(id, "avif"),
     width,
     height,
     alt,
@@ -382,7 +384,8 @@ const registry: Photo[] = [
   {
     id: "reuse-api-page",
     src: "/photos/reuse-api-page-1280.jpg",
-    srcSet: files("reuse-api-page", "avif"),
+    srcSet: files("reuse-api-page", "jpg"),
+    avifSrcSet: files("reuse-api-page", "avif"),
     width: 2560,
     height: 8045,
     alt: "A full-page screenshot of the Lightbox API reference on reuse.sh",

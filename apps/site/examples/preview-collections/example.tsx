@@ -7,7 +7,7 @@ const collections = [
   [
     "autumn",
     "The autumn run",
-    "Coral and sand, in a small run.",
+    "White walls and blue sky, in a small run.",
     "white-court",
   ],
   ["gifts", "Gift sets", "Boxed, wrapped and ready to give.", "yellow-bloom"],
@@ -33,14 +33,21 @@ export function PreviewCollections() {
     >
       <nav aria-label="Collections" className="re-preview-collections">
         {collections.map(([id, name, line, picture], index) => {
-          const { src, width, height } = photo(picture);
+          const { src, srcSet, width, height } = photo(picture);
           return (
             <a key={id} href={`#${id}`} id={id} data-re-preview={src}>
               <small>{String(index + 1).padStart(2, "0")}</small>
               <b>{name}</b>
               <span>{line}</span>
               {/* biome-ignore lint/performance/noImgElement: standalone examples use native images. */}
-              <img src={src} alt="" width={width} height={height} />
+              <img
+                src={src}
+                srcSet={srcSet}
+                sizes="(max-width: 48rem) 40vw, 160px"
+                alt=""
+                width={width}
+                height={height}
+              />
             </a>
           );
         })}

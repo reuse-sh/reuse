@@ -853,7 +853,7 @@ function gradients(): Scene {
 }
 
 function cursorPreview(): Scene {
-  const names = ["Coral sky", "Mint and ember", "Lilac bloom"];
+  const names = portraits.slice(0, 3).map((picture) => picture.caption);
   const rows = names.map((name, i) =>
     target(
       el(

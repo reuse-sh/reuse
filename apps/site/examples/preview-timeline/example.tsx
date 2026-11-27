@@ -29,14 +29,21 @@ export function PreviewTimeline() {
     <CursorPreview previewClassName="re-preview-timeline-photo">
       <ol className="re-preview-timeline">
         {years.map(([year, title, text, picture]) => {
-          const { src, width, height } = photo(picture);
+          const { src, srcSet, width, height } = photo(picture);
           return (
             <li key={year} data-re-preview={src}>
               <time>{year}</time>
               <h3>{title}</h3>
               <p>{text}</p>
               {/* biome-ignore lint/performance/noImgElement: standalone examples use native images. */}
-              <img src={src} alt="" width={width} height={height} />
+              <img
+                src={src}
+                srcSet={srcSet}
+                sizes="(max-width: 48rem) 40vw, 160px"
+                alt=""
+                width={width}
+                height={height}
+              />
             </li>
           );
         })}

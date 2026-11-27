@@ -55,6 +55,7 @@ export function Example() {
                   viewer.open(
                     photos.map((item, at) => ({
                       ...item,
+                      srcset: item.srcSet,
                       thumbnailSrc: item.src,
                       origin: tiles?.[at] ?? null,
                     })),

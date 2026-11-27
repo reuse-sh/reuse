@@ -43,13 +43,13 @@ function Card({
   line: string;
   picture: PhotoId;
 }) {
-  const { src, width, height } = photo(picture);
+  const { src, srcSet, width, height } = photo(picture);
   return (
     <template
       id={`menu-card-${id}`}
       // biome-ignore lint/security/noDangerouslySetInnerHtml: fixed synthetic markup, cloned by the preview.
       dangerouslySetInnerHTML={{
-        __html: `<span class="re-preview-menu-card"><img src="${src}" alt="" width="${width}" height="${height}"><b>${name}</b><small>${line}</small></span>`,
+        __html: `<span class="re-preview-menu-card"><img src="${src}" srcset="${srcSet}" sizes="240px" alt="" width="${width}" height="${height}"><b>${name}</b><small>${line}</small></span>`,
       }}
     />
   );
@@ -79,6 +79,8 @@ export function PreviewMenu() {
                   <img
                     className="re-preview-menu-thumb"
                     src={photo(picture).src}
+                    srcSet={photo(picture).srcSet}
+                    sizes="(max-width: 48rem) 40vw, 160px"
                     alt=""
                     width={photo(picture).width}
                     height={photo(picture).height}

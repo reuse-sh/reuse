@@ -115,6 +115,8 @@ export function LightboxLaunch({
               {/* biome-ignore lint/performance/noImgElement: photos are served as is; the lightbox reads the rendered image as its origin. */}
               <img
                 src={item.src}
+                srcSet={"srcset" in item ? item.srcset : undefined}
+                sizes="(max-width: 40rem) 50vw, 180px"
                 alt={item.alt}
                 width={item.width}
                 height={item.height}

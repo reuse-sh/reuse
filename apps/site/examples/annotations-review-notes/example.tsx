@@ -5,7 +5,7 @@ import { Avatar } from "@reuse-sh/avatars/react";
 import "./mechanics.css";
 import { photo } from "@/lib/photos";
 
-const proof = photo("open-sea");
+const proof = photo("sailboat");
 
 const review: Annotation[] = [
   { kind: "area", box: [7, 10, 30, 32], label: "Bands too tight" },

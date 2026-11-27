@@ -487,12 +487,12 @@ test("the panel style list glides when quick paging changes the text height", as
 }) => {
   await page.setViewportSize({ width: 1280, height: 900 });
   await page.goto("/lightbox/controls/panel");
-  // Lone pine wraps to two lines, Evening sail to one, Amber to two.
-  await page.locator('main a[href^="/photos/"]').nth(3).click();
+  // Evening sail wraps to two lines, Cloud peak to one, Dusk beach to two.
+  await page.locator('main a[href^="/photos/"]').nth(4).click();
   await expect(page.locator(".re-lightbox-style-panel h2")).toHaveText(
-    "Lone pine",
+    "Evening sail",
   );
-  // The second key lands while Evening sail fades in, so its height change is still running.
+  // The second key lands while Cloud peak fades in, so its height change is still running.
   await page.evaluate(() => {
     const panel = document.querySelector(".re-lightbox-style-panel");
     const label = panel?.querySelector(".re-lightbox-style-panel-label");
@@ -511,7 +511,7 @@ test("the panel style list glides when quick paging changes the text height", as
     requestAnimationFrame(sample);
     if (title)
       new MutationObserver((_, observer) => {
-        if (title.textContent !== "Evening sail") return;
+        if (title.textContent !== "Cloud peak") return;
         observer.disconnect();
         setTimeout(press, 40);
       }).observe(title, {
@@ -522,13 +522,14 @@ test("the panel style list glides when quick paging changes the text height", as
     press();
   });
   await expect(page.locator(".re-lightbox-style-panel h2")).toHaveText(
-    "Cloud peak",
+    "Dusk beach",
   );
   const tops = () =>
     page.evaluate(() => (window as unknown as { tops: number[] }).tops);
   await expect.poll(async () => (await tops()).length).toBe(60);
   const sampled = await tops();
   const steps = sampled.slice(1).map((top, i) => Math.abs(top - sampled[i]));
+  expect(Math.max(...sampled) - Math.min(...sampled)).toBeGreaterThan(0);
   expect(Math.max(...steps)).toBeLessThan(12);
 });
 
@@ -1116,7 +1117,7 @@ test("a recipe tooltip has one owner inside the documentation shell", async ({
   for (const [path, label] of [
     ["/floating-tooltip", "Zoom in"],
     ["/floating-tooltip/examples/shortcuts", "Zoom in"],
-    ["/floating-tooltip/examples/links", "Coral sky"],
+    ["/floating-tooltip/examples/links", "Pink summit"],
     ["/floating-tooltip/examples/people", "Mara Lind"],
   ]) {
     await page.goto(path);
