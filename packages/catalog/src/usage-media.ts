@@ -502,6 +502,7 @@ export function Journal() {
     <article ref={article}>
       <a href="/images/sea-large.jpg"><img src="/images/sea.jpg" alt="A calm sea" width="640" height="320" /></a>
       <p>Every print in this series starts as a walk and a single frame.</p>
+      <a href="/images/snow-large.jpg"><img src="/images/snow.jpg" alt="A walk across snow" width="320" height="400" /></a>
     </article>
   );
 }`,
@@ -532,9 +533,9 @@ export function Journal() {
             id: "lightbox-examples-journal-markup",
             language: "html",
             code: `<div id="gallery">
-  <a href="/images/print-large.jpg">
-    <img data-lightbox-src="/images/print-large.jpg" src="/images/print.jpg" alt="Marble print" width="640" height="480" />
-  </a>
+  <a href="/images/sea-large.jpg"><img src="/images/sea.jpg" alt="A calm sea" width="640" height="320" /></a>
+  <p>Every print in this series starts as a walk and a single frame.</p>
+  <a href="/images/snow-large.jpg"><img src="/images/snow.jpg" alt="A walk across snow" width="320" height="400" /></a>
 </div>`,
             role: "usage",
           },
