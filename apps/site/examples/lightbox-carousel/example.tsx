@@ -71,7 +71,7 @@ export function Example() {
           <button
             key={photo.id}
             type="button"
-            className="re-carousel__slide grid gap-2 rounded-lg text-start text-foreground cursor-zoom-in focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+            className="re-carousel__slide grid gap-2 rounded-control text-start text-foreground cursor-zoom-in focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
             data-carousel-slide
             onClick={() => viewer.open(opened, index)}
           >
@@ -80,7 +80,7 @@ export function Example() {
               ref={(image) => {
                 images.current[index] = image;
               }}
-              className="aspect-landscape w-full rounded-lg bg-media object-cover"
+              className="aspect-landscape w-full rounded-control bg-media object-cover"
               sizes="(max-width: 48rem) 50vw, 200px"
             />
             <span className="text-label font-medium">{photo.caption}</span>

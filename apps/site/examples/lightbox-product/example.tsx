@@ -28,7 +28,6 @@ function PhotoLink({
         "block overflow-hidden bg-media cursor-zoom-in focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ring",
         className,
       )}
-      aria-label={`Open ${photo.caption}`}
       data-lightbox-caption={photo.caption}
     >
       <Picture photo={photo} sizes={sizes} className="size-full object-cover" />
@@ -176,7 +175,7 @@ export function Example() {
           {cover.caption} print
         </h2>
         <ProductOptions />
-        <p className="re-note mt-2.5 text-caption text-subtle-foreground text-center">
+        <p className="re-note mt-2.5 text-caption text-subtle-foreground text-center text-balance">
           Ships flat between two boards in 3 to 5 days.
         </p>
       </div>

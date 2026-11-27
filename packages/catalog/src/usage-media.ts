@@ -174,7 +174,7 @@ lightbox.destroy();`,
         blocks: [
           {
             kind: "prose",
-            text: "Use one item list for the product hero and its detail images. Open the clicked index and enable thumbnails so people can inspect each view without leaving the viewer.",
+            text: "Put the product hero and its detail images in one gallery. A click opens that image, and thumbnails let people inspect each view without leaving the viewer.",
           },
           {
             kind: "code",
@@ -208,7 +208,7 @@ export function ProductGallery() {
         blocks: [
           {
             kind: "prose",
-            text: "The small item list describes the two actual product assets. Keep image dimensions and alt text with each asset. Native gallery binding collects images in DOM order. Links still open the image without JavaScript. The native dialog keeps focus inside, Escape closes it, and close returns focus to the current photo's tile. The React hook closes its viewer at once and frees it on unmount or when Activity hides it, and opens the same viewer again when Activity shows it.",
+            text: "Keep image dimensions and alt text with each asset. The binding collects the gallery's images in DOM order. Links still open the image without JavaScript. The native dialog keeps focus inside, Escape closes it, and close returns focus to the current photo's tile. The React hook closes its viewer at once and frees it on unmount or when Activity hides it, and opens the same viewer again when Activity shows it.",
           },
         ],
       },
@@ -219,7 +219,7 @@ export function ProductGallery() {
         blocks: [
           {
             kind: "prose",
-            text: "Use one item list for the product hero and its detail images. Open the clicked index and enable thumbnails so people can inspect each view without leaving the viewer.",
+            text: "Put the product hero and its detail images in one gallery. A click opens that image, and thumbnails let people inspect each view without leaving the viewer.",
           },
           {
             kind: "code",
@@ -274,7 +274,7 @@ const unbind = bindLightboxGallery(document.querySelector("#gallery"), lightbox)
         blocks: [
           {
             kind: "prose",
-            text: "The small item list describes the two actual product assets. Keep image dimensions and alt text with each asset. Native gallery binding collects images in DOM order. Links still open the image without JavaScript. The native dialog keeps focus inside, Escape closes it, and close returns focus to the current photo's tile.",
+            text: "Keep image dimensions and alt text with each asset. The binding collects the gallery's images in DOM order. Links still open the image without JavaScript. The native dialog keeps focus inside, Escape closes it, and close returns focus to the current photo's tile.",
           },
         ],
       },
@@ -335,7 +335,7 @@ import { useEffect, useRef } from "react";
 
 export function Thread() {
   const thread = useRef<HTMLDivElement>(null);
-  const lightbox = useLightbox();
+  const lightbox = useLightbox({ thumbnails: "bottom" });
   useEffect(() => {
     if (thread.current) return bindLightboxGallery(thread.current, lightbox);
   }, [lightbox]);
@@ -422,7 +422,7 @@ export function Thread() {
             language: "javascript",
             code: `import { bindLightboxGallery, createLightbox } from "@reuse-sh/lightbox";
 
-const lightbox = createLightbox();
+const lightbox = createLightbox({ thumbnails: "bottom" });
 const unbind = bindLightboxGallery(document.querySelector("#thread"), lightbox);`,
             role: "setup",
           },
@@ -494,7 +494,7 @@ import { useEffect, useRef } from "react";
 
 export function Journal() {
   const article = useRef<HTMLElement>(null);
-  const lightbox = useLightbox({ imageClick: "close", doubleTapZoom: false });
+  const lightbox = useLightbox({ thumbnails: "bottom", imageClick: "close", doubleTapZoom: false });
   useEffect(() => {
     if (article.current) return bindLightboxGallery(article.current, lightbox);
   }, [lightbox]);
@@ -570,7 +570,7 @@ export function Journal() {
             language: "javascript",
             code: `import { bindLightboxGallery, createLightbox } from "@reuse-sh/lightbox";
 
-const lightbox = createLightbox({ imageClick: "close", doubleTapZoom: false });
+const lightbox = createLightbox({ thumbnails: "bottom", imageClick: "close", doubleTapZoom: false });
 const unbind = bindLightboxGallery(document.querySelector("#gallery"), lightbox);`,
             role: "setup",
           },
@@ -2944,7 +2944,7 @@ import { AnnotatedImage } from "@reuse-sh/annotations/react";
 export function ReviewImage() {
   const annotations: Annotation[] = [
     { kind: "area", box: [72, 80, 19, 9], label: "Hold, don't click" },
-    { kind: "pointer", point: [91, 62], label: "Values align right", side: "auto" },
+    { kind: "pointer", point: [93, 53], label: "Values align right", side: "auto" },
   ];
   return <AnnotatedImage src="/images/settings.png" alt="Settings page" width={1280} height={1005} annotations={annotations} />;
 }`,

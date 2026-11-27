@@ -32,7 +32,6 @@ function PhotoLink({
     <a
       href={photo.src}
       className="re-chat-photo"
-      aria-label={`Open ${photo.caption}`}
       data-lightbox-caption={photo.caption}
       hidden={hidden}
       tabIndex={hidden ? -1 : undefined}
@@ -55,7 +54,7 @@ function Thread({
   children: ReactNode;
 }) {
   const root = useRef<HTMLDivElement>(null);
-  const lightbox = useLightbox();
+  const lightbox = useLightbox({ thumbnails: "bottom" });
   useEffect(() => {
     if (root.current) return bindLightboxGallery(root.current, lightbox);
   }, [lightbox]);

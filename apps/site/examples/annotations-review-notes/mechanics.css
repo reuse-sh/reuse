@@ -4,8 +4,8 @@
     --re-annotation-color: var(--destructive);
     --re-annotation-radius: var(--radius-control);
   }
-  .re-review-notes [data-annot-media] {
-    @apply overflow-hidden rounded-control shadow-ring;
+  .re-review-notes [data-annot-media] img {
+    @apply rounded-control shadow-ring;
   }
   .re-review-notes ol[data-annot-list] > li {
     @apply px-0 text-ui;

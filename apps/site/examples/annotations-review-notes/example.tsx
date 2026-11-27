@@ -11,7 +11,7 @@ const notes: Annotation[] = [
   { kind: "marker", point: [39.2, 25.5], text: "Copy a prompt for your agent" },
   {
     kind: "pointer",
-    point: [90.8, 62.3],
+    point: [93.5, 52.7],
     label: "Values align right",
     side: "auto",
   },

@@ -25,7 +25,6 @@ function PhotoLink({
         "block overflow-hidden bg-media cursor-zoom-in focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ring",
         className,
       )}
-      aria-label={`Open ${photo.caption}`}
       data-lightbox-caption={photo.caption}
     >
       <Picture
@@ -40,7 +39,11 @@ function PhotoLink({
 
 export function Example() {
   const root = useRef<HTMLElement>(null);
-  const lightbox = useLightbox({ imageClick: "close", doubleTapZoom: false });
+  const lightbox = useLightbox({
+    thumbnails: "bottom",
+    imageClick: "close",
+    doubleTapZoom: false,
+  });
   useEffect(() => {
     if (root.current) return bindLightboxGallery(root.current, lightbox);
   }, [lightbox]);
