@@ -3,7 +3,6 @@ import { Avatar } from "@reuse-sh/avatars/react";
 import { createMovingHighlight } from "@reuse-sh/interactions";
 import { createLightbox, type LightboxItem } from "@reuse-sh/lightbox";
 import { type ReactNode, useEffect, useRef, useState } from "react";
-import { siteLightbox } from "@/components/site-lightbox";
 import { cn } from "@/lib/utils";
 import "./mechanics.css";
 
@@ -107,7 +106,6 @@ function PhotoLightbox({
     if (!node) return;
     const lightbox = createLightbox({
       thumbnails: "bottom",
-      ...siteLightbox,
     });
     const onClick = (event: MouseEvent) => {
       const target = event.target;

@@ -5,7 +5,6 @@ import type { Metadata } from "next";
 import { Fraunces } from "next/font/google";
 import Script from "next/script";
 import type { ReactNode } from "react";
-import { lightboxLookCss } from "../components/docs/lightbox-styles";
 
 const fraunces = Fraunces({
   subsets: ["latin"],
@@ -30,7 +29,6 @@ export default function RootLayout({ children }: { children: ReactNode }) {
       className={`${GeistSans.variable} ${GeistMono.variable} ${fraunces.variable}`}
     >
       <body>
-        <style>{lightboxLookCss}</style>
         {process.env.NODE_ENV !== "development" && (
           <Script
             src="https://cdn.visitors.now/v.js"

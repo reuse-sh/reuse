@@ -40,7 +40,7 @@ async function setup(
   await mount(
     page,
     '<meta name="viewport" content="width=device-width, initial-scale=1"><button id="open">Open</button>',
-    ["lightbox/base.css", "lightbox/theme.css"],
+    ["lightbox/base.css"],
   );
   await page.evaluate(
     async ([list, extra, index, image, frameOptions]) => {

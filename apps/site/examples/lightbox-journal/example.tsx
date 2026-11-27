@@ -1,7 +1,6 @@
 "use client";
 import { createLightbox, type LightboxItem } from "@reuse-sh/lightbox";
 import { type ReactNode, useEffect, useRef } from "react";
-import { siteLightbox } from "@/components/site-lightbox";
 import { cn } from "@/lib/utils";
 import "./mechanics.css";
 
@@ -105,7 +104,6 @@ function PhotoLightbox({
     if (!node) return;
     const lightbox = createLightbox({
       thumbnails: "bottom",
-      ...siteLightbox,
     });
     const onClick = (event: MouseEvent) => {
       const target = event.target;

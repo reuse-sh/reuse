@@ -29,7 +29,7 @@ async function open(
   sizes: [number, number][],
   { aside = false, styles = [] }: { aside?: boolean; styles?: string[] } = {},
 ) {
-  await mount(page, "", ["lightbox/base.css", "lightbox/theme.css", ...styles]);
+  await mount(page, "", ["lightbox/base.css", ...styles]);
   await page.evaluate(
     async ([list, withAside]) => {
       const sources: string[] = [];

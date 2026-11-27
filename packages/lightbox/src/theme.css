@@ -1,35 +1,50 @@
 .re-lightbox {
-  --re-lightbox-background: rgb(15 15 17 / 96%);
-  --re-lightbox-foreground: #fff;
-  --re-lightbox-control: rgb(35 35 38 / 96%);
+  --re-lightbox-background: #fcfcfc;
+  --re-lightbox-foreground: #1f1f1f;
+  --re-lightbox-muted: color-mix(
+    in srgb,
+    var(--re-lightbox-foreground) 80%,
+    var(--re-lightbox-background)
+  );
+  --re-lightbox-control: #fff;
   --re-lightbox-control-hover: color-mix(
     in srgb,
-    var(--re-lightbox-control) 88%,
+    var(--re-lightbox-control) 95%,
     var(--re-lightbox-foreground)
   );
-  --re-lightbox-panel: rgb(24 24 27 / 96%);
-  --re-lightbox-button-size: 44px;
-  --re-lightbox-button-padding: 10px;
+  --re-lightbox-ring:
+    0 0 0 0.5px rgb(0 0 0 / 10%), 0 1px 2px rgb(0 0 0 / 6%),
+    0 2px 6px rgb(0 0 0 / 4%);
+  --re-lightbox-panel: #fff;
+  --re-lightbox-button-size: 40px;
+  --re-lightbox-button-padding: 0px;
   --re-lightbox-button-radius: 50%;
-  --re-lightbox-press-scale: 0.96;
-  --re-lightbox-icon-size: 24px;
+  --re-lightbox-press-scale: 0.95;
+  --re-lightbox-icon-size: 18px;
   --re-lightbox-font-size: 14px;
   --re-lightbox-counter-font-size: 13px;
-  --re-lightbox-blur: 16px;
+  --re-lightbox-counter-padding: 0 14px;
+  --re-lightbox-counter-radius: 999px;
+  --re-lightbox-caption-padding: 0px;
+  --re-lightbox-caption-radius: 0px;
   --re-lightbox-inset: 16px;
-  --re-lightbox-gap: 10px;
-  --re-lightbox-arrow-inset: 16px;
-  --re-lightbox-footer-inset: 72px;
-  --re-lightbox-counter-padding: 6px 12px;
-  --re-lightbox-counter-radius: 20px;
-  --re-lightbox-caption-padding: 4px 10px;
-  --re-lightbox-caption-radius: 4px;
+  --re-lightbox-gap: 8px;
+  --re-lightbox-arrow-inset: var(--re-lightbox-inset);
+  --re-lightbox-footer-inset: var(--re-lightbox-inset);
+  --re-lightbox-padding: 24px;
+  --re-lightbox-caption-room: 30px;
+  --re-lightbox-strip-room: 0px;
+  --re-lightbox-bottom-room: calc(
+    var(--re-lightbox-caption-room) +
+    var(--re-lightbox-strip-room)
+  );
   --re-lightbox-thumbnail-size: 44px;
-  --re-lightbox-thumbnail-radius: 5px;
-  --re-lightbox-thumbnail-gap: 8px;
+  --re-lightbox-thumbnail-radius: 8px;
+  --re-lightbox-thumbnail-gap: 6px;
   --re-lightbox-thumbnails-padding: 4px;
+  --re-lightbox-thumbnail-background: #e6e6e3;
   --re-lightbox-error-padding: 24px;
-  --re-lightbox-placeholder: rgb(255 255 255 / 6%);
+  --re-lightbox-placeholder: rgb(0 0 0 / 5%);
   --re-lightbox-media-background: #f2f2f2;
   --re-lightbox-retry-padding: 8px 16px;
   --re-lightbox-retry-radius: 20px;
@@ -52,22 +67,33 @@
     sans-serif
   );
 }
+.re-lightbox [class*="re-lightbox"],
+.re-lightbox [class*="re-lightbox"]::before,
+.re-lightbox [class*="re-lightbox"]::after {
+  box-sizing: border-box;
+}
 .re-lightbox-backdrop {
   background: var(--re-lightbox-background);
   transition: background-color var(--re-lightbox-background-duration, 0ms) ease;
 }
 .re-lightbox-button {
-  box-sizing: border-box;
   width: var(--re-lightbox-button-size);
   height: var(--re-lightbox-button-size);
   padding: var(--re-lightbox-button-padding);
   border: 0;
   border-radius: var(--re-lightbox-button-radius);
   background: var(--re-lightbox-control);
+  box-shadow: var(--re-lightbox-ring);
   color: inherit;
   font: inherit;
   line-height: 1;
-  backdrop-filter: blur(var(--re-lightbox-blur));
+}
+/* The arrows take their opacity transitions from the phase rules in base.css. */
+.re-lightbox-button:where(:not(.re-lightbox-prev, .re-lightbox-next)) {
+  transition:
+    background-color 150ms ease,
+    scale 160ms cubic-bezier(0.23, 1, 0.32, 1),
+    opacity 300ms ease;
 }
 .re-lightbox-button svg {
   width: var(--re-lightbox-icon-size);
@@ -90,7 +116,18 @@
   opacity: calc(0.3 * var(--re-lightbox-chrome-opacity, 1));
 }
 .re-lightbox-close {
-  transition: rotate var(--re-lightbox-control-duration) ease;
+  transition:
+    background-color 150ms ease,
+    scale 160ms cubic-bezier(0.23, 1, 0.32, 1),
+    opacity 300ms ease,
+    rotate var(--re-lightbox-control-duration) ease;
+}
+/* Repeats base.css's zoomed fade, which the transitions above replace. */
+:where(.re-lightbox[data-zoomed="true"] .re-lightbox-toolbar-end)
+> :not(.re-lightbox-zoom, .re-lightbox-close) {
+  transition:
+    opacity 300ms ease,
+    visibility 0s 300ms;
 }
 .re-lightbox-download {
   text-decoration: none;
@@ -127,27 +164,56 @@
 [data-re-focus-quiet]:focus-visible {
   outline: none;
 }
+.re-lightbox-prev,
+.re-lightbox-next {
+  top: calc(
+    (100% - var(--re-lightbox-bottom-room)) /
+    2 -
+    var(--re-lightbox-button-size) /
+    2
+  );
+}
+.re-lightbox-footer {
+  gap: 10px;
+}
 .re-lightbox-counter {
+  display: flex;
+  height: var(--re-lightbox-button-size);
   padding: var(--re-lightbox-counter-padding);
+  align-items: center;
   border-radius: var(--re-lightbox-counter-radius);
   background: var(--re-lightbox-control);
+  box-shadow: var(--re-lightbox-ring);
   font-size: var(--re-lightbox-counter-font-size);
+  font-weight: 500;
   font-variant-numeric: tabular-nums;
-  backdrop-filter: blur(var(--re-lightbox-blur));
+}
+.re-lightbox-counter[hidden] {
+  display: none;
 }
 .re-lightbox-caption {
+  order: 1;
   padding: var(--re-lightbox-caption-padding);
   border-radius: var(--re-lightbox-caption-radius);
-  background: var(--re-lightbox-background);
+  color: var(--re-lightbox-muted);
   font-size: var(--re-lightbox-font-size);
-  line-height: 1.5;
+  line-height: 20px;
   text-align: center;
+}
+.re-lightbox[data-thumbnails="bottom"] {
+  --re-lightbox-strip-room: 64px;
+}
+.re-lightbox:has(.re-lightbox-aside > .re-lightbox-caption) {
+  --re-lightbox-caption-room: 0px;
 }
 .re-lightbox-thumbnails {
   gap: var(--re-lightbox-thumbnail-gap);
 }
 .re-lightbox[data-thumbnails="bottom"] .re-lightbox-thumbnails {
-  padding-block: 12px max(14px, env(safe-area-inset-bottom));
+  order: 2;
+  max-width: 100%;
+  margin: 0;
+  padding: 5px 50%;
 }
 .re-lightbox[data-thumbnails="side"] .re-lightbox-thumbnails {
   padding: 0 var(--re-lightbox-thumbnails-padding);
@@ -158,7 +224,7 @@
   padding: 0;
   border: 0;
   border-radius: var(--re-lightbox-thumbnail-radius);
-  background: none;
+  background: var(--re-lightbox-thumbnail-background);
   opacity: 0.45;
   transition: opacity var(--re-lightbox-control-duration) ease;
 }
@@ -177,14 +243,16 @@
 }
 .re-lightbox-thumbnail-ring {
   border-radius: var(--re-lightbox-thumbnail-radius);
-  outline: 2px solid var(--re-lightbox-foreground);
-  outline-offset: 2px;
+  box-shadow:
+    0 0 0 2px var(--re-lightbox-background),
+    0 0 0 3.5px var(--re-lightbox-foreground);
   transition:
     width var(--re-lightbox-ring-duration) ease,
     height var(--re-lightbox-ring-duration) ease;
 }
 @media (prefers-reduced-motion: reduce) {
-  .re-lightbox-thumbnail-ring {
+  .re-lightbox-thumbnail-ring,
+  .re-lightbox-thumbnails button {
     transition: none;
   }
 }
@@ -198,8 +266,6 @@
       var(--re-lightbox-gap)
     )
     var(--re-lightbox-inset) var(--re-lightbox-inset);
-  border-radius: 0;
-  background: none;
   text-align: start;
 }
 .re-lightbox-frame:is([data-loading], [data-error]) {
@@ -215,6 +281,7 @@
   border: 0;
   border-radius: var(--re-lightbox-retry-radius);
   background: var(--re-lightbox-control);
+  box-shadow: var(--re-lightbox-ring);
   color: inherit;
   font: inherit;
 }
@@ -225,9 +292,24 @@
   outline: 2px solid currentColor;
   outline-offset: 3px;
 }
-@media (max-width: 480px) {
+@media (max-width: 559.98px) {
   .re-lightbox {
-    --re-lightbox-arrow-inset: 8px;
-    --re-lightbox-footer-inset: 16px;
+    --re-lightbox-inset: 12px;
+    --re-lightbox-padding: 12px;
+    --re-lightbox-thumbnail-size: 36px;
+  }
+  .re-lightbox[data-thumbnails="bottom"] {
+    --re-lightbox-strip-room: 56px;
+  }
+}
+@media (max-height: 479.98px) {
+  .re-lightbox[data-thumbnails="bottom"] {
+    --re-lightbox-strip-room: 0px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .re-lightbox,
+  .re-lightbox * {
+    transition-duration: 0ms;
   }
 }

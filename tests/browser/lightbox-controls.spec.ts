@@ -497,7 +497,7 @@ test("the fullscreen button toggles the viewer's stage, and leaving fullscreen k
 }) => {
   await open(page, { controls: { fullscreen: true } });
   const button = page.locator(".re-lightbox-fullscreen");
-  const icon = () => button.locator("path").getAttribute("d");
+  const icon = () => button.locator("path").first().getAttribute("d");
   await expect(button).toHaveAttribute("aria-label", "Enter full screen");
   const enter = await icon();
   await button.click();
@@ -604,8 +604,8 @@ test("in RTL previous sits on the right and next on the left, each icon mirrored
     }),
   );
   expect(arrows).toEqual([
-    { left: 1000 - 16 - 44, right: 1000 - 16, scale: "-1 1" },
-    { left: 16, right: 16 + 44, scale: "-1 1" },
+    { left: 1000 - 16 - 40, right: 1000 - 16, scale: "-1 1" },
+    { left: 16, right: 16 + 40, scale: "-1 1" },
   ]);
 });
 
@@ -791,7 +791,7 @@ const offCenter = (page: Page) =>
     return Math.abs(b.left + b.width / 2 - (a.left + a.width / 2));
   });
 
-test("the carousel's own stylesheet on the page leaves the slides edge to edge and the 3:2 thumbnails 66 by 44px, 8px apart", async ({
+test("the carousel's own stylesheet on the page leaves the slides edge to edge and the 3:2 thumbnails 66 by 44px, 6px apart", async ({
   page,
 }) => {
   await open(
@@ -818,7 +818,7 @@ test("the carousel's own stylesheet on the page leaves the slides edge to edge a
     pitch: layout.width,
     width: layout.width,
     thumb: [66, 44],
-    gap: 8,
+    gap: 6,
   });
 });
 
@@ -1121,7 +1121,7 @@ const channels = (color: string) => {
   return color.startsWith("rgb") ? values.map((value) => value / 255) : values;
 };
 
-test("a button's hover follows a theme's own control color, and the default stays dark", {
+test("a button's hover mixes 5% of the foreground into a theme's own control color, and the default is #f4f4f4", {
   tag: "@desktop",
 }, async ({ page }) => {
   await open(page, { className: "pale" }, { count: 2 });
@@ -1133,21 +1133,20 @@ test("a button's hover follows a theme's own control color, and the default stay
   const hovered = async () => {
     await page.mouse.move(0, 0);
     await close.hover();
-    await page.waitForTimeout(100);
+    await page.waitForTimeout(300);
     return channels(
       await close.evaluate(
         (element) => getComputedStyle(element).backgroundColor,
       ),
     );
   };
-  for (const channel of await hovered()) {
-    expect(channel).toBeGreaterThan(0.8);
-    expect(channel).toBeLessThan(0.95);
-  }
+  for (const channel of await hovered())
+    expect(channel).toBeCloseTo((0.95 * 255 + 0.05 * 17) / 255, 2);
   await page.evaluate(() =>
     document.querySelector(".re-lightbox")?.classList.remove("pale"),
   );
-  for (const channel of await hovered()) expect(channel).toBeLessThan(0.3);
+  for (const channel of await hovered())
+    expect(channel).toBeCloseTo(244 / 255, 2);
 });
 
 const ringOnCurrent = (page: Page) =>
@@ -1386,19 +1385,52 @@ test("the last of 40 photos without loop goes back to the first without showing 
   expect(blank).toBe(0);
 });
 
-test("theme.css takes its font sizes, blur and control timings from --re-lightbox-* properties", async ({
+test("under reduced motion theme.css runs no transition on a control", async ({
+  page,
+}) => {
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await open(page, { controls: { fullscreen: true } });
+  const durations = await page.evaluate(() =>
+    [
+      ".re-lightbox-close",
+      ".re-lightbox-zoom",
+      ".re-lightbox-fullscreen",
+      ".re-lightbox-counter",
+    ].map((selector) =>
+      getComputedStyle(
+        document.querySelector(selector) as Element,
+      ).transitionDuration.split(", "),
+    ),
+  );
+  for (const list of durations)
+    for (const duration of list) expect(duration).toBe("0s");
+});
+
+test("a zoom fades the other toolbar buttons out before it hides them", async ({
+  page,
+}) => {
+  await open(page, { controls: { fullscreen: true } });
+  await page.evaluate(() => (window as Window).lightbox.zoomTo(2));
+  const fullscreen = page.locator(".re-lightbox-fullscreen");
+  await expect(fullscreen).toHaveCSS(
+    "transition-property",
+    "opacity, visibility",
+  );
+  await expect(fullscreen).toHaveCSS("transition-delay", "0s, 0.3s");
+});
+
+test("theme.css takes its font sizes and control timings from --re-lightbox-* properties", async ({
   page,
 }) => {
   await open(page, { thumbnails: "bottom" }, { captions: true });
   await page.addStyleTag({
     content:
-      ".re-lightbox{--re-lightbox-font-size:15px;--re-lightbox-counter-font-size:11px;--re-lightbox-blur:4px;--re-lightbox-control-duration:120ms;--re-lightbox-ring-duration:60ms}",
+      ".re-lightbox{--re-lightbox-font-size:15px;--re-lightbox-counter-font-size:11px;--re-lightbox-control-duration:120ms;--re-lightbox-ring-duration:60ms}",
   });
   const styles = await page.evaluate(() => {
     const css = (selector: string) =>
       getComputedStyle(document.querySelector(selector) as Element);
     return {
-      blur: css(".re-lightbox-counter").backdropFilter,
       rotate: css(".re-lightbox-close").transitionDuration,
       counter: css(".re-lightbox-counter").fontSize,
       caption: css(".re-lightbox-caption").fontSize,
@@ -1407,8 +1439,7 @@ test("theme.css takes its font sizes, blur and control timings from --re-lightbo
     };
   });
   expect(styles).toEqual({
-    blur: "blur(4px)",
-    rotate: "0.12s",
+    rotate: "0.15s, 0.16s, 0.3s, 0.12s",
     counter: "11px",
     caption: "15px",
     thumbnail: "0.12s",
@@ -1491,8 +1522,8 @@ test("without icons every built-in button, a hidden one too, shows an SVG icon a
   }
   const svg = (name: string, list: typeof before) =>
     list.find((icon) => icon.name === `re-lightbox-${name}`)?.svg;
-  await page.click(".re-lightbox-zoom");
   await page.click(".re-lightbox-slideshow");
+  await page.click(".re-lightbox-zoom");
   const after = await icons();
   expect(svg("zoom", after)).not.toBe(svg("zoom", before));
   expect(svg("slideshow", after)).not.toBe(svg("slideshow", before));
@@ -1608,7 +1639,7 @@ test("on a plain page the theme sets a sans-serif font, so the counter is not th
   ).toBe("Courier");
 });
 
-test("on a plain page the download link is the same 44 by 44px as the buttons", async ({
+test("on a plain page the download link is the same 40 by 40px as the buttons", async ({
   page,
 }) => {
   await openFiles(page, ["https://cdn.test/photo.jpg"]);
@@ -1621,8 +1652,8 @@ test("on a plain page the download link is the same 44 by 44px as the buttons", 
     }),
   );
   expect(sizes).toEqual([
-    { width: 44, height: 44 },
-    { width: 44, height: 44 },
+    { width: 40, height: 40 },
+    { width: 40, height: 40 },
   ]);
 });
 

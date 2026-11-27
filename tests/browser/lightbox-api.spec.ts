@@ -438,7 +438,7 @@ test("inside a frame the lightbox leaves the page's history alone unless history
 test("--re-lightbox-padding sets the space around the fitted photo, 32px without it", async ({
   page,
 }) => {
-  await mount(page, "", ["lightbox/base.css", "lightbox/theme.css"]);
+  await mount(page, "", ["lightbox/base.css"]);
   await page.addStyleTag({
     content: ".re-lightbox{--re-lightbox-padding:100px}",
   });
@@ -470,7 +470,7 @@ for (const [padding, height] of [
   test(`--re-lightbox-padding: ${padding} is read as the length it computes to`, async ({
     page,
   }) => {
-    await mount(page, "", ["lightbox/base.css", "lightbox/theme.css"]);
+    await mount(page, "", ["lightbox/base.css"]);
     await page.addStyleTag({
       content: `.re-lightbox{--re-lightbox-padding:${padding}}`,
     });
@@ -483,6 +483,42 @@ for (const [padding, height] of [
     await expect(page.locator("dialog")).toHaveAttribute("data-phase", "open");
     expect(Math.round((await current(page).boundingBox())?.height ?? 0)).toBe(
       height,
+    );
+  });
+
+for (const [layout, options, height] of [
+  ["a caption under the photo", {}, 800 - 2 * 24 - 30],
+  ["the bottom strip", { thumbnails: "bottom" }, 800 - 2 * 24 - 30 - 64],
+  ["a side caption", { caption: "side" }, 800 - 2 * 24],
+] as const)
+  test(`theme.css fits a portrait photo above the room ${layout} keeps`, async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 1280, height: 800 });
+    await mount(page, "", ["lightbox/base.css", "lightbox/theme.css"]);
+    await page.evaluate(
+      async ([src, options]) => {
+        const { createLightbox } = await import("/modules/lightbox/index.js");
+        createLightbox({ history: false, ...options }).open(
+          [1, 2].map((n) => ({
+            src,
+            width: 800,
+            height: 1200,
+            caption: `${n}`,
+          })),
+        );
+      },
+      [photo(1), options] as const,
+    );
+    await expect(page.locator("dialog")).toHaveAttribute("data-phase", "open");
+    await expect
+      .poll(async () =>
+        Math.round((await current(page).boundingBox())?.height ?? 0),
+      )
+      .toBe(height);
+    const arrow = await page.locator(".re-lightbox-next").boundingBox();
+    expect(Math.round((arrow?.y ?? 0) + (arrow?.height ?? 0) / 2)).toBe(
+      Math.round((800 - (800 - 2 * 24 - height)) / 2),
     );
   });
 
@@ -555,10 +591,10 @@ test("a slot draws the built-in icons, or the ones the icons option gives", asyn
     return drawn;
   });
   expect(icons).toEqual([
-    "m15 6-6 6 6 6",
+    "m15 18-6-6 6-6",
     "Next!",
-    "M18 11a7 7 0 1 1-14 0 7 7 0 0 1 14 0m-2 5 4 4M8 11h6",
-    "M9 4v5H4m11-5v5h5m0 6h-5v5m-6 0v-5H4",
+    "M19 11a8 8 0 1 1-16 0 8 8 0 0 1 16 0M21 21l-4.35-4.35",
+    "M13 4L13 7.00002C13 8.88563 13.0001 9.82843 13.5858 10.4142C14.1716 11 15.1144 11 17 11L20 11",
     "Pause!",
   ]);
 });
