@@ -1,5 +1,5 @@
 export interface LightboxStyle {
-  arrows: "Sides" | "Toolbar" | "None";
+  arrows: "Sides" | "Toolbar";
   counter: "Corner" | "Toolbar" | "None";
   thumbnails: boolean;
   caption: "Below" | "Panel" | "None";
@@ -27,12 +27,11 @@ const style = (
 });
 
 export const lightboxStyles: Record<string, LightboxStyle> = {
-  minimal: style("None", "None", false, "None", "Light", false, false),
   classic: style("Sides", "Corner", false, "Below", "Light", false, true),
   filmstrip: style("Sides", "None", true, "None", "Light", false, true),
+  toolbar: style("Toolbar", "Toolbar", false, "Below", "Light", false, true),
   panel: style("Sides", "None", false, "Panel", "Light", false, false),
   immersive: style("Sides", "Corner", false, "Below", "Dark", true, false),
-  toolbar: style("Toolbar", "Toolbar", false, "Below", "Light", false, true),
 };
 
 export const LIGHTBOX_STYLE_CLASS = "re-lightbox-style";
@@ -42,11 +41,6 @@ const hasBar = (o: LightboxStyle) =>
 const dark = (o: LightboxStyle) => o.backdrop === "Dark";
 
 const rules: readonly (readonly [(o: LightboxStyle) => boolean, string])[] = [
-  [
-    (o) => o.arrows === "None",
-    `.re-lightbox-style .re-lightbox-prev,
-.re-lightbox-style .re-lightbox-next { display: none; }`,
-  ],
   [
     (o) => o.counter === "None",
     ".re-lightbox-style .re-lightbox-counter { display: none; }",

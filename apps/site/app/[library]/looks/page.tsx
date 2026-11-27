@@ -8,9 +8,9 @@ import type { DocSearch } from "../../../lib/framework";
 
 export const dynamicParams = false;
 export const generateStaticParams = () =>
-  docParams("themes").map(({ library }) => ({ library }));
+  docParams("looks").map(({ library }) => ({ library }));
 export const generateMetadata = ({ params }: { params: DocParams }) =>
-  docMetadata(params, "themes");
+  docMetadata(params, "looks");
 export default function Page({
   params,
   searchParams,
@@ -19,6 +19,6 @@ export default function Page({
   searchParams: Promise<DocSearch>;
 }) {
   return (
-    <DocRoute params={params} searchParams={searchParams} prefix="themes" />
+    <DocRoute params={params} searchParams={searchParams} prefix="looks" />
   );
 }

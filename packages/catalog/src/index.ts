@@ -321,9 +321,9 @@ export const libraries: Library[] = [
         lead: "Install the package, import the stylesheet once, then bind the viewer to the element that holds your images.",
       },
       {
-        path: "themes",
-        title: "Themes",
-        lead: "Four themes for the room and the controls, each a stylesheet of custom properties, and four looks built from a theme, slots and options.",
+        path: "looks",
+        title: "Looks",
+        lead: "Every look the viewer ships, opened on the same photos: four themes, five control layouts and four recipes. Try one in the frame, then copy its setup.",
       },
       {
         path: "gestures",
@@ -370,41 +370,6 @@ export const libraries: Library[] = [
             path: "examples/device-check",
             title: "Device check",
             lead: "A checklist for trying the lightbox by hand on an iPhone, an Android phone and a Mac, with the examples to open.",
-          },
-        ],
-      },
-      {
-        title: "Control styles",
-        pages: [
-          {
-            path: "controls/minimal",
-            title: "Minimal",
-            lead: "Only a close button. Swipe, drag or press the arrow keys to move, and Escape to leave.",
-          },
-          {
-            path: "controls/classic",
-            title: "Classic",
-            lead: "Side arrows, a counter in the corner, and the caption under the image.",
-          },
-          {
-            path: "controls/filmstrip",
-            title: "Filmstrip",
-            lead: "Thumbnails along the bottom edge. The ring in the middle marks the open photo, and dragging the strip pages through them.",
-          },
-          {
-            path: "controls/panel",
-            title: "Panel",
-            lead: "Caption and details in a side panel, which moves under the image on narrow screens.",
-          },
-          {
-            path: "controls/immersive",
-            title: "Immersive",
-            lead: "A dark room for the image. The controls fade after two seconds and return on any movement.",
-          },
-          {
-            path: "controls/toolbar",
-            title: "Toolbar",
-            lead: "Paging, the counter and zoom in one floating toolbar, as in a photos app.",
           },
         ],
       },

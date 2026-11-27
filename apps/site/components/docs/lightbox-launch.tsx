@@ -36,12 +36,10 @@ export function LightboxLaunch({
   items,
   module,
   css,
-  scope,
 }: {
   items: readonly LaunchItem[];
   module: string;
   css: string;
-  scope?: string;
 }) {
   const root = useRef<HTMLDivElement>(null);
   const viewer = useRef<Promise<Lightbox> | null>(null);
@@ -64,12 +62,7 @@ export function LightboxLaunch({
         const { default: make }: { default: Make } = await import(
           /* webpackIgnore: true */ /* turbopackIgnore: true */ url
         );
-        const create = (options?: LightboxOptions) =>
-          createLightbox({
-            ...options,
-            className: [options?.className, scope].filter(Boolean).join(" "),
-          });
-        return make(create, setupIcons, () => [...items]);
+        return make(createLightbox, setupIcons, () => [...items]);
       } finally {
         URL.revokeObjectURL(url);
       }
