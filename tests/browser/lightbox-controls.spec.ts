@@ -1385,6 +1385,40 @@ test("the last of 40 photos without loop goes back to the first without showing 
   expect(blank).toBe(0);
 });
 
+test("under reduced motion theme.css runs no transition on a control", async ({
+  page,
+}) => {
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await open(page, { controls: { fullscreen: true } });
+  const durations = await page.evaluate(() =>
+    [
+      ".re-lightbox-close",
+      ".re-lightbox-zoom",
+      ".re-lightbox-fullscreen",
+      ".re-lightbox-counter",
+    ].map((selector) =>
+      getComputedStyle(
+        document.querySelector(selector) as Element,
+      ).transitionDuration.split(", "),
+    ),
+  );
+  for (const list of durations)
+    for (const duration of list) expect(duration).toBe("0s");
+});
+
+test("a zoom fades the other toolbar buttons out before it hides them", async ({
+  page,
+}) => {
+  await open(page, { controls: { fullscreen: true } });
+  await page.evaluate(() => (window as Window).lightbox.zoomTo(2));
+  const fullscreen = page.locator(".re-lightbox-fullscreen");
+  await expect(fullscreen).toHaveCSS(
+    "transition-property",
+    "opacity, visibility",
+  );
+  await expect(fullscreen).toHaveCSS("transition-delay", "0s, 0.3s");
+});
+
 test("theme.css takes its font sizes and control timings from --re-lightbox-* properties", async ({
   page,
 }) => {
