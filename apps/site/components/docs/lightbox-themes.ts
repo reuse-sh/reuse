@@ -25,7 +25,7 @@ interface Preset {
 
 const places = [
   ["Monday, 4 March", "Above the clouds"],
-  ["Monday, 4 March", "Ferry crossing"],
+  ["Monday, 4 March", "Open water"],
   ["Saturday, 16 March", "Dune field"],
   ["Sunday, 17 March", "Snow plain"],
   ["Friday, 5 April", "West bay"],
