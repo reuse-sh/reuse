@@ -10,57 +10,8 @@ import {
 } from "@reuse-sh/gradients";
 import { createMovingHighlight } from "@reuse-sh/interactions";
 import { useEffect, useRef, useState } from "react";
+import { photos } from "@/lib/photos";
 
-const photos = [
-  {
-    id: "lake",
-    caption: "Coral sky",
-    alt: "A soft marble texture in coral, sand and blue",
-    src: "/images/marble-lake.webp",
-  },
-  {
-    id: "mountains",
-    caption: "Mint and ember",
-    alt: "A soft marble texture in mint, blue and orange",
-    src: "/images/marble-mountains.webp",
-  },
-  {
-    id: "coast",
-    caption: "Lilac bloom",
-    alt: "A soft marble texture in lilac, rose and sea green",
-    src: "/images/marble-coast.webp",
-  },
-  {
-    id: "forest",
-    caption: "Sand and fern",
-    alt: "A soft marble texture in sand, green and violet",
-    src: "/images/marble-forest.webp",
-  },
-  {
-    id: "night",
-    caption: "Blue hour",
-    alt: "A soft marble texture in blue, lilac and gold",
-    src: "/images/marble-night.webp",
-  },
-  {
-    id: "woods",
-    caption: "Amber",
-    alt: "A soft marble texture in orange, yellow and blue",
-    src: "/images/marble-woods.webp",
-  },
-  {
-    id: "dune",
-    caption: "Sea glass",
-    alt: "A soft marble texture in sea green, blue and pink",
-    src: "/images/marble-dune.webp",
-  },
-  {
-    id: "meadow",
-    caption: "Dusk",
-    alt: "A soft marble texture in periwinkle, peach and green",
-    src: "/images/marble-meadow.webp",
-  },
-];
 function Choice<T extends string>({
   name,
   legend,
@@ -174,9 +125,11 @@ export function Example() {
             <img
               className="block aspect-4/3 h-auto w-full rounded-lg object-cover"
               src={photo.src}
+              srcSet={photo.srcSet}
+              sizes="(max-width: 48rem) 50vw, 16rem"
               alt={photo.alt}
-              width={2400}
-              height={1800}
+              width={photo.width}
+              height={photo.height}
               draggable={false}
             />
             <figcaption className="mt-2 text-label text-subtle-foreground">

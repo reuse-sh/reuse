@@ -330,7 +330,7 @@ test("the narrow panel sheet shows one caption line until it expands", async ({
   await page.setViewportSize({ width: 320, height: 900 });
   await page.goto("/lightbox/controls/panel");
   // The eighth caption is the one long enough to wrap at 320px.
-  await page.locator('main a[href^="/images/marble"]').nth(7).click();
+  await page.locator('main a[href^="/photos/"]').nth(7).click();
   const text = page.locator(".re-lightbox-style-panel-text");
   await expect(text).toBeVisible();
   const lines = () =>
@@ -347,9 +347,11 @@ test("the narrow panel sheet shows one caption line until it expands", async ({
   await expect(toggle).toHaveAttribute("aria-expanded", "true");
   expect(await lines()).toEqual({ clipped: false, lines: 2 });
   await page
-    .locator(".re-lightbox-style-panel-list button", { hasText: "Amber" })
+    .locator(".re-lightbox-style-panel-list button", { hasText: "Cloud peak" })
     .click();
-  await expect(page.locator(".re-lightbox-style-panel h2")).toHaveText("Amber");
+  await expect(page.locator(".re-lightbox-style-panel h2")).toHaveText(
+    "Cloud peak",
+  );
   await expect(toggle).toHaveAttribute("aria-expanded", "false");
 });
 
@@ -357,9 +359,9 @@ test("the panel style rises its text through a change and lands on the latest ph
   page,
 }) => {
   await page.goto("/lightbox/controls/panel");
-  await page.locator('main a[href^="/images/marble"]').nth(1).click();
+  await page.locator('main a[href^="/photos/"]').nth(1).click();
   const title = page.locator(".re-lightbox-style-panel h2");
-  await expect(title).toHaveText("Mint and ember");
+  await expect(title).toHaveText("Open sea");
   await expect(page.locator(".re-lightbox-image").nth(1)).toBeVisible();
   await title.evaluate((element) => {
     const frames: [string, number, number][] = [];
@@ -376,7 +378,7 @@ test("the panel style rises its text through a change and lands on the latest ph
     requestAnimationFrame(sample);
   });
   await page.keyboard.press("ArrowRight");
-  await expect(title).toHaveText("Lilac bloom");
+  await expect(title).toHaveText("Dunes");
   const recorded = () =>
     page.evaluate(
       () =>
@@ -389,30 +391,30 @@ test("the panel style rises its text through a change and lands on the latest ph
       ([shown, opacity, y]) => shown === text && opacity < 0.5 && rise(y),
     );
   expect({
-    leavesUpward: seen("Mint and ember", (y) => y < 0),
-    entersFromBelow: seen("Lilac bloom", (y) => y > 0),
+    leavesUpward: seen("Open sea", (y) => y < 0),
+    entersFromBelow: seen("Dunes", (y) => y > 0),
     ends: frames.at(-1),
   }).toEqual({
     leavesUpward: true,
     entersFromBelow: true,
-    ends: ["Lilac bloom", 1, 0],
+    ends: ["Dunes", 1, 0],
   });
   const opacity = () =>
     title.evaluate((element) => Number(getComputedStyle(element).opacity));
   await page.keyboard.press("ArrowRight");
   await page.keyboard.press("ArrowRight");
-  await expect(title).toHaveText("Blue hour");
+  await expect(title).toHaveText("Evening sail");
   await expect.poll(opacity).toBe(1);
   await expect(page.locator(".re-lightbox-style-panel-count")).toHaveText(
     "5 / 8",
   );
   await expect(
     page.locator('.re-lightbox-style-panel-list [aria-current="true"]'),
-  ).toHaveText("Blue hour");
+  ).toHaveText("Evening sail");
   await page
-    .locator(".re-lightbox-style-panel-list button", { hasText: "Dusk" })
+    .locator(".re-lightbox-style-panel-list button", { hasText: "Empty room" })
     .click();
-  await expect(title).toHaveText("Dusk");
+  await expect(title).toHaveText("Empty room");
   await expect(page.locator(".re-lightbox-style-panel-count")).toHaveText(
     "8 / 8",
   );
@@ -422,9 +424,9 @@ test("the panel style mirrors its rise when paging back and continues from where
   page,
 }) => {
   await page.goto("/lightbox/controls/panel");
-  await page.locator('main a[href^="/images/marble"]').nth(2).click();
+  await page.locator('main a[href^="/photos/"]').nth(2).click();
   const title = page.locator(".re-lightbox-style-panel h2");
-  await expect(title).toHaveText("Lilac bloom");
+  await expect(title).toHaveText("Dunes");
   await expect(page.locator(".re-lightbox-image").nth(2)).toBeVisible();
   const result = await title.evaluate(async (element) => {
     const text = element.nextElementSibling as HTMLElement;
@@ -458,16 +460,15 @@ test("the panel style mirrors its rise when paging back and continues from where
     };
     const opacity = () => Number(getComputedStyle(element).opacity);
     const rose =
-      (await wait(
-        () => element.textContent === "Lilac bloom" && opacity() <= 0.6,
-      )) && (await wait(() => opacity() >= 0.3));
+      (await wait(() => element.textContent === "Dunes" && opacity() <= 0.6)) &&
+      (await wait(() => opacity() >= 0.3));
     const before = [y(element), y(text)];
     press("ArrowRight");
     const after = [y(element), y(text)];
     return {
       rose,
-      leavesDownward: seen("Lilac bloom", (shift) => shift > 0),
-      entersFromAbove: seen("Mint and ember", (shift) => shift < 0),
+      leavesDownward: seen("Dunes", (shift) => shift > 0),
+      entersFromAbove: seen("Open sea", (shift) => shift < 0),
       rising: before.every((shift) => shift > 0),
       steady: after.map((shift, at) => Math.abs(shift - before[at]) < 0.1),
     };
@@ -486,12 +487,12 @@ test("the panel style list glides when quick paging changes the text height", as
 }) => {
   await page.setViewportSize({ width: 1280, height: 900 });
   await page.goto("/lightbox/controls/panel");
-  // Sand and fern wraps to two lines, Blue hour to one, Amber to two.
-  await page.locator('main a[href^="/images/marble"]').nth(3).click();
+  // Lone pine wraps to two lines, Evening sail to one, Amber to two.
+  await page.locator('main a[href^="/photos/"]').nth(3).click();
   await expect(page.locator(".re-lightbox-style-panel h2")).toHaveText(
-    "Sand and fern",
+    "Lone pine",
   );
-  // The second key lands while Blue hour fades in, so its height change is still running.
+  // The second key lands while Evening sail fades in, so its height change is still running.
   await page.evaluate(() => {
     const panel = document.querySelector(".re-lightbox-style-panel");
     const label = panel?.querySelector(".re-lightbox-style-panel-label");
@@ -510,7 +511,7 @@ test("the panel style list glides when quick paging changes the text height", as
     requestAnimationFrame(sample);
     if (title)
       new MutationObserver((_, observer) => {
-        if (title.textContent !== "Blue hour") return;
+        if (title.textContent !== "Evening sail") return;
         observer.disconnect();
         setTimeout(press, 40);
       }).observe(title, {
@@ -520,7 +521,9 @@ test("the panel style list glides when quick paging changes the text height", as
       });
     press();
   });
-  await expect(page.locator(".re-lightbox-style-panel h2")).toHaveText("Amber");
+  await expect(page.locator(".re-lightbox-style-panel h2")).toHaveText(
+    "Cloud peak",
+  );
   const tops = () =>
     page.evaluate(() => (window as unknown as { tops: number[] }).tops);
   await expect.poll(async () => (await tops()).length).toBe(60);
@@ -534,7 +537,7 @@ test("the collapsed panel sheet keeps its list out of the tab order", async ({
 }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto("/lightbox/controls/panel");
-  await page.locator('main a[href^="/images/marble"]').first().click();
+  await page.locator('main a[href^="/photos/"]').first().click();
   const toggle = page.getByRole("button", { name: "All photos" });
   await toggle.focus();
   await page.keyboard.press("Tab");
@@ -552,11 +555,11 @@ test("picking from the open panel sheet keeps the arrow keys paging", async ({
 }) => {
   await page.setViewportSize({ width: 600, height: 844 });
   await page.goto("/lightbox/controls/panel");
-  await page.locator('main a[href^="/images/marble"]').first().click();
+  await page.locator('main a[href^="/photos/"]').first().click();
   const toggle = page.getByRole("button", { name: "All photos" });
   await toggle.click();
   const row = page.locator(".re-lightbox-style-panel-list button", {
-    hasText: "Lilac bloom",
+    hasText: "Dunes",
   });
   await row.focus();
   await page.keyboard.press("Enter");
@@ -564,7 +567,7 @@ test("picking from the open panel sheet keeps the arrow keys paging", async ({
   await expect(toggle).toBeFocused();
   await page.keyboard.press("ArrowRight");
   await expect(page.locator(".re-lightbox-style-panel h2")).toHaveText(
-    "Sand and fern",
+    "Lone pine",
   );
 });
 
@@ -573,14 +576,16 @@ test("the panel sheet shows its title after turning from wide to narrow", async 
 }) => {
   await page.setViewportSize({ width: 844, height: 390 });
   await page.goto("/lightbox/controls/panel");
-  await page.locator('main a[href^="/images/marble"]').first().click();
+  await page.locator('main a[href^="/photos/"]').first().click();
   const count = page.locator(".re-lightbox-style-panel-count");
   await expect(count).toHaveText("1 / 8");
   for (let step = 2; step <= 6; step++) {
     await page.keyboard.press("ArrowRight");
     await expect(count).toHaveText(`${step} / 8`);
   }
-  await expect(page.locator(".re-lightbox-style-panel h2")).toHaveText("Amber");
+  await expect(page.locator(".re-lightbox-style-panel h2")).toHaveText(
+    "Cloud peak",
+  );
   await page.setViewportSize({ width: 390, height: 844 });
   await expect(
     page.getByRole("button", { name: "All photos" }),
@@ -604,9 +609,9 @@ test("the panel style switches its text at once under reduced motion", async ({
 }) => {
   await page.emulateMedia({ reducedMotion: "reduce" });
   await page.goto("/lightbox/controls/panel");
-  await page.locator('main a[href^="/images/marble"]').nth(1).click();
+  await page.locator('main a[href^="/photos/"]').nth(1).click();
   const title = page.locator(".re-lightbox-style-panel h2");
-  await expect(title).toHaveText("Mint and ember");
+  await expect(title).toHaveText("Open sea");
   await page.keyboard.press("ArrowRight");
   const shown = await title.evaluate((element) => ({
     text: element.textContent,
@@ -617,7 +622,7 @@ test("the panel style switches its text at once under reduced motion", async ({
     text: element.textContent,
     animations: element.getAnimations({ subtree: true }).length,
   }));
-  expect(shown).toEqual({ text: "Lilac bloom", animations: 0 });
+  expect(shown).toEqual({ text: "Dunes", animations: 0 });
   expect(rolled).toEqual({ text: "3 / 8", animations: 0 });
 });
 
@@ -625,7 +630,7 @@ test("the panel style rolls its position digit in the paging direction", async (
   page,
 }) => {
   await page.goto("/lightbox/controls/panel");
-  await page.locator('main a[href^="/images/marble"]').nth(1).click();
+  await page.locator('main a[href^="/photos/"]').nth(1).click();
   const count = page.locator(".re-lightbox-style-panel-count");
   await expect(count).toHaveText("2 / 8");
   const roll = (key: string) =>
@@ -671,7 +676,7 @@ test("the panel style fits the photo beside its card and above its sheet", async
   ]) {
     await page.setViewportSize({ width, height });
     await page.goto("/lightbox/controls/panel");
-    await page.locator('main a[href^="/images/marble"]').nth(1).click();
+    await page.locator('main a[href^="/photos/"]').nth(1).click();
     const image = page.locator(".re-lightbox-image").nth(1);
     await expect(image).toBeVisible();
     await expect(page.locator("dialog[open]")).toHaveAttribute(
@@ -699,7 +704,7 @@ test("the panel style keeps a plain close button inside its card", async ({
   page,
 }) => {
   await page.goto("/lightbox/controls/panel");
-  await page.locator('main a[href^="/images/marble"]').first().click();
+  await page.locator('main a[href^="/photos/"]').first().click();
   const close = page.getByRole("button", { name: "Close gallery" });
   await expect(close).toBeVisible();
   const look = await close.evaluate((element) => {
@@ -753,7 +758,7 @@ test("every control style shows an icon in each lightbox button", async ({
 }) => {
   for (const style of Object.keys(lightboxStyles)) {
     await page.goto(`/lightbox/controls/${style}`);
-    await page.locator('main a[href^="/images/marble"]').first().click();
+    await page.locator('main a[href^="/photos/"]').first().click();
     await expect(
       page.locator("dialog[open] .re-lightbox-image").first(),
     ).toBeVisible();
@@ -780,7 +785,7 @@ test("the toolbar style hides its bar while zoomed and zooms out from the button
   page,
 }) => {
   await page.goto("/lightbox/controls/toolbar");
-  await page.locator('main a[href^="/images/marble"]').first().click();
+  await page.locator('main a[href^="/photos/"]').first().click();
   await expect(
     page.locator("dialog[open] .re-lightbox-image").first(),
   ).toBeVisible();
@@ -858,9 +863,9 @@ test("every lightbox on the site uses the site's icons and font", async ({
   };
   const tile = (card: number) =>
     page
-      .locator('main [data-slot="card"]:has(a[href^="/images/marble"])')
+      .locator('main [data-slot="card"]:has(a[href^="/photos/"])')
       .nth(card)
-      .locator('a[href^="/images/marble"]')
+      .locator('a[href^="/photos/"]')
       .first();
   await page.goto("/lightbox/themes");
   for (const theme of ["Dark", "Light", "Page", "Photos"]) {
@@ -1060,7 +1065,7 @@ test("the panel style shows the photo's position once", async ({ page }) => {
   for (const width of [390, 1280]) {
     await page.setViewportSize({ width, height: 844 });
     await page.goto("/lightbox/controls/panel");
-    await page.locator('main a[href^="/images/marble"]').first().click();
+    await page.locator('main a[href^="/photos/"]').first().click();
     await expect(page.locator(".re-lightbox-style-panel-count")).toBeVisible();
     const positions = await page.locator("dialog[open] *").evaluateAll(
       (elements) =>
@@ -1241,7 +1246,7 @@ for (const [path, section] of [
           has: page.getByRole("heading", { name: section, exact: true }),
         })
       : page.locator("main");
-    const tile = scope.locator('a[href^="/images/marble"]').first();
+    const tile = scope.locator('a[href^="/photos/"]').first();
     await tile.scrollIntoViewIfNeeded();
     await tile.click();
     const dialog = page.locator("dialog.re-lightbox[open]");

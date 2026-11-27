@@ -1,33 +1,55 @@
 "use client";
 import { CursorPreview } from "@reuse-sh/interactions/react";
 import "./effects.css";
+import { type PhotoId, photo } from "@/lib/photos";
 
 const groups = [
   [
     "Shop",
     [
-      ["prints", "Prints", "Single sheets, signed on the back", "lake"],
-      ["sets", "Gift sets", "Three sheets in a folded sleeve", "woods"],
-      ["paper", "Paper", "The stock we pull every print on", "dune"],
+      [
+        "prints",
+        "Prints",
+        "Single sheets, signed on the back",
+        "table-still-life",
+      ],
+      ["sets", "Gift sets", "Three sheets in a folded sleeve", "empty-room"],
+      ["paper", "Paper", "The stock we pull every print on", "dunes"],
     ],
   ],
   [
     "Studio",
     [
-      ["visit", "Visit", "Open on Saturdays from ten", "meadow"],
-      ["classes", "Classes", "Two hours, one tray, your own sheet", "coast"],
-      ["journal", "Journal", "Notes from the table", "forest"],
+      ["visit", "Visit", "Open on Saturdays from ten", "open-sea"],
+      [
+        "classes",
+        "Classes",
+        "Two hours, one tray, your own sheet",
+        "cloud-peak",
+      ],
+      ["journal", "Journal", "Notes from the table", "lone-pine"],
     ],
   ],
 ] as const;
 
-function Card({ id, name, line, photo }: Record<string, string>) {
+function Card({
+  id,
+  name,
+  line,
+  picture,
+}: {
+  id: string;
+  name: string;
+  line: string;
+  picture: PhotoId;
+}) {
+  const { src, width, height } = photo(picture);
   return (
     <template
       id={`menu-card-${id}`}
       // biome-ignore lint/security/noDangerouslySetInnerHtml: fixed synthetic markup, cloned by the preview.
       dangerouslySetInnerHTML={{
-        __html: `<span class="re-preview-menu-card"><img src="/images/marble-${photo}-2250x1500.webp" alt="" width="2250" height="1500"><b>${name}</b><small>${line}</small></span>`,
+        __html: `<span class="re-preview-menu-card"><img src="${src}" alt="" width="${width}" height="${height}"><b>${name}</b><small>${line}</small></span>`,
       }}
     />
   );
@@ -46,7 +68,7 @@ export function PreviewMenu() {
           {groups.map(([title, rows]) => (
             <div key={title}>
               <p>{title}</p>
-              {rows.map(([id, name, line, photo]) => (
+              {rows.map(([id, name, line, picture]) => (
                 <a
                   key={id}
                   href={`#${id}`}
@@ -56,10 +78,10 @@ export function PreviewMenu() {
                   {/* biome-ignore lint/performance/noImgElement: standalone examples use native images. */}
                   <img
                     className="re-preview-menu-thumb"
-                    src={`/images/marble-${photo}-2250x1500.webp`}
+                    src={photo(picture).src}
                     alt=""
-                    width="2250"
-                    height="1500"
+                    width={photo(picture).width}
+                    height={photo(picture).height}
                   />
                   <b>{name}</b>
                   <small>{line}</small>
@@ -70,8 +92,8 @@ export function PreviewMenu() {
         </nav>
       </CursorPreview>
       {groups.flatMap(([, rows]) =>
-        rows.map(([id, name, line, photo]) => (
-          <Card key={id} id={id} name={name} line={line} photo={photo} />
+        rows.map(([id, name, line, picture]) => (
+          <Card key={id} id={id} name={name} line={line} picture={picture} />
         )),
       )}
     </>

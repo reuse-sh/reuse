@@ -24,6 +24,7 @@ export function LightboxStylePage({ style }: { style: string }) {
         <LightboxLaunch
           items={photos.map((photo) => ({
             src: photo.src,
+            srcset: photo.srcSet,
             previewSrc: photo.src,
             thumbnailSrc: photo.src,
             alt: photo.alt,

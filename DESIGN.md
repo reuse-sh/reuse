@@ -46,7 +46,7 @@ Moving highlights follow Poise: they appear with a scale from 0.97 to 1, slide i
 
 ## Media
 
-Demonstration media are generated marble textures. scripts/generate-marble.mjs writes them as apps/site/public/images/marble-*.svg, and scripts/rasterize-marble.mjs renders each one to WebP at 1.5 times its size, named by its pixel size. Pages and examples show the WebP files, because the blurred SVGs repaint on every frame a photo moves. They carry no third-party image license.
+Demonstration media are real photos from Unsplash in apps/site/public/photos, chosen to be calm and clean, without busy detail. Each photo has AVIF and JPEG files at 640, 1280 and 2560 px wide, and apps/site/lib/photos.ts is the one registry of them: id, files, size, alt text, an invented caption, the author and the Unsplash link. Pages and examples read the registry. Images take the registry's srcSet with a sizes value that matches their layout, and lightbox items pass it as srcset. Captions and names stay invented. Each photo's author, link and license are listed in THIRD_PARTY_NOTICES.md. The folder also holds media made for this site: a long screenshot of a reuse.sh page, a transparent PNG of the Re: tile and an SVG drawing. Marble textures remain only as avatar images in apps/site/public/images.
 
 ## Verification
 

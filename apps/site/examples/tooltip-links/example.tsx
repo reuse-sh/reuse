@@ -1,6 +1,7 @@
 "use client";
 import { FloatingTooltipGroup } from "@reuse-sh/interactions/react";
 import "./effects.css";
+import { photo } from "@/lib/photos";
 
 function escapeHtml(value: string) {
   return value.replace(
@@ -11,26 +12,7 @@ function escapeHtml(value: string) {
       ] ?? char,
   );
 }
-const photos = [
-  {
-    src: "/images/marble-lake.webp",
-    alt: "A soft marble texture in coral, sand and blue",
-    width: 2400,
-    height: 1800,
-  },
-  {
-    src: "/images/marble-mountains.webp",
-    alt: "A soft marble texture in mint, blue and orange",
-    width: 2400,
-    height: 1800,
-  },
-  {
-    src: "/images/marble-coast.webp",
-    alt: "A soft marble texture in lilac, rose and sea green",
-    width: 2400,
-    height: 1800,
-  },
-];
+const photos = [photo("pink-summit"), photo("open-sea"), photo("dunes")];
 
 function Template({ id, html }: { id: string; html: string }) {
   // biome-ignore lint/security/noDangerouslySetInnerHtml: the markup is built from fixed synthetic strings, escaped with escapeHtml.
@@ -100,7 +82,7 @@ export function TooltipLinks() {
         <Template
           key={id}
           id={`tt-print-${id}`}
-          html={`<span class="grid grid-cols-[auto_minmax(0,1fr)] gap-3 w-72 max-w-full text-label leading-4.5 [&>img]:size-21 [&>img]:rounded-control [&>img]:object-cover"><img src="${escapeHtml(photo.src)}" alt="" width="2400" height="1800"><span class="grid grid-cols-[minmax(0,1fr)] min-w-0 content-center gap-0.5 pr-1.5 [&>b]:font-semibold [&>b]:overflow-x-clip [&>b]:text-ellipsis [&>b]:whitespace-nowrap [&>b]:[text-box:trim-start_cap_alphabetic] [&>span]:line-clamp-2 [&>span]:text-muted-foreground [&>small]:overflow-x-clip [&>small]:text-ellipsis [&>small]:whitespace-nowrap [&>small]:text-caption [&>small]:text-subtle-foreground [&>small]:[text-box:trim-end_cap_alphabetic]"><b>${escapeHtml(name)}</b><span>${escapeHtml(text)}</span><small>prints.example.com</small></span></span>`}
+          html={`<span class="grid grid-cols-[auto_minmax(0,1fr)] gap-3 w-72 max-w-full text-label leading-4.5 [&>img]:size-21 [&>img]:rounded-control [&>img]:object-cover"><img src="${escapeHtml(photo.src)}" alt="" width="${photo.width}" height="${photo.height}"><span class="grid grid-cols-[minmax(0,1fr)] min-w-0 content-center gap-0.5 pr-1.5 [&>b]:font-semibold [&>b]:overflow-x-clip [&>b]:text-ellipsis [&>b]:whitespace-nowrap [&>b]:[text-box:trim-start_cap_alphabetic] [&>span]:line-clamp-2 [&>span]:text-muted-foreground [&>small]:overflow-x-clip [&>small]:text-ellipsis [&>small]:whitespace-nowrap [&>small]:text-caption [&>small]:text-subtle-foreground [&>small]:[text-box:trim-end_cap_alphabetic]"><b>${escapeHtml(name)}</b><span>${escapeHtml(text)}</span><small>prints.example.com</small></span></span>`}
         />
       ))}
     </>

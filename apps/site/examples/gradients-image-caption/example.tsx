@@ -1,7 +1,10 @@
 "use client";
 import { createMovingHighlight } from "@reuse-sh/interactions";
 import { useEffect, useRef, useState } from "react";
+import { photo } from "@/lib/photos";
 import { cn } from "@/lib/utils";
+
+const ridges = photo("blue-ridges");
 
 const curves = ["eased", "linear"] as const;
 function Choice<T extends string>({
@@ -80,10 +83,12 @@ export function Example() {
         {/* biome-ignore lint/performance/noImgElement: this standalone recipe uses a native image. */}
         <img
           className="block aspect-landscape h-auto w-full object-cover"
-          src="/images/marble-forest.webp"
-          alt="A soft marble texture in sand, green and violet"
-          width={2400}
-          height={1800}
+          src={ridges.src}
+          srcSet={ridges.srcSet}
+          sizes="(max-width: 48rem) 100vw, 608px"
+          alt={ridges.alt}
+          width={ridges.width}
+          height={ridges.height}
         />
         <figcaption
           className={cn(
@@ -94,9 +99,9 @@ export function Example() {
           )}
         >
           <b className="text-subsection leading-6 font-semibold text-inherit">
-            Sand and fern
+            {ridges.caption}
           </b>
-          <span>Marble print on cotton paper, 50 × 70 cm, edition of 30</span>
+          <span>Pigment print on cotton paper, 50 × 70 cm, edition of 30</span>
         </figcaption>
       </figure>
     </div>

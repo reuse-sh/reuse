@@ -13,6 +13,8 @@ export function Example() {
           key={photo.id}
           className="rounded-frame bg-media"
           src={photo.src}
+          srcSet={photo.srcSet}
+          sizes="(max-width: 48rem) 50vw, 300px"
           alt={photo.alt}
           width={photo.width}
           height={photo.height}

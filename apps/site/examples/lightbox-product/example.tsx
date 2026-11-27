@@ -6,56 +6,15 @@ import { siteLightbox } from "@/components/site-lightbox";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import "./mechanics.css";
+import { photo } from "@/lib/photos";
 
 const photos = [
-  {
-    id: "lake",
-    src: "/images/marble-lake.webp",
-    caption: "Coral sky",
-    alt: "A soft marble texture in coral, sand and blue",
-    width: 2400,
-    height: 1800,
-  },
-  {
-    id: "mountains",
-    src: "/images/marble-mountains.webp",
-    caption: "Mint and ember",
-    alt: "A soft marble texture in mint, blue and orange",
-    width: 2400,
-    height: 1800,
-  },
-  {
-    id: "coast",
-    src: "/images/marble-coast.webp",
-    caption: "Lilac bloom",
-    alt: "A soft marble texture in lilac, rose and sea green",
-    width: 2400,
-    height: 1800,
-  },
-  {
-    id: "forest",
-    src: "/images/marble-forest.webp",
-    caption: "Sand and fern",
-    alt: "A soft marble texture in sand, green and violet",
-    width: 2400,
-    height: 1800,
-  },
-  {
-    id: "night",
-    src: "/images/marble-night.webp",
-    caption: "Blue hour",
-    alt: "A soft marble texture in blue, lilac and gold",
-    width: 2400,
-    height: 1800,
-  },
-  {
-    id: "woods",
-    src: "/images/marble-woods.webp",
-    caption: "Amber",
-    alt: "A soft marble texture in orange, yellow and blue",
-    width: 2400,
-    height: 1800,
-  },
+  photo("pink-summit"),
+  photo("open-sea"),
+  photo("dunes"),
+  photo("lone-pine"),
+  photo("sailboat"),
+  photo("cloud-peak"),
 ];
 const [lake, mountains, coast, , , woods] = photos;
 type Photo = (typeof photos)[number];
@@ -80,9 +39,11 @@ function PhotoButton({
       hidden={hidden}
       tabIndex={hidden ? -1 : undefined}
     >
-      {/* biome-ignore lint/performance/noImgElement: marble photos are served as is; the lightbox reads the rendered image as its origin. */}
+      {/* biome-ignore lint/performance/noImgElement: photos are served as is; the lightbox reads the rendered image as its origin. */}
       <img
         src={photo.src}
+        srcSet={photo.srcSet}
+        sizes="(max-width: 48rem) 75vw, 300px"
         alt={photo.alt}
         width={photo.width}
         height={photo.height}
@@ -132,6 +93,7 @@ function PhotoLightbox({
         const image = button.querySelector("img");
         return {
           src: photo.src,
+          srcset: photo.srcSet,
           alt: photo.alt,
           caption: photo.caption,
           width: photo.width,
@@ -200,8 +162,8 @@ function ProductOptions() {
         </span>
       </p>
       <p className="re-desc mt-4 text-ui leading-6 text-muted-foreground">
-        Coral, sand and blue drift across the sheet like ink on water. Printed
-        to order on matte cotton paper with a 2 cm border.
+        A quiet summit in pink haze, above a sea of cloud. Printed to order on
+        matte cotton paper with a 2 cm border.
       </p>
       <fieldset className="re-field min-w-0 mt-6 p-0 border-0">
         <legend className="re-label mb-2 p-0 text-caption font-medium text-secondary-foreground">
@@ -268,7 +230,7 @@ export function Example() {
         </PhotoLightbox>
         <div className="re-info flex flex-col pt-1.5">
           <p className="re-crumb text-caption text-subtle-foreground">
-            Prints <span>/</span> Marble
+            Prints <span>/</span> Landscape
           </p>
           <h2 className="re-title mt-2 text-2xl leading-8 font-semibold tracking-tight">
             {lake.caption} print

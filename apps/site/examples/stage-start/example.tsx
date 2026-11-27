@@ -4,6 +4,7 @@ import { Avatar, AvatarGroup } from "@reuse-sh/avatars/react";
 import { Stage, type StageAct } from "@reuse-sh/stage/react";
 import { type FormEvent, useState } from "react";
 import "./scene.css";
+import { photo } from "@/lib/photos";
 
 const image = (id: string) => `/images/marble-${id}.webp`;
 const team = [
@@ -78,10 +79,18 @@ export function Example() {
           </button>
         </div>
         <div className="sd-board">
-          {["lake", "dune", "woods", "meadow"].map((id) => (
-            // biome-ignore lint/performance/noImgElement: standalone examples use native images.
-            <img key={id} src={image(id)} alt="" width={2400} height={1800} />
-          ))}
+          {(["pink-summit", "dunes", "cloud-peak", "empty-room"] as const).map(
+            (id) => (
+              // biome-ignore lint/performance/noImgElement: standalone examples use native images.
+              <img
+                key={id}
+                src={photo(id).src}
+                alt=""
+                width={photo(id).width}
+                height={photo(id).height}
+              />
+            ),
+          )}
         </div>
         <form
           className="sd-pop re-shadow-ring-lg"

@@ -70,18 +70,18 @@
   },
   {
     "path": "/annotations",
-    "height": 572,
-    "images": [[608, 456]]
+    "height": 521.640625,
+    "images": [[608, 405.640625]]
   },
   {
     "path": "/annotations/examples/review-notes",
-    "height": 515.5,
-    "images": [[32, 32], [458, 343.5]]
+    "height": 477.5625,
+    "images": [[32, 32], [458, 305.5625]]
   },
   {
     "path": "/annotations/examples/editor",
-    "height": 798,
-    "images": [[608, 456]]
+    "height": 747.640625,
+    "images": [[608, 405.640625]]
   },
   {
     "path": "/avatars",

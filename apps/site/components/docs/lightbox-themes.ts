@@ -1,6 +1,6 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import { photos } from "../../lib/photos";
+import { photo, photos } from "../../lib/photos";
 import { iconData } from "../icons";
 
 export const lightboxThemes = {
@@ -242,22 +242,26 @@ const lightbox = createLightbox({
   },
 };
 
+const squares = [
+  photo("monstera"),
+  photo("cube-and-squash"),
+  photo("concrete-blocks"),
+  photo("white-grid"),
+  photo("shadow-wall"),
+];
+
 function previewItems(preset?: Preset) {
-  return photos.map((photo, index) => {
-    const src = preset?.square
-      ? `/images/marble-${photo.id}-1800x1800.webp`
-      : photo.src;
-    return {
-      src,
-      previewSrc: src,
-      thumbnailSrc: src,
-      alt: photo.alt,
-      caption: photo.caption,
-      width: preset?.square ? 1800 : photo.width,
-      height: preset?.square ? 1800 : photo.height,
-      ...preset?.extra?.(index),
-    };
-  });
+  return (preset?.square ? squares : photos).map((item, index) => ({
+    src: item.src,
+    srcset: item.srcSet,
+    previewSrc: item.src,
+    thumbnailSrc: item.src,
+    alt: item.alt,
+    caption: item.caption,
+    width: item.width,
+    height: item.height,
+    ...preset?.extra?.(index),
+  }));
 }
 
 const defaultSetup = `const lightbox = createLightbox({ thumbnails: "bottom" });`;

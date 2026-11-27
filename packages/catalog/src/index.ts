@@ -336,7 +336,7 @@ export const libraries: Library[] = [
           {
             path: "examples/product",
             title: "Product page",
-            lead: "A marble art print with its detail shots. The main image and the thumbnails open as one set.",
+            lead: "A photo print with its detail shots. The main image and the thumbnails open as one set.",
             build: "a product page gallery",
           },
           {
@@ -2177,7 +2177,7 @@ export const tools: readonly Tool[] = [
     name: "Boring Avatars",
     url: "https://boringavatars.com",
     reason:
-      "Generated SVG avatars from a name and a palette. The marble textures across this site follow its marble variant.",
+      "Generated SVG avatars from a name and a palette. The marble textures in the avatar examples follow its marble variant.",
     group: "Images",
   },
   {

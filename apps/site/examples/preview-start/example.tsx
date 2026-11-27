@@ -1,21 +1,22 @@
 "use client";
 import { CursorPreview } from "@reuse-sh/interactions/react";
 import "./effects.css";
+import { photo } from "@/lib/photos";
 
 const prints = [
-  ["coral", "Coral sky", "Coral, sand and blue", "lake"],
-  ["mint", "Mint and ember", "Mint, blue and orange", "mountains"],
-  ["lilac", "Lilac bloom", "Lilac, rose and sea green", "coast"],
-  ["fern", "Sand and fern", "Sand, green and violet", "forest"],
-  ["hour", "Blue hour", "Blue, lilac and gold", "night"],
+  ["stair", "Plaster, sand and shade", "quiet-stair"],
+  ["sprig", "Sage, white and grey", "green-sprig"],
+  ["court", "White, blue and shadow", "white-court"],
+  ["bloom", "Glass, yellow and oak", "yellow-bloom"],
+  ["garden", "Concrete, green and sand", "garden-wall"],
 ] as const;
 
 export function PreviewStart() {
   return (
     <CursorPreview previewClassName="re-preview-start-photo">
       <ol className="re-preview-start-list">
-        {prints.map(([id, name, colors, photo], index) => {
-          const src = `/images/marble-${photo}-1350x1800.webp`;
+        {prints.map(([id, colors, picture], index) => {
+          const { src, width, height, caption } = photo(picture);
           return (
             <li key={id} id={`print-${id}`}>
               <a href={`#print-${id}`} data-re-preview={src}>
@@ -27,10 +28,10 @@ export function PreviewStart() {
                   className="re-preview-start-thumb"
                   src={src}
                   alt=""
-                  width="1350"
-                  height="1800"
+                  width={width}
+                  height={height}
                 />
-                <b>{name}</b>
+                <b>{caption}</b>
                 <span className="re-preview-start-colors">{colors}</span>
               </a>
             </li>

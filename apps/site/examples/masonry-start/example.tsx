@@ -4,18 +4,18 @@ import { galleryPhotos } from "@/lib/photos";
 import "./cards.css";
 
 const texts = [
-  "Warm coral over a calm sand ground.",
+  "Layered ridges in cyan and slate.",
   "A tall print for a narrow wall. Printed on cotton rag.",
-  "Mint and orange drift across a blue field.",
-  "Lilac and rose in a square frame.",
-  "A wide band of amber for a long shelf or a hallway.",
-  "Sand and fern, cut upright.",
-  "Sea green with a pink edge.",
-  "Periwinkle and peach, the colors of late evening.",
-  "A narrow crop of Mint and ember. It pairs with the wide one.",
-  "Lilac and sea green along a low horizon.",
-  "Blue and lilac with a thin gold seam near the edge.",
-  "Orange and yellow in a square, quieter than the wide print.",
+  "One tree on a white field.",
+  "A single leaf in a square frame.",
+  "A wide band of evening light for a long shelf or a hallway.",
+  "Plaster steps, cut upright.",
+  "Sand under a light sky.",
+  "White walls and a deep blue sky.",
+  "A green sprig against grey-blue.",
+  "Soft waves along a low horizon.",
+  "Peach and pink in a square, quieter than the wide print.",
+  "A road that fades into fog.",
 ];
 
 export function Example() {
@@ -27,12 +27,14 @@ export function Example() {
           <img
             className="block h-auto w-full rounded-frame bg-media"
             src={photo.src}
+            srcSet={photo.srcSet}
+            sizes="(max-width: 48rem) 100vw, 300px"
             alt=""
             width={photo.width}
             height={photo.height}
           />
           <h3 className="mt-2.5 text-ui font-medium text-foreground">
-            {photo.title}
+            {photo.caption}
           </h3>
           <p className="text-caption text-muted-foreground">{texts[index]}</p>
         </article>
