@@ -1,6 +1,6 @@
 import { Container } from "@/components/ui/container";
 import { DocLink as Link } from "../docs/doc-link";
-import { Icon } from "../icons";
+import { Logo } from "./logo";
 
 export function SiteFooter({ layout }: { layout?: "content" | "docs" }) {
   return (
@@ -9,9 +9,9 @@ export function SiteFooter({ layout }: { layout?: "content" | "docs" }) {
         size={layout}
         className="flex flex-wrap items-baseline gap-x-3.5 gap-y-1.5 text-ui"
       >
-        <span className="inline-flex items-center gap-1.5 self-center font-semibold tracking-tight">
-          <Icon name="logo" size={16} />
-          Reuse
+        <span className="inline-flex self-center">
+          <Logo />
+          <span className="sr-only">Reuse</span>
         </span>
         <nav
           className="-my-0.5 ml-auto flex gap-4 text-muted-foreground"

@@ -9,6 +9,7 @@ import { libraryAt } from "../../lib/menu";
 import { DocLink as Link } from "../docs/doc-link";
 import { Icon, type IconName } from "../icons";
 import { focusMenuRow, LibraryMenu } from "./library-menu";
+import { Logo } from "./logo";
 
 const MENU_ID = "library-menu";
 
@@ -105,12 +106,13 @@ export function SiteHeader() {
           ref={brand}
         >
           <Link
-            className="-ml-2 inline-flex h-8 items-center gap-1.5 rounded-lg px-2 text-ui font-semibold tracking-tight text-foreground"
+            className="-ml-2 inline-flex h-8 items-center rounded-lg px-2 text-foreground"
             data-re-row
             href="/"
+            aria-label="Reuse"
+            data-re-tooltip="Reuse · Interface parts for any stack"
           >
-            <Icon name="logo" size={16} />
-            Reuse
+            <Logo />
           </Link>
           <span
             className="mx-0.5 text-body text-foreground/15 max-sm:mx-0"
