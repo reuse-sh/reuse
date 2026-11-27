@@ -68,9 +68,11 @@ export function Example() {
                 {/* biome-ignore lint/performance/noImgElement: standalone recipe uses native images. */}
                 <img
                   src={photo.src}
+                  srcSet={photo.srcSet}
+                  sizes="(max-width: 48rem) 100vw, 45rem"
                   alt={photo.alt}
-                  width={2400}
-                  height={1800}
+                  width={photo.width}
+                  height={photo.height}
                   draggable={false}
                 />
               </figure>

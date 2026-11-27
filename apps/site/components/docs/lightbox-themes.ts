@@ -1,6 +1,6 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import { photos } from "../../lib/photos";
+import { photo, photos } from "../../lib/photos";
 import { iconData } from "../icons";
 
 export const lightboxThemes = {
@@ -24,14 +24,14 @@ interface Preset {
 }
 
 const places = [
-  ["Monday, 4 March", "Harbor studio"],
-  ["Monday, 4 March", "Harbor studio"],
-  ["Saturday, 16 March", "North gallery"],
-  ["Saturday, 16 March", "North gallery"],
-  ["Friday, 5 April", "Print room"],
-  ["Friday, 5 April", "Print room"],
-  ["Sunday, 21 April", "Garden annex"],
-  ["Sunday, 21 April", "Garden annex"],
+  ["Monday, 4 March", "Above the clouds"],
+  ["Monday, 4 March", "Open water"],
+  ["Saturday, 16 March", "Dune field"],
+  ["Sunday, 17 March", "Snow plain"],
+  ["Friday, 5 April", "West bay"],
+  ["Saturday, 6 April", "High pass"],
+  ["Sunday, 21 April", "Island beach"],
+  ["Monday, 22 April", "Studio"],
 ] as const;
 
 export const lightboxPresets: Record<string, Preset> = {
@@ -242,22 +242,26 @@ const lightbox = createLightbox({
   },
 };
 
+const squares = [
+  photo("monstera"),
+  photo("cube-and-squash"),
+  photo("concrete-blocks"),
+  photo("white-grid"),
+  photo("shadow-wall"),
+];
+
 function previewItems(preset?: Preset) {
-  return photos.map((photo, index) => {
-    const src = preset?.square
-      ? `/images/marble-${photo.id}-1800x1800.webp`
-      : photo.src;
-    return {
-      src,
-      previewSrc: src,
-      thumbnailSrc: src,
-      alt: photo.alt,
-      caption: photo.caption,
-      width: preset?.square ? 1800 : photo.width,
-      height: preset?.square ? 1800 : photo.height,
-      ...preset?.extra?.(index),
-    };
-  });
+  return (preset?.square ? squares : photos).map((item, index) => ({
+    src: item.src,
+    srcset: item.srcSet,
+    previewSrc: item.src,
+    thumbnailSrc: item.src,
+    alt: item.alt,
+    caption: item.caption,
+    width: item.width,
+    height: item.height,
+    ...preset?.extra?.(index),
+  }));
 }
 
 const defaultSetup = `const lightbox = createLightbox({ thumbnails: "bottom" });`;
@@ -303,8 +307,8 @@ const sample = (preset?: Preset) => {
   const file = (name: string) =>
     preset?.square ? `/photos/${name}-square.jpg` : `/photos/${name}.jpg`;
   return `const items = [
-  { src: "${file("coast")}", alt: "A rocky coast", caption: "Coast"${fields(0)} },
-  { src: "${file("forest")}", alt: "A path through a forest", caption: "Forest"${fields(2)} },
+  { src: "${file("sea")}", alt: "A calm open sea", caption: "Open sea"${fields(1)} },
+  { src: "${file("dunes")}", alt: "Sand dunes under a light sky", caption: "Dunes"${fields(2)} },
 ];`;
 };
 

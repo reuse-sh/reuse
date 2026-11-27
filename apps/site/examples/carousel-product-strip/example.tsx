@@ -1,56 +1,15 @@
 "use client";
 import { useCarousel, useCarouselState } from "@reuse-sh/carousel/react";
 import "./controls.css";
+import { photo } from "@/lib/photos";
 
 const photos = [
-  {
-    id: "lake",
-    caption: "Coral sky",
-    alt: "A soft marble texture in coral, sand and blue",
-    src: "/images/marble-lake.webp",
-    width: 2400,
-    height: 1800,
-  },
-  {
-    id: "mountains",
-    caption: "Mint and ember",
-    alt: "A soft marble texture in mint, blue and orange",
-    src: "/images/marble-mountains.webp",
-    width: 2400,
-    height: 1800,
-  },
-  {
-    id: "night",
-    caption: "Blue hour",
-    alt: "A soft marble texture in blue, lilac and gold",
-    src: "/images/marble-night.webp",
-    width: 2400,
-    height: 1800,
-  },
-  {
-    id: "forest",
-    caption: "Sand and fern",
-    alt: "A soft marble texture in sand, green and violet",
-    src: "/images/marble-forest.webp",
-    width: 2400,
-    height: 1800,
-  },
-  {
-    id: "woods",
-    caption: "Amber",
-    alt: "A soft marble texture in orange, yellow and blue",
-    src: "/images/marble-woods.webp",
-    width: 2400,
-    height: 1800,
-  },
-  {
-    id: "coast",
-    caption: "Lilac bloom",
-    alt: "A soft marble texture in lilac, rose and sea green",
-    src: "/images/marble-coast.webp",
-    width: 2400,
-    height: 1800,
-  },
+  photo("pink-summit"),
+  photo("open-sea"),
+  photo("sailboat"),
+  photo("lone-pine"),
+  photo("cloud-peak"),
+  photo("dunes"),
 ];
 const prices = ["$84", "$72", "$96", "$64", "$88", "$72"];
 export function Example() {
@@ -132,9 +91,11 @@ export function Example() {
               <img
                 className="h-full w-full object-cover"
                 src={photo.src}
+                srcSet={photo.srcSet}
+                sizes="(max-width: 48rem) 45vw, 14rem"
                 alt={photo.alt}
-                width={2400}
-                height={1800}
+                width={photo.width}
+                height={photo.height}
                 draggable={false}
               />
             </span>

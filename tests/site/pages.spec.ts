@@ -21,11 +21,6 @@ async function problems(context: BrowserContext, path: string) {
     if (message.type() === "error") found.push(`console: ${message.text()}`);
   });
   page.on("pageerror", (error) => found.push(`page error: ${error.message}`));
-  // The blurred marble SVGs repaint on every frame a photo moves; pages show the WebP renders.
-  page.on("request", (request) => {
-    if (/\/images\/marble-[^/]*\.svg$/.test(new URL(request.url()).pathname))
-      found.push(`vector photo: ${request.url()}`);
-  });
   page.on("response", (response) => {
     if (response.status() >= 400)
       found.push(`HTTP ${response.status()}: ${response.url()}`);
@@ -99,7 +94,7 @@ test("the toolbar preview's counter rolls its digit in the paging direction", as
   page,
 }) => {
   await page.goto("/lightbox/looks/toolbar");
-  await page.locator('main a[href^="/images/marble"]').nth(1).click();
+  await page.locator('main a[href^="/photos/"]').nth(1).click();
   const counter = page.locator(
     ".re-lightbox-style-toolbar .re-lightbox-counter",
   );
@@ -142,7 +137,7 @@ test("the classic preview's corner counter reads 1 / 8 on one line", async ({
   page,
 }) => {
   await page.goto("/lightbox/looks/classic");
-  await page.locator('main a[href^="/images/marble"]').first().click();
+  await page.locator('main a[href^="/photos/"]').first().click();
   const counter = page.locator(".re-lightbox-counter");
   await expect(counter).toHaveText("1 / 8");
   const parts = await counter.evaluate((element) => {

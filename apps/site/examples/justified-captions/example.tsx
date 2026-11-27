@@ -21,14 +21,18 @@ export function Example() {
           <img
             className="re-justified-media rounded-frame bg-media"
             src={photo.src}
+            srcSet={photo.srcSet}
+            sizes="(max-width: 48rem) 50vw, 300px"
             alt=""
             width={photo.width}
             height={photo.height}
           />
           <figcaption className="pt-2">
-            <span className="block text-ui text-foreground">{photo.title}</span>
+            <span className="block text-ui text-foreground">
+              {photo.caption}
+            </span>
             <span className="block text-caption text-subtle-foreground">
-              {photo.note}
+              {photo.author}
             </span>
           </figcaption>
         </figure>

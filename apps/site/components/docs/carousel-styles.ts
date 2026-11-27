@@ -91,7 +91,7 @@ function slides() {
   return photos
     .map(
       (photo) =>
-        `<figure class="cc-slide" data-carousel-slide><img src="${attr(photo.src)}" alt="${attr(photo.alt)}" width="2400" height="1800" draggable="false"></figure>`,
+        `<figure class="cc-slide" data-carousel-slide><img src="${attr(photo.src)}" srcset="${attr(photo.srcSet ?? "")}" sizes="(max-width: 48rem) 100vw, 45rem" alt="${attr(photo.alt)}" width="${photo.width}" height="${photo.height}" draggable="false"></figure>`,
     )
     .join("");
 }

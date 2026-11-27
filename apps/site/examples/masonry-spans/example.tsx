@@ -21,14 +21,16 @@ export function Example() {
           <img
             className="block h-auto w-full rounded-frame bg-media"
             src={photo.src}
+            srcSet={photo.srcSet}
+            sizes="(max-width: 48rem) 100vw, 400px"
             alt=""
             width={photo.width}
             height={photo.height}
           />
           <h3 className="mt-2.5 text-ui font-medium text-foreground">
-            {photo.title}
+            {photo.caption}
           </h3>
-          <p className="text-caption text-muted-foreground">{photo.note}</p>
+          <p className="text-caption text-muted-foreground">{photo.author}</p>
         </article>
       ))}
     </Masonry>

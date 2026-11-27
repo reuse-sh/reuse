@@ -31,6 +31,7 @@ export function PhotoStrip() {
     lightbox.open(
       strip.map((photo, at) => ({
         ...photo,
+        srcset: photo.srcSet,
         thumbnailSrc: photo.src,
         previewSrc: images.current[at]?.currentSrc || photo.src,
         origin: () => images.current[at] ?? null,

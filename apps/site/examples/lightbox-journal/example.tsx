@@ -3,56 +3,15 @@ import { createLightbox, type LightboxItem } from "@reuse-sh/lightbox";
 import { type ReactNode, useEffect, useRef } from "react";
 import { cn } from "@/lib/utils";
 import "./mechanics.css";
+import { photo } from "@/lib/photos";
 
 const photos = [
-  {
-    id: "lake",
-    src: "/images/marble-lake.webp",
-    caption: "Coral sky",
-    alt: "A soft marble texture in coral, sand and blue",
-    width: 2400,
-    height: 1800,
-  },
-  {
-    id: "mountains",
-    src: "/images/marble-mountains.webp",
-    caption: "Mint and ember",
-    alt: "A soft marble texture in mint, blue and orange",
-    width: 2400,
-    height: 1800,
-  },
-  {
-    id: "coast",
-    src: "/images/marble-coast.webp",
-    caption: "Lilac bloom",
-    alt: "A soft marble texture in lilac, rose and sea green",
-    width: 2400,
-    height: 1800,
-  },
-  {
-    id: "forest",
-    src: "/images/marble-forest.webp",
-    caption: "Sand and fern",
-    alt: "A soft marble texture in sand, green and violet",
-    width: 2400,
-    height: 1800,
-  },
-  {
-    id: "night",
-    src: "/images/marble-night.webp",
-    caption: "Blue hour",
-    alt: "A soft marble texture in blue, lilac and gold",
-    width: 2400,
-    height: 1800,
-  },
-  {
-    id: "woods",
-    src: "/images/marble-woods.webp",
-    caption: "Amber",
-    alt: "A soft marble texture in orange, yellow and blue",
-    width: 2400,
-    height: 1800,
-  },
+  photo("pink-summit"),
+  photo("open-sea"),
+  photo("dunes"),
+  photo("lone-pine"),
+  photo("sailboat"),
+  photo("cloud-peak"),
 ];
 const [lake, mountains, , forest, night, woods] = photos;
 type Photo = (typeof photos)[number];
@@ -77,9 +36,11 @@ function PhotoButton({
       hidden={hidden}
       tabIndex={hidden ? -1 : undefined}
     >
-      {/* biome-ignore lint/performance/noImgElement: marble photos are served as is; the lightbox reads the rendered image as its origin. */}
+      {/* biome-ignore lint/performance/noImgElement: photos are served as is; the lightbox reads the rendered image as its origin. */}
       <img
         src={photo.src}
+        srcSet={photo.srcSet}
+        sizes="(max-width: 48rem) 100vw, 608px"
         alt={photo.alt}
         width={photo.width}
         height={photo.height}
@@ -128,6 +89,7 @@ function PhotoLightbox({
         const image = button.querySelector("img");
         return {
           src: photo.src,
+          srcset: photo.srcSet,
           alt: photo.alt,
           caption: photo.caption,
           width: photo.width,
@@ -161,12 +123,11 @@ export function Example() {
             October 2026 · 5 prints
           </p>
           <h2 className="re-j-title mt-1.5 text-2xl leading-8 font-semibold tracking-tight text-balance">
-            Six colors in one tray of water
+            One week of soft light
           </h2>
           <p className="re-j-text max-w-xl mt-4 text-body leading-7 text-muted-foreground text-pretty">
-            Every print in this series starts as a tray of water and a few drops
-            of ink. A comb pulls the colors into bands, and a sheet of paper
-            lifts them off in one pass.
+            Every print in this series starts as a walk and a single frame, over
+            the sea, the snow or the peaks.
           </p>
           <figure className="re-j-fig mt-7">
             <PhotoButton
@@ -180,9 +141,9 @@ export function Example() {
             <PhotoButton photo={b} />
           </div>
           <p className="re-j-text max-w-xl mt-4 text-body leading-7 text-muted-foreground text-pretty">
-            No two sheets come out alike. We kept the five where the colors
-            stayed apart, and printed them on matte cotton paper at the size
-            they were made.
+            No two days come out alike. We kept the five where the light stayed
+            soft, and printed them on matte cotton paper at the size they were
+            taken.
           </p>
           <div className="re-j-wide grid gap-2 h-64 max-sm:h-40 mt-7">
             <PhotoButton photo={c} />

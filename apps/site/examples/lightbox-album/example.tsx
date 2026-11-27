@@ -19,13 +19,13 @@ const thread: readonly Message[] = [
   {
     id: "cliff",
     from: "Ines",
-    text: "The view from the cliff this morning",
+    text: "The view from the ridge this morning",
     photos: [coast],
   },
   {
     id: "roll",
     from: "Tomas",
-    text: "And the whole roll from the beach",
+    text: "And the whole roll from the week",
     photos: album,
   },
   { id: "reply", from: null, text: "The third one should be a print" },
@@ -36,8 +36,9 @@ const shown = 4;
 const sequence = thread.flatMap((message) => message.photos ?? []);
 const items = sequence.map((photo) => ({
   src: photo.src,
+  srcset: photo.srcSet,
   alt: photo.alt,
-  caption: photo.title,
+  caption: photo.caption,
   width: photo.width,
   height: photo.height,
   thumbnailSrc: photo.src,
@@ -80,8 +81,8 @@ export function Example() {
               }
               aria-label={
                 more
-                  ? `Open ${photo.title} and ${hidden} more`
-                  : `Open ${photo.title}`
+                  ? `Open ${photo.caption} and ${hidden} more`
+                  : `Open ${photo.caption}`
               }
               onClick={() => viewer.open(opened, index)}
             >
@@ -89,6 +90,8 @@ export function Example() {
               <img
                 className="h-full w-full object-cover"
                 src={photo.src}
+                srcSet={photo.srcSet}
+                sizes="(max-width: 48rem) 50vw, 300px"
                 alt=""
                 width={photo.width}
                 height={photo.height}

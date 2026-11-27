@@ -5,6 +5,7 @@ import {
 } from "@reuse-sh/interactions/react";
 import "./effects.css";
 import { Toolbar as ToolbarSurface } from "@/components/ui/surfaces";
+import { photo } from "@/lib/photos";
 
 const iconPaths = {
   layers: (
@@ -151,26 +152,7 @@ function escapeHtml(value: string) {
       ] ?? char,
   );
 }
-const photos = [
-  {
-    src: "/images/marble-lake.webp",
-    alt: "A soft marble texture in coral, sand and blue",
-    width: 2400,
-    height: 1800,
-  },
-  {
-    src: "/images/marble-mountains.webp",
-    alt: "A soft marble texture in mint, blue and orange",
-    width: 2400,
-    height: 1800,
-  },
-  {
-    src: "/images/marble-coast.webp",
-    alt: "A soft marble texture in lilac, rose and sea green",
-    width: 2400,
-    height: 1800,
-  },
-];
+const photos = [photo("pink-summit"), photo("open-sea"), photo("dunes")];
 
 function Template({ id, html }: { id: string; html: string }) {
   // biome-ignore lint/security/noDangerouslySetInnerHtml: the markup is built from fixed synthetic strings, escaped with escapeHtml.
@@ -232,9 +214,11 @@ export function TooltipShortcuts() {
           {/* biome-ignore lint/performance/noImgElement: this portable recipe uses a native image. */}
           <img
             src={photos[1].src}
+            srcSet={photos[1].srcSet}
+            sizes="(max-width: 48rem) 100vw, 45rem"
             alt={photos[1].alt}
-            width={2400}
-            height={1800}
+            width={photos[1].width}
+            height={photos[1].height}
             className="h-auto re-tooltip-shortcuts-x-editor-photo w-full aspect-8/5 block object-cover"
           />
           <Toolbar

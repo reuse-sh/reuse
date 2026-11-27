@@ -1,62 +1,451 @@
-const marble = [
-  ["lake", "Coral sky", "A soft marble texture in coral, sand and blue"],
+export interface Photo {
+  id: string;
+  src: string;
+  srcSet?: string;
+  avifSrcSet?: string;
+  width: number;
+  height: number;
+  alt: string;
+  caption: string;
+  author: string;
+  link: string;
+}
+
+const widths = [640, 1280, 2560];
+
+const files = (id: string, format: string) =>
+  widths
+    .map((width) => `/photos/${id}-${width}.${format} ${width}w`)
+    .join(", ");
+const unsplash = [
   [
-    "mountains",
-    "Mint and ember",
-    "A soft marble texture in mint, blue and orange",
+    "white-court",
+    2560,
+    3200,
+    "Courtyard stair",
+    "White walls and an outdoor stair under a deep blue sky",
+    "Eduardo Gorghetto",
+    "Y9uYq6aDHAU",
   ],
   [
-    "coast",
-    "Lilac bloom",
-    "A soft marble texture in lilac, rose and sea green",
+    "white-arc",
+    2560,
+    3840,
+    "Curved wall",
+    "A figure stands by a pool in front of a curved white wall",
+    "Leo Manjarrez",
+    "-vygi0Cvz_c",
   ],
   [
-    "forest",
-    "Sand and fern",
-    "A soft marble texture in sand, green and violet",
+    "garden-wall",
+    2560,
+    3200,
+    "Garden wall",
+    "Two round trees in front of a pale concrete wall",
+    "niklas schoenberger",
+    "WfCePInWrlQ",
   ],
-  ["night", "Blue hour", "A soft marble texture in blue, lilac and gold"],
-  ["woods", "Amber", "A soft marble texture in orange, yellow and blue"],
-  ["dune", "Sea glass", "A soft marble texture in sea green, blue and pink"],
-  ["meadow", "Dusk", "A soft marble texture in periwinkle, peach and green"],
+  [
+    "steel-wave",
+    2560,
+    1440,
+    "Steel wave",
+    "Curved steel panels rise against a pale sky",
+    "Anatolii Nesterov",
+    "X4K1DvQlgPQ",
+  ],
+  [
+    "concrete-blocks",
+    2560,
+    2560,
+    "Concrete blocks",
+    "Stacked concrete volumes under a blue sky",
+    "Victor",
+    "4G6DOKSwO8U",
+  ],
+  [
+    "blue-corner",
+    2560,
+    3840,
+    "Blue corner",
+    "A building corner meets a clear blue sky",
+    "Willian Justen de Vasconcellos",
+    "FeqQOmlTcBI",
+  ],
+  [
+    "quiet-stair",
+    2560,
+    3200,
+    "Quiet stair",
+    "Plaster steps rise to a landing with a vase",
+    "Alesia Kazantceva",
+    "0B7ijYKaKcE",
+  ],
+  [
+    "pink-tower",
+    2560,
+    3840,
+    "Pink hour",
+    "A tower block against a pink and orange sky",
+    "Massimiliano Morosinotto",
+    "j2gWpAqTG7w",
+  ],
+  [
+    "glass-tower",
+    2560,
+    3200,
+    "Glass tower",
+    "A glass office tower against a blue sky",
+    "Liah Martens",
+    "2Jr7i0hwVrU",
+  ],
+  [
+    "balconies",
+    2560,
+    3840,
+    "Balconies",
+    "Rows of balconies climb against a pale blue sky",
+    "Habila Mazawaje",
+    "YksM0mkrgH4",
+  ],
+  [
+    "white-grid",
+    2560,
+    2560,
+    "White grid",
+    "White tiled facades under a dark blue sky",
+    "Parsoa Khorsand",
+    "GN5CzJAULDU",
+  ],
+  [
+    "shadow-wall",
+    2560,
+    2560,
+    "Afternoon shadow",
+    "A white wall with small windows, half in shadow",
+    "Allan Rolim",
+    "XRJ23hDjo-8",
+  ],
+  [
+    "lone-pine",
+    2560,
+    1707,
+    "Lone pine",
+    "A single pine on a snowy field",
+    "Cristina Gottardi",
+    "4L-AyDJM-yM",
+  ],
+  [
+    "misty-forest",
+    2560,
+    1440,
+    "Misty forest",
+    "A forested slope fading into mist",
+    "Adrien Olichon",
+    "yH3YvNlf4VA",
+  ],
+  [
+    "cloud-peak",
+    2560,
+    1707,
+    "Cloud peak",
+    "A dark peak under low cloud",
+    "Nik Iurev",
+    "7h82oLj3GA0",
+  ],
+  [
+    "blue-ridges",
+    2560,
+    1440,
+    "Blue ridges",
+    "Layered mountain ridges under a cyan sky",
+    "Nidheesh Kavalan",
+    "Ha501MB_XE8",
+  ],
+  [
+    "green-hill",
+    2560,
+    1440,
+    "Green hill",
+    "A green hill under a clear blue sky",
+    "Chris Barbalis",
+    "doicC_ATzkQ",
+  ],
+  [
+    "pink-summit",
+    2560,
+    1707,
+    "Pink summit",
+    "A mountain rises from pink haze",
+    "abednego s g",
+    "h7FysA92Jww",
+  ],
+  [
+    "beach-palm",
+    2560,
+    3840,
+    "Palm and sand",
+    "A lone palm leans over a pale beach",
+    "Faisal Sultan",
+    "2FshIx29IIs",
+  ],
+  [
+    "dunes",
+    2560,
+    1707,
+    "Dunes",
+    "Smooth sand dunes under a light sky",
+    "Willian Justen de Vasconcellos",
+    "jOF2TFSNxQI",
+  ],
+  [
+    "open-sea",
+    2560,
+    1707,
+    "Open sea",
+    "A calm deep blue sea under a pale sky",
+    "Thomas Vimare",
+    "IZ01rjX0XQA",
+  ],
+  [
+    "golden-calm",
+    2560,
+    1440,
+    "Golden calm",
+    "Long exposure of a calm sea at sunset",
+    "Jonathan Bean",
+    "ywnnwzcdR5o",
+  ],
+  [
+    "horizon",
+    2560,
+    600,
+    "Horizon",
+    "A wide band of calm sea at sunset",
+    "Jonathan Bean",
+    "ywnnwzcdR5o",
+  ],
+  [
+    "sailboat",
+    2560,
+    1707,
+    "Evening sail",
+    "A small sailboat on a calm, deep blue sea at sunset",
+    "Benoît Deschasaux",
+    "XA8xxmPdMZY",
+  ],
+  [
+    "sea-and-sky",
+    2560,
+    3840,
+    "Sea and sky",
+    "A wide sky over a teal sea",
+    "Rafael Rodrigues",
+    "OQsqFTw_IRE",
+  ],
+  [
+    "shoreline",
+    2560,
+    1440,
+    "Shoreline",
+    "Soft waves run up a sandy shore",
+    "Jonathan Borba",
+    "sbbz1dRfrxE",
+  ],
+  [
+    "dusk-beach",
+    2560,
+    1707,
+    "Dusk beach",
+    "Waves on a beach at dusk with islands on the horizon",
+    "Kikki Starr",
+    "4_3irkYalTY",
+  ],
+  [
+    "table-still-life",
+    2560,
+    1707,
+    "Table still life",
+    "A vase, a pear and grapes on a white cloth",
+    "Mary Skrynnikova",
+    "sE0gmFKBovY",
+  ],
+  [
+    "monstera",
+    2560,
+    2560,
+    "Monstera",
+    "A monstera leaf in a glass vase",
+    "Sarah Dorweiler",
+    "m2J105CzEAU",
+  ],
+  [
+    "green-sprig",
+    2560,
+    3200,
+    "Green sprig",
+    "A green sprig in a small white vase",
+    "Ryoji Hayasaka",
+    "pMImt780DDM",
+  ],
+  [
+    "cube-and-squash",
+    2560,
+    2560,
+    "Cube and squash",
+    "A pale cube with a peach and half a squash",
+    "nilufar nattaq",
+    "NAIPi9-_Ebo",
+  ],
+  [
+    "yellow-bloom",
+    2560,
+    3200,
+    "Yellow bloom",
+    "A yellow bloom in a clear glass vase",
+    "Mykola Kolya Korzh",
+    "COkzcCViCNg",
+  ],
+  [
+    "arch-room",
+    2560,
+    3840,
+    "Arch room",
+    "A white arched room with a low sofa",
+    "Inside Weather",
+    "Uxqlfigh6oE",
+  ],
+  [
+    "grey-lounge",
+    2560,
+    1440,
+    "Grey lounge",
+    "A pale living room with a low sofa and shelves",
+    "Kam Idris",
+    "U39FPHKfDu0",
+  ],
+  [
+    "empty-room",
+    2560,
+    1707,
+    "Empty room",
+    "A wooden ladder, a white chair and a plant in an empty room",
+    "Andrew Neel",
+    "DLD5LvnFblU",
+  ],
+  [
+    "snow-walk",
+    2560,
+    3840,
+    "Snow walk",
+    "A person walks across a white snowfield",
+    "Émile Séguin",
+    "R9OueKOtGGU",
+  ],
+  [
+    "rock-edge",
+    2560,
+    3200,
+    "On the edge",
+    "A person stands on a dark rock edge",
+    "Olivia Hutcherson",
+    "-EIpkzVxrhQ",
+  ],
+  [
+    "fog-road",
+    2560,
+    3840,
+    "Into the fog",
+    "A figure walks down a road into fog",
+    "Warren",
+    "uuVguyksViA",
+  ],
 ] as const;
 
-export const photos = marble.map(([id, caption, alt]) => ({
-  id,
-  src: `/images/marble-${id}.webp`,
-  alt,
-  caption,
-  width: 2400,
-  height: 1800,
-}));
+export type PhotoId =
+  | (typeof unsplash)[number][0]
+  | "reuse-api-page"
+  | "re-tile"
+  | "quiet-hills";
 
-const prints = [
-  ["lake", 2400, 1350, "Coral sky", "Coral, sand and blue"],
-  ["night", 1200, 1800, "Blue hour", "Blue, lilac and gold"],
-  ["mountains", 2250, 1500, "Mint and ember", "Mint, blue and orange"],
-  ["coast", 1800, 1800, "Lilac bloom", "Lilac, rose and sea green"],
-  ["woods", 3150, 1350, "Amber", "A wide crop in orange, yellow and blue"],
-  ["forest", 1350, 1800, "Sand and fern", "Sand, green and violet"],
-  ["dune", 2400, 1800, "Sea glass", "Sea green, blue and pink"],
-  ["meadow", 2250, 1500, "Dusk", "Periwinkle, peach and green"],
-  ["mountains", 1350, 1800, "Ember study", "A narrow crop of Mint and ember"],
-  ["coast", 2400, 1350, "Lilac shore", "Lilac, rose and sea green"],
-  ["night", 2400, 1800, "Gold edge", "Blue, lilac and gold"],
-  ["woods", 1800, 1800, "Amber square", "Orange, yellow and blue"],
-] as const;
-
-/** Marble photos in mixed proportions, for layouts that keep each picture's ratio. */
-export const galleryPhotos = prints.map(([id, width, height, title, note]) => {
-  const size = `${width}x${height}`;
-  const photo = photos.find((entry) => entry.id === id);
-  if (!photo) throw new Error(`No marble photo "${id}".`);
-  return {
-    id: `${id}-${size}`,
-    src: size === "2400x1800" ? photo.src : `/images/marble-${id}-${size}.webp`,
-    alt: photo.alt,
-    title,
-    note,
+const registry: Photo[] = [
+  ...unsplash.map(([id, width, height, caption, alt, author, slug]) => ({
+    id,
+    src: `/photos/${id}-1280.jpg`,
+    srcSet: files(id, "jpg"),
+    avifSrcSet: files(id, "avif"),
     width,
     height,
-  };
-});
+    alt,
+    caption,
+    author,
+    link: `https://unsplash.com/photos/${slug}`,
+  })),
+  {
+    id: "reuse-api-page",
+    src: "/photos/reuse-api-page-1280.jpg",
+    srcSet: files("reuse-api-page", "jpg"),
+    avifSrcSet: files("reuse-api-page", "avif"),
+    width: 2560,
+    height: 8045,
+    alt: "A full-page screenshot of the Lightbox API reference on reuse.sh",
+    caption: "API reference",
+    author: "Reuse",
+    link: "https://reuse.sh/lightbox/api",
+  },
+  {
+    id: "re-tile",
+    src: "/photos/re-tile-1280.png",
+    srcSet: files("re-tile", "png"),
+    width: 2560,
+    height: 2560,
+    alt: "The Reuse tile, a dark rounded square reading Re:",
+    caption: "Re: tile",
+    author: "Reuse",
+    link: "https://reuse.sh",
+  },
+  {
+    id: "quiet-hills",
+    src: "/photos/quiet-hills.svg",
+    width: 1500,
+    height: 1000,
+    alt: "A flat drawing of green hills under a pale sun",
+    caption: "Quiet hills",
+    author: "Reuse",
+    link: "https://reuse.sh",
+  },
+];
+
+export function photo(id: PhotoId): Photo {
+  const found = registry.find((entry) => entry.id === id);
+  if (!found) throw new Error(`No photo "${id}".`);
+  return found;
+}
+export const photos = (
+  [
+    "pink-summit",
+    "open-sea",
+    "dunes",
+    "lone-pine",
+    "sailboat",
+    "cloud-peak",
+    "dusk-beach",
+    "empty-room",
+  ] as const
+).map(photo);
+export const galleryPhotos = (
+  [
+    "blue-ridges",
+    "snow-walk",
+    "lone-pine",
+    "monstera",
+    "golden-calm",
+    "quiet-stair",
+    "dunes",
+    "dusk-beach",
+    "green-sprig",
+    "shoreline",
+    "table-still-life",
+    "cube-and-squash",
+  ] as const
+).map(photo);

@@ -21,7 +21,7 @@ import {
   type StageOptions,
 } from "@reuse-sh/stage";
 import { type MenuSlug, menuLibrary } from "../../lib/menu";
-import { photos } from "../../lib/photos";
+import { type Photo, photo, photos } from "../../lib/photos";
 import { iconNode } from "../icons";
 import { nativeArrow } from "../lucide-arrows";
 import { buttonVariants } from "../ui/button";
@@ -43,10 +43,22 @@ function target<T extends HTMLElement>(node: T, name: string) {
   return node;
 }
 
-function img(index: number, size?: string) {
+const portraits = [
+  photo("quiet-stair"),
+  photo("green-sprig"),
+  photo("white-court"),
+  photo("yellow-bloom"),
+  photo("garden-wall"),
+  photo("glass-tower"),
+  photo("rock-edge"),
+];
+const pick = (list: Photo[], index: number) => list[index % list.length];
+
+function img(source: Photo) {
   const image = document.createElement("img");
-  const photo = photos[index % photos.length];
-  image.src = size ? photo.src.replace(".webp", `-${size}.webp`) : photo.src;
+  image.src = source.src;
+  image.srcset = source.srcSet ?? "";
+  image.sizes = "240px";
   image.alt = "";
   image.decoding = "async";
   image.draggable = false;
@@ -86,9 +98,15 @@ function settle(...nodes: Element[]) {
 function lightbox(): Scene {
   const tiles = photos
     .slice(0, 6)
-    .map((_, i) => target(el("span", "pk-lb-tile", img(i)), `tile-${i}`));
-  const photo = el("span", "pk-lb-photo", img(1));
-  const incoming = el("span", "pk-lb-photo pk-lb-incoming", img(2));
+    .map((_, i) =>
+      target(el("span", "pk-lb-tile", img(pick(photos, i))), `tile-${i}`),
+    );
+  const photo = el("span", "pk-lb-photo", img(pick(photos, 1)));
+  const incoming = el(
+    "span",
+    "pk-lb-photo pk-lb-incoming",
+    img(pick(photos, 2)),
+  );
   const count = el("span", "pk-lb-count", "2 / 6");
   const close = target(
     el("span", "pk-lb-close", iconNode("close", 11)),
@@ -174,7 +192,7 @@ function carousel(): Scene {
   const viewport = el(
     "div",
     "pk-car-track",
-    ...order.map((i) => el("div", "pk-car-slide", img(i, "2250x1500"))),
+    ...order.map((i) => el("div", "pk-car-slide", img(pick(photos, i)))),
   );
   const dots = order.map(() => el("i"));
   const prev = target(el("button", "pk-car-arrow", arrow("left", 13)), "prev");
@@ -230,8 +248,8 @@ function annotations(): Scene {
   const base = {
     src: photos[2].src,
     alt: "",
-    width: 2400,
-    height: 1800,
+    width: photos[2].width,
+    height: photos[2].height,
   };
   let marks: Annotation[] = [];
   let image: ReturnType<typeof createAnnotatedImage> | undefined;
@@ -351,24 +369,23 @@ function resizable(
 }
 
 function justified(): Scene {
-  const sizes = [
-    "2400x1350",
-    "1350x1800",
-    "2250x1500",
-    "1800x1800",
-    "3150x1350",
-    "1200x1800",
-    "2250x1500",
-    "2400x1350",
+  const pictures = [
+    photo("blue-ridges"),
+    photo("white-court"),
+    photo("dunes"),
+    photo("monstera"),
+    photo("steel-wave"),
+    photo("snow-walk"),
+    photo("sailboat"),
+    photo("shoreline"),
   ];
   const box = el(
     "div",
     "pk-jg",
-    ...sizes.map((size, i) => {
-      const image = img(i, size);
-      const [w, h] = size.split("x");
-      image.width = Number(w);
-      image.height = Number(h);
+    ...pictures.map((picture) => {
+      const image = img(picture);
+      image.width = picture.width;
+      image.height = picture.height;
       return image;
     }),
   );
@@ -397,7 +414,7 @@ function masonry(): Scene {
     "div",
     "pk-mas",
     ...heights.map((height, i) => {
-      const card = el("span", "pk-mas-card", img(i + 2, "1350x1800"));
+      const card = el("span", "pk-mas-card", img(pick(portraits, i + 2)));
       card.style.height = `${height}px`;
       return card;
     }),
@@ -446,7 +463,7 @@ function avatars(): Scene {
     const node = el("span");
     const controller = createAvatar(node, {
       name: people[i],
-      src: photos[i + 1].src,
+      src: `/images/marble-${["mountains", "coast", "forest", "night"][i]}.webp`,
       size: 30,
       badge:
         i === 0
@@ -746,7 +763,7 @@ function shadows(): Scene {
     el(
       "span",
       "pk-sh-card re-shadow-ring-sm",
-      img(5, "2250x1500"),
+      img(pick(photos, 5)),
       el("span", "pk-sh-lines", el("i"), el("i")),
     ),
     "card",
@@ -790,7 +807,7 @@ function gradients(): Scene {
   const photo = el(
     "div",
     "pk-gr-photo",
-    img(4, "2250x1500"),
+    img(pick(photos, 4)),
     scrim(false),
     scrim(true),
     el("span", "pk-gr-tag", "Linear"),
@@ -836,7 +853,7 @@ function gradients(): Scene {
 }
 
 function cursorPreview(): Scene {
-  const names = ["Coral sky", "Mint and ember", "Lilac bloom"];
+  const names = portraits.slice(0, 3).map((picture) => picture.caption);
   const rows = names.map((name, i) =>
     target(
       el(
@@ -848,7 +865,7 @@ function cursorPreview(): Scene {
       `row-${i}`,
     ),
   );
-  const pictures = names.map((_, i) => img(i, "1350x1800"));
+  const pictures = names.map((_, i) => img(pick(portraits, i)));
   const photo = el("span", "pk-cp-photo", ...pictures);
   const list = el("div", "pk-cp-list", ...rows);
   const root = el("div", "pk pk-cp", list, photo);
@@ -925,9 +942,9 @@ function demoStage(): Scene {
       el(
         "span",
         "pk-ds-body",
-        img(0, "1800x1800"),
-        img(3, "1800x1800"),
-        img(6, "1800x1800"),
+        img(photo("monstera")),
+        img(photo("white-grid")),
+        img(photo("cube-and-squash")),
       ),
     ),
     el("div", "pk-ds-pop re-shadow-ring-lg", link),

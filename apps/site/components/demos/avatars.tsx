@@ -1,8 +1,11 @@
 "use client";
 
 import { Avatar, AvatarGroup } from "@reuse-sh/avatars/react";
-import { photos } from "../../lib/photos";
 import { Icon } from "../icons";
+
+const photos = ["lake", "mountains", "coast", "forest", "night", "woods"].map(
+  (id) => ({ src: `/images/marble-${id}.webp` }),
+);
 
 export function AvatarsDemo() {
   return (

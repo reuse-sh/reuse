@@ -3,56 +3,15 @@ import { useCarousel, useCarouselState } from "@reuse-sh/carousel/react";
 import "./controls.css";
 import { useLightbox } from "@reuse-sh/lightbox/react";
 import type { CSSProperties } from "react";
+import { photo } from "@/lib/photos";
 
 const photos = [
-  {
-    id: "night",
-    caption: "Blue hour",
-    alt: "A soft marble texture in blue, lilac and gold",
-    src: "/images/marble-night.webp",
-    width: 2400,
-    height: 1800,
-  },
-  {
-    id: "mountains",
-    caption: "Mint and ember",
-    alt: "A soft marble texture in mint, blue and orange",
-    src: "/images/marble-mountains.webp",
-    width: 2400,
-    height: 1800,
-  },
-  {
-    id: "lake",
-    caption: "Coral sky",
-    alt: "A soft marble texture in coral, sand and blue",
-    src: "/images/marble-lake.webp",
-    width: 2400,
-    height: 1800,
-  },
-  {
-    id: "forest",
-    caption: "Sand and fern",
-    alt: "A soft marble texture in sand, green and violet",
-    src: "/images/marble-forest.webp",
-    width: 2400,
-    height: 1800,
-  },
-  {
-    id: "woods",
-    caption: "Amber",
-    alt: "A soft marble texture in orange, yellow and blue",
-    src: "/images/marble-woods.webp",
-    width: 2400,
-    height: 1800,
-  },
-  {
-    id: "coast",
-    caption: "Lilac bloom",
-    alt: "A soft marble texture in lilac, rose and sea green",
-    src: "/images/marble-coast.webp",
-    width: 2400,
-    height: 1800,
-  },
+  photo("sailboat"),
+  photo("open-sea"),
+  photo("pink-summit"),
+  photo("lone-pine"),
+  photo("cloud-peak"),
+  photo("dunes"),
 ];
 export function Example() {
   const { ref, carousel } = useCarousel({ loop: true, align: "start" });
@@ -69,11 +28,11 @@ export function Example() {
           Print series · October 2026
         </p>
         <h2 className="mt-1.5 text-2xl leading-8 font-semibold tracking-tight text-balance">
-          Six sheets from one tray
+          Six frames from one trip
         </h2>
         <p className="mt-4 max-w-xl text-base leading-7 text-muted-foreground text-pretty">
-          The series started with one tray of water and six colors. These are
-          the sheets we kept, in the order they were pulled.
+          The series started with one trip and a small camera. These are the
+          frames we kept, in the order they were taken.
         </p>
       </article>
       <div className="min-w-0">
@@ -107,6 +66,7 @@ export function Example() {
                   viewer.open(
                     photos.map((item, at) => ({
                       ...item,
+                      srcset: item.srcSet,
                       thumbnailSrc: item.src,
                       origin: tiles?.[at] ?? null,
                     })),
@@ -117,9 +77,11 @@ export function Example() {
                 {/* biome-ignore lint/performance/noImgElement: standalone examples use native images. */}
                 <img
                   src={photo.src}
+                  srcSet={photo.srcSet}
+                  sizes="(max-width: 48rem) 80vw, 22rem"
                   alt={photo.alt}
-                  width={2400}
-                  height={1800}
+                  width={photo.width}
+                  height={photo.height}
                   draggable={false}
                 />
               </a>

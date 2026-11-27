@@ -21,8 +21,9 @@ export function Example() {
             viewer.open(
               galleryPhotos.map((item, at) => ({
                 src: item.src,
+                srcset: item.srcSet,
                 alt: item.alt,
-                caption: item.title,
+                caption: item.caption,
                 width: item.width,
                 height: item.height,
                 thumbnailSrc: item.src,
@@ -36,6 +37,8 @@ export function Example() {
           <img
             className="re-justified-media rounded-frame bg-media"
             src={photo.src}
+            srcSet={photo.srcSet}
+            sizes="(max-width: 48rem) 50vw, 300px"
             alt={photo.alt}
             width={photo.width}
             height={photo.height}
