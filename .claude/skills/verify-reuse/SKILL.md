@@ -20,7 +20,7 @@ node .claude/skills/verify-reuse/verify.mjs <command>
 | `map` | Compares `features.json` with the route files and the sitemap |
 | `stop` | Stops the server `start` launched |
 
-`check` options: `--out <dir>`, `--width <px>` (default 1280), `--height <px>`, `--block <url glob>` to fail matching requests, `--click <locator>` (repeatable) to click once the page is ready and wait 1.2s before the screenshot, such as a gallery image that opens the lightbox, `--audit` to write `<id>.audit.json` next to each screenshot, `--focus` (with `--audit`) to tab through the page and list focused elements with no outline or shadow, `--viewport` for a viewport-sized screenshot, `--reduced-motion`, `--jobs <n>`.
+`check` options: `--out <dir>`, `--width <px>` (default 1280), `--height <px>`, `--block <url glob>` to fail matching requests, `--click <locator>` (repeatable) to click once the page is ready and wait 1.2s before the screenshot, such as a gallery image that opens the lightbox, `--audit` to write `<id>.audit.json` next to each screenshot, `--focus` (with `--audit`) to tab through the page and list focused elements with no outline or shadow, `--viewport` for a viewport-sized screenshot, `--element <locator>` to capture only the first matching element, such as `[data-slot=example-preview]`, `--scale <n>` for the device pixel ratio, `--reduced-motion`, `--jobs <n>`.
 
 A page error, a console error, a failed request for the site's own assets or an unexpected status fails the feature.
 

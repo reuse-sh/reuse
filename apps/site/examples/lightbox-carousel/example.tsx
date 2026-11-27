@@ -4,6 +4,7 @@ import { connectCarousel } from "@reuse-sh/lightbox/carousel";
 import { useLightbox } from "@reuse-sh/lightbox/react";
 import { useEffect, useRef } from "react";
 import { ArrowIcon } from "@/components/lucide-arrows";
+import { Picture } from "@/components/picture";
 import { Button } from "@/components/ui/button";
 import { photos } from "@/lib/photos";
 import "./strip.css";
@@ -63,7 +64,7 @@ export function Example() {
       </div>
       <section
         ref={ref}
-        className="re-carousel re-lc-strip"
+        className="re-carousel re-lc-strip -me-8 pe-8"
         aria-label="Photos"
       >
         {photos.map((photo, index) => (
@@ -74,19 +75,13 @@ export function Example() {
             data-carousel-slide
             onClick={() => viewer.open(opened, index)}
           >
-            {/* biome-ignore lint/performance/noImgElement: standalone examples use native images. */}
-            <img
+            <Picture
+              photo={photo}
               ref={(image) => {
                 images.current[index] = image;
               }}
               className="aspect-landscape w-full rounded-lg bg-media object-cover"
-              src={photo.src}
-              srcSet={photo.srcSet}
               sizes="(max-width: 48rem) 50vw, 200px"
-              alt={photo.alt}
-              width={photo.width}
-              height={photo.height}
-              draggable={false}
             />
             <span className="text-label font-medium">{photo.caption}</span>
           </button>

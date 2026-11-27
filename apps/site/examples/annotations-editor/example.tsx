@@ -26,8 +26,8 @@ export function Example() {
         annotations={annotations}
         onChange={setAnnotations}
       />
-      <div className="re-saved overflow-hidden rounded-control bg-card shadow-raised">
-        <p className="re-saved-head flex justify-between px-3.5 pt-2.5 text-caption text-subtle-foreground">
+      <div className="re-saved border-t border-border pt-4">
+        <p className="re-saved-head flex justify-between text-caption text-subtle-foreground">
           <b className="re-saved-label text-foreground font-semibold">Saved</b>
           <span aria-live="polite">
             {annotations.length === 1
@@ -35,7 +35,7 @@ export function Example() {
               : `${annotations.length} marks`}
           </span>
         </p>
-        <pre className="re-saved-code my-3 max-h-36 px-3.5 pt-2 pb-3.5 overflow-auto font-mono text-caption whitespace-pre-wrap break-all text-muted-foreground">
+        <pre className="re-saved-code mt-2 max-h-36 overflow-auto font-mono text-caption whitespace-pre-wrap break-all text-muted-foreground">
           <code>{saved}</code>
         </pre>
       </div>

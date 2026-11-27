@@ -1,32 +1,10 @@
 @reference "../../app/globals.css";
 @layer components {
   .re-product {
-    grid-template-columns: minmax(0, 1.08fr) minmax(0, 1fr);
+    grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr);
   }
   .re-sizes {
     --re-highlight-radius: var(--radius-control);
-  }
-  .re-photo {
-    @apply relative block p-0 overflow-hidden border-0 rounded-control bg-media cursor-zoom-in;
-  }
-  .re-photo::after {
-    content: "";
-    @apply absolute inset-0;
-    border-radius: inherit;
-    box-shadow: inset 0 0 0 1px
-      color-mix(in srgb, var(--foreground) 5%, transparent);
-    @apply pointer-events-none;
-  }
-  .re-photo img {
-    @apply w-full h-full object-cover;
-  }
-  .re-photo[hidden] {
-    @apply hidden;
-  }
-
-  .re-thumbs .re-photo {
-    aspect-ratio: 1;
-    @apply rounded-lg;
   }
   .re-crumb span {
     @apply mt-0 mr-1 mb-0 ml-1;
@@ -55,7 +33,6 @@
   @media (max-width: 600px) {
     .re-product {
       grid-template-columns: 1fr;
-      @apply gap-6;
     }
   }
 }

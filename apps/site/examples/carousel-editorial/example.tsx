@@ -3,6 +3,7 @@ import { useCarousel, useCarouselState } from "@reuse-sh/carousel/react";
 import "./controls.css";
 import { useLightbox } from "@reuse-sh/lightbox/react";
 import type { CSSProperties } from "react";
+import { Picture } from "@/components/picture";
 import { photo } from "@/lib/photos";
 
 const photos = [
@@ -38,7 +39,7 @@ export function Example() {
       <div className="min-w-0">
         <section
           ref={ref}
-          className="re-carousel gap-3.5 pr-4 scroll-p-0"
+          className="re-carousel gap-3.5 -me-8 pe-8 scroll-p-0"
           aria-label="Photos"
         >
           {photos.map((photo, index) => (
@@ -74,16 +75,7 @@ export function Example() {
                   );
                 }}
               >
-                {/* biome-ignore lint/performance/noImgElement: standalone examples use native images. */}
-                <img
-                  src={photo.src}
-                  srcSet={photo.srcSet}
-                  sizes="(max-width: 48rem) 80vw, 22rem"
-                  alt={photo.alt}
-                  width={photo.width}
-                  height={photo.height}
-                  draggable={false}
-                />
+                <Picture photo={photo} sizes="(max-width: 48rem) 80vw, 22rem" />
               </a>
               <figcaption className="mt-2.5 text-sm leading-5">
                 {photo.caption}

@@ -81,4 +81,4 @@ The photos in apps/site/public/photos come from Unsplash and are used under the 
 - rock-edge: Olivia Hutcherson, https://unsplash.com/photos/-EIpkzVxrhQ, Unsplash License
 - fog-road: Warren, https://unsplash.com/photos/uuVguyksViA, Unsplash License
 
-reuse-api-page, re-tile and quiet-hills in the same folder are made for this site and fall under its MIT license.
+reuse-api-page, reuse-settings-page, re-tile and quiet-hills in the same folder are made for this site and fall under its MIT license.

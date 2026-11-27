@@ -1,6 +1,7 @@
 "use client";
 import { useLightbox } from "@reuse-sh/lightbox/react";
 import { useRef } from "react";
+import { Picture } from "@/components/picture";
 import { galleryPhotos } from "@/lib/photos";
 import { cn } from "@/lib/utils";
 
@@ -53,7 +54,7 @@ export function Example() {
   }));
   let first = 0;
   return (
-    <div className="flex w-full min-w-0 flex-col gap-1.5 overflow-hidden rounded-2xl bg-card p-4 shadow-panel max-sm:px-3">
+    <div className="flex w-full min-w-0 flex-col gap-1.5">
       {thread.map((message, at) => {
         const start = first;
         first += message.photos?.length ?? 0;
@@ -86,19 +87,14 @@ export function Example() {
               }
               onClick={() => viewer.open(opened, index)}
             >
-              {/* biome-ignore lint/performance/noImgElement: standalone examples use native images. */}
-              <img
+              <Picture
+                photo={photo}
                 className="h-full w-full object-cover"
-                src={photo.src}
-                srcSet={photo.srcSet}
                 sizes="(max-width: 48rem) 50vw, 300px"
                 alt=""
-                width={photo.width}
-                height={photo.height}
-                draggable={false}
               />
               {more ? (
-                <span className="absolute inset-0 grid place-items-center bg-scrim/50 text-lg font-semibold text-primary-foreground">
+                <span className="absolute inset-0 grid place-items-center bg-scrim/60 text-lg font-semibold text-overlay-foreground">
                   +{hidden}
                 </span>
               ) : null}

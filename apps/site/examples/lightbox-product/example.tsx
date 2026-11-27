@@ -1,60 +1,42 @@
 "use client";
 import { createMovingHighlight } from "@reuse-sh/interactions";
-import { createLightbox, type LightboxItem } from "@reuse-sh/lightbox";
+import { bindLightboxGallery } from "@reuse-sh/lightbox";
+import { useLightbox } from "@reuse-sh/lightbox/react";
 import { type ReactNode, useEffect, useRef, useState } from "react";
+import { Picture } from "@/components/picture";
 import { Button } from "@/components/ui/button";
+import { type Photo, photo } from "@/lib/photos";
 import { cn } from "@/lib/utils";
 import "./mechanics.css";
-import { photo } from "@/lib/photos";
 
-const photos = [
-  photo("pink-summit"),
-  photo("open-sea"),
-  photo("dunes"),
-  photo("lone-pine"),
-  photo("sailboat"),
-  photo("cloud-peak"),
-];
-const [lake, mountains, coast, , , woods] = photos;
-type Photo = (typeof photos)[number];
+const cover = photo("pink-summit");
+const views = [photo("open-sea"), photo("cloud-peak"), photo("dunes")];
 
-function PhotoButton({
+function PhotoLink({
   photo,
+  sizes,
   className,
-  hidden,
-  children,
 }: {
   photo: Photo;
+  sizes: string;
   className?: string;
-  hidden?: boolean;
-  children?: ReactNode;
 }) {
   return (
     <a
       href={photo.src}
-      className={cn("re-photo", className)}
-      data-photo={photo.id}
+      className={cn(
+        "block overflow-hidden bg-media cursor-zoom-in focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ring",
+        className,
+      )}
       aria-label={`Open ${photo.caption}`}
-      hidden={hidden}
-      tabIndex={hidden ? -1 : undefined}
+      data-lightbox-caption={photo.caption}
     >
-      {/* biome-ignore lint/performance/noImgElement: photos are served as is; the lightbox reads the rendered image as its origin. */}
-      <img
-        src={photo.src}
-        srcSet={photo.srcSet}
-        sizes="(max-width: 48rem) 75vw, 300px"
-        alt={photo.alt}
-        width={photo.width}
-        height={photo.height}
-        loading="lazy"
-        draggable={false}
-      />
-      {children}
+      <Picture photo={photo} sizes={sizes} className="size-full object-cover" />
     </a>
   );
 }
 
-function PhotoLightbox({
+function Gallery({
   className,
   children,
 }: {
@@ -62,55 +44,12 @@ function PhotoLightbox({
   children: ReactNode;
 }) {
   const root = useRef<HTMLDivElement>(null);
+  const lightbox = useLightbox({ thumbnails: "bottom" });
   useEffect(() => {
-    const node = root.current;
-    if (!node) return;
-    const lightbox = createLightbox({
-      thumbnails: "bottom",
-    });
-    const onClick = (event: MouseEvent) => {
-      const target = event.target;
-      if (!(target instanceof Element)) return;
-      const trigger = target.closest<HTMLElement>("[data-photo]");
-      if (!trigger || !node.contains(trigger)) return;
-      if (
-        event.button !== 0 ||
-        event.metaKey ||
-        event.ctrlKey ||
-        event.shiftKey ||
-        event.altKey
-      )
-        return;
-      event.preventDefault();
-      const group = trigger.closest("[data-photo-group]") ?? node;
-      const triggers = [...group.querySelectorAll<HTMLElement>("[data-photo]")];
-      const items = triggers.map((button): LightboxItem => {
-        const photo =
-          photos.find((entry) => entry.id === button.dataset.photo) ??
-          photos[0];
-        const image = button.querySelector("img");
-        return {
-          src: photo.src,
-          srcset: photo.srcSet,
-          alt: photo.alt,
-          caption: photo.caption,
-          width: photo.width,
-          height: photo.height,
-          thumbnailSrc: photo.src,
-          previewSrc: image?.currentSrc || photo.src,
-          origin: button.hidden ? null : image,
-        };
-      });
-      lightbox.open(items, triggers.indexOf(trigger));
-    };
-    node.addEventListener("click", onClick);
-    return () => {
-      node.removeEventListener("click", onClick);
-      lightbox.destroy();
-    };
-  }, []);
+    if (root.current) return bindLightboxGallery(root.current, lightbox);
+  }, [lightbox]);
   return (
-    <div ref={root} data-gallery="" className={className}>
+    <div ref={root} className={className}>
       {children}
     </div>
   );
@@ -211,33 +150,35 @@ function ProductOptions() {
 
 export function Example() {
   return (
-    <div className="re-example w-full min-w-0">
-      <div className="re-product grid gap-9 max-sm:gap-6">
-        <PhotoLightbox className="re-shots">
-          <div data-photo-group>
-            <PhotoButton
-              photo={lake}
-              className="re-shot-main w-full aspect-portrait"
+    <div className="re-example re-product grid min-h-demo w-full min-w-0">
+      <Gallery className="relative min-h-80">
+        <PhotoLink
+          photo={cover}
+          sizes="(max-width: 600px) 100vw, 400px"
+          className="absolute inset-0"
+        />
+        <div className="absolute bottom-4 left-4 flex gap-2">
+          {views.map((view) => (
+            <PhotoLink
+              key={view.id}
+              photo={view}
+              sizes="96px"
+              className="size-12 rounded-control shadow-control ring-2 ring-card"
             />
-            <div className="re-thumbs grid grid-cols-3 gap-1.5 mt-1.5">
-              {[mountains, woods, coast].map((photo) => (
-                <PhotoButton key={photo.id} photo={photo} />
-              ))}
-            </div>
-          </div>
-        </PhotoLightbox>
-        <div className="re-info flex flex-col pt-1.5">
-          <p className="re-crumb text-caption text-subtle-foreground">
-            Prints <span>/</span> Landscape
-          </p>
-          <h2 className="re-title mt-2 text-2xl leading-8 font-semibold tracking-tight">
-            {lake.caption} print
-          </h2>
-          <ProductOptions />
-          <p className="re-note mt-2.5 text-caption text-subtle-foreground text-center">
-            Ships flat between two boards in 3 to 5 days.
-          </p>
+          ))}
         </div>
+      </Gallery>
+      <div className="re-info flex flex-col self-center p-8 max-sm:p-6">
+        <p className="re-crumb text-caption text-subtle-foreground">
+          Prints <span>/</span> Landscape
+        </p>
+        <h2 className="re-title mt-2 text-2xl leading-8 font-semibold tracking-tight">
+          {cover.caption} print
+        </h2>
+        <ProductOptions />
+        <p className="re-note mt-2.5 text-caption text-subtle-foreground text-center">
+          Ships flat between two boards in 3 to 5 days.
+        </p>
       </div>
     </div>
   );

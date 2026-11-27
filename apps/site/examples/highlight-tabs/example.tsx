@@ -62,8 +62,8 @@ export function HighlightTabs() {
     document.getElementById(`x-tab-${next}`)?.focus();
   };
   return (
-    <div className="overflow-hidden rounded-2xl bg-card shadow-panel re-highlight-tabs-x-app-tabs">
-      <header className="px-5 pt-5 border-b border-border">
+    <div className="re-highlight-tabs-x-app-tabs">
+      <header className="border-b border-border">
         <h2 className="text-subsection leading-6.5 font-semibold tracking-tight">
           Spring catalogue
         </h2>
@@ -95,7 +95,7 @@ export function HighlightTabs() {
         id="re-highlight-tabs-x-tab-panel"
         role="tabpanel"
         aria-labelledby={`x-tab-${selected}`}
-        className="min-h-24 px-5 pt-4.5 pb-5.5 text-ui leading-5.5 text-muted-foreground"
+        className="min-h-24 pt-4.5 text-ui leading-5.5 text-muted-foreground"
       >
         {tabs[selected][1]}
       </div>

@@ -699,8 +699,8 @@ export const libraries: Library[] = [
           {
             path: "examples/review-notes",
             title: "Review notes",
-            lead: "Feedback on a print proof, with all six kinds of mark. Read-only, as a reviewer would send it.",
-            build: "read-only review notes on an image",
+            lead: "Notes on a screenshot, the way documentation points at one part of an interface. Read-only, as a reviewer would send them.",
+            build: "read-only review notes on a screenshot",
           },
           {
             path: "examples/editor",

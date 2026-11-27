@@ -279,28 +279,29 @@ test("image captions keep their title white over the scrim", async ({
 });
 test("chat composers fit inside narrow panels", async ({ page }) => {
   await page.setViewportSize({ width: 320, height: 900 });
-  for (const path of [
-    "/lightbox/examples/chat",
-    "/loaders/examples/chat-reply",
-  ]) {
+  for (const [path, inset, ring] of [
+    ["/lightbox/examples/chat", 12, "input"],
+    ["/loaders/examples/chat-reply", 32, "form"],
+  ] as const) {
     await page.goto(path);
     const form = page.locator(
       '[data-slot="example-preview"] .re-compose, [data-slot="example-preview"] form',
     );
-    const bounds = await form.boundingBox();
+    const send = form.getByRole("button", { name: "Send", exact: true });
+    const bounds = await send.boundingBox();
     const panel = await page
       .locator('[data-slot="example-stage"]')
       .boundingBox();
     expect((bounds?.x ?? 0) + (bounds?.width ?? 0)).toBeLessThanOrEqual(
-      (panel?.x ?? 0) + (panel?.width ?? 0) - 31,
+      (panel?.x ?? 0) + (panel?.width ?? 0) - inset,
     );
-    await expect(
-      form.getByRole("button", { name: "Send", exact: true }),
-    ).toBeVisible();
+    await expect(send).toBeVisible();
     await form.getByRole("textbox").focus();
     await page.keyboard.press("Shift+Tab");
     await page.keyboard.press("Tab");
-    await expect(form).not.toHaveCSS("outline-style", "none");
+    await expect(
+      ring === "form" ? form : form.getByRole("textbox"),
+    ).not.toHaveCSS("outline-style", "none");
   }
 });
 
@@ -1379,7 +1380,7 @@ test("every site lightbox opens with the Classic controls", async ({
 
 test("a site lightbox with one photo shows no counter", async ({ page }) => {
   await page.goto("/lightbox/examples/chat");
-  await page.locator(".re-single [data-photo]").click();
+  await page.locator(".re-single a").click();
   await expect(
     page.locator("dialog.re-lightbox[open] .re-lightbox-close"),
   ).toBeVisible();

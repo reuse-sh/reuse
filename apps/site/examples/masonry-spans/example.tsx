@@ -1,5 +1,6 @@
 "use client";
 import { Masonry } from "@reuse-sh/gallery/react";
+import { Picture } from "@/components/picture";
 import { galleryPhotos } from "@/lib/photos";
 import "./cards.css";
 
@@ -17,15 +18,11 @@ export function Example() {
           key={photo.id}
           className={photo === featured ? "@sm:col-span-2" : undefined}
         >
-          {/* biome-ignore lint/performance/noImgElement: standalone examples use native images. */}
-          <img
-            className="block h-auto w-full rounded-frame bg-media"
-            src={photo.src}
-            srcSet={photo.srcSet}
+          <Picture
+            photo={photo}
+            className="block h-auto w-full rounded-control bg-media"
             sizes="(max-width: 48rem) 100vw, 400px"
             alt=""
-            width={photo.width}
-            height={photo.height}
           />
           <h3 className="mt-2.5 text-ui font-medium text-foreground">
             {photo.caption}

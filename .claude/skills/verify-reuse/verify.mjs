@@ -434,8 +434,9 @@ async function audit(page) {
         const style = getComputedStyle(node);
         if (style.backgroundImage !== "none") return undefined;
         const color = parse(style.backgroundColor);
-        if (color && color.a >= 0.95) return color;
-        if (color && color.a > 0) return undefined;
+        if (!color) return undefined;
+        if (color.a >= 0.95) return color;
+        if (color.a > 0) return undefined;
       }
       return { r: 255, g: 255, b: 255, a: 1 };
     };
@@ -556,11 +557,13 @@ async function check(args) {
   const clicks = optionsOf(args, "--click");
   const doAudit = args.includes("--audit");
   const full = !args.includes("--viewport");
+  const element = optionOf(args, "--element");
   mkdirSync(out, { recursive: true });
   const { chromium } = await import("@playwright/test");
   const browser = await chromium.launch();
   const context = await browser.newContext({
     viewport: { width, height },
+    deviceScaleFactor: Number(optionOf(args, "--scale") ?? 1),
     reducedMotion: args.includes("--reduced-motion")
       ? "reduce"
       : "no-preference",
@@ -668,7 +671,17 @@ async function check(args) {
           for (const [kind, count] of Object.entries(counts))
             console.log(`warn ${feature.id} ${kind} ${count}`);
         }
-        await page.screenshot({ path: shot, fullPage: full, timeout: 30_000 });
+        if (element)
+          await page
+            .locator(element)
+            .first()
+            .screenshot({ path: shot, timeout: 30_000 });
+        else
+          await page.screenshot({
+            path: shot,
+            fullPage: full,
+            timeout: 30_000,
+          });
       } catch (error) {
         errors.push(error.message.split("\n")[0]);
         await page

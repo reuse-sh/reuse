@@ -45,8 +45,8 @@ export function Example() {
   };
 
   return (
-    <div className="grid grid-cols-1 w-full max-w-140 overflow-hidden rounded-2xl bg-card shadow-panel">
-      <div className="grid min-h-75 content-end gap-4.5 px-4 py-4.5">
+    <div className="grid grid-cols-1 gap-4 w-full max-w-140">
+      <div className="grid min-h-75 content-end gap-4.5">
         {shown.map(({ position, pair: [question, answer] }, index) => {
           const pending = thinking && index === shown.length - 1;
           return (
@@ -69,7 +69,7 @@ export function Example() {
         })}
       </div>
       <form
-        className="mx-3 mb-3 flex items-center gap-2 rounded-2xl py-1 pr-1 pl-3.5 shadow-ring has-[input:focus-visible]:outline-2 has-[input:focus-visible]:outline-offset-2 has-[input:focus-visible]:outline-ring"
+        className="flex items-center gap-2 rounded-2xl py-1 pr-1 pl-3.5 shadow-ring has-[input:focus-visible]:outline-2 has-[input:focus-visible]:outline-offset-2 has-[input:focus-visible]:outline-ring"
         onSubmit={send}
       >
         <input

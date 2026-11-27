@@ -166,10 +166,10 @@ export function NavigationList() {
   const [current, setCurrent] = useState(0);
   const [, label, summary] = pages[current];
   return (
-    <div className="overflow-hidden rounded-2xl bg-card shadow-panel flex min-h-75 max-md:flex-col">
+    <div className="flex min-h-75 max-md:flex-col">
       <nav
         aria-label="Workspace"
-        className="w-55 shrink-0 py-3.5 px-2 bg-secondary border-r border-border max-md:w-full max-md:border-r-0 max-md:border-b"
+        className="w-55 shrink-0 pe-3 border-r border-border max-md:w-full max-md:pe-0 max-md:pb-3 max-md:border-r-0 max-md:border-b"
       >
         <p className="px-4 pt-0.5 pb-1.5 text-label font-semibold">
           Ink and Paper
@@ -201,7 +201,10 @@ export function NavigationList() {
           ))}
         </MovingHighlight>
       </nav>
-      <section className="min-w-0 flex-1 p-6" aria-live="polite">
+      <section
+        className="min-w-0 flex-1 ps-6 pt-2 max-md:ps-4 max-md:pt-5"
+        aria-live="polite"
+      >
         <h2 className="text-subsection leading-6.5 font-semibold tracking-tight">
           {label}
         </h2>
