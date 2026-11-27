@@ -36,7 +36,7 @@ const prints = [
     "dunes",
     photos[2],
     photos[2].caption,
-    "The last frame of the day, once the light had softened.",
+    "The last frame of the trip, smooth sand under a light sky.",
   ],
 ] as const;
 
@@ -70,7 +70,7 @@ export function TooltipLinks() {
             <PrintLink id="sea">{photos[1].caption}</PrintLink> came from the
             ferry an hour later.{" "}
             <PrintLink id="dunes">{photos[2].caption}</PrintLink> was the last,
-            once the light had softened.
+            on the walk back over the sand.
           </p>
           <p
             className="max-w-140 mt-4 text-lead leading-7 text-muted-foreground text-pretty"

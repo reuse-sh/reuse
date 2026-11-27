@@ -10,17 +10,22 @@ const collections = [
     "White walls and blue sky, in a small run.",
     "white-court",
   ],
-  ["gifts", "Gift sets", "Boxed, wrapped and ready to give.", "yellow-bloom"],
+  [
+    "gifts",
+    "Gift sets",
+    "A bloom in a glass vase, wrapped to give.",
+    "yellow-bloom",
+  ],
   [
     "prints",
     "Large prints",
-    "Pulled by hand, one sheet at a time.",
+    "Plaster steps and a vase, printed a metre wide.",
     "quiet-stair",
   ],
   [
     "studio",
     "From the studio",
-    "Test sheets and the ones we kept.",
+    "A green sprig on the sill, shot between jobs.",
     "green-sprig",
   ],
 ] as const;

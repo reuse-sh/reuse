@@ -7,27 +7,42 @@ const groups = [
   [
     "Shop",
     [
+      ["prints", "Prints", "Sand, sea and peaks, signed on the back", "dunes"],
       [
-        "prints",
-        "Prints",
-        "Single sheets, signed on the back",
+        "sets",
+        "Gift sets",
+        "Flowers and a print, ready to give",
+        "yellow-bloom",
+      ],
+      [
+        "still-lifes",
+        "Still lifes",
+        "Fruit and vases on the studio table",
         "table-still-life",
       ],
-      ["sets", "Gift sets", "Three sheets in a folded sleeve", "empty-room"],
-      ["paper", "Paper", "The stock we pull every print on", "dunes"],
     ],
   ],
   [
     "Studio",
     [
-      ["visit", "Visit", "Open on Saturdays from ten", "open-sea"],
+      [
+        "visit",
+        "Visit",
+        "Open on Saturdays, with a sofa to sit on",
+        "grey-lounge",
+      ],
       [
         "classes",
         "Classes",
-        "Two hours, one tray, your own sheet",
-        "cloud-peak",
+        "Two hours in the workroom, your own sheet",
+        "empty-room",
       ],
-      ["journal", "Journal", "Notes from the table", "lone-pine"],
+      [
+        "journal",
+        "Journal",
+        "Notes from the road, the snow and the sea",
+        "lone-pine",
+      ],
     ],
   ],
 ] as const;
