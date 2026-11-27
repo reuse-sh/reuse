@@ -486,6 +486,42 @@ for (const [padding, height] of [
     );
   });
 
+for (const [layout, options, height] of [
+  ["a caption under the photo", {}, 800 - 2 * 24 - 30],
+  ["the bottom strip", { thumbnails: "bottom" }, 800 - 2 * 24 - 30 - 64],
+  ["a side caption", { caption: "side" }, 800 - 2 * 24],
+] as const)
+  test(`theme.css fits a portrait photo above the room ${layout} keeps`, async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 1280, height: 800 });
+    await mount(page, "", ["lightbox/base.css", "lightbox/theme.css"]);
+    await page.evaluate(
+      async ([src, options]) => {
+        const { createLightbox } = await import("/modules/lightbox/index.js");
+        createLightbox({ history: false, ...options }).open(
+          [1, 2].map((n) => ({
+            src,
+            width: 800,
+            height: 1200,
+            caption: `${n}`,
+          })),
+        );
+      },
+      [photo(1), options] as const,
+    );
+    await expect(page.locator("dialog")).toHaveAttribute("data-phase", "open");
+    await expect
+      .poll(async () =>
+        Math.round((await current(page).boundingBox())?.height ?? 0),
+      )
+      .toBe(height);
+    const arrow = await page.locator(".re-lightbox-next").boundingBox();
+    expect(Math.round((arrow?.y ?? 0) + (arrow?.height ?? 0) / 2)).toBe(
+      Math.round((800 - (800 - 2 * 24 - height)) / 2),
+    );
+  });
+
 test("an item type of your own comes back as state.item, the object passed in", async ({
   page,
 }) => {

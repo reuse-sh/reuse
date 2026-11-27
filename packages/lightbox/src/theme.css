@@ -1,7 +1,11 @@
 .re-lightbox {
   --re-lightbox-background: #fcfcfc;
   --re-lightbox-foreground: #1f1f1f;
-  --re-lightbox-muted: #4a4a4a;
+  --re-lightbox-muted: color-mix(
+    in srgb,
+    var(--re-lightbox-foreground) 80%,
+    var(--re-lightbox-background)
+  );
   --re-lightbox-control: #fff;
   --re-lightbox-control-hover: color-mix(
     in srgb,
@@ -63,9 +67,9 @@
     sans-serif
   );
 }
-.re-lightbox *,
-.re-lightbox *::before,
-.re-lightbox *::after {
+.re-lightbox [class*="re-lightbox"],
+.re-lightbox [class*="re-lightbox"]::before,
+.re-lightbox [class*="re-lightbox"]::after {
   box-sizing: border-box;
 }
 .re-lightbox-backdrop {
@@ -83,6 +87,9 @@
   color: inherit;
   font: inherit;
   line-height: 1;
+}
+/* The arrows take their opacity transitions from the phase rules in base.css. */
+.re-lightbox-button:not(.re-lightbox-prev, .re-lightbox-next) {
   transition:
     background-color 150ms ease,
     scale 160ms cubic-bezier(0.23, 1, 0.32, 1),
@@ -108,7 +115,7 @@
 .re-lightbox-button:disabled {
   opacity: calc(0.3 * var(--re-lightbox-chrome-opacity, 1));
 }
-.re-lightbox-close {
+.re-lightbox-button.re-lightbox-close {
   transition:
     background-color 150ms ease,
     scale 160ms cubic-bezier(0.23, 1, 0.32, 1),
@@ -163,10 +170,6 @@
   gap: 10px;
 }
 .re-lightbox-counter {
-  position: fixed;
-  z-index: 2;
-  top: var(--re-lightbox-inset);
-  inset-inline-start: var(--re-lightbox-inset);
   display: flex;
   height: var(--re-lightbox-button-size);
   padding: var(--re-lightbox-counter-padding);
@@ -192,6 +195,9 @@
 }
 .re-lightbox[data-thumbnails="bottom"] {
   --re-lightbox-strip-room: 64px;
+}
+.re-lightbox:has(.re-lightbox-aside > .re-lightbox-caption) {
+  --re-lightbox-caption-room: 0px;
 }
 .re-lightbox-thumbnails {
   gap: var(--re-lightbox-thumbnail-gap);
@@ -238,7 +244,8 @@
     height var(--re-lightbox-ring-duration) ease;
 }
 @media (prefers-reduced-motion: reduce) {
-  .re-lightbox-thumbnail-ring {
+  .re-lightbox-thumbnail-ring,
+  .re-lightbox-thumbnails button {
     transition: none;
   }
 }
@@ -286,6 +293,11 @@
   }
   .re-lightbox[data-thumbnails="bottom"] {
     --re-lightbox-strip-room: 56px;
+  }
+}
+@media (max-height: 479.98px) {
+  .re-lightbox[data-thumbnails="bottom"] {
+    --re-lightbox-strip-room: 0px;
   }
 }
 @media (prefers-reduced-motion: reduce) {

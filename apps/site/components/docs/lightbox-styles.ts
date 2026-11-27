@@ -95,7 +95,7 @@ const rules: readonly (readonly [(o: LightboxStyle) => boolean, string])[] = [
 }
 .re-lightbox-style-toolbar .re-lightbox-button { position: static; box-shadow: none; background: transparent; }
 .re-lightbox-style-toolbar .re-lightbox-button:hover { background: rgb(0 0 0 / 5%); }
-.re-lightbox-style-toolbar .re-lightbox-counter { position: static; display: block; height: auto; min-width: 52px; padding: 0 6px; background: none; box-shadow: none; font-weight: 500; text-align: center; }
+.re-lightbox-style-toolbar .re-lightbox-counter:not([hidden]) { position: static; display: block; height: auto; min-width: 52px; padding: 0 6px; background: none; box-shadow: none; font-weight: 500; text-align: center; }
 .re-lightbox-style-toolbar-divider { width: 1px; height: 20px; margin: 0 4px; background: rgb(0 0 0 / 10%); }`,
   ],
   [
@@ -226,8 +226,9 @@ const rules: readonly (readonly [(o: LightboxStyle) => boolean, string])[] = [
     `.re-lightbox-style .re-lightbox-counter {
   height: auto;
   padding: 0;
-  top: calc(var(--re-lightbox-inset) + 12px);
-  inset-inline-start: calc(var(--re-lightbox-inset) + 4px);
+  position: relative;
+  top: 12px;
+  inset-inline-start: 4px;
   background: none;
   color: rgb(255 255 255 / 60%);
   font-family: ui-monospace, monospace;
@@ -316,12 +317,14 @@ const rules: readonly (readonly [(o: LightboxStyle) => boolean, string])[] = [
   ],
 ];
 
+const reducedMotion = `@media (prefers-reduced-motion: reduce) {
+  .re-lightbox-style, .re-lightbox-style * { transition-duration: 0ms !important; }
+}`;
+
 /** What one style changes on top of the package's theme.css, written against the re-lightbox-style class. */
 export function lightboxStyleCss(options: LightboxStyle) {
-  return rules
-    .filter(([when]) => when(options))
-    .map(([, css]) => css)
-    .join("\n\n");
+  const css = rules.filter(([when]) => when(options)).map(([, rule]) => rule);
+  return css.length ? [...css, reducedMotion].join("\n\n") : "";
 }
 
 /**

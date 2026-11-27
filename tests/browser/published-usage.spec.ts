@@ -105,10 +105,14 @@ for (const [path, recipe] of Object.entries(usageRecipes)) {
       const close = dialog.locator(".re-lightbox-close");
       await expect(close).toHaveCSS("width", "40px");
       await expect(close).toHaveCSS("background-color", "rgb(255, 255, 255)");
-      await expect(dialog.locator(".re-lightbox-counter")).toHaveCSS(
-        "position",
-        "fixed",
-      );
+      const counter = await dialog
+        .locator(".re-lightbox-counter")
+        .boundingBox();
+      expect(
+        [counter?.x, counter?.y, counter?.height].map((n) =>
+          Math.round(n ?? 0),
+        ),
+      ).toEqual([16, 16, 40]);
       const zoomPaths = () =>
         dialog
           .locator(".re-lightbox-zoom path")
