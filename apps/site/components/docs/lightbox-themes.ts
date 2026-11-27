@@ -267,26 +267,21 @@ const pageColors = `.re-lightbox {
   --re-lightbox-page-foreground: var(--foreground);
 }`;
 
-// A theme file styles every .re-lightbox, so a page with several previews scopes each copy
-// to its own class.
-const scoped = (css: string, scope: string) =>
-  css.replace(/\.re-lightbox(?![-\w])/g, `.re-lightbox.${scope}`);
-
-/** A theme or preset preview: its setup as an ES module, its items, and its scoped CSS. */
+/** A theme or preset preview: its setup as an ES module, its items, and its CSS. */
 export function lightboxThemePreview(id: string) {
   const preset = lightboxPresets[id];
   const theme = preset?.theme ?? (id as LightboxTheme);
   if (!(theme in lightboxThemes)) return null;
-  const scope = `re-preview-${id}`;
   const file = readFileSync(
     join(process.cwd(), "public/modules/lightbox/themes", `${theme}.css`),
     "utf8",
   );
-  const css = [file, theme === "page" ? pageColors : "", preset?.css ?? ""]
-    .map((part) => scoped(part, scope))
-    .join("\n");
+  const css = [
+    file,
+    theme === "page" ? pageColors : "",
+    preset?.css ?? "",
+  ].join("\n");
   return {
-    scope,
     css,
     items: previewItems(preset),
     module: `export default (createLightbox, icons, getItems) => {

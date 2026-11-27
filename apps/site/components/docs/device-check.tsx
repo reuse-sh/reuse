@@ -46,8 +46,8 @@ const examples = [
   ["/lightbox/examples/product", "Product page"],
   ["/lightbox/examples/chat", "Chat thread"],
   ["/lightbox/examples/journal", "Journal"],
-  ["/lightbox/controls/immersive", "Immersive controls"],
-  ["/lightbox/themes", "Themes"],
+  ["/lightbox/looks/immersive", "Immersive layout"],
+  ["/lightbox/looks", "Looks"],
   ["/carousel/examples/product-strip", "Carousel product strip"],
 ] as const;
 

@@ -3,8 +3,8 @@ import { GeistMono } from "geist/font/mono";
 import { GeistSans } from "geist/font/sans";
 import type { Metadata } from "next";
 import { Fraunces } from "next/font/google";
-import Script from "next/script";
 import type { ReactNode } from "react";
+import { Analytics } from "../components/analytics";
 
 const fraunces = Fraunces({
   subsets: ["latin"],
@@ -29,21 +29,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
       className={`${GeistSans.variable} ${GeistMono.variable} ${fraunces.variable}`}
     >
       <body>
-        {process.env.NODE_ENV !== "development" && (
-          <Script
-            src="https://cdn.visitors.now/v.js"
-            data-token="f3601f34-d199-43d4-839b-276c7f22650c"
-            data-persist
-            strategy="afterInteractive"
-          />
-        )}
-        {process.env.NODE_ENV !== "development" && (
-          <Script
-            src="https://cloud.umami.is/script.js"
-            data-website-id="6f4fda54-25e2-4b29-adab-cb9bbbfd51fb"
-            strategy="afterInteractive"
-          />
-        )}
+        {process.env.NODE_ENV !== "development" && <Analytics />}
         <a
           className="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-50 focus:rounded-control focus:bg-card focus:px-3 focus:py-2 focus:shadow-raised"
           href="#main"

@@ -98,7 +98,7 @@ for (const viewport of viewports) {
 test("the toolbar preview's counter rolls its digit in the paging direction", async ({
   page,
 }) => {
-  await page.goto("/lightbox/controls/toolbar");
+  await page.goto("/lightbox/looks/toolbar");
   await page.locator('main a[href^="/images/marble"]').nth(1).click();
   const counter = page.locator(
     ".re-lightbox-style-toolbar .re-lightbox-counter",
@@ -141,7 +141,7 @@ test("the toolbar preview's counter rolls its digit in the paging direction", as
 test("the classic preview's corner counter reads 1 / 8 on one line", async ({
   page,
 }) => {
-  await page.goto("/lightbox/controls/classic");
+  await page.goto("/lightbox/looks/classic");
   await page.locator('main a[href^="/images/marble"]').first().click();
   const counter = page.locator(".re-lightbox-counter");
   await expect(counter).toHaveText("1 / 8");
