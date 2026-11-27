@@ -29,7 +29,6 @@ import Loading03Icon from "@hugeicons/core-free-icons/Loading03Icon";
 import Presentation01Icon from "@hugeicons/core-free-icons/Presentation01Icon";
 import ReactIcon from "@hugeicons/core-free-icons/ReactIcon";
 import Share08Icon from "@hugeicons/core-free-icons/Share08Icon";
-import SquareDashedMousePointerIcon from "@hugeicons/core-free-icons/SquareDashedMousePointerIcon";
 import Tick02Icon from "@hugeicons/core-free-icons/Tick02Icon";
 import UserGroupIcon from "@hugeicons/core-free-icons/UserGroupIcon";
 import ZoomInAreaIcon from "@hugeicons/core-free-icons/ZoomInAreaIcon";
@@ -61,7 +60,6 @@ export const iconData = {
   book: BookOpen01Icon,
   code: CodeIcon,
   terminal: ComputerTerminal01Icon,
-  logo: SquareDashedMousePointerIcon,
   copy: Copy01Icon,
   check: Tick02Icon,
   close: Cancel01Icon,

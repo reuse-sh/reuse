@@ -1,6 +1,9 @@
 "use client";
 
-import { createMovingHighlight } from "@reuse-sh/interactions";
+import {
+  createFloatingTooltip,
+  createMovingHighlight,
+} from "@reuse-sh/interactions";
 import { isStageEvent } from "@reuse-sh/stage";
 import { usePathname } from "next/navigation";
 import { type MouseEvent, useEffect, useRef, useState } from "react";
@@ -9,6 +12,7 @@ import { libraryAt } from "../../lib/menu";
 import { DocLink as Link } from "../docs/doc-link";
 import { Icon, type IconName } from "../icons";
 import { focusMenuRow, LibraryMenu } from "./library-menu";
+import { Logo } from "./logo";
 
 const MENU_ID = "library-menu";
 
@@ -31,6 +35,19 @@ export function SiteHeader() {
     return () => {
       for (const controller of controllers) controller.destroy();
     };
+  }, []);
+
+  useEffect(() => {
+    const logo = brand.current?.querySelector<HTMLElement>("[data-re-tooltip]");
+    if (!brand.current || !logo) return;
+    const tooltip = createFloatingTooltip(brand.current, {
+      selector: "[data-re-tooltip]",
+      track: { y: "anchor" },
+      sideOffset: logo.offsetHeight / 2 + 10,
+      tilt: 5,
+      className: "f-tip",
+    });
+    return () => tooltip.destroy();
   }, []);
 
   useEffect(() => {
@@ -105,12 +122,13 @@ export function SiteHeader() {
           ref={brand}
         >
           <Link
-            className="-ml-2 inline-flex h-8 items-center gap-1.5 rounded-lg px-2 text-ui font-semibold tracking-tight text-foreground"
+            className="-ml-2 inline-flex h-8 items-center rounded-lg px-2 text-foreground"
             data-re-row
             href="/"
+            aria-label="Reuse"
+            data-re-tooltip="Reuse · Interface parts for any stack"
           >
-            <Icon name="logo" size={16} />
-            Reuse
+            <Logo />
           </Link>
           <span
             className="mx-0.5 text-body text-foreground/15 max-sm:mx-0"
