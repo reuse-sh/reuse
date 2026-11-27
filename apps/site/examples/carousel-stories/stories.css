@@ -1,0 +1,87 @@
+@reference "../../app/globals.css";
+@layer components {
+  .re-st {
+    @apply overflow-hidden text-overlay-foreground select-none;
+    -webkit-touch-callout: none;
+  }
+  .re-st-strip {
+    --re-carousel-gap: 0px;
+    @apply h-full;
+  }
+  .re-st-bar {
+    @apply sticky start-0 z-1 flex gap-1 self-start px-3 pt-3 pointer-events-none;
+    flex: 0 0 100%;
+    margin-inline-end: -100%;
+  }
+  .re-st-segment {
+    @apply relative h-0.5 flex-1 overflow-hidden rounded-full;
+    background: color-mix(in srgb, var(--overlay-foreground) 40%, transparent);
+  }
+  .re-st-segment::after {
+    content: "";
+    @apply absolute inset-0 bg-overlay-foreground origin-left;
+    transform: scaleX(var(--re-st-fill, 0));
+  }
+  [dir="rtl"] .re-st-segment::after {
+    @apply origin-right;
+  }
+  .re-st-segment[data-state="past"] {
+    --re-st-fill: 1;
+  }
+  .re-st-segment[data-state="current"] {
+    --re-st-fill: var(--re-carousel-autoplay-progress, 0);
+  }
+  .re-st-story {
+    @apply relative m-0 h-full;
+  }
+  .re-st-story::before,
+  .re-st-story::after {
+    content: "";
+    @apply absolute inset-x-0 h-40 pointer-events-none;
+  }
+  .re-st-story::before {
+    @apply top-0;
+    background: linear-gradient(
+      color-mix(in srgb, var(--scrim) 60%, transparent),
+      color-mix(in srgb, var(--scrim) 48%, transparent) 25%,
+      color-mix(in srgb, var(--scrim) 26%, transparent) 50%,
+      color-mix(in srgb, var(--scrim) 9%, transparent) 75%,
+      transparent
+    );
+  }
+  .re-st-story::after {
+    @apply bottom-0;
+    background: linear-gradient(
+      transparent,
+      color-mix(in srgb, var(--scrim) 12%, transparent) 25%,
+      color-mix(in srgb, var(--scrim) 32%, transparent) 50%,
+      color-mix(in srgb, var(--scrim) 53%, transparent) 75%,
+      color-mix(in srgb, var(--scrim) 60%, transparent)
+    );
+  }
+  .re-st-story img {
+    @apply block h-full w-full object-cover;
+  }
+  .re-st-caption {
+    @apply absolute inset-x-4 bottom-4 z-1 text-ui font-medium;
+  }
+  .re-st-taps {
+    @apply absolute inset-0 flex;
+    touch-action: pan-y;
+  }
+  .re-st-tap {
+    @apply h-full border-0 bg-transparent p-0 cursor-pointer;
+  }
+  .re-st-tap:focus-visible {
+    @apply outline-2 -outline-offset-4 outline-overlay-foreground;
+  }
+  .re-st-header {
+    @apply absolute inset-x-0 top-0 flex items-center justify-between gap-3 px-4 pt-6 pointer-events-none;
+  }
+  .re-st-play {
+    @apply -me-2 grid size-10 place-items-center rounded-full border-0 bg-transparent p-0 text-overlay-foreground cursor-pointer pointer-events-auto;
+  }
+  .re-st-play:focus-visible {
+    @apply outline-2 outline-overlay-foreground;
+  }
+}

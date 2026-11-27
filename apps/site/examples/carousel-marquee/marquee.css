@@ -1,0 +1,14 @@
+@reference "../../app/globals.css";
+@layer components {
+  .re-mq-strip {
+    --re-carousel-gap: 3rem;
+    @apply py-2;
+  }
+  .re-mq-strip:focus-visible {
+    @apply outline-2 -outline-offset-2 outline-ring;
+  }
+  .re-mq-logo {
+    @apply flex h-10 items-center whitespace-nowrap text-muted-foreground select-none;
+    flex: 0 0 auto;
+  }
+}

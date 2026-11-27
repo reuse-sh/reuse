@@ -627,21 +627,23 @@ export const libraries: Library[] = [
           {
             path: "examples/coverflow",
             title: "Coverflow",
-            lead: "A looping strip whose covers turn and recede the farther they are from the center, drawn from each slide's --re-carousel-offset.",
+            lead: "A looping strip whose covers turn and recede the farther they are from the center, drawn from each slide's --re-carousel-offset. Click a side cover to bring it to the middle.",
             build:
               "a looping coverflow carousel drawn from --re-carousel-offset",
           },
           {
             path: "examples/marquee",
             title: "Marquee",
-            lead: "A row of logos that runs at 40 px a second and slows while the pointer rests on it. A drag takes the strip, and the run picks up once it settles.",
-            build: "a logo marquee that slows on hover",
+            lead: "A row of logos that runs at 40 px a second and eases down while a mouse rests on it. A drag takes the strip, and the run picks up once it settles.",
+            build:
+              "a logo marquee driven through take() that slows on hover and resumes after a drag",
           },
           {
             path: "examples/stories",
             title: "Stories",
-            lead: "Photo stories that advance on their own, with a progress segment for each. Hold a finger or the mouse button down to pause.",
-            build: "a stories viewer with progress segments and hold to pause",
+            lead: "Photo stories that advance on their own, with a progress segment for each. Hold a finger or the mouse button down to pause, and tap the start side to go back or the rest to go on.",
+            build:
+              "a stories viewer with autoplay progress segments, hold to pause and tap to page",
           },
           {
             path: "examples/product-gallery",

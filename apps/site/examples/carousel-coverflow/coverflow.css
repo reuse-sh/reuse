@@ -1,0 +1,43 @@
+@reference "../../app/globals.css";
+@layer components {
+  .re-cf-strip {
+    --re-carousel-gap: 0px;
+    --re-carousel-slide-width: min(14rem, 52%);
+    --re-cf-dir: 1;
+    @apply py-4;
+  }
+  [dir="rtl"] .re-cf-strip {
+    --re-cf-dir: -1;
+  }
+  .re-cf-strip:focus-visible {
+    @apply outline-2 -outline-offset-2 outline-ring;
+  }
+  .re-cf-slide {
+    --re-cf-near: clamp(-1, var(--re-carousel-offset, 0), 1);
+    --re-cf-far: max(
+      var(--re-carousel-offset, 0),
+      -1 *
+      var(--re-carousel-offset, 0)
+    );
+    position: relative;
+    z-index: calc(100 - var(--re-cf-far) * 10);
+    perspective: 50rem;
+    cursor: pointer;
+  }
+  .re-cf-cover {
+    @apply aspect-square overflow-hidden rounded-control bg-media shadow-raised;
+    transform: translateX(
+        calc(
+          (0.3 * var(--re-cf-near) - 0.7 * var(--re-carousel-offset, 0)) *
+          100% *
+          var(--re-cf-dir)
+        )
+      )
+      rotateY(calc(var(--re-cf-near) * -50deg * var(--re-cf-dir)))
+      scale(calc(1 - min(var(--re-cf-far), 2) * 0.12));
+    opacity: clamp(0, 3.5 - var(--re-cf-far), 1);
+  }
+  .re-cf-cover img {
+    @apply block w-full h-full object-cover;
+  }
+}
