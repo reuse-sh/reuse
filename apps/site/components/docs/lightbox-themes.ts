@@ -307,8 +307,8 @@ const sample = (preset?: Preset) => {
   const file = (name: string) =>
     preset?.square ? `/photos/${name}-square.jpg` : `/photos/${name}.jpg`;
   return `const items = [
-  { src: "${file("coast")}", alt: "A rocky coast", caption: "Coast"${fields(0)} },
-  { src: "${file("forest")}", alt: "A path through a forest", caption: "Forest"${fields(2)} },
+  { src: "${file("sea")}", alt: "A calm open sea", caption: "Open sea"${fields(1)} },
+  { src: "${file("dunes")}", alt: "Sand dunes under a light sky", caption: "Dunes"${fields(2)} },
 ];`;
 };
 
