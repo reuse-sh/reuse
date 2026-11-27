@@ -367,6 +367,33 @@ export const libraries: Library[] = [
               "a conversation where every photo opens in one sequence and an album shows four tiles",
           },
           {
+            path: "examples/portfolio",
+            title: "Portfolio grid",
+            lead: "A masonry grid of 24 photos with a filter by subject. The viewer pages through the photos the filter shows, and Load more adds twelve to it while it is open.",
+            build:
+              "a filtered portfolio grid whose lightbox follows the filter and grows with Load more",
+          },
+          {
+            path: "examples/contact-sheet",
+            title: "Contact sheet",
+            lead: "Sixty numbered frames on one sheet. The viewer keeps them in a column at its side, jumps straight to a distant frame and plays them as a slideshow.",
+            build:
+              "a contact sheet of sixty frames with side thumbnails and a slideshow",
+          },
+          {
+            path: "examples/tall-and-wide",
+            title: "Tall and wide media",
+            lead: "A page-long screenshot, a panorama, a transparent PNG and an SVG drawing. Each opens whole at its own shape, and a zoom shows its real pixels.",
+            build: "a gallery of tall, wide, transparent and vector images",
+          },
+          {
+            path: "examples/mixed-media",
+            title: "Mixed media",
+            lead: "Photos, a video file and a YouTube video in one set. The players come from optional modules, and only the slide on screen plays.",
+            build:
+              "a lightbox that mixes photos, a video file and a YouTube video",
+          },
+          {
             path: "examples/device-check",
             title: "Device check",
             lead: "A checklist for trying the lightbox by hand on an iPhone, an Android phone and a Mac, with the examples to open.",
@@ -595,6 +622,32 @@ export const libraries: Library[] = [
             lead: "A strip of prints that shrinks a little while a mouse drags it, so the press reads as picking the strip up. Touch and trackpads scroll as usual.",
             build:
               "a carousel whose slides shrink slightly while a mouse drags it",
+          },
+          {
+            path: "examples/coverflow",
+            title: "Coverflow",
+            lead: "A looping strip whose covers turn and recede the farther they are from the center, drawn from each slide's --re-carousel-offset.",
+            build:
+              "a looping coverflow carousel drawn from --re-carousel-offset",
+          },
+          {
+            path: "examples/marquee",
+            title: "Marquee",
+            lead: "A row of logos that runs at 40 px a second and slows while the pointer rests on it. A drag takes the strip, and the run picks up once it settles.",
+            build: "a logo marquee that slows on hover",
+          },
+          {
+            path: "examples/stories",
+            title: "Stories",
+            lead: "Photo stories that advance on their own, with a progress segment for each. Hold a finger or the mouse button down to pause.",
+            build: "a stories viewer with progress segments and hold to pause",
+          },
+          {
+            path: "examples/product-gallery",
+            title: "Product gallery",
+            lead: "A main photo strip with thumbnails under it that follow it and move it. A click on the main photo opens the viewer.",
+            build:
+              "a product gallery with a main strip, thumbnails and a lightbox",
           },
         ],
       },
