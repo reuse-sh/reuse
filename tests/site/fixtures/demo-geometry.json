@@ -6,8 +6,8 @@
   },
   {
     "path": "/lightbox/examples/product",
-    "height": 478,
-    "images": [[373.328125, 470], [48, 48], [48, 48], [48, 48]]
+    "height": 328,
+    "images": [[373.328125, 320], [48, 48], [48, 48], [48, 48]]
   },
   {
     "path": "/lightbox/examples/chat",
