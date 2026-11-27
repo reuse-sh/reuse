@@ -31,16 +31,24 @@ export function LightboxLookOpen({ children }: { children: ReactNode }) {
     if (!new URLSearchParams(location.search).has("open")) return;
     let wake: ReturnType<typeof setInterval> | undefined;
     let touched = false;
+    let pressed = false;
     const stop = (event: Event) => {
       if (!event.isTrusted) return;
       touched = true;
+      pressed ||= event.type !== "pointermove";
       clearInterval(wake);
     };
-    const outer = window.frameElement?.ownerDocument.activeElement;
+    const frame = window.frameElement;
+    const page = frame?.ownerDocument;
+    let outer = page?.activeElement;
+    const follow = (event: Event) => {
+      if (event.target !== frame) outer = event.target as Element;
+    };
+    page?.addEventListener("focusin", follow);
     const opened = new MutationObserver(() => {
       if (!document.querySelector("dialog[open]")) return;
       opened.disconnect();
-      returnFocus(outer);
+      if (!pressed) returnFocus(outer);
       if (touched) return;
       // The lightbox reads autoHide once per open, so until the reader moves the frame stands in
       // a mouse that keeps moving. A live autoHide in setOptions would let this go.
@@ -64,6 +72,7 @@ export function LightboxLookOpen({ children }: { children: ReactNode }) {
     for (const type of inputs)
       window.addEventListener(type, stop, { capture: true });
     return () => {
+      page?.removeEventListener("focusin", follow);
       opened.disconnect();
       clearInterval(wake);
       for (const type of inputs)
