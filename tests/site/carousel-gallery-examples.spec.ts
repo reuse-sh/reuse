@@ -26,7 +26,6 @@ function parts(page: Page) {
   };
 }
 
-// The first thumbnail is marked once connectThumbnails has joined the two strips.
 async function openGallery(page: Page) {
   await page.goto(gallery);
   const { thumbnail } = parts(page);
@@ -209,7 +208,6 @@ test("the editorial dots and counter follow the strip", async ({ page }) => {
     name: "Previous slide",
     exact: true,
   });
-  // The editorial strip loops, so its arrows wrap instead of turning off.
   await previous.click();
   await expect(counter).toHaveText("06 / 06");
   await expect(dot("Dunes")).toHaveAttribute("aria-current", "true");

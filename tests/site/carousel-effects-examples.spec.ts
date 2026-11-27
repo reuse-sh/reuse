@@ -15,7 +15,6 @@ function rightToLeft(page: Page) {
   });
 }
 
-// Scroll speed in px per second over the given time; jumps across the loop seam are left out.
 function speed(strip: Locator, ms = 1000) {
   return strip.evaluate(
     (element, duration) =>
@@ -39,7 +38,6 @@ function speed(strip: Locator, ms = 1000) {
 
 test.describe("coverflow", () => {
   const strip = (page: Page) => page.locator(`${preview} .re-cf-strip`);
-  // Each cover's offset, its turn and scale from the computed transform, and where it sits.
   const covers = (page: Page) =>
     strip(page).evaluate((element) => {
       const box = element.getBoundingClientRect();

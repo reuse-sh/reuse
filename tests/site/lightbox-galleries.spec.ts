@@ -8,7 +8,6 @@ const counter = (page: Page) => dialog(page).locator(".re-lightbox-counter");
 const caption = (page: Page) => dialog(page).locator(".re-lightbox-caption");
 const tiles = (page: Page) =>
   page.locator(preview).getByRole("button", { name: /^Open / });
-/** Every tile, also the one the open viewer hides. */
 const gridTiles = (page: Page) => page.locator(".re-portfolio-grid > button");
 const subject = (page: Page, name: string) =>
   page

@@ -84,7 +84,6 @@ test("the panorama opens whole at the screen's width and its zoom stops at the w
   expect(rest.width / rest.height).toBeCloseTo(2560 / 600, 1);
   await dialog(page).locator(".re-lightbox-zoom").click();
   await expect(dialog(page)).toHaveAttribute("data-zoomed", "true");
-  // As high as the viewport would pass the file's 600 pixels, so the zoom stops at 1:1.
   await expect.poll(async () => (await shown(page)).width).toBeCloseTo(2560, 0);
   expect((await shown(page)).height).toBeCloseTo(600, 0);
   await expect(current(page).locator(".re-lightbox-image")).toHaveAttribute(
