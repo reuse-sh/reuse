@@ -265,7 +265,7 @@
 }
 
 @container annot-figure (max-width: 559px) {
-  [data-annot-stage] {
+  [data-re-annotations] [data-annot-stage] {
     padding: 0;
   }
   [data-re-annotations]

@@ -365,6 +365,7 @@ const unsplash = [
 export type PhotoId =
   | (typeof unsplash)[number][0]
   | "reuse-api-page"
+  | "reuse-settings-page"
   | "re-tile"
   | "quiet-hills";
 
@@ -392,6 +393,18 @@ const registry: Photo[] = [
     caption: "API reference",
     author: "Reuse",
     link: "https://reuse.sh/lightbox/api",
+  },
+  {
+    id: "reuse-settings-page",
+    src: "/photos/reuse-settings-page-1280.jpg",
+    srcSet: files("reuse-settings-page", "jpg"),
+    avifSrcSet: files("reuse-settings-page", "avif"),
+    width: 2560,
+    height: 2010,
+    alt: "The Settings row page on reuse.sh: a workspace settings list that ends with a Hold to delete button",
+    caption: "Settings row page",
+    author: "Reuse",
+    link: "https://reuse.sh/hold-to-confirm/examples/settings",
   },
   {
     id: "re-tile",

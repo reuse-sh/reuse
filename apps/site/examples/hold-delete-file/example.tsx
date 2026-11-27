@@ -128,7 +128,7 @@ export function DeleteFile() {
     <div className="grid gap-3 max-w-140" ref={root}>
       {deleted ? (
         <div
-          className="flex items-center justify-between gap-3.5 min-h-18 py-3.5 pr-3.5 pl-4 rounded-xl bg-card shadow-raised text-ui text-muted-foreground"
+          className="flex items-center justify-between gap-3.5 min-h-18 py-3.5 text-ui text-muted-foreground"
           role="status"
         >
           <p>
@@ -146,7 +146,7 @@ export function DeleteFile() {
           </button>
         </div>
       ) : (
-        <div className="flex flex-wrap sm:flex-nowrap [&>span:nth-child(2)]:flex-1 items-center gap-3.5 min-h-18 py-3.5 pr-3.5 pl-4 rounded-xl bg-card shadow-raised">
+        <div className="flex flex-wrap sm:flex-nowrap [&>span:nth-child(2)]:flex-1 items-center gap-3.5 min-h-18 py-3.5">
           <span
             className="grid place-items-center w-10 h-11 rounded-lg bg-muted text-muted-foreground"
             aria-hidden="true"

@@ -174,7 +174,7 @@ lightbox.destroy();`,
         blocks: [
           {
             kind: "prose",
-            text: "Use one item list for the product hero and its detail images. Open the clicked index and enable thumbnails so people can inspect each view without leaving the viewer.",
+            text: "Put the product hero and its detail images in one gallery. A click opens that image, and thumbnails let people inspect each view without leaving the viewer.",
           },
           {
             kind: "code",
@@ -182,27 +182,22 @@ lightbox.destroy();`,
             language: "tsx",
             code: `"use client";
 
+import { bindLightboxGallery } from "@reuse-sh/lightbox";
 import { useLightbox } from "@reuse-sh/lightbox/react";
+import { useEffect, useRef } from "react";
 
 export function ProductGallery() {
+  const gallery = useRef<HTMLDivElement>(null);
   const lightbox = useLightbox({ thumbnails: "bottom" });
-  const items = [
-    { src: "/images/print-large.jpg", thumbnailSrc: "/images/print.jpg", alt: "Whole print" },
-    { src: "/images/detail-large.jpg", thumbnailSrc: "/images/detail.jpg", alt: "Paper detail" },
-  ];
-  return <div className="flex gap-4">{items.map((item, index) => (
-    <a key={item.src} href={item.src} onClick={(event) => {
-      if (event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
-      event.preventDefault();
-      const tiles = event.currentTarget.parentElement?.querySelectorAll("img");
-      lightbox.open(items.map((entry, position) => ({
-        ...entry,
-        origin: tiles?.[position] ?? null,
-      })), index);
-    }}>
-      <img src={item.thumbnailSrc} alt={item.alt} width="320" height="240" />
-    </a>
-  ))}</div>;
+  useEffect(() => {
+    if (gallery.current) return bindLightboxGallery(gallery.current, lightbox);
+  }, [lightbox]);
+  return (
+    <div ref={gallery}>
+      <a href="/images/print-large.jpg"><img src="/images/print.jpg" alt="Whole print" width="320" height="240" /></a>
+      <a href="/images/detail-large.jpg"><img src="/images/detail.jpg" alt="Paper detail" width="320" height="240" /></a>
+    </div>
+  );
 }`,
             role: "usage",
           },
@@ -213,7 +208,7 @@ export function ProductGallery() {
         blocks: [
           {
             kind: "prose",
-            text: "The small item list describes the two actual product assets. Keep image dimensions and alt text with each asset. Native gallery binding collects images in DOM order. Links still open the image without JavaScript. The native dialog keeps focus inside, Escape closes it, and close returns focus to the current photo's tile. The React hook closes its viewer at once and frees it on unmount or when Activity hides it, and opens the same viewer again when Activity shows it.",
+            text: "Keep image dimensions and alt text with each asset. The binding collects the gallery's images in DOM order. Links still open the image without JavaScript. The native dialog keeps focus inside, Escape closes it, and close returns focus to the current photo's tile. The React hook closes its viewer at once and frees it on unmount or when Activity hides it, and opens the same viewer again when Activity shows it.",
           },
         ],
       },
@@ -224,7 +219,7 @@ export function ProductGallery() {
         blocks: [
           {
             kind: "prose",
-            text: "Use one item list for the product hero and its detail images. Open the clicked index and enable thumbnails so people can inspect each view without leaving the viewer.",
+            text: "Put the product hero and its detail images in one gallery. A click opens that image, and thumbnails let people inspect each view without leaving the viewer.",
           },
           {
             kind: "code",
@@ -279,7 +274,7 @@ const unbind = bindLightboxGallery(document.querySelector("#gallery"), lightbox)
         blocks: [
           {
             kind: "prose",
-            text: "The small item list describes the two actual product assets. Keep image dimensions and alt text with each asset. Native gallery binding collects images in DOM order. Links still open the image without JavaScript. The native dialog keeps focus inside, Escape closes it, and close returns focus to the current photo's tile.",
+            text: "Keep image dimensions and alt text with each asset. The binding collects the gallery's images in DOM order. Links still open the image without JavaScript. The native dialog keeps focus inside, Escape closes it, and close returns focus to the current photo's tile.",
           },
         ],
       },
@@ -326,7 +321,7 @@ lightbox.destroy();`,
         blocks: [
           {
             kind: "prose",
-            text: "Bind each message separately so next and previous stay inside the selected attachment group. One hook instance per message gives React the same boundary.",
+            text: "Give each message's photos their own data-lightbox-group, so next and previous stay inside that message. One binding on the thread serves every message.",
           },
           {
             kind: "code",
@@ -334,19 +329,28 @@ lightbox.destroy();`,
             language: "tsx",
             code: `"use client";
 
+import { bindLightboxGallery } from "@reuse-sh/lightbox";
 import { useLightbox } from "@reuse-sh/lightbox/react";
+import { useEffect, useRef } from "react";
 
-export function MessageAttachments({ sources }: { sources: string[] }) {
-  const lightbox = useLightbox();
-  return <div className="flex gap-2">{sources.map((src, index) => (
-    <a key={src} href={src} onClick={(event) => {
-      if (event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
-      event.preventDefault();
-      lightbox.open(sources.map((source) => ({ src: source, alt: "Message attachment" })), index);
-    }}>
-      <img src={src} alt="Message attachment" width="160" height="120" />
-    </a>
-  ))}</div>;
+export function Thread() {
+  const thread = useRef<HTMLDivElement>(null);
+  const lightbox = useLightbox({ thumbnails: "bottom" });
+  useEffect(() => {
+    if (thread.current) return bindLightboxGallery(thread.current, lightbox);
+  }, [lightbox]);
+  return (
+    <div ref={thread}>
+      <p>Here is the print proof.</p>
+      <div data-lightbox-group="proofs">
+        <a href="/images/proof.jpg"><img src="/images/proof.jpg" alt="Print proof" width="160" height="120" /></a>
+        <a href="/images/detail.jpg"><img src="/images/detail.jpg" alt="Paper detail" width="160" height="120" /></a>
+      </div>
+      <div data-lightbox-group="reply">
+        <a href="/images/framed.jpg"><img src="/images/framed.jpg" alt="Framed print" width="160" height="120" /></a>
+      </div>
+    </div>
+  );
 }`,
             role: "usage",
           },
@@ -357,7 +361,7 @@ export function MessageAttachments({ sources }: { sources: string[] }) {
         blocks: [
           {
             kind: "prose",
-            text: "Mount the message component for every message rather than passing every conversation attachment to a global viewer. Destroy the binding when a message is removed. Links still open the image without JavaScript. The native dialog keeps focus inside, Escape closes it, and close returns focus to the current photo's tile. The React hook closes its viewer at once and frees it on unmount or when Activity hides it, and opens the same viewer again when Activity shows it.",
+            text: "The binding reads the links when one is clicked, so a message added later needs no new binding. Links still open the image without JavaScript. The native dialog keeps focus inside, Escape closes it, and close returns focus to the current photo's tile. The React hook closes its viewer at once and frees it on unmount or when Activity hides it, and opens the same viewer again when Activity shows it.",
           },
         ],
       },
@@ -368,18 +372,22 @@ export function MessageAttachments({ sources }: { sources: string[] }) {
         blocks: [
           {
             kind: "prose",
-            text: "Bind each message separately so next and previous stay inside the selected attachment group. Keep one gallery binding per message.",
+            text: "Give each message's photos their own data-lightbox-group, so next and previous stay inside that message. One binding on the thread serves every message.",
           },
           {
             kind: "code",
             id: "lightbox-examples-chat-markup",
             language: "html",
-            code: `<article>
+            code: `<div id="thread">
   <p>Here is the print proof.</p>
-  <div data-message-images>
-    <a href="/images/proof.jpg"><img data-lightbox-src="/images/proof.jpg" src="/images/proof.jpg" alt="Print proof" width="160" height="120" /></a>
+  <div data-lightbox-group="proofs">
+    <a href="/images/proof.jpg"><img src="/images/proof.jpg" alt="Print proof" width="160" height="120" /></a>
+    <a href="/images/detail.jpg"><img src="/images/detail.jpg" alt="Paper detail" width="160" height="120" /></a>
   </div>
-</article>`,
+  <div data-lightbox-group="reply">
+    <a href="/images/framed.jpg"><img src="/images/framed.jpg" alt="Framed print" width="160" height="120" /></a>
+  </div>
+</div>`,
             role: "usage",
           },
         ],
@@ -414,10 +422,8 @@ export function MessageAttachments({ sources }: { sources: string[] }) {
             language: "javascript",
             code: `import { bindLightboxGallery, createLightbox } from "@reuse-sh/lightbox";
 
-const lightbox = createLightbox();
-const unbinds = Array.from(document.querySelectorAll("[data-message-images]"),
-  (root) => bindLightboxGallery(root, lightbox));
-const unbind = () => unbinds.forEach((stop) => stop());`,
+const lightbox = createLightbox({ thumbnails: "bottom" });
+const unbind = bindLightboxGallery(document.querySelector("#thread"), lightbox);`,
             role: "setup",
           },
         ],
@@ -427,7 +433,7 @@ const unbind = () => unbinds.forEach((stop) => stop());`,
         blocks: [
           {
             kind: "prose",
-            text: "Bind each message's images as their own gallery, so a message opens only its own photos, and share one lightbox between them. Unbind a message's gallery when the message is removed. Links still open the image without JavaScript. The native dialog keeps focus inside, Escape closes it, and close returns focus to the current photo's tile.",
+            text: "The binding reads the links when one is clicked, so a message added later needs no new binding. Links still open the image without JavaScript. The native dialog keeps focus inside, Escape closes it, and close returns focus to the current photo's tile.",
           },
         ],
       },
@@ -474,7 +480,7 @@ lightbox.destroy();`,
         blocks: [
           {
             kind: "prose",
-            text: "Bind the article image sequence and make image clicks close the viewer. Disable double-tap zoom for the same reading-oriented interaction.",
+            text: "Bind the article's photos as one sequence, in reading order, with thumbnails to jump between them. The viewer keeps its default gestures: a click on the photo zooms it and a click beside it closes. On a phone a tap shows or hides the controls and a double tap zooms.",
           },
           {
             kind: "code",
@@ -482,22 +488,22 @@ lightbox.destroy();`,
             language: "tsx",
             code: `"use client";
 
+import { bindLightboxGallery } from "@reuse-sh/lightbox";
 import { useLightbox } from "@reuse-sh/lightbox/react";
+import { useEffect, useRef } from "react";
 
-export function Gallery() {
-  const lightbox = useLightbox({ imageClick: "close", doubleTapZoom: false });
+export function Journal() {
+  const article = useRef<HTMLElement>(null);
+  const lightbox = useLightbox({ thumbnails: "bottom" });
+  useEffect(() => {
+    if (article.current) return bindLightboxGallery(article.current, lightbox);
+  }, [lightbox]);
   return (
-    <a href="/images/print-large.jpg" onClick={(event) => {
-      if (event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
-      event.preventDefault();
-      lightbox.open([{
-        src: event.currentTarget.href,
-        alt: "Marble print",
-        origin: event.currentTarget.querySelector("img"),
-      }]);
-    }}>
-      <img src="/images/print.jpg" alt="Marble print" width="640" height="480" />
-    </a>
+    <article ref={article}>
+      <a href="/images/sea-large.jpg"><img src="/images/sea.jpg" alt="A calm sea" width="640" height="320" /></a>
+      <p>Every print in this series starts as a walk and a single frame.</p>
+      <a href="/images/snow-large.jpg"><img src="/images/snow.jpg" alt="A walk across snow" width="320" height="400" /></a>
+    </article>
   );
 }`,
             role: "usage",
@@ -520,16 +526,16 @@ export function Gallery() {
         blocks: [
           {
             kind: "prose",
-            text: "Bind the article image sequence and make image clicks close the viewer. Disable double-tap zoom for the same reading-oriented interaction.",
+            text: "Bind the article's photos as one sequence, in reading order, with thumbnails to jump between them. The viewer keeps its default gestures: a click on the photo zooms it and a click beside it closes. On a phone a tap shows or hides the controls and a double tap zooms.",
           },
           {
             kind: "code",
             id: "lightbox-examples-journal-markup",
             language: "html",
             code: `<div id="gallery">
-  <a href="/images/print-large.jpg">
-    <img data-lightbox-src="/images/print-large.jpg" src="/images/print.jpg" alt="Marble print" width="640" height="480" />
-  </a>
+  <a href="/images/sea-large.jpg"><img src="/images/sea.jpg" alt="A calm sea" width="640" height="320" /></a>
+  <p>Every print in this series starts as a walk and a single frame.</p>
+  <a href="/images/snow-large.jpg"><img src="/images/snow.jpg" alt="A walk across snow" width="320" height="400" /></a>
 </div>`,
             role: "usage",
           },
@@ -565,7 +571,7 @@ export function Gallery() {
             language: "javascript",
             code: `import { bindLightboxGallery, createLightbox } from "@reuse-sh/lightbox";
 
-const lightbox = createLightbox({ imageClick: "close", doubleTapZoom: false });
+const lightbox = createLightbox({ thumbnails: "bottom" });
 const unbind = bindLightboxGallery(document.querySelector("#gallery"), lightbox);`,
             role: "setup",
           },
@@ -2938,10 +2944,10 @@ import { AnnotatedImage } from "@reuse-sh/annotations/react";
 
 export function ReviewImage() {
   const annotations: Annotation[] = [
-    { kind: "area", box: [20, 25, 30, 20], label: "Check this crop" },
-    { kind: "pointer", point: [65, 42], label: "Keep this detail", side: "auto" },
+    { kind: "area", box: [72, 49, 19.5, 26], label: "Right-aligned" },
+    { kind: "pointer", point: [93, 85.5], label: "Press and hold", side: "auto" },
   ];
-  return <AnnotatedImage src="/images/proof.jpg" alt="Print proof" width={1200} height={900} annotations={annotations} />;
+  return <AnnotatedImage src="/images/settings.png" alt="Settings page" width={1280} height={1005} annotations={annotations} />;
 }`,
             role: "usage",
           },
@@ -2970,9 +2976,9 @@ export function ReviewImage() {
             id: "annotations-examples-review-notes-markup",
             language: "html",
             code: `<div id="review-image">
-  <img src="/images/proof.jpg" alt="Print proof" width="1200" height="900" />
+  <img src="/images/settings.png" alt="Settings page" width="1280" height="1005" />
   <ol data-annotations>
-    <li data-kind="marker" data-point="38 46">Check the paper texture.</li>
+    <li data-kind="marker" data-point="39 26">Copy a prompt for your agent.</li>
   </ol>
 </div>`,
             role: "usage",
@@ -3011,7 +3017,7 @@ export function ReviewImage() {
 const root = document.querySelector("#review-image");
 const annotations = annotationsFromHtml(root);
 const image = createAnnotatedImage(root, {
-  src: "/images/proof.jpg", alt: "Print proof", width: 1200, height: 900, annotations,
+  src: "/images/settings.png", alt: "Settings page", width: 1280, height: 1005, annotations,
 });`,
             role: "setup",
           },

@@ -9,7 +9,7 @@ export function CopyShareLink() {
   const [ready, setReady] = useState(false);
   useEffect(() => setReady(true), []);
   return (
-    <div className="max-w-115 rounded-panel bg-card p-5 re-shadow-ring-md">
+    <div className="max-w-115">
       <p className="font-semibold">Share Coral sky</p>
       <p className="mt-0.5 text-ui leading-5.5 text-muted-foreground">
         Anyone with the link can see the print and order a proof.

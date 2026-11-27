@@ -1,21 +1,13 @@
 @reference "../../app/globals.css";
 @layer components {
-  .re-example {
-    --re-avatar-background: var(--muted);
-    --re-avatar-color: var(--secondary-foreground);
-    --re-avatar-badge-background: var(--primary);
-    --re-avatar-badge-color: var(--primary-foreground);
-    --re-avatar-status-color: var(--success);
-  }
-
   .re-annot {
     --re-annotation-color: var(--destructive);
     --re-annotation-radius: var(--radius-control);
   }
-  .re-review-meta b {
-    @apply text-foreground font-semibold;
+  .re-review-notes [data-annot-media] img {
+    @apply rounded-control shadow-ring;
   }
-  .re-review-meta small {
-    @apply text-caption text-subtle-foreground;
+  .re-review-notes ol[data-annot-list] > li {
+    @apply px-0 text-ui;
   }
 }

@@ -78,7 +78,7 @@ export function SettingsRow() {
           </div>
         ))}
       </dl>
-      <div className="flex items-center justify-between gap-4 min-h-14 text-ui mt-7 p-4 rounded-xl bg-destructive/5 ring-1 ring-destructive/15 [&_.re-hold-settings-button]:flex-none max-sm:flex-col max-sm:items-stretch max-sm:[&_.re-hold-settings-button]:justify-center">
+      <div className="flex items-center justify-between gap-4 min-h-14 text-ui mt-3 pt-4 border-t border-border [&_.re-hold-settings-button]:flex-none max-sm:flex-col max-sm:items-stretch max-sm:[&_.re-hold-settings-button]:justify-center">
         <div>
           <b className="font-semibold">Delete workspace</b>
           <p

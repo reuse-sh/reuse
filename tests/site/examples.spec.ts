@@ -279,28 +279,29 @@ test("image captions keep their title white over the scrim", async ({
 });
 test("chat composers fit inside narrow panels", async ({ page }) => {
   await page.setViewportSize({ width: 320, height: 900 });
-  for (const path of [
-    "/lightbox/examples/chat",
-    "/loaders/examples/chat-reply",
-  ]) {
+  for (const [path, inset, ring] of [
+    ["/lightbox/examples/chat", 12, "input"],
+    ["/loaders/examples/chat-reply", 32, "form"],
+  ] as const) {
     await page.goto(path);
     const form = page.locator(
       '[data-slot="example-preview"] .re-compose, [data-slot="example-preview"] form',
     );
-    const bounds = await form.boundingBox();
+    const send = form.getByRole("button", { name: "Send", exact: true });
+    const bounds = await send.boundingBox();
     const panel = await page
       .locator('[data-slot="example-stage"]')
       .boundingBox();
     expect((bounds?.x ?? 0) + (bounds?.width ?? 0)).toBeLessThanOrEqual(
-      (panel?.x ?? 0) + (panel?.width ?? 0) - 31,
+      (panel?.x ?? 0) + (panel?.width ?? 0) - inset,
     );
-    await expect(
-      form.getByRole("button", { name: "Send", exact: true }),
-    ).toBeVisible();
+    await expect(send).toBeVisible();
     await form.getByRole("textbox").focus();
     await page.keyboard.press("Shift+Tab");
     await page.keyboard.press("Tab");
-    await expect(form).not.toHaveCSS("outline-style", "none");
+    await expect(
+      ring === "form" ? form : form.getByRole("textbox"),
+    ).not.toHaveCSS("outline-style", "none");
   }
 });
 
@@ -939,6 +940,54 @@ test("gallery examples give the photo paged to its own tile", async ({
   }
 });
 
+test("the journal keeps the default click: on the open photo it zooms, beside it it closes", async ({
+  page,
+}) => {
+  const journal = "/lightbox/examples/journal";
+  await page.goto(journal);
+  const dialog = page.locator("dialog.re-lightbox[open]");
+  const open = async () => {
+    await expect(async () => {
+      // A click before hydration follows the photo link instead of opening the viewer.
+      if (!page.url().endsWith(journal)) await page.goto(journal);
+      await page.locator(`${preview} a`).first().click();
+      await expect(dialog.locator(".re-lightbox-image").first()).toBeVisible({
+        timeout: 1000,
+      });
+    }).toPass();
+    await expect(dialog).toHaveAttribute("data-phase", "open");
+    const box = await dialog
+      .locator(".re-lightbox-image")
+      .first()
+      .boundingBox();
+    if (!box) throw new Error("Missing open photo");
+    return box;
+  };
+  const photo = await open();
+  await page.mouse.click(photo.x + photo.width / 2, photo.y / 2);
+  await closed(page);
+  const again = await open();
+  await page.mouse.click(again.x + again.width / 2, again.y + again.height / 2);
+  await expect(dialog).toHaveAttribute("data-zoomed", "true");
+});
+
+test("a narrow annotated screenshot drops the pointer label gutter", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto("/annotations/examples/review-notes");
+  const figure = page.locator(`${preview} figure[data-re-annotations]`);
+  const image = figure.locator("[data-annot-media] img");
+  await expect(image).toBeVisible();
+  await expect(figure.locator("[data-annot-drawing]")).toBeHidden();
+  const [shown, frame] = await Promise.all([
+    image.boundingBox(),
+    figure.boundingBox(),
+  ]);
+  expect(frame?.width).toBeGreaterThan(300);
+  expect(shown?.width).toBe(frame?.width);
+});
+
 test("only the press to grab example shrinks its slides during a mouse drag", async ({
   page,
 }) => {
@@ -1379,7 +1428,7 @@ test("every site lightbox opens with the Classic controls", async ({
 
 test("a site lightbox with one photo shows no counter", async ({ page }) => {
   await page.goto("/lightbox/examples/chat");
-  await page.locator(".re-single [data-photo]").click();
+  await page.locator(".re-single a").click();
   await expect(
     page.locator("dialog.re-lightbox[open] .re-lightbox-close"),
   ).toBeVisible();
