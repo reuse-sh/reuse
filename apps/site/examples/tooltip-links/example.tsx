@@ -30,7 +30,7 @@ const prints = [
     "sea",
     photos[1],
     photos[1].caption,
-    "Taken from the ferry an hour later, deep blue under a pale sky.",
+    "Taken an hour later, deep blue under a pale sky.",
   ],
   [
     "dunes",
@@ -67,10 +67,9 @@ export function TooltipLinks() {
             The series opens with{" "}
             <PrintLink id="summit">{photos[0].caption}</PrintLink>, shot above
             the clouds at dawn.{" "}
-            <PrintLink id="sea">{photos[1].caption}</PrintLink> came from the
-            ferry an hour later.{" "}
-            <PrintLink id="dunes">{photos[2].caption}</PrintLink> was the last,
-            on the walk back over the sand.
+            <PrintLink id="sea">{photos[1].caption}</PrintLink> came an hour
+            later. <PrintLink id="dunes">{photos[2].caption}</PrintLink> was the
+            last, on the walk back over the sand.
           </p>
           <p
             className="max-w-140 mt-4 text-lead leading-7 text-muted-foreground text-pretty"

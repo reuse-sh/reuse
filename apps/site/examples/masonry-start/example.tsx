@@ -5,7 +5,7 @@ import "./cards.css";
 
 const texts = [
   "Layered ridges in cyan and slate.",
-  "A tall print for a narrow wall. Printed on cotton rag.",
+  "One walker on a white field, cut tall for a narrow wall.",
   "One tree on a white field.",
   "A single leaf in a square frame.",
   "A wide band of evening light for a long shelf or a hallway.",
