@@ -122,7 +122,7 @@ export function SiteHeader() {
           ref={brand}
         >
           <Link
-            className="-ml-1.5 inline-flex size-8 shrink-0 items-center justify-center rounded-xl text-foreground"
+            className="-ml-1.5 inline-flex size-8 shrink-0 items-center justify-center rounded-lg text-foreground"
             data-re-row
             href="/"
             aria-label="Reuse"
