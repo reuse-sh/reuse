@@ -6,21 +6,21 @@ import { photo } from "@/lib/photos";
 const years = [
   [
     "2019",
-    "A borrowed tray",
-    "Prints on a kitchen table, one sheet at a time.",
-    "garden-wall",
+    "A borrowed table",
+    "Prints laid out on a kitchen table, one sheet at a time.",
+    "table-still-life",
   ],
   [
     "2021",
     "A first studio",
-    "A garage with a long table and a window to the north.",
-    "white-court",
+    "An empty room with a ladder and a window to the north.",
+    "empty-room",
   ],
   [
     "2024",
     "Open on Saturdays",
-    "People came by to watch, and stayed to pull a sheet.",
-    "quiet-stair",
+    "People came by to look, and stayed on the sofa to talk.",
+    "grey-lounge",
   ],
 ] as const;
 
