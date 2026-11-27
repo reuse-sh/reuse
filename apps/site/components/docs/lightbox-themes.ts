@@ -4,7 +4,7 @@ import { photos } from "../../lib/photos";
 import { iconData } from "../icons";
 
 export const lightboxThemes = {
-  dark: "The default. A near-black room with frosted controls.",
+  dark: "A near-black room with dark controls and muted captions.",
   light: "A pale room with white controls, for light pages.",
   page: "The room takes the page's own background from --re-lightbox-page, and the controls follow its text color.",
   photos:

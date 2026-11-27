@@ -96,6 +96,35 @@ for (const [path, recipe] of Object.entries(usageRecipes)) {
       await page.locator("a").first().click();
       await expect(page.locator("dialog[open]")).toHaveCount(1);
     }
+    if (path === "lightbox/examples/product") {
+      const dialog = page.locator("dialog[open]");
+      await expect(dialog.locator(".re-lightbox-backdrop")).toHaveCSS(
+        "background-color",
+        "rgb(252, 252, 252)",
+      );
+      const close = dialog.locator(".re-lightbox-close");
+      await expect(close).toHaveCSS("width", "40px");
+      await expect(close).toHaveCSS("background-color", "rgb(255, 255, 255)");
+      await expect(dialog.locator(".re-lightbox-counter")).toHaveCSS(
+        "position",
+        "fixed",
+      );
+      const zoomPaths = () =>
+        dialog
+          .locator(".re-lightbox-zoom path")
+          .evaluateAll((paths) => paths.map((path) => path.getAttribute("d")));
+      expect(await zoomPaths()).toEqual([
+        "M19 11a8 8 0 1 1-16 0 8 8 0 0 1 16 0M21 21l-4.35-4.35",
+        "M11 8v6M8 11h6",
+      ]);
+      await dialog.locator(".re-lightbox-zoom").click();
+      await expect
+        .poll(zoomPaths)
+        .toEqual([
+          "M19 11a8 8 0 1 1-16 0 8 8 0 0 1 16 0M21 21l-4.35-4.35",
+          "M8 11h6",
+        ]);
+    }
     if (path.startsWith("annotations/") && !path.endsWith("data-format"))
       await expect(page.locator("[data-re-annotations]")).toHaveCount(1);
     if (path.startsWith("floating-tooltip/")) {

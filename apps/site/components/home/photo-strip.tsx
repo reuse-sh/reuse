@@ -8,7 +8,6 @@ import { type CSSProperties, useEffect, useRef } from "react";
 import { Container } from "@/components/ui/container";
 import { photos } from "../../lib/photos";
 import { Icon } from "../icons";
-import { siteLightbox } from "../site-lightbox";
 
 const strip = [0, 4, 6, 1, 5, 7, 2, 3].map((index) => photos[index]);
 
@@ -24,7 +23,7 @@ export function PhotoStrip() {
     }),
   );
   const images = useRef<(HTMLImageElement | null)[]>([]);
-  const lightbox = useLightbox({ ...siteLightbox, thumbnails: "bottom" });
+  const lightbox = useLightbox({ thumbnails: "bottom" });
   useEffect(() => {
     if (carousel) return connectCarousel(lightbox, carousel);
   }, [lightbox, carousel]);

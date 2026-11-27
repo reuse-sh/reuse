@@ -80,19 +80,21 @@ export function LightboxStylePage({ style }: { style: string }) {
             codeRole="setup"
           />
         </Section>
-        <Section title="Style the controls">
-          <Text>
-            Save this as <C>lightbox-style.css</C> and import it after the
-            package stylesheet. It scopes the selected layout to{" "}
-            <C>re-lightbox-style</C>.
-          </Text>
-          <CodeBlock
-            tabs={{ code: code.css, lang: "css" }}
-            caption="lightbox-style.css"
-            snippetId={`lightbox-${style}-styles`}
-            codeRole="setup"
-          />
-        </Section>
+        {code.css ? (
+          <Section title="Style the controls">
+            <Text>
+              Save this as <C>lightbox-style.css</C> and import it after the
+              package stylesheet. It holds what the layout changes on top of{" "}
+              <C>theme.css</C>, scoped to <C>re-lightbox-style</C>.
+            </Text>
+            <CodeBlock
+              tabs={{ code: code.css, lang: "css" }}
+              caption="lightbox-style.css"
+              snippetId={`lightbox-${style}-styles`}
+              codeRole="setup"
+            />
+          </Section>
+        ) : null}
         {code.chrome ? (
           <Section title="Add the control layout helper">
             <Text>
@@ -136,12 +138,6 @@ export function LightboxStylePage({ style }: { style: string }) {
               codeRole="cleanup"
             />
           </FrameworkOnly>
-          <Text>
-            The preview supplies the site’s icons through <C>icons</C> and uses
-            responsive image padding. This integration uses the package’s
-            built-in icons and default image padding. The control layout and
-            helper are the same.
-          </Text>
         </Section>
       </section>
     </>

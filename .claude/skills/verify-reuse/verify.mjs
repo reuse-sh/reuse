@@ -553,6 +553,7 @@ async function check(args) {
   const width = Number(optionOf(args, "--width") ?? 1280);
   const height = Number(optionOf(args, "--height") ?? 800);
   const blocks = optionsOf(args, "--block");
+  const clicks = optionsOf(args, "--click");
   const doAudit = args.includes("--audit");
   const full = !args.includes("--viewport");
   mkdirSync(out, { recursive: true });
@@ -649,6 +650,10 @@ async function check(args) {
           .waitFor({ state: "visible", timeout: 10_000 });
         await page.evaluate(() => document.fonts.ready);
         await page.waitForTimeout(300);
+        for (const click of clicks) {
+          await page.locator(click).first().click();
+          await page.waitForTimeout(1200);
+        }
         if (doAudit) {
           const findings = await audit(page);
           if (args.includes("--focus"))
@@ -696,7 +701,7 @@ const commands = {
 };
 if (!commands[command]) {
   console.log(
-    "usage: verify.mjs start|doctor|list [--affected <base>]|check <id>...|--all [--out dir] [--width px] [--height px] [--block glob] [--audit] [--viewport] [--reduced-motion] [--jobs n]|map|stop",
+    "usage: verify.mjs start|doctor|list [--affected <base>]|check <id>...|--all [--out dir] [--width px] [--height px] [--block glob] [--click locator] [--audit] [--viewport] [--reduced-motion] [--jobs n]|map|stop",
   );
   process.exit(2);
 }

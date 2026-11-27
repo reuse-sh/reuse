@@ -12,6 +12,22 @@
     var(--re-lightbox-page, Canvas)
   );
   --re-lightbox-panel: var(--re-lightbox-page, Canvas);
+  --re-lightbox-muted: color-mix(
+    in srgb,
+    var(--re-lightbox-page-foreground, CanvasText) 78%,
+    var(--re-lightbox-page, Canvas)
+  );
+  --re-lightbox-ring: 0 0 0 0.5px
+    color-mix(
+      in srgb,
+      var(--re-lightbox-page-foreground, CanvasText) 14%,
+      transparent
+    );
+  --re-lightbox-thumbnail-background: color-mix(
+    in srgb,
+    var(--re-lightbox-page-foreground, CanvasText) 10%,
+    var(--re-lightbox-page, Canvas)
+  );
   --re-lightbox-placeholder: color-mix(
     in srgb,
     var(--re-lightbox-page-foreground, CanvasText) 6%,

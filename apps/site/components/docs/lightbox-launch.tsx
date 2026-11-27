@@ -7,7 +7,7 @@ import {
   type LightboxOptions,
 } from "@reuse-sh/lightbox";
 import { useEffect, useRef } from "react";
-import { iconNode, lightboxIcons } from "../icons";
+import { iconNode } from "../icons";
 import { Card, CardContent } from "../ui/card";
 
 export type LaunchItem = LightboxItem & {
@@ -24,7 +24,6 @@ type Make = (
 ) => Lightbox;
 
 const setupIcons = {
-  ...lightboxIcons,
   info: () => iconNode("info", 18),
   heart: () => iconNode("heart", 18),
 };
@@ -67,7 +66,6 @@ export function LightboxLaunch({
         );
         const create = (options?: LightboxOptions) =>
           createLightbox({
-            icons: lightboxIcons,
             ...options,
             className: [options?.className, scope].filter(Boolean).join(" "),
           });

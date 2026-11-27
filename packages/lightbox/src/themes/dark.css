@@ -1,9 +1,12 @@
 .re-lightbox {
   --re-lightbox-background: rgb(15 15 17 / 96%);
   --re-lightbox-foreground: #fff;
+  --re-lightbox-muted: rgb(255 255 255 / 72%);
   --re-lightbox-control: rgb(35 35 38 / 96%);
   --re-lightbox-control-hover: rgb(58 58 62 / 98%);
+  --re-lightbox-ring: none;
   --re-lightbox-panel: rgb(24 24 27 / 96%);
   --re-lightbox-placeholder: rgb(255 255 255 / 6%);
+  --re-lightbox-thumbnail-background: #222;
   --re-lightbox-media-background: #f2f2f2;
 }

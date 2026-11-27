@@ -19,7 +19,7 @@ async function open(
   page: Page,
   options: Record<string, unknown> & { count?: number } = {},
 ) {
-  await mount(page, "", ["lightbox/base.css", "lightbox/theme.css"]);
+  await mount(page, "", ["lightbox/base.css"]);
   await openMounted(page, options);
 }
 
