@@ -82,3 +82,11 @@ The photos in apps/site/public/photos come from Unsplash and are used under the 
 - fog-road: Warren, https://unsplash.com/photos/uuVguyksViA, Unsplash License
 
 reuse-api-page, reuse-settings-page, re-tile and quiet-hills in the same folder are made for this site and fall under its MIT license.
+
+## Videos
+
+horizon-pan.mp4 and its poster horizon-pan.jpg in apps/site/public/videos are a slow pan made for this site with ffmpeg over the horizon photo above, by Jonathan Bean, https://unsplash.com/photos/ywnnwzcdR5o, Unsplash License.
+
+The Mixed media example embeds a YouTube video and shows a frame of it as ocean-waves.jpg in the same folder:
+
+- Blue Ocean Waves - Free 4K Footage, Free HD Footage, https://www.youtube.com/watch?v=KBPavXDw8lw, Creative Commons Attribution license (CC BY), as its YouTube page states

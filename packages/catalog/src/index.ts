@@ -383,13 +383,14 @@ export const libraries: Library[] = [
           {
             path: "examples/tall-and-wide",
             title: "Tall and wide media",
-            lead: "A page-long screenshot, a panorama, a transparent PNG and an SVG drawing. Each opens whole at its own shape, and a zoom shows its real pixels.",
-            build: "a gallery of tall, wide, transparent and vector images",
+            lead: "A page-long screenshot, a panorama, a transparent PNG and an SVG drawing. The screenshot opens at the width of the screen and scrolls, the panorama opens whole, and a zoom goes up to each photo's own pixels.",
+            build:
+              "a gallery of a tall screenshot, a panorama, a transparent PNG and an SVG",
           },
           {
             path: "examples/mixed-media",
             title: "Mixed media",
-            lead: "Photos, a video file and a YouTube video in one set. The players come from optional modules, and only the slide on screen plays.",
+            lead: "Photos, a video file and a YouTube video in one set. The players come from the optional video and embed modules, and leaving a slide pauses its player.",
             build:
               "a lightbox that mixes photos, a video file and a YouTube video",
           },
