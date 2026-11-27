@@ -943,10 +943,13 @@ test("gallery examples give the photo paged to its own tile", async ({
 test("the journal keeps the default click: on the open photo it zooms, beside it it closes", async ({
   page,
 }) => {
-  await page.goto("/lightbox/examples/journal");
+  const journal = "/lightbox/examples/journal";
+  await page.goto(journal);
   const dialog = page.locator("dialog.re-lightbox[open]");
   const open = async () => {
     await expect(async () => {
+      // A click before hydration follows the photo link instead of opening the viewer.
+      if (!page.url().endsWith(journal)) await page.goto(journal);
       await page.locator(`${preview} a`).first().click();
       await expect(dialog.locator(".re-lightbox-image").first()).toBeVisible({
         timeout: 1000,
@@ -974,12 +977,15 @@ test("a narrow annotated screenshot drops the pointer label gutter", async ({
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto("/annotations/examples/review-notes");
   const figure = page.locator(`${preview} figure[data-re-annotations]`);
+  const image = figure.locator("[data-annot-media] img");
+  await expect(image).toBeVisible();
   await expect(figure.locator("[data-annot-drawing]")).toBeHidden();
-  const [image, frame] = await Promise.all([
-    figure.locator("[data-annot-media] img").boundingBox(),
+  const [shown, frame] = await Promise.all([
+    image.boundingBox(),
     figure.boundingBox(),
   ]);
-  expect(image?.width).toBe(frame?.width);
+  expect(frame?.width).toBeGreaterThan(300);
+  expect(shown?.width).toBe(frame?.width);
 });
 
 test("only the press to grab example shrinks its slides during a mouse drag", async ({
