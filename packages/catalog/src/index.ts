@@ -369,14 +369,14 @@ export const libraries: Library[] = [
           {
             path: "examples/portfolio",
             title: "Portfolio grid",
-            lead: "A masonry grid of 24 photos with a filter by subject. The viewer pages through the photos the filter shows, and Load more adds twelve to it while it is open.",
+            lead: "A masonry grid of 24 photos with a filter by subject. The viewer pages through the photos the filter shows, in grid order. Load more, on the page and inside the open viewer, loads twelve more and adds those the filter shows to the viewer without leaving the current photo.",
             build:
-              "a filtered portfolio grid whose lightbox follows the filter and grows with Load more",
+              "a masonry portfolio with a subject filter whose lightbox opens the filtered photos and loads more from inside the open viewer",
           },
           {
             path: "examples/contact-sheet",
             title: "Contact sheet",
-            lead: "Sixty numbered frames on one sheet. The viewer keeps them in a column at its side, jumps straight to a distant frame and plays them as a slideshow.",
+            lead: "Sixty numbered frames on one sheet. The viewer keeps their thumbnails in a column at its side, jumps straight to a distant frame by End or a thumbnail, and plays them as a slideshow.",
             build:
               "a contact sheet of sixty frames with side thumbnails and a slideshow",
           },
