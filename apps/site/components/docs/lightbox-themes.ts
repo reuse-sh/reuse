@@ -24,14 +24,14 @@ interface Preset {
 }
 
 const places = [
-  ["Monday, 4 March", "Harbor studio"],
-  ["Monday, 4 March", "Harbor studio"],
-  ["Saturday, 16 March", "North gallery"],
-  ["Saturday, 16 March", "North gallery"],
-  ["Friday, 5 April", "Print room"],
-  ["Friday, 5 April", "Print room"],
-  ["Sunday, 21 April", "Garden annex"],
-  ["Sunday, 21 April", "Garden annex"],
+  ["Monday, 4 March", "Above the clouds"],
+  ["Monday, 4 March", "Ferry crossing"],
+  ["Saturday, 16 March", "Dune field"],
+  ["Sunday, 17 March", "Snow plain"],
+  ["Friday, 5 April", "West bay"],
+  ["Saturday, 6 April", "High pass"],
+  ["Sunday, 21 April", "Island beach"],
+  ["Monday, 22 April", "Studio"],
 ] as const;
 
 export const lightboxPresets: Record<string, Preset> = {

@@ -7,17 +7,22 @@ const groups = [
   [
     "Shop",
     [
-      ["prints", "Prints", "Sand, sea and peaks, signed on the back", "dunes"],
+      [
+        "prints",
+        "Prints",
+        "Dunes under an open sky, signed on the back",
+        "dunes",
+      ],
       [
         "sets",
         "Gift sets",
-        "Flowers and a print, ready to give",
+        "A yellow bloom in a glass vase, ready to give",
         "yellow-bloom",
       ],
       [
         "still-lifes",
         "Still lifes",
-        "Fruit and vases on the studio table",
+        "Fruit and a vase on a white cloth",
         "table-still-life",
       ],
     ],
@@ -34,18 +39,20 @@ const groups = [
       [
         "classes",
         "Classes",
-        "Two hours in the workroom, your own sheet",
+        "Two hours in the bright workroom, chair included",
         "empty-room",
       ],
       [
         "journal",
         "Journal",
-        "Notes from the road, the snow and the sea",
+        "Notes from a winter walk past a lone pine",
         "lone-pine",
       ],
     ],
   ],
 ] as const;
+
+const focus: Partial<Record<PhotoId, string>> = { "yellow-bloom": "50% 25%" };
 
 function Card({
   id,
@@ -59,12 +66,13 @@ function Card({
   picture: PhotoId;
 }) {
   const { src, width, height } = photo(picture);
+  const position = focus[picture];
   return (
     <template
       id={`menu-card-${id}`}
       // biome-ignore lint/security/noDangerouslySetInnerHtml: fixed synthetic markup, cloned by the preview.
       dangerouslySetInnerHTML={{
-        __html: `<span class="re-preview-menu-card"><img src="${src}" alt="" width="${width}" height="${height}"><b>${name}</b><small>${line}</small></span>`,
+        __html: `<span class="re-preview-menu-card"><img src="${src}" alt="" width="${width}" height="${height}"${position ? ` style="object-position: ${position}"` : ""}><b>${name}</b><small>${line}</small></span>`,
       }}
     />
   );
@@ -97,6 +105,7 @@ export function PreviewMenu() {
                     alt=""
                     width={photo(picture).width}
                     height={photo(picture).height}
+                    style={{ objectPosition: focus[picture] }}
                   />
                   <b>{name}</b>
                   <small>{line}</small>

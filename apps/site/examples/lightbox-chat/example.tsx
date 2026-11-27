@@ -220,7 +220,7 @@ export function Example() {
               ))}
             </div>
             <p className="re-msg max-w-3/4 px-3 py-2 text-ui re-me self-end mt-1.5 rounded-2xl rounded-br-md bg-message text-message-foreground">
-              The coral one is my favorite
+              The pink one is my favorite
             </p>
             <span className="re-read self-end -mt-0.5">Read 18:44</span>
             <div

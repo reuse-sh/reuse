@@ -13,7 +13,7 @@ const collections = [
   [
     "gifts",
     "Gift sets",
-    "A bloom in a glass vase, wrapped to give.",
+    "A yellow bloom in a glass vase, ready to give.",
     "yellow-bloom",
   ],
   [
@@ -25,7 +25,7 @@ const collections = [
   [
     "studio",
     "From the studio",
-    "A green sprig on the sill, shot between jobs.",
+    "A green sprig in a white vase, shot between jobs.",
     "green-sprig",
   ],
 ] as const;

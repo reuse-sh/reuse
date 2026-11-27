@@ -123,12 +123,11 @@ export function Example() {
             October 2026 · 5 prints
           </p>
           <h2 className="re-j-title mt-1.5 text-2xl leading-8 font-semibold tracking-tight text-balance">
-            One week of early light
+            One week of soft light
           </h2>
           <p className="re-j-text max-w-xl mt-4 text-body leading-7 text-muted-foreground text-pretty">
-            Every print in this series starts as an early walk and a single
-            frame. The light comes up over the sea or the snow, and the shutter
-            keeps it in one long pass.
+            Every print in this series starts as a walk and a single frame, over
+            the sea, the snow or the peaks.
           </p>
           <figure className="re-j-fig mt-7">
             <PhotoButton
@@ -142,9 +141,9 @@ export function Example() {
             <PhotoButton photo={b} />
           </div>
           <p className="re-j-text max-w-xl mt-4 text-body leading-7 text-muted-foreground text-pretty">
-            No two mornings come out alike. We kept the five where the light
-            stayed soft, and printed them on matte cotton paper at the size they
-            were taken.
+            No two days come out alike. We kept the five where the light stayed
+            soft, and printed them on matte cotton paper at the size they were
+            taken.
           </p>
           <div className="re-j-wide grid gap-2 h-64 max-sm:h-40 mt-7">
             <PhotoButton photo={c} />

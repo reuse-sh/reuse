@@ -259,7 +259,7 @@ test("chat colors and file-menu shortcuts preserve the original hierarchy", asyn
 }) => {
   await page.goto("/lightbox/examples/chat");
   await expect(
-    page.getByText("The coral one is my favorite", { exact: true }),
+    page.getByText("The pink one is my favorite", { exact: true }),
   ).toHaveCSS("background-color", "rgb(31, 111, 235)");
   await page.goto("/moving-highlight/examples/menu");
   const row = page.getByRole("menuitem", { name: "New print" });

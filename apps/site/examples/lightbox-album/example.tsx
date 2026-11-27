@@ -19,13 +19,13 @@ const thread: readonly Message[] = [
   {
     id: "cliff",
     from: "Ines",
-    text: "The view from the cliff this morning",
+    text: "The view from the ridge this morning",
     photos: [coast],
   },
   {
     id: "roll",
     from: "Tomas",
-    text: "And the whole roll from the beach",
+    text: "And the whole roll from the week",
     photos: album,
   },
   { id: "reply", from: null, text: "The third one should be a print" },

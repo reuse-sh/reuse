@@ -7,7 +7,7 @@ const years = [
   [
     "2019",
     "A borrowed table",
-    "A vase and pears on a kitchen table, shot by the window.",
+    "A vase, a pear and grapes on a white cloth.",
     "table-still-life",
   ],
   [
@@ -19,7 +19,7 @@ const years = [
   [
     "2024",
     "Open on Saturdays",
-    "People came by to look, and stayed on the sofa to talk.",
+    "A long sofa by the shelves, where visitors stay to talk.",
     "grey-lounge",
   ],
 ] as const;

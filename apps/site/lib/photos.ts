@@ -139,7 +139,7 @@ const unsplash = [
     "misty-forest",
     2560,
     1440,
-    "Rain forest",
+    "Misty forest",
     "A forested slope fading into mist",
     "Adrien Olichon",
     "yH3YvNlf4VA",
