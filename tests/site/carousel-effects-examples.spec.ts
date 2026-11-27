@@ -190,6 +190,24 @@ test.describe("marquee", () => {
     expect(await speed(strip(page))).toBeGreaterThan(36);
   });
 
+  test("a sideways trackpad scroll moves the strip and the run resumes after it", async ({
+    page,
+  }) => {
+    await page.goto("/carousel/examples/marquee");
+    await page.waitForTimeout(1500);
+    const box = await strip(page).boundingBox();
+    if (!box) throw new Error("Missing marquee");
+    await page.mouse.move(box.x + 100, box.y + box.height / 2);
+    const before = await strip(page).evaluate((element) => element.scrollLeft);
+    await page.mouse.wheel(240, 0);
+    await page.waitForTimeout(150);
+    const after = await strip(page).evaluate((element) => element.scrollLeft);
+    expect(Math.abs(after - before)).toBeGreaterThan(120);
+    await page.mouse.move(box.x + 100, box.y + 400);
+    await page.waitForTimeout(2500);
+    expect(await speed(strip(page))).toBeGreaterThan(36);
+  });
+
   test("stops while hidden or off screen, and Pause gives the strip back", async ({
     page,
   }) => {

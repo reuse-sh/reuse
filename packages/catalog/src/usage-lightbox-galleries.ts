@@ -8,7 +8,7 @@ export const lightboxGalleryUsage: Readonly<Record<string, UsageRecipe>> = {
         blocks: [
           {
             kind: "prose",
-            text: "Import the package stylesheets once in your main CSS: the gallery's styles.css lays out the masonry grid, and the lightbox's base.css and theme.css hold the viewer's layout and default theme. The components layer lets Tailwind utilities adapt their presentation.",
+            text: "Install @reuse-sh/gallery beside the lightbox. Import the package stylesheets once in your main CSS: the gallery's styles.css lays out the masonry grid, and the lightbox's base.css and theme.css hold the viewer's layout and default theme. The components layer lets Tailwind utilities adapt their presentation.",
           },
           {
             kind: "code",
@@ -46,15 +46,16 @@ export function Portfolio({ photos, subjects }: { photos: Photo[]; subjects: str
   const [subject, setSubject] = useState("All");
   const [loaded, setLoaded] = useState(24);
   const tiles = useRef(new Map<string, HTMLElement>());
-  const latest = useRef({ subject, loaded });
-  latest.current = { subject, loaded };
+  const focusTile = useRef<string | null>(null);
+  const latest = useRef({ subject, loaded, photos });
+  latest.current = { subject, loaded, photos };
   const matches = (photo: Photo) => latest.current.subject === "All" || photo.subject === latest.current.subject;
   const item = (photo: Photo) => ({ ...photo, origin: () => tiles.current.get(photo.src) ?? null });
   const loadMore = () => {
     const from = latest.current.loaded;
     latest.current.loaded = from + pageSize;
     setLoaded(from + pageSize);
-    return photos.slice(from, from + pageSize).filter(matches).map(item);
+    return latest.current.photos.slice(from, from + pageSize).filter(matches);
   };
   const loadMoreButton = useRef<LightboxSlot>(({ lightbox, document }) => {
     const button = document.createElement("button");
@@ -64,11 +65,13 @@ export function Portfolio({ photos, subjects }: { photos: Photo[]; subjects: str
     button.style.width = "auto";
     button.style.paddingInline = "16px";
     button.style.borderRadius = "20px";
+    const update = () => { button.hidden = latest.current.loaded >= latest.current.photos.length; };
     button.addEventListener("click", () => {
-      lightbox.append(loadMore());
+      lightbox.append(loadMore().map(item));
+      update();
       if (button.hidden) button.closest("dialog")?.querySelector<HTMLElement>(".re-lightbox-viewport")?.focus();
     });
-    return { node: button, update: () => { button.hidden = latest.current.loaded >= photos.length; } };
+    return { node: button, update };
   });
   const lightbox = useLightbox({ slots: { toolbarEnd: loadMoreButton.current } });
   const shown = photos.slice(0, loaded).filter(matches);
@@ -85,13 +88,17 @@ export function Portfolio({ photos, subjects }: { photos: Photo[]; subjects: str
     <Masonry className="[--re-masonry-columns:4] max-md:[--re-masonry-columns:2]">
       {shown.map((photo, index) => (
         <button key={photo.src} type="button" aria-label={\`Open \${photo.alt}\`}
-          ref={(tile) => { if (tile) tiles.current.set(photo.src, tile); else tiles.current.delete(photo.src); }}
+          ref={(tile) => {
+            if (!tile) return void tiles.current.delete(photo.src);
+            tiles.current.set(photo.src, tile);
+            if (focusTile.current === photo.src) { focusTile.current = null; tile.focus(); }
+          }}
           onClick={() => lightbox.open(shown.map(item), index)}>
           <img className="block h-auto w-full" src={photo.src} alt="" width={photo.width} height={photo.height} />
         </button>
       ))}
     </Masonry>
-    {loaded < photos.length ? <button type="button" onClick={loadMore}>Load more</button> : null}
+    {loaded < photos.length ? <button type="button" onClick={() => { focusTile.current = loadMore()[0]?.src ?? null; }}>Load more</button> : null}
   </div>;
 }`,
             role: "usage",
@@ -103,7 +110,7 @@ export function Portfolio({ photos, subjects }: { photos: Photo[]; subjects: str
         blocks: [
           {
             kind: "prose",
-            text: "Each item's origin is a function that looks its tile up when the viewer needs it, so a photo appended while the viewer is open closes into the tile React rendered for it. The slot reads the loaded count from a ref, since its update runs between React renders, and hides itself once the last page is in. When the button that had focus goes, focus moves to the viewer's viewport, where the arrow keys page on to the new photos. The native dialog keeps focus inside, Escape closes it, and close returns focus to the current photo's tile. The React hook closes its viewer at once and frees it on unmount.",
+            text: "Each item's origin is a function that looks its tile up when the viewer needs it, so a photo appended while the viewer is open closes into the tile React rendered for it. The slot reads the loaded count from a ref, since its update runs between React renders, and hides itself once the last page is in. The in-viewer button hides itself after its click too, because an append that adds no photo of the chosen subject changes nothing the viewer would report. When the button that had focus goes, focus moves to the viewer's viewport, where the arrow keys page on to the new photos, and the page's button hands focus to the first new tile. The native dialog keeps focus inside, Escape closes it, and close returns focus to the current photo's tile. The React hook closes its viewer at once and frees it on unmount.",
           },
         ],
       },
@@ -144,7 +151,7 @@ export function Portfolio({ photos, subjects }: { photos: Photo[]; subjects: str
         blocks: [
           {
             kind: "prose",
-            text: "Import the package stylesheets once: the gallery's styles.css lays out the grid, and the lightbox's base.css and theme.css hold the viewer's layout and default theme.",
+            text: "Install @reuse-sh/gallery beside the lightbox. Import the package stylesheets once: the gallery's styles.css lays out the grid, and the lightbox's base.css and theme.css hold the viewer's layout and default theme.",
           },
           {
             kind: "code",
@@ -166,7 +173,7 @@ export function Portfolio({ photos, subjects }: { photos: Photo[]; subjects: str
         blocks: [
           {
             kind: "prose",
-            text: "Run this after the markup exists. The filter hides the links of other subjects, and the group option puts hidden links in a group of their own, so a click opens only the photos the grid shows. Load more moves the next page into the grid, and the toolbarEnd slot does the same from inside the open viewer and appends the new photos that match the filter.",
+            text: "Run this after the markup exists. The filter hides the links of other subjects, and the group option puts hidden links in a group of their own, so a click opens only the photos the grid shows. Load more moves the next page into the grid and focuses its first photo the filter shows, and the toolbarEnd slot does the same from inside the open viewer and appends the new photos that match the filter.",
           },
           {
             kind: "code",
@@ -193,7 +200,11 @@ const loadMore = () => {
   grid.append(...links);
   filter();
   pageButton.hidden = true;
-  return links.filter((link) => !link.hidden).map(lightboxItemFromElement);
+  return links.filter((link) => !link.hidden);
+};
+const loadMoreOnPage = () => {
+  const [first] = loadMore();
+  (first ?? subjects.querySelector(":checked")).focus();
 };
 
 const lightbox = createLightbox({
@@ -207,7 +218,8 @@ const lightbox = createLightbox({
       button.style.paddingInline = "16px";
       button.style.borderRadius = "20px";
       button.addEventListener("click", () => {
-        lightbox.append(loadMore());
+        lightbox.append(loadMore().map(lightboxItemFromElement));
+        button.hidden = true;
         button.closest("dialog").querySelector(".re-lightbox-viewport").focus();
       });
       return { node: button, update: () => { button.hidden = !left; } };
@@ -216,7 +228,7 @@ const lightbox = createLightbox({
 });
 const unbind = bindLightboxGallery(grid, lightbox, { group: (link) => (link.hidden ? "hidden" : "shown") });
 subjects.addEventListener("change", filter);
-pageButton.addEventListener("click", loadMore);`,
+pageButton.addEventListener("click", loadMoreOnPage);`,
             role: "setup",
           },
         ],
@@ -242,7 +254,7 @@ pageButton.addEventListener("click", loadMore);`,
             id: "lightbox-examples-portfolio-cleanup",
             language: "javascript",
             code: `subjects.removeEventListener("change", filter);
-pageButton.removeEventListener("click", loadMore);
+pageButton.removeEventListener("click", loadMoreOnPage);
 unbind();
 lightbox.destroy();
 masonry.destroy();`,

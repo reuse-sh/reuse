@@ -58,6 +58,13 @@ export function runMarquee(
     interrupted = false;
     update();
   };
+  const wheel = (event: WheelEvent) => {
+    if (!driver || Math.abs(event.deltaX) <= Math.abs(event.deltaY)) return;
+    driver.release();
+    driver = null;
+    interrupted = true;
+    update();
+  };
   const slow = (event: PointerEvent) => {
     if (event.pointerType === "mouse") target = hoverSpeed;
   };
@@ -79,6 +86,7 @@ export function runMarquee(
 
   observer.observe(strip);
   strip.addEventListener("re-carousel:settle", settle);
+  strip.addEventListener("wheel", wheel, { passive: true });
   strip.addEventListener("pointerenter", slow);
   strip.addEventListener("pointerleave", resume);
   strip.addEventListener("focus", focus);
@@ -91,6 +99,7 @@ export function runMarquee(
   return () => {
     observer.disconnect();
     strip.removeEventListener("re-carousel:settle", settle);
+    strip.removeEventListener("wheel", wheel);
     strip.removeEventListener("pointerenter", slow);
     strip.removeEventListener("pointerleave", resume);
     strip.removeEventListener("focus", focus);

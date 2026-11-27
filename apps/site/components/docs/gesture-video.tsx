@@ -34,7 +34,9 @@ export function GestureVideo({
     let onScreen = false;
     const sync = () => {
       if (onScreen && document.visibilityState === "visible")
-        element.play().catch(() => {});
+        element.play().catch((error: DOMException) => {
+          if (error.name === "NotAllowedError") setAutoplay(false);
+        });
       else element.pause();
     };
     const observer = new IntersectionObserver(([entry]) => {

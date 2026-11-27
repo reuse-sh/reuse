@@ -52,7 +52,7 @@ const coverflowUsage =
   "Loop the strip and center the active slide. Every slide carries --re-carousel-offset, its distance from the center in slide widths, negative before it and positive after it, so the CSS turns, shrinks, stacks and fades each cover from that one number. Put the effect on an element inside the slide: the slide keeps its box, so snapping and the loop shift stay where the carousel measured them.";
 
 const coverflowIntegration =
-  "The offset is written on every scroll, drag and spring frame, so the covers turn while the strip moves, across the loop seam too. Under reduced motion the strip jumps and the covers take their new angles at once. A click on a side cover brings it to the center, and the arrow keys page when the strip has focus.";
+  "The offset is written on every scroll, drag and spring frame, so the covers turn while the strip moves, across the loop seam too. Under reduced motion the strip jumps and the covers take their new angles at once. A click on a side cover brings it to the center, and the arrow keys page when the strip has focus. The strip loops only while its covers span the viewport plus the widest cover, so a wider container needs more covers.";
 
 const marqueeFunction = `function runMarquee(carousel, strip, { speed = 40, hoverSpeed = 10 } = {}) {
   const reducedMotion = matchMedia("(prefers-reduced-motion: reduce)");
@@ -98,6 +98,13 @@ const marqueeFunction = `function runMarquee(carousel, strip, { speed = 40, hove
     interrupted = false;
     update();
   };
+  const wheel = (event) => {
+    if (!driver || Math.abs(event.deltaX) <= Math.abs(event.deltaY)) return;
+    driver.release();
+    driver = null;
+    interrupted = true;
+    update();
+  };
   const slow = (event) => {
     if (event.pointerType === "mouse") target = hoverSpeed;
   };
@@ -118,6 +125,7 @@ const marqueeFunction = `function runMarquee(carousel, strip, { speed = 40, hove
   });
   observer.observe(strip);
   strip.addEventListener("re-carousel:settle", settle);
+  strip.addEventListener("wheel", wheel, { passive: true });
   strip.addEventListener("pointerenter", slow);
   strip.addEventListener("pointerleave", resume);
   strip.addEventListener("focus", focus);
@@ -129,6 +137,7 @@ const marqueeFunction = `function runMarquee(carousel, strip, { speed = 40, hove
   return () => {
     observer.disconnect();
     strip.removeEventListener("re-carousel:settle", settle);
+    strip.removeEventListener("wheel", wheel);
     strip.removeEventListener("pointerenter", slow);
     strip.removeEventListener("pointerleave", resume);
     strip.removeEventListener("focus", focus);
@@ -151,7 +160,8 @@ const marqueeFunctionTyped = marqueeFunction
     'let driver: ReturnType<Carousel["take"]> | null = null;',
   )
   .replace("const tick = (now) =>", "const tick = (now: number) =>")
-  .replace("const slow = (event) =>", "const slow = (event: PointerEvent) =>");
+  .replace("const slow = (event) =>", "const slow = (event: PointerEvent) =>")
+  .replace("const wheel = (event) =>", "const wheel = (event: WheelEvent) =>");
 
 const marqueeCss = `.studios {
   --re-carousel-gap: 3rem;
@@ -166,7 +176,7 @@ const marqueeUsage =
   "Loop the strip and hand its position to your own driver with take(). The driver adds 40 px a second on every frame and passes the total to setPosition, which wraps through the loop seam. A mouse resting on the strip eases the speed down to 10 px a second and back, so it never jumps.";
 
 const marqueeIntegration =
-  "A mouse drag or a touch takes the strip back and calls onInterrupt. The run takes it again on the next re-carousel:settle and eases up from rest. It stops while the strip is off screen or the page is hidden, lets go while the strip has keyboard focus so the arrow keys scroll it, and stays still under reduced motion, where the strip scrolls as an ordinary carousel. Pause releases the strip, and it snaps to the nearest logo.";
+  "A mouse drag or a touch takes the strip back and calls onInterrupt, and a sideways trackpad scroll releases it to the person scrolling. The run takes it again on the next re-carousel:settle and eases up from rest. It stops while the strip is off screen or the page is hidden, lets go while the strip has keyboard focus so the arrow keys scroll it, and stays still under reduced motion, where the strip scrolls as an ordinary carousel. Pause releases the strip, and it snaps to the nearest logo. The strip loops only while its logos span the viewport plus the widest logo; with fewer, setPosition stops at the end, so repeat the row in a wide container.";
 
 const storiesCss = `.stories {
   position: relative;

@@ -102,6 +102,7 @@ export function Example() {
     button.style.borderRadius = "20px";
     button.addEventListener("click", () => {
       lightbox.append(loadMore().map(item));
+      button.hidden = true;
       button
         .closest("dialog")
         ?.querySelector<HTMLElement>(".re-lightbox-viewport")

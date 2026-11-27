@@ -201,6 +201,15 @@ for (const [path, recipe] of Object.entries(usageRecipes)) {
         )
         .not.toBe("");
     }
+    if (path === "lightbox/examples/portfolio") {
+      await page.keyboard.press("Escape");
+      await expect(page.locator("dialog[open]")).toHaveCount(0);
+      await page.locator("#load-more").click();
+      await expect(page.locator("#load-more")).toBeHidden();
+      await expect(
+        page.locator('#portfolio a[href$="pier.jpg"]'),
+      ).toBeFocused();
+    }
     if (setup)
       await page.evaluate(() =>
         (window as unknown as { __usageCleanup: () => void }).__usageCleanup(),
