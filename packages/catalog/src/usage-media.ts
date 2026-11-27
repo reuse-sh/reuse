@@ -2944,8 +2944,8 @@ import { AnnotatedImage } from "@reuse-sh/annotations/react";
 
 export function ReviewImage() {
   const annotations: Annotation[] = [
-    { kind: "area", box: [72, 80, 19, 9], label: "Hold, don't click" },
-    { kind: "pointer", point: [93, 53], label: "Right-aligned", side: "auto" },
+    { kind: "area", box: [72, 49, 19.5, 26], label: "Right-aligned" },
+    { kind: "pointer", point: [93, 85.5], label: "Press and hold", side: "auto" },
   ];
   return <AnnotatedImage src="/images/settings.png" alt="Settings page" width={1280} height={1005} annotations={annotations} />;
 }`,

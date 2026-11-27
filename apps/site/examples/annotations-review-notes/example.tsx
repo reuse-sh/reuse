@@ -7,12 +7,12 @@ import { photo } from "@/lib/photos";
 const page = photo("reuse-settings-page");
 
 const notes: Annotation[] = [
-  { kind: "area", box: [72.6, 80.8, 18.4, 9], label: "Hold, don't click" },
+  { kind: "area", box: [72, 49, 19.5, 26], label: "Right-aligned" },
   { kind: "marker", point: [39.2, 25.5], text: "Copy a prompt for your agent" },
   {
     kind: "pointer",
-    point: [93.5, 52.7],
-    label: "Right-aligned",
+    point: [93, 85.5],
+    label: "Press and hold",
     side: "auto",
   },
 ];
