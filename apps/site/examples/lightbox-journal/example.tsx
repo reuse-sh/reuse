@@ -125,12 +125,12 @@ export function Example() {
             October 2026 · 5 prints
           </p>
           <h2 className="re-j-title mt-1.5 text-2xl leading-8 font-semibold tracking-tight text-balance">
-            Six colors in one tray of water
+            Light along one quiet coast
           </h2>
           <p className="re-j-text max-w-xl mt-4 text-body leading-7 text-muted-foreground text-pretty">
-            Every print in this series starts as a tray of water and a few drops
-            of ink. A comb pulls the colors into bands, and a sheet of paper
-            lifts them off in one pass.
+            Every print in this series starts as an early walk along the water
+            and a single frame. The light rises over the sea, and the shutter
+            keeps it in one long pass.
           </p>
           <figure className="re-j-fig mt-7">
             <PhotoButton

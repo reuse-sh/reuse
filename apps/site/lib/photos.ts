@@ -442,10 +442,10 @@ export const galleryPhotos = (
     "golden-calm",
     "quiet-stair",
     "dunes",
-    "white-court",
+    "dusk-beach",
     "green-sprig",
     "shoreline",
+    "table-still-life",
     "cube-and-squash",
-    "fog-road",
   ] as const
 ).map(photo);

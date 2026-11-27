@@ -11,11 +11,11 @@ const texts = [
   "A wide band of evening light for a long shelf or a hallway.",
   "Plaster steps, cut upright.",
   "Sand under a light sky.",
-  "White walls and a deep blue sky.",
+  "Waves at dusk, with islands on the horizon.",
   "A green sprig against grey-blue.",
   "Soft waves along a low horizon.",
+  "A vase, a pear and grapes on a white cloth.",
   "Peach and pink in a square, quieter than the wide print.",
-  "A road that fades into fog.",
 ];
 
 export function Example() {

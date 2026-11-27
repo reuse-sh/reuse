@@ -8,7 +8,7 @@ import { photo } from "@/lib/photos";
 const proof = photo("sailboat");
 
 const review: Annotation[] = [
-  { kind: "area", box: [7, 10, 30, 32], label: "Bands too tight" },
+  { kind: "area", box: [7, 10, 30, 32], label: "Horizon too low" },
   { kind: "spotlight", box: [56, 50, 28, 32] },
   { kind: "arrow", line: [38, 82, 54, 68] },
   { kind: "line", line: [8, 90, 44, 90] },

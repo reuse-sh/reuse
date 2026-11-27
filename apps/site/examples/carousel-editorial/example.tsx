@@ -29,11 +29,11 @@ export function Example() {
           Print series · October 2026
         </p>
         <h2 className="mt-1.5 text-2xl leading-8 font-semibold tracking-tight text-balance">
-          Six sheets from one tray
+          Six frames from one trip
         </h2>
         <p className="mt-4 max-w-xl text-base leading-7 text-muted-foreground text-pretty">
-          The series started with one tray of water and six colors. These are
-          the sheets we kept, in the order they were pulled.
+          The series started with one trip and a small camera. These are the
+          frames we kept, in the order they were taken.
         </p>
       </article>
       <div className="min-w-0">
