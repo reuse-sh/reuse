@@ -646,7 +646,7 @@ export const libraries: Library[] = [
           {
             path: "examples/product-gallery",
             title: "Product gallery",
-            lead: "A main photo strip with thumbnails under it that follow it and move it. A click on the main photo opens the viewer.",
+            lead: "A product's photos in a main strip, with thumbnails under it that follow it and move it. A click on the main photo opens the viewer, and the strip stays on the photo the viewer closes on.",
             build:
               "a product gallery with a main strip, thumbnails and a lightbox",
           },
