@@ -968,6 +968,20 @@ test("the journal keeps the default click: on the open photo it zooms, beside it
   await expect(dialog).toHaveAttribute("data-zoomed", "true");
 });
 
+test("a narrow annotated screenshot drops the pointer label gutter", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto("/annotations/examples/review-notes");
+  const figure = page.locator(`${preview} figure[data-re-annotations]`);
+  await expect(figure.locator("[data-annot-drawing]")).toBeHidden();
+  const [image, frame] = await Promise.all([
+    figure.locator("[data-annot-media] img").boundingBox(),
+    figure.boundingBox(),
+  ]);
+  expect(image?.width).toBe(frame?.width);
+});
+
 test("only the press to grab example shrinks its slides during a mouse drag", async ({
   page,
 }) => {
