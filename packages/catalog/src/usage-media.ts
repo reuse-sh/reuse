@@ -1531,7 +1531,7 @@ carousel.destroy();`,
         blocks: [
           {
             kind: "prose",
-            text: "Give editorial images most of the viewport width so the next image remains visible, and keep alignment at the start. bindCarouselControls wires the dots, the counter and the arrows under the strip: the dot for the current photo gets aria-current and the counter reads its position.",
+            text: "Give editorial images most of the viewport width so the next image remains visible, keep alignment at the start, and loop so the last print leads back to the first. bindCarouselControls wires the dots, the counter and the arrows under the strip: the dot for the current photo gets aria-current and the counter reads its position.",
           },
           {
             kind: "code",
@@ -1551,7 +1551,7 @@ const prints = [
 
 export function PrintGallery() {
   const root = useRef<HTMLElement>(null);
-  const { ref, carousel } = useCarousel({ align: "start" });
+  const { ref, carousel } = useCarousel({ align: "start", loop: true });
   useEffect(() => {
     if (carousel && root.current) return bindCarouselControls(root.current, carousel);
   }, [carousel]);
@@ -1596,7 +1596,7 @@ export function PrintGallery() {
         blocks: [
           {
             kind: "prose",
-            text: "Give editorial images most of the viewport width so the next image remains visible, and keep alignment at the start. bindCarouselControls wires the dots, the counter and the arrows under the strip: the dot for the current photo gets aria-current and the counter reads its position.",
+            text: "Give editorial images most of the viewport width so the next image remains visible, keep alignment at the start, and loop so the last print leads back to the first. bindCarouselControls wires the dots, the counter and the arrows under the strip: the dot for the current photo gets aria-current and the counter reads its position.",
           },
           {
             kind: "code",
@@ -1660,7 +1660,7 @@ export function PrintGallery() {
             code: `import { createCarousel } from "@reuse-sh/carousel";
 import { bindCarouselControls } from "@reuse-sh/carousel/controls";
 
-const carousel = createCarousel(document.querySelector("#prints"), { align: "start" });
+const carousel = createCarousel(document.querySelector("#prints"), { align: "start", loop: true });
 const unbind = bindCarouselControls(document.querySelector("#gallery"), carousel);`,
             role: "setup",
           },
