@@ -42,10 +42,14 @@ const tiles = (count: number) =>
       `<a class="tile" href="${photo(index)}" data-carousel-slide style="flex:0 0 300px"><img src="${photo(index)}" alt="Photo ${index + 1}" style="display:block;width:300px;height:200px"></a>`,
   ).join("");
 
-async function stripPage(page: Page, carousel: Record<string, unknown> = {}) {
+async function stripPage(
+  page: Page,
+  carousel: Record<string, unknown> = {},
+  width = 300,
+) {
   await mount(
     page,
-    `<div id="strip" style="width:300px;margin:100px 0 0 100px;--re-carousel-gap:0px">${tiles(6)}</div>`,
+    `<div id="strip" style="width:${width}px;margin:100px 0 0 100px;--re-carousel-gap:0px">${tiles(6)}</div>`,
     styles,
   );
   await page.evaluate(async (options) => {
@@ -133,6 +137,37 @@ function expectOn(actual: Box | null, expected: Box) {
     expect(Math.abs((actual as Box)[key] - expected[key])).toBeLessThanOrEqual(
       1,
     );
+}
+
+for (const [width, visible] of [
+  [750, true],
+  [740, false],
+] as const) {
+  test(`paging to a tile with ${width - 600}px of 300px visible ${visible ? "keeps" : "moves"} the strip`, async ({
+    page,
+  }) => {
+    await stripPage(page, {}, width);
+    await openAt(page, 1);
+    const strip = page.locator("#strip");
+    const offset = () => strip.evaluate((element) => element.scrollLeft);
+    expect(await offset()).toBe(0);
+    await page.evaluate(
+      () =>
+        new Promise<void>((resolve) => {
+          const { lightbox } = window as Window;
+          const stop = lightbox.on("settle", () => {
+            stop();
+            resolve();
+          });
+          lightbox.next();
+        }),
+    );
+    const expected = visible ? 0 : 600;
+    expect(await offset()).toBe(expected);
+    await page.keyboard.press("Escape");
+    await expect(page.locator("dialog.re-lightbox")).toHaveCount(0);
+    expect(await offset()).toBe(expected);
+  });
 }
 
 test("after paging to photo 3, close brings the strip to slide 3 and lands on its tile", async ({
