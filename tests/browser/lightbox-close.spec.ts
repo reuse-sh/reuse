@@ -1191,6 +1191,25 @@ test.describe("focus after close", { tag: "@desktop" }, () => {
     expect((await focused(page)).id).toBe("search");
   });
 
+  test("scrolling the page during a keyboard close keeps the return ring", async ({
+    page,
+  }) => {
+    await galleryPage(page);
+    await slowClose(page, "body{min-height:200vh}");
+    const tile = page.locator('a:has(img[alt="Photo 2"])');
+    await tile.press("Enter");
+    const dialog = page.locator("dialog");
+    await expect(dialog).toHaveAttribute("data-phase", "open");
+    await page.keyboard.press("Escape");
+    await expect(dialog).toHaveAttribute("data-phase", "closing");
+    await page.mouse.move(700, 450);
+    await page.mouse.wheel(0, 45);
+    await expect.poll(() => page.evaluate(() => scrollY)).toBeGreaterThan(0);
+    await expect(dialog).toHaveCount(0);
+    await expect(tile).toBeFocused();
+    await expect(tile).not.toHaveCSS("outline-style", "none");
+  });
+
   test("a mouse close focuses the tile without a ring", async ({ page }) => {
     await galleryPage(page);
     await page.getByAltText("Photo 2").click();

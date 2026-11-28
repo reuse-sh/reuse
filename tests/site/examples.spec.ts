@@ -83,15 +83,21 @@ for (const [name, path, selector, open] of [
     const menu = page.locator(open);
     const surface =
       name === "Libraries" ? menu : menu.locator("[data-slot=menu-surface]");
-    for (const input of ["click", "Enter"]) {
+    for (const [input, clickPadding] of [
+      ["click", false],
+      ["click", true],
+      ["Enter", true],
+    ] as const) {
       if (input === "click") await trigger.click();
       else await trigger.press("Enter");
       await expect(menu).toBeVisible();
-      const box = await surface.boundingBox();
-      if (!box) throw new Error("The menu surface is missing.");
-      await page.mouse.click(box.x + box.width / 2, box.y + 3);
-      await expect(menu).toBeVisible();
-      await expect(trigger).not.toBeFocused();
+      if (clickPadding) {
+        const box = await surface.boundingBox();
+        if (!box) throw new Error("The menu surface is missing.");
+        await page.mouse.click(box.x + box.width / 2, box.y + 3);
+        await expect(menu).toBeVisible();
+        await expect(trigger).not.toBeFocused();
+      }
       await page.keyboard.press("Escape");
       await expect(menu).not.toBeVisible();
       await expect(trigger).toBeFocused();

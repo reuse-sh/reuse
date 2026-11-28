@@ -4927,6 +4927,7 @@ export function createLightbox<Item extends LightboxItem = LightboxItem>(
       win?.addEventListener(
         type,
         (event) => {
+          if (type === "wheel" && state.isClosing) return;
           if (input === "keyboard" && (event as KeyboardEvent).key === "Escape")
             s.input ??= keyboardAtOpen ? "keyboard" : "pointer";
           else s.input = input;
