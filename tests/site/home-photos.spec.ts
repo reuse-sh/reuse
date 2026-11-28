@@ -76,3 +76,60 @@ for (const { name, viewport } of [
     });
   });
 }
+
+test.describe("a pending neighbor on the home carousel", () => {
+  test.use({ viewport: { width: 1440, height: 900 }, deviceScaleFactor: 2 });
+
+  test("the lightbox keeps the AVIF format for a photo that is still loading", async ({
+    page,
+  }) => {
+    const fullPath = "/photos/sailboat-2560.avif";
+    const jpegRequests: string[] = [];
+    page.on("request", (request) => {
+      const path = new URL(request.url()).pathname;
+      if (path.startsWith("/photos/sailboat-") && path.endsWith(".jpg"))
+        jpegRequests.push(path);
+    });
+    let resume = () => {};
+    const pending = new Promise<void>((resolve) => {
+      resume = resolve;
+    });
+    await page.route(`**${fullPath}`, async (route) => {
+      await pending;
+      await route.continue();
+    });
+
+    try {
+      await page.goto("/");
+      const trigger = page.getByRole("button", { name: "Open Pink summit" });
+      await trigger.scrollIntoViewIfNeeded();
+      await expect
+        .poll(() =>
+          trigger
+            .locator("img")
+            .evaluate((image: HTMLImageElement) => image.currentSrc),
+        )
+        .toMatch(/pink-summit-2560\.avif$/);
+      const neighbor = page.getByRole("button", { name: "Open Evening sail" });
+      await expect(neighbor.locator("img")).toHaveJSProperty("currentSrc", "");
+      await trigger.press("Enter");
+      const dialog = page.locator('dialog.re-lightbox[data-phase="open"]');
+      const thumbnail = dialog.locator(".re-lightbox-thumbnails button").nth(1);
+      await expect(thumbnail.locator("img")).toHaveAttribute(
+        "src",
+        "/photos/sailboat-640.avif",
+      );
+
+      await page.keyboard.press("ArrowRight");
+      resume();
+      const shown = dialog.getByRole("img", { name: /A small sailboat/ });
+      await expect(shown).toHaveAttribute(
+        "src",
+        new URL(fullPath, page.url()).href,
+      );
+      expect(jpegRequests).toEqual([]);
+    } finally {
+      resume();
+    }
+  });
+});
