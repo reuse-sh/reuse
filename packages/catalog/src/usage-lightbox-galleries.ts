@@ -47,6 +47,7 @@ export function Portfolio({ photos, subjects }: { photos: Photo[]; subjects: str
   const [loaded, setLoaded] = useState(24);
   const tiles = useRef(new Map<string, HTMLElement>());
   const focusTile = useRef<string | null>(null);
+  const subjectGroup = useRef<HTMLFieldSetElement>(null);
   const latest = useRef({ subject, loaded, photos });
   latest.current = { subject, loaded, photos };
   const matches = (photo: Photo) => latest.current.subject === "All" || photo.subject === latest.current.subject;
@@ -76,7 +77,7 @@ export function Portfolio({ photos, subjects }: { photos: Photo[]; subjects: str
   const lightbox = useLightbox({ slots: { toolbarEnd: loadMoreButton.current } });
   const shown = photos.slice(0, loaded).filter(matches);
   return <div>
-    <fieldset>
+    <fieldset ref={subjectGroup}>
       <legend>Subject</legend>
       {["All", ...subjects].map((name) => (
         <label key={name}>
@@ -98,7 +99,10 @@ export function Portfolio({ photos, subjects }: { photos: Photo[]; subjects: str
         </button>
       ))}
     </Masonry>
-    {loaded < photos.length ? <button type="button" onClick={() => { focusTile.current = loadMore()[0]?.src ?? null; }}>Load more</button> : null}
+    {loaded < photos.length ? <button type="button" onClick={() => {
+      focusTile.current = loadMore()[0]?.src ?? null;
+      if (!focusTile.current) subjectGroup.current?.querySelector<HTMLInputElement>(":checked")?.focus();
+    }}>Load more</button> : null}
   </div>;
 }`,
             role: "usage",
@@ -110,7 +114,7 @@ export function Portfolio({ photos, subjects }: { photos: Photo[]; subjects: str
         blocks: [
           {
             kind: "prose",
-            text: "Each item's origin is a function that looks its tile up when the viewer needs it, so a photo appended while the viewer is open closes into the tile React rendered for it. The slot reads the loaded count from a ref, since its update runs between React renders, and hides itself once the last page is in. The in-viewer button hides itself after its click too, because an append that adds no photo of the chosen subject changes nothing the viewer would report. When the button that had focus goes, focus moves to the viewer's viewport, where the arrow keys page on to the new photos, and the page's button hands focus to the first new tile. The native dialog keeps focus inside, Escape closes it, and close returns focus to the current photo's tile. The React hook closes its viewer at once and frees it on unmount.",
+            text: "Each item's origin is a function that looks its tile up when the viewer needs it, so a photo appended while the viewer is open closes into the tile React rendered for it. The slot reads the loaded count from a ref, since its update runs between React renders, and hides itself once the last page is in. The in-viewer button hides itself after its click too, because an append that adds no photo of the chosen subject changes nothing the viewer would report. When the button that had focus goes, focus moves to the viewer's viewport, where the arrow keys page on to the new photos, and the page's button hands focus to the first new tile, or to the chosen subject when the page added none. The native dialog keeps focus inside, Escape closes it, and close returns focus to the current photo's tile. The React hook closes its viewer at once and frees it on unmount.",
           },
         ],
       },

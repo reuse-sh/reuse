@@ -217,18 +217,43 @@ test.describe("gesture clips on /lightbox/gestures", () => {
     );
   });
 
-  test("a browser that blocks autoplay gets the clips' own controls", async ({
+  test("a browser that blocks autoplay gets the clips' own controls, focus and offscreen pause", async ({
     page,
   }) => {
     await page.addInitScript(() => {
-      HTMLMediaElement.prototype.play = () =>
-        Promise.reject(new DOMException("Blocked", "NotAllowedError"));
+      const play = HTMLMediaElement.prototype.play;
+      const blocked = window as unknown as { attempts: number };
+      blocked.attempts = 0;
+      HTMLMediaElement.prototype.play = function (this: HTMLMediaElement) {
+        if (this.dataset.started) return play.call(this);
+        blocked.attempts++;
+        return Promise.reject(new DOMException("Blocked", "NotAllowedError"));
+      };
     });
     await page.goto("/lightbox/gestures");
+    await page.locator("figure button").first().focus();
+    await expect(page.locator("figure video").first()).toBeFocused();
     await page.locator("figure video").first().scrollIntoViewIfNeeded();
+    await expect
+      .poll(() =>
+        page.evaluate(
+          () => (window as unknown as { attempts: number }).attempts,
+        ),
+      )
+      .toBeGreaterThanOrEqual(3);
     await expect
       .poll(() => states(page))
       .toEqual(Array(3).fill({ paused: true, controls: true }));
+    await page
+      .locator("figure video")
+      .first()
+      .evaluate((video: HTMLVideoElement) => {
+        video.dataset.started = "true";
+        return video.play();
+      });
+    await expect.poll(async () => (await states(page))[0].paused).toBe(false);
+    await page.evaluate(() => window.scrollTo(0, 0));
+    await expect.poll(async () => (await states(page))[0].paused).toBe(true);
   });
 
   test("each clip's caption names a row of the gestures table and describes it", async ({
@@ -244,6 +269,9 @@ test.describe("gesture clips on /lightbox/gestures", () => {
         ),
       );
     expect(captions).toHaveLength(3);
-    for (const [name] of captions) expect(rows).toContain(name);
+    for (const [name, description] of captions) {
+      expect(rows).toContain(name);
+      expect(description.trim()).not.toBe("");
+    }
   });
 });

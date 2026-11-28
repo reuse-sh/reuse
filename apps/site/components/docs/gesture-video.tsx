@@ -16,6 +16,8 @@ export function GestureVideo({
   label: string;
 }) {
   const video = useRef<HTMLVideoElement>(null);
+  const overlay = useRef<HTMLButtonElement>(null);
+  const refocus = useRef(false);
   const [autoplay, setAutoplay] = useState(false);
   const [paused, setPaused] = useState(false);
 
@@ -29,15 +31,18 @@ export function GestureVideo({
 
   useEffect(() => {
     const element = video.current;
-    if (!element || !autoplay || paused) return;
+    if (!element) return;
     element.muted = true;
+    const play = autoplay && !paused;
     let onScreen = false;
     const sync = () => {
-      if (onScreen && document.visibilityState === "visible")
+      if (!onScreen || document.visibilityState !== "visible") element.pause();
+      else if (play)
         element.play().catch((error: DOMException) => {
-          if (error.name === "NotAllowedError") setAutoplay(false);
+          if (error.name !== "NotAllowedError") return;
+          refocus.current = document.activeElement === overlay.current;
+          setAutoplay(false);
         });
-      else element.pause();
     };
     const observer = new IntersectionObserver(([entry]) => {
       onScreen = entry.isIntersecting;
@@ -48,9 +53,15 @@ export function GestureVideo({
     return () => {
       observer.disconnect();
       document.removeEventListener("visibilitychange", sync);
-      element.pause();
+      if (play) element.pause();
     };
   }, [autoplay, paused]);
+
+  useEffect(() => {
+    if (autoplay || !refocus.current) return;
+    refocus.current = false;
+    video.current?.focus();
+  }, [autoplay]);
 
   return (
     <div className="relative">
@@ -70,6 +81,7 @@ export function GestureVideo({
       />
       {autoplay ? (
         <button
+          ref={overlay}
           type="button"
           aria-label={`${paused ? "Play" : "Pause"} the ${label.toLowerCase()} clip`}
           onClick={() => setPaused((value) => !value)}
