@@ -259,6 +259,28 @@ test("home and overview keep the same base hold color after confirmation", async
   }
 });
 
+test("Escape cancels a pointer hold without adding a ring", async ({
+  page,
+}) => {
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await page.goto("/hold-to-confirm");
+  const button = page.getByRole("button", { name: "Hold to delete" });
+  await button.scrollIntoViewIfNeeded();
+  const box = await button.boundingBox();
+  if (!box) throw new Error("The hold control is missing.");
+  await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+  await page.mouse.down();
+  await expect(button).toHaveAttribute("data-holding", "");
+  await page.keyboard.press("Escape");
+  await page.mouse.up();
+  await expect(button).not.toHaveAttribute("data-holding", "");
+  await expect(button).toBeFocused();
+  await expect(button).not.toHaveCSS("box-shadow", /[1-9]\d*px/);
+
+  await page.keyboard.press("Space");
+  await expect(button).toHaveCSS("box-shadow", / 4px/);
+});
+
 test("confirmed hold label and fill share one reset clock", async ({
   page,
 }) => {

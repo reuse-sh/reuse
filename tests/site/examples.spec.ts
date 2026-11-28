@@ -71,6 +71,50 @@ test("framework menu has one moving background after repeated selection and clos
   }
 });
 
+for (const [name, path, selector, open] of [
+  ["Libraries", "/", 'role=button[name="Libraries"]', ".library-menu"],
+  ["Framework", "/carousel", `${chooser} summary`, `${chooser}[open]`],
+] as const) {
+  test(`${name} shows a return outline only after keyboard use`, async ({
+    page,
+  }) => {
+    await page.goto(path);
+    const trigger = page.locator(selector);
+    const menu = page.locator(open);
+    const surface =
+      name === "Libraries" ? menu : menu.locator("[data-slot=menu-surface]");
+    for (const [input, clickPadding] of [
+      ["click", false],
+      ["click", true],
+      ["Enter", true],
+    ] as const) {
+      if (input === "click") await trigger.click();
+      else await trigger.press("Enter");
+      await expect(menu).toBeVisible();
+      if (clickPadding) {
+        const box = await surface.boundingBox();
+        if (!box) throw new Error("The menu surface is missing.");
+        await page.mouse.click(box.x + box.width / 2, box.y + 3);
+        await expect(menu).toBeVisible();
+        await expect(trigger).not.toBeFocused();
+      }
+      await page.keyboard.press("Escape");
+      await expect(menu).not.toBeVisible();
+      await expect(trigger).toBeFocused();
+      await expect(trigger).toHaveCSS("outline-style", "none");
+      await page.keyboard.press("Escape");
+      await expect(trigger).toHaveCSS("outline-style", "none");
+    }
+
+    await trigger.press("Enter");
+    await expect(menu).toBeVisible();
+    await page.keyboard.press("Escape");
+    await expect(menu).not.toBeVisible();
+    await expect(trigger).toBeFocused();
+    await expect(trigger).not.toHaveCSS("outline-style", "none");
+  });
+}
+
 test("overview has only the showcase and principles while usage is ordered below example demos", async ({
   page,
 }) => {
@@ -1294,13 +1338,19 @@ for (const look of ["classic", "dark", "photos-app"]) {
     await tile.click();
     const dialog = page.locator("dialog.re-lightbox[open]");
     await expect(dialog).toHaveCount(1);
+    await expect(dialog.locator(".re-lightbox-close")).toHaveCSS(
+      "outline-style",
+      "none",
+    );
     const box = await dialog.boundingBox();
     const viewport = page.viewportSize();
     expect(box?.width).toBe(viewport?.width);
     expect(box?.height).toBe(viewport?.height);
     await expect(page.locator("iframe")).toHaveCount(0);
     await page.keyboard.press("Escape");
-    await expect(dialog).toHaveCount(0);
+    await expect(page.locator("dialog.re-lightbox")).toHaveCount(0);
+    await expect(tile).toBeFocused();
+    await expect(tile).toHaveCSS("outline-style", "none");
   });
 }
 
@@ -1531,7 +1581,32 @@ test("opening and closing a visible home strip photo keeps the strip in place", 
   expect(await offset()).toBe(before);
   await page.keyboard.press("Escape");
   await expect(page.locator("dialog.re-lightbox")).toHaveCount(0);
+  await expect(tile).toBeFocused();
+  await expect(tile).toHaveCSS("outline-style", "none");
   expect(await offset()).toBe(before);
+});
+
+test("Escape shows no outline during a return to a different carousel photo", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await page.addStyleTag({
+    content: ".re-lightbox { --re-lightbox-close-duration: 2s }",
+  });
+  const tiles = page.getByRole("region", { name: "Photos" });
+  const first = tiles.getByRole("button", { name: /^Open / }).first();
+  const second = tiles.getByRole("button", { name: /^Open / }).nth(1);
+  await first.click();
+  const dialog = page.locator("dialog.re-lightbox");
+  await expect(dialog).toHaveAttribute("data-phase", "open");
+  await dialog.getByRole("button", { name: "Next image" }).click();
+  await expect(dialog.locator(".re-lightbox-counter")).toHaveText(/2 \/ /);
+  await page.keyboard.press("Escape");
+  await expect(dialog).toHaveAttribute("data-phase", "closing");
+  await expect(first).toHaveCSS("outline-style", "none");
+  await expect(dialog).toHaveCount(0);
+  await expect(second).toBeFocused();
+  await expect(second).toHaveCSS("outline-style", "none");
 });
 
 test("the home strip lightbox closes onto the tile it paged to", async ({
@@ -1568,4 +1643,24 @@ test("the home strip lightbox closes onto the tile it paged to", async ({
     (image) => image.getBoundingClientRect().left,
   );
   expect(Math.abs(settled - atClose)).toBeLessThanOrEqual(1);
+});
+
+test("scrolling thumbnails after a keyboard open returns to the carousel without an outline", async ({
+  page,
+}) => {
+  await page.goto("/");
+  const strip = page.getByRole("region", { name: "Photos" });
+  await strip.getByRole("button", { name: "Open Pink summit" }).press("Enter");
+  const dialog = page.locator("dialog.re-lightbox");
+  await expect(dialog).toHaveAttribute("data-phase", "open");
+  const counter = dialog.locator(".re-lightbox-counter");
+  await expect(counter).toHaveText("1 / 8");
+  await dialog.locator(".re-lightbox-thumbnails").hover();
+  await page.mouse.wheel(440, 0);
+  await expect(counter).not.toHaveText("1 / 8");
+  await page.keyboard.press("Escape");
+  await expect(dialog).toHaveCount(0);
+  const focusedTile = strip.locator("button:focus");
+  await expect(focusedTile).toHaveCount(1);
+  await expect(focusedTile).toHaveCSS("outline-style", "none");
 });

@@ -5,9 +5,7 @@ import { type ReactNode, useEffect, useRef } from "react";
 const wakeEvery = 800;
 const inputs = ["pointermove", "pointerdown", "keydown"] as const;
 
-// Opening focuses the viewer's close button with a ring, because the open is not a reader's
-// click, and a focused control holds the controls shown. In a frame that focus would also pull
-// focus out of the embedding page. Give it back to wherever the reader was.
+// Focusing the viewer's close button inside the frame can steal focus from the embedding page.
 function returnFocus(outer: Element | null | undefined) {
   // The frame and the reader's element belong to the embedding page's realm, so instanceof
   // against this document's classes is false for them.

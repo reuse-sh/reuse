@@ -201,7 +201,7 @@ export const libraries: Library[] = [
       ],
       [
         "Give focus back quietly",
-        "A click or a tap opens with focus on the close button and no ring. Focus returns to the photo's tile without a ring after a pointer close, and with one after a keyboard close, unless the visitor moved it during the close flight.",
+        "A click or a tap opens with focus on the close button and no ring. Escape closes without changing the input mode. Focus returns to the photo's tile without a ring after pointer use, and with one after keyboard use, unless the visitor moved it during the close flight.",
         "tests/browser/lightbox-close.spec.ts",
       ],
       [
