@@ -46,6 +46,11 @@
   --re-lightbox-error-padding: 24px;
   --re-lightbox-placeholder: rgb(0 0 0 / 5%);
   --re-lightbox-media-background: #f2f2f2;
+  --re-lightbox-media-ring: color-mix(
+    in srgb,
+    var(--re-lightbox-foreground) 14%,
+    transparent
+  );
   --re-lightbox-retry-padding: 8px 16px;
   --re-lightbox-retry-radius: 20px;
   --re-lightbox-aside-width: 320px;
@@ -267,6 +272,9 @@
     )
     var(--re-lightbox-inset) var(--re-lightbox-inset);
   text-align: start;
+}
+.re-lightbox-slide[data-framed]::after {
+  box-shadow: inset 0 0 0 1px var(--re-lightbox-media-ring);
 }
 .re-lightbox-frame:is([data-loading], [data-error]) {
   background: var(--re-lightbox-placeholder);
