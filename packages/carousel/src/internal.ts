@@ -11,6 +11,7 @@ export interface CarouselInternals {
   slides(): readonly HTMLElement[];
   pagePositions(): readonly number[];
   settling(): boolean;
+  willKeepVisible(index: number): boolean;
   autoplays(): boolean;
   onOptions(listener: () => void): () => void;
   align(): "start" | "center" | undefined;

@@ -645,14 +645,19 @@ export function createCarousel(
     return page;
   }
 
+  function slideVisibleAt(index: number, current: number) {
+    const size = widths[index] ?? 0;
+    if (size === 0) return false;
+    let left = starts[index] - current;
+    if (span) left += Math.round((width / 2 - left - size / 2) / span) * span;
+    const overlap = Math.min(left + size, width) - Math.max(left, 0);
+    return overlap >= size / 2 - 0.5;
+  }
+
   function visibleSlides(current: number) {
     const shown: number[] = [];
     slides.forEach((_slide, index) => {
-      const size = widths[index] ?? 0;
-      let left = (starts[index] ?? 0) - current;
-      if (span) left += Math.round((width / 2 - left - size / 2) / span) * span;
-      const overlap = Math.min(left + size, width) - Math.max(left, 0);
-      if (size > 0 && overlap >= size / 2 - 0.5) shown.push(index);
+      if (slideVisibleAt(index, current)) shown.push(index);
     });
     return shown;
   }
@@ -2072,6 +2077,9 @@ export function createCarousel(
             : 0,
       ),
     settling: () => unsettled,
+    willKeepVisible: (index) =>
+      slideVisibleAt(index, position()) &&
+      (pendingPosition === undefined || slideVisibleAt(index, pendingPosition)),
     align: () => options.align,
     goTo: (index, behavior, announce) =>
       announce ? announced(() => goTo(index, behavior)) : goTo(index, behavior),

@@ -14,7 +14,7 @@ node scripts/measure-native.mjs imported every native entry without React or a b
 
 ## Reproduced defects and fixes
 
-The page carousel used to scroll when the lightbox settled on a slide that was already visible or closed onto it. The visibility check adds 27 gzip bytes to the standalone `carousel-link.js` build, from 283 to 310 bytes. The bundle budget is 0.31 KiB.
+The page carousel used to scroll when the lightbox settled on a slide that was already visible or closed onto it. The visibility check adds 81 gzip bytes to the standalone `carousel-link.js` build, from 283 to 364 bytes. The bundle budget is 0.36 KiB.
 
 Before the mouse-drag fix, dragging a photo button from 750, 520 to 450, 520 left the old carousel at scrollLeft 2494.5 and slide 1. The corrected carousel moved to slide 2 after a real drag over the image. No accidental lightbox opened. Rapid Next, Next, Previous ended at the expected slide 3, and slide 6 followed by Next returned to slide 1.
 
