@@ -87,6 +87,8 @@ for (const [name, path, selector, open] of [
     await expect(menu).not.toBeVisible();
     await expect(trigger).toBeFocused();
     await expect(trigger).toHaveCSS("outline-style", "none");
+    await page.keyboard.press("Escape");
+    await expect(trigger).toHaveCSS("outline-style", "none");
 
     await trigger.press("Enter");
     await expect(menu).toBeVisible();
@@ -1320,13 +1322,19 @@ for (const look of ["classic", "dark", "photos-app"]) {
     await tile.click();
     const dialog = page.locator("dialog.re-lightbox[open]");
     await expect(dialog).toHaveCount(1);
+    await expect(dialog.locator(".re-lightbox-close")).toHaveCSS(
+      "outline-style",
+      "none",
+    );
     const box = await dialog.boundingBox();
     const viewport = page.viewportSize();
     expect(box?.width).toBe(viewport?.width);
     expect(box?.height).toBe(viewport?.height);
     await expect(page.locator("iframe")).toHaveCount(0);
     await page.keyboard.press("Escape");
-    await expect(dialog).toHaveCount(0);
+    await expect(page.locator("dialog.re-lightbox")).toHaveCount(0);
+    await expect(tile).toBeFocused();
+    await expect(tile).toHaveCSS("outline-style", "none");
   });
 }
 
@@ -1557,7 +1565,32 @@ test("opening and closing a visible home strip photo keeps the strip in place", 
   expect(await offset()).toBe(before);
   await page.keyboard.press("Escape");
   await expect(page.locator("dialog.re-lightbox")).toHaveCount(0);
+  await expect(tile).toBeFocused();
+  await expect(tile).toHaveCSS("outline-style", "none");
   expect(await offset()).toBe(before);
+});
+
+test("Escape shows no outline during a return to a different carousel photo", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await page.addStyleTag({
+    content: ".re-lightbox { --re-lightbox-close-duration: 2s }",
+  });
+  const tiles = page.getByRole("region", { name: "Photos" });
+  const first = tiles.getByRole("button", { name: /^Open / }).first();
+  const second = tiles.getByRole("button", { name: /^Open / }).nth(1);
+  await first.click();
+  const dialog = page.locator("dialog.re-lightbox");
+  await expect(dialog).toHaveAttribute("data-phase", "open");
+  await dialog.getByRole("button", { name: "Next image" }).click();
+  await expect(dialog.locator(".re-lightbox-counter")).toHaveText(/2 \/ /);
+  await page.keyboard.press("Escape");
+  await expect(dialog).toHaveAttribute("data-phase", "closing");
+  await expect(first).toHaveCSS("outline-style", "none");
+  await expect(dialog).toHaveCount(0);
+  await expect(second).toBeFocused();
+  await expect(second).toHaveCSS("outline-style", "none");
 });
 
 test("the home strip lightbox closes onto the tile it paged to", async ({

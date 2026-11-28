@@ -7,6 +7,7 @@ import {
 import { isStageEvent } from "@reuse-sh/stage";
 import { usePathname } from "next/navigation";
 import { type MouseEvent, useEffect, useRef, useState } from "react";
+import { useMenuTriggerFocus } from "@/lib/use-menu-trigger-focus";
 import { cn } from "@/lib/utils";
 import { libraryAt } from "../../lib/menu";
 import { DocLink as Link } from "../docs/doc-link";
@@ -20,6 +21,7 @@ export function SiteHeader() {
   const pathname = usePathname();
   const library = libraryAt(pathname);
   const [open, setOpen] = useState(false);
+  const { onClick: trackTriggerClick, ...triggerFocus } = useMenuTriggerFocus();
   const header = useRef<HTMLElement>(null);
   const wrap = useRef<HTMLDivElement>(null);
   const brand = useRef<HTMLDivElement>(null);
@@ -137,6 +139,7 @@ export function SiteHeader() {
             /
           </span>
           <button
+            {...triggerFocus}
             ref={button}
             type="button"
             className="inline-flex h-8 min-w-0 items-center gap-1.5 rounded-lg bg-transparent px-2 text-ui font-medium text-foreground max-sm:min-w-8 max-sm:shrink-0 [&_svg]:shrink-0"
@@ -145,6 +148,7 @@ export function SiteHeader() {
             aria-expanded={open}
             aria-controls={MENU_ID}
             onClick={(event: MouseEvent) => {
+              trackTriggerClick(event);
               if (open) setOpen(false);
               else show(event.detail === 0);
             }}

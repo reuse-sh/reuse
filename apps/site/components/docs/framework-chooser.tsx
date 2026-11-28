@@ -3,6 +3,7 @@ import { createMovingHighlight } from "@reuse-sh/interactions";
 import Link from "next/link";
 import { useEffect, useId, useRef } from "react";
 import { MenuSurface } from "@/components/ui/surfaces";
+import { useMenuTriggerFocus } from "@/lib/use-menu-trigger-focus";
 import type { Framework } from "../../lib/framework";
 import { Icon } from "../icons";
 
@@ -11,6 +12,7 @@ interface ChooserProps {
   pathname: string;
 }
 function Menu({ framework, pathname }: ChooserProps) {
+  const triggerFocus = useMenuTriggerFocus();
   const root = useRef<HTMLDetailsElement>(null);
   const options = useRef<HTMLDivElement>(null);
   const id = useId();
@@ -45,6 +47,7 @@ function Menu({ framework, pathname }: ChooserProps) {
   return (
     <details ref={root} className="re-framework relative mb-5">
       <summary
+        {...triggerFocus}
         aria-controls={id}
         className="flex min-h-7 w-fit max-w-full cursor-pointer list-none items-center gap-2 text-foreground [&::-webkit-details-marker]:hidden"
       >

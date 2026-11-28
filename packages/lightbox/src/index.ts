@@ -2990,24 +2990,27 @@ export function createLightbox<Item extends LightboxItem = LightboxItem>(
         target.blur();
       target.focus(options);
       if (target.ownerDocument.activeElement !== target) continue;
-      if (quiet && matches(target, ":focus-visible")) quietFocus(target);
+      if (quiet) quietFocus(target);
       return;
     }
   }
 
-  // Focus that still shows a ring after a pointer close, from an engine without focusVisible or
-  // the dialog's own focus restore, gets an attribute the theme hides the ring by.
+  // Some browsers ignore focusVisible or show the ring again on a repeated Escape.
   function quietFocus(target: HTMLElement) {
+    if (target.hasAttribute("data-re-focus-quiet")) return;
     const stop = new AbortController();
     const clear = () => {
       target.removeAttribute("data-re-focus-quiet");
       stop.abort();
     };
     target.setAttribute("data-re-focus-quiet", "");
-    target.ownerDocument.defaultView?.addEventListener("keydown", clear, {
-      capture: true,
-      signal: stop.signal,
-    });
+    target.addEventListener(
+      "keydown",
+      (event) => {
+        if (event.key !== "Escape") clear();
+      },
+      { capture: true, signal: stop.signal },
+    );
     target.addEventListener("blur", clear, { signal: stop.signal });
   }
 
@@ -4671,6 +4674,10 @@ export function createLightbox<Item extends LightboxItem = LightboxItem>(
     const previousFocus = isHTMLElement(doc.activeElement)
       ? doc.activeElement
       : null;
+    const opener = doc.defaultView?.event;
+    const keyboardAtOpen =
+      opener?.type === "keydown" ||
+      (previousFocus && matches(previousFocus, ":focus-visible"));
     (settings.container ?? doc.body).append(dialog);
     const restoreScroll = lockScroll(doc);
     try {
@@ -4918,8 +4925,10 @@ export function createLightbox<Item extends LightboxItem = LightboxItem>(
     ] as const)
       win?.addEventListener(
         type,
-        () => {
-          s.input = input;
+        (event) => {
+          if (input === "keyboard" && (event as KeyboardEvent).key === "Escape")
+            s.input ??= keyboardAtOpen ? "keyboard" : "pointer";
+          else s.input = input;
         },
         { signal: abort.signal, capture: true, passive: true },
       );
@@ -4957,18 +4966,22 @@ export function createLightbox<Item extends LightboxItem = LightboxItem>(
       { signal: abort.signal },
     );
     const opening = closeButton ?? viewport;
-    // window.event is the click or tap that called open(); a key's click has detail 0.
-    const opener = win?.event;
+    // Firefox gives keyboard-activated links a click detail of 1 and an empty pointerType.
     const pointerOpen =
       opener !== undefined &&
       (/^(pointer|touch|mouse)/.test(opener.type) ||
-        (opener.type === "click" && (opener as MouseEvent).detail > 0));
+        (opener.type === "click" &&
+          ("pointerType" in opener
+            ? Boolean(opener.pointerType)
+            : (opener as MouseEvent).detail > 0)));
+    if (pointerOpen) s.input = "pointer";
+    const quietOpening = pointerOpen || (!opener && !keyboardAtOpen);
     opening.focus(
-      pointerOpen
+      quietOpening
         ? { preventScroll: true, focusVisible: false }
         : { preventScroll: true },
     );
-    if (pointerOpen && matches(opening, ":focus-visible")) quietFocus(opening);
+    if (quietOpening && matches(opening, ":focus-visible")) quietFocus(opening);
     watchControls(s);
     readTiming(s);
     void win?.getComputedStyle(toolbar).opacity;
@@ -5028,6 +5041,12 @@ export function createLightbox<Item extends LightboxItem = LightboxItem>(
     dialog.popover = "manual";
     dialog.showPopover();
     s.releasedFocus = dialog.ownerDocument.activeElement;
+    if (
+      s.input === "pointer" &&
+      s.previousFocus &&
+      s.releasedFocus === s.previousFocus
+    )
+      quietFocus(s.previousFocus);
   }
 
   // closed waits for the history back, unless open() or destroy() comes first.

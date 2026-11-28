@@ -1240,13 +1240,20 @@ test.describe("focus after close", { tag: "@desktop" }, () => {
       const tile = page.locator('a:has(img[alt="Photo 2"])');
       if (input === "Enter") await tile.press("Enter");
       else await tile.click();
-      await expect(page.locator("dialog")).toHaveAttribute("data-phase", "open");
+      await expect(page.locator("dialog")).toHaveAttribute(
+        "data-phase",
+        "open",
+      );
       if (input === "Tab after click") await page.keyboard.press("Tab");
       await page.keyboard.press("Escape");
       await expect(page.locator("dialog")).toHaveCount(0);
       await expect(tile).toBeFocused();
       if (ring) await expect(tile).not.toHaveCSS("outline-style", "none");
-      else await expect(tile).toHaveCSS("outline-style", "none");
+      else {
+        await expect(tile).toHaveCSS("outline-style", "none");
+        await page.keyboard.press("Escape");
+        await expect(tile).toHaveCSS("outline-style", "none");
+      }
 
       await page.keyboard.press("Tab");
       const next = page.locator(":focus-visible");

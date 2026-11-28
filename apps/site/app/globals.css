@@ -239,10 +239,11 @@
   :focus-visible {
     @apply outline-2 outline-offset-2 outline-ring;
   }
-  [data-re-focus-quiet]:focus-visible {
-    @apply outline-none;
-  }
   ::selection {
     @apply bg-selection text-foreground;
   }
+}
+
+[data-re-focus-quiet]:focus-visible {
+  outline: none;
 }
