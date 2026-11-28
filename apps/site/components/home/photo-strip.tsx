@@ -3,13 +3,19 @@
 import { useCarousel, useCarouselState } from "@reuse-sh/carousel/react";
 import { connectCarousel } from "@reuse-sh/lightbox/carousel";
 import { useLightbox } from "@reuse-sh/lightbox/react";
-import Image from "next/image";
 import { type CSSProperties, useEffect, useRef } from "react";
+import { Picture } from "@/components/picture";
 import { Container } from "@/components/ui/container";
 import { photos } from "../../lib/photos";
 import { Icon } from "../icons";
 
-const strip = [0, 4, 6, 1, 5, 7, 2, 3].map((index) => photos[index]);
+const strip = [0, 4, 6, 1, 5, 7, 2, 3].map((index) => {
+  const photo = photos[index];
+  const aspect = photo.width / photo.height;
+  const coverWidth = `min(310px, 72vw) * ${Math.max(1, (aspect * 5) / 4)}`;
+  const viewerWidth = `min(100vw, (100dvh - 64px) * ${aspect})`;
+  return { ...photo, sizes: `max(${coverWidth}, ${viewerWidth})` };
+});
 
 export function PhotoStrip() {
   const { ref, carousel } = useCarousel({ align: "start" });
@@ -29,13 +35,15 @@ export function PhotoStrip() {
   }, [lightbox, carousel]);
   const open = (index: number) =>
     lightbox.open(
-      strip.map((photo, at) => ({
-        ...photo,
-        srcset: photo.srcSet,
-        thumbnailSrc: photo.src,
-        previewSrc: images.current[at]?.currentSrc || photo.src,
-        origin: () => images.current[at] ?? null,
-      })),
+      strip.map((photo, at) => {
+        const source = images.current[at]?.currentSrc;
+        return {
+          ...photo,
+          srcset: source?.endsWith(".avif") ? photo.avifSrcSet : photo.srcSet,
+          thumbnailSrc: source || photo.src,
+          origin: () => images.current[at] ?? null,
+        };
+      }),
       index,
     );
   return (
@@ -56,17 +64,15 @@ export function PhotoStrip() {
               aria-label={`Open ${photo.caption}`}
               onClick={() => open(index)}
             >
-              <Image
+              <Picture
+                photo={photo}
                 ref={(image) => {
                   images.current[index] = image;
                 }}
-                src={photo.src}
-                alt={photo.alt}
-                width={photo.width}
-                height={photo.height}
-                draggable={false}
+                decoding="async"
+                loading="lazy"
                 className="size-full object-cover select-none"
-                sizes="(max-width: 430px) 72vw, 310px"
+                sizes={photo.sizes}
               />
             </button>
             <figcaption className="mt-2.5 text-ui">{photo.caption}</figcaption>
