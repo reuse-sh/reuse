@@ -11,8 +11,11 @@ export function connectCarousel(
   { slideOf = (index) => index }: ConnectCarouselOptions = {},
 ): () => void {
   const hold = (isHeld: boolean) => carousel.hold("lightbox", isHeld);
-  const follow = (event: { index: number }) =>
-    carousel.goTo(slideOf(event.index), "instant");
+  const follow = ({ index }: { index: number }) => {
+    const slide = slideOf(index);
+    if (!carousel.getState().visible.includes(slide))
+      carousel.goTo(slide, "instant");
+  };
   const stops = [
     lightbox.on("open", () => hold(true)),
     lightbox.on("settle", follow),
