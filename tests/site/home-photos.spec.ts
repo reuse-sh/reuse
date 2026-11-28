@@ -13,9 +13,17 @@ for (const { name, viewport } of [
       await page.goto("/");
       const tile = page.getByRole("button", { name: "Open Pink summit" });
       await tile.scrollIntoViewIfNeeded();
-      const { source, width, coverWidth } = await tile
-        .locator("img")
-        .evaluate(async (image: HTMLImageElement) => {
+      const photo = tile.locator("img");
+      await expect
+        .poll(() =>
+          photo.evaluate(
+            (image: HTMLImageElement) =>
+              image.complete && image.naturalWidth > 0,
+          ),
+        )
+        .toBe(true);
+      const { source, width, coverWidth } = await photo.evaluate(
+        async (image: HTMLImageElement) => {
           await image.decode();
           const file = new Image();
           file.src = image.currentSrc;
@@ -29,7 +37,8 @@ for (const { name, viewport } of [
                 (image.clientHeight * file.naturalWidth) / file.naturalHeight,
               ) * devicePixelRatio,
           };
-        });
+        },
+      );
 
       const flight = page.evaluate(
         () =>
