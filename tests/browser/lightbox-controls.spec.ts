@@ -1130,23 +1130,24 @@ test("a button's hover mixes 5% of the foreground into a theme's own control col
       ".re-lightbox.pale{--re-lightbox-control:#fff;--re-lightbox-foreground:#111}",
   });
   const close = page.getByRole("button", { name: "Close gallery" });
-  const hovered = async () => {
+  const expectHoverColor = async (expected: number) => {
     await page.mouse.move(0, 0);
     await close.hover();
-    await page.waitForTimeout(300);
-    return channels(
-      await close.evaluate(
-        (element) => getComputedStyle(element).backgroundColor,
-      ),
-    );
+    await expect
+      .poll(async () =>
+        channels(
+          await close.evaluate(
+            (element) => getComputedStyle(element).backgroundColor,
+          ),
+        ),
+      )
+      .toEqual(Array.from({ length: 3 }, () => expect.closeTo(expected, 2)));
   };
-  for (const channel of await hovered())
-    expect(channel).toBeCloseTo((0.95 * 255 + 0.05 * 17) / 255, 2);
+  await expectHoverColor((0.95 * 255 + 0.05 * 17) / 255);
   await page.evaluate(() =>
     document.querySelector(".re-lightbox")?.classList.remove("pale"),
   );
-  for (const channel of await hovered())
-    expect(channel).toBeCloseTo(244 / 255, 2);
+  await expectHoverColor(244 / 255);
 });
 
 const ringOnCurrent = (page: Page) =>
