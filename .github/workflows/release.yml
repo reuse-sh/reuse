@@ -25,16 +25,25 @@ jobs:
       - id: plan
         run: node scripts/release-plan.mjs >> "$GITHUB_OUTPUT"
 
-  check:
+  check-packages:
     needs: plan
     if: needs.plan.outputs.action == 'publish'
     uses: ./.github/workflows/ci.yml
+    with:
+      browser-test-path: tests/browser
+
+  check-site:
+    needs: plan
+    if: needs.plan.outputs.action == 'publish'
+    uses: ./.github/workflows/ci.yml
+    with:
+      browser-test-path: tests/site
 
   release:
-    needs: [plan, check]
+    needs: [plan, check-packages]
     if: >-
       !cancelled() && (needs.plan.outputs.action == 'version' ||
-      (needs.plan.outputs.action == 'publish' && needs.check.result == 'success'))
+      (needs.plan.outputs.action == 'publish' && needs.check-packages.result == 'success'))
     # npm Trusted Publishing requires a GitHub-hosted runner.
     runs-on: ubuntu-latest
     timeout-minutes: 15
