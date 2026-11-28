@@ -1,21 +1,87 @@
 "use client";
 
 import { useCarousel, useCarouselState } from "@reuse-sh/carousel/react";
+import type { LightboxContentContext } from "@reuse-sh/lightbox";
 import { connectCarousel } from "@reuse-sh/lightbox/carousel";
 import { useLightbox } from "@reuse-sh/lightbox/react";
 import { type CSSProperties, useEffect, useRef } from "react";
 import { Picture } from "@/components/picture";
 import { Container } from "@/components/ui/container";
-import { photos } from "../../lib/photos";
+import { photoSources, photos } from "../../lib/photos";
 import { Icon } from "../icons";
 
+const tileWidths = [640, 1280, 1760];
 const strip = [0, 4, 6, 1, 5, 7, 2, 3].map((index) => {
   const photo = photos[index];
   const aspect = photo.width / photo.height;
-  const coverWidth = `min(310px, 72vw) * ${Math.max(1, (aspect * 5) / 4)}`;
-  const viewerWidth = `min(100vw, (100dvh - 64px) * ${aspect})`;
-  return { ...photo, sizes: `max(${coverWidth}, ${viewerWidth})` };
+  return {
+    photo,
+    tile: {
+      ...photo,
+      src: `/photos/${photo.id}-640.jpg`,
+      srcSet: photoSources(photo.id, "jpg", tileWidths),
+      avifSrcSet: photoSources(photo.id, "avif", tileWidths),
+    },
+    sizes: `calc(min(310px, 72vw) * ${Math.max(1, (aspect * 5) / 4)})`,
+  };
 });
+
+function fadePreview({ container, image }: LightboxContentContext) {
+  const motion = matchMedia("(prefers-reduced-motion: reduce)");
+  if (!image.hasAttribute("src") || motion.matches) return;
+  const preview = image.cloneNode(false) as HTMLImageElement;
+  preview.className = "re-home-photo-preview";
+  preview.alt = "";
+  preview.setAttribute("aria-hidden", "true");
+  preview.style.cssText =
+    "position:absolute;inset:0;width:100%;height:100%;object-fit:contain;pointer-events:none";
+  image.after(preview);
+  const load = new AbortController();
+  const remove = () => {
+    load.abort();
+    preview.remove();
+  };
+  let animation: Animation | undefined;
+  const fade = () => {
+    if (!image.complete || image.currentSrc !== image.src) return;
+    load.abort();
+    void image.decode().then(() => {
+      if (!preview.isConnected) return;
+      animation = preview.animate([{ opacity: 1 }, { opacity: 0 }], {
+        duration: 150,
+        easing: "ease-out",
+      });
+      void animation.finished.then(remove, remove);
+    }, remove);
+  };
+  const observer = new MutationObserver(() => {
+    if (container.hasAttribute("data-loading")) return;
+    observer.disconnect();
+    if (
+      image.src === preview.src ||
+      !preview.complete ||
+      !preview.naturalWidth ||
+      container.hasAttribute("data-error") ||
+      container.parentElement?.getAttribute("aria-hidden") === "true" ||
+      motion.matches
+    ) {
+      remove();
+      return;
+    }
+    image.addEventListener("load", fade, { signal: load.signal });
+    image.addEventListener("error", remove, { signal: load.signal });
+    fade();
+  });
+  observer.observe(container, {
+    attributes: true,
+    attributeFilter: ["data-loading"],
+  });
+  return () => {
+    observer.disconnect();
+    animation?.cancel();
+    remove();
+  };
+}
 
 export function PhotoStrip() {
   const { ref, carousel } = useCarousel({ align: "start" });
@@ -29,22 +95,38 @@ export function PhotoStrip() {
     }),
   );
   const images = useRef<(HTMLImageElement | null)[]>([]);
-  const lightbox = useLightbox({ thumbnails: "bottom" });
+  const lightbox = useLightbox({
+    thumbnails: "bottom",
+    renderContent: fadePreview,
+  });
   useEffect(() => {
     if (carousel) return connectCarousel(lightbox, carousel);
   }, [lightbox, carousel]);
   const open = (index: number) => {
-    const avif = images.current.some((image) =>
+    const format = images.current.some((image) =>
       image?.currentSrc.endsWith(".avif"),
-    );
+    )
+      ? "avif"
+      : "jpg";
     lightbox.open(
-      strip.map((photo, at) => {
-        const source = images.current[at]?.currentSrc;
-        const srcset = (avif ? photo.avifSrcSet : undefined) ?? photo.srcSet;
+      strip.map(({ photo }, at) => {
+        const image = images.current[at];
+        const source =
+          image?.complete && image.naturalWidth > 0
+            ? image.currentSrc
+            : undefined;
+        const minimum =
+          tileWidths.find((width) => source?.endsWith(`-${width}.${format}`)) ??
+          tileWidths[0];
+        const candidates = [...tileWidths, photo.width].filter(
+          (width) => width >= minimum,
+        );
+        const fallback = `/photos/${photo.id}-640.${format}`;
         return {
           ...photo,
-          srcset,
-          thumbnailSrc: source || srcset?.split(" ", 1)[0] || photo.src,
+          src: source || fallback,
+          srcset: photoSources(photo.id, format, candidates),
+          thumbnailSrc: source || fallback,
           origin: () => images.current[at] ?? null,
         };
       }),
@@ -57,7 +139,7 @@ export function PhotoStrip() {
       data-dragging={state.isDragging ? "" : undefined}
     >
       <section ref={ref} className="re-carousel h-strip-vp" aria-label="Photos">
-        {strip.map((photo, index) => (
+        {strip.map(({ photo, tile, sizes }, index) => (
           <figure
             key={photo.id}
             className="re-carousel__slide"
@@ -70,14 +152,14 @@ export function PhotoStrip() {
               onClick={() => open(index)}
             >
               <Picture
-                photo={photo}
+                photo={tile}
                 ref={(image) => {
                   images.current[index] = image;
                 }}
                 decoding="async"
                 loading="lazy"
                 className="size-full object-cover select-none"
-                sizes={photo.sizes}
+                sizes={sizes}
               />
             </button>
             <figcaption className="mt-2.5 text-ui">{photo.caption}</figcaption>
@@ -89,7 +171,7 @@ export function PhotoStrip() {
           className="h-dots relative -ml-1 flex h-6 items-center"
           style={{ "--h-dot": state.index } as CSSProperties}
         >
-          {strip.map((photo, index) => (
+          {strip.map(({ photo }, index) => (
             <button
               type="button"
               key={photo.id}
