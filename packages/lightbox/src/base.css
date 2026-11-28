@@ -69,6 +69,12 @@
   transition: clip-path var(--re-lightbox-zoom-duration, 350ms)
     var(--re-lightbox-ease, cubic-bezier(0.32, 0.72, 0, 1));
 }
+@media (prefers-reduced-motion: no-preference) {
+  .re-lightbox:is([data-phase="opening"], [data-phase="returning"])
+    .re-lightbox-slide[data-framed] {
+    transition-duration: var(--re-lightbox-open-duration, 400ms);
+  }
+}
 .re-lightbox-slide[data-framed]::after {
   content: "";
   position: absolute;

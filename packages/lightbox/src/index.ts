@@ -1427,7 +1427,8 @@ export function createLightbox<Item extends LightboxItem = LightboxItem>(
   }
 
   function tall(index: number, s: Session) {
-    if (items[index].type) return false;
+    if (items[index].type || s.loaded.get(index)?.status === "failed")
+      return false;
     return (
       shapeOf(imageSize(index, s), room(index, s), spacing(index, s)) === "tall"
     );
@@ -1460,6 +1461,20 @@ export function createLightbox<Item extends LightboxItem = LightboxItem>(
     const zoom = resting(s, index);
     s.rest = zoom;
     return zoom;
+  }
+
+  function photoRect(s: Session) {
+    const box = s.loaded.get(state.index)?.frame.getBoundingClientRect();
+    if (!box || state.zoom.scale > 1 || !framed(state.index, s)) return box;
+    const { width, height, x = 0, y = 0 } = s.window;
+    const left = s.box.left + s.box.width / 2 + x - width / 2;
+    const top = s.box.top + s.box.height / 2 + y - height / 2;
+    return {
+      left: Math.max(box.left, left),
+      top: Math.max(box.top, top),
+      right: Math.min(box.right, left + width),
+      bottom: Math.min(box.bottom, top + height),
+    };
   }
 
   function markFramed(s: Session, index: number) {
@@ -2425,7 +2440,8 @@ export function createLightbox<Item extends LightboxItem = LightboxItem>(
           if (entry.status !== "loading") return;
           failed();
           settle("failed");
-          if (!state.isClosing) layout(s);
+          if (s.flying) entry.commit = () => layout(s);
+          else if (!state.isClosing) layout(s);
         };
         if (item.srcset) {
           loader.srcset = item.srcset;
@@ -3691,7 +3707,7 @@ export function createLightbox<Item extends LightboxItem = LightboxItem>(
         const now = Date.now();
         s.suppressClickUntil = now + 400;
         const current = point(event);
-        const box = s.loaded.get(state.index)?.frame.getBoundingClientRect();
+        const box = photoRect(s);
         const onPhoto =
           box !== undefined &&
           current.x >= box.left &&
@@ -3808,7 +3824,7 @@ export function createLightbox<Item extends LightboxItem = LightboxItem>(
         )
           return;
         // A pan captures the pointer, which retargets its click to the viewport.
-        const box = s.loaded.get(state.index)?.frame.getBoundingClientRect();
+        const box = photoRect(s);
         const onPhoto =
           target.closest(".re-lightbox-frame") !== null ||
           (box !== undefined &&

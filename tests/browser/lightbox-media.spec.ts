@@ -383,6 +383,41 @@ test.describe("lightbox tall photos in the default theme", {
     expect(Math.abs(box.y - top)).toBeLessThan(1);
   });
 
+  test("a click in the band under a tall photo's window closes the viewer, and Retry on a failed one shows in the window", async ({
+    page,
+  }) => {
+    await open(page, [[2560, 8045]], {
+      styles: ["lightbox/base.css", "lightbox/theme.css"],
+    });
+    const view = await screen(page);
+    await page.mouse.click(view.x + 200, view.y + view.height - 30 - 12);
+    await expect.poll(async () => (await state(page)).isOpen).toBe(false);
+    await page.evaluate(() =>
+      (
+        window as unknown as {
+          lightbox: { open(items: object[], index: number): void };
+        }
+      ).lightbox.open(
+        [{ src: "/missing/page.png", width: 1000, height: 4200 }],
+        0,
+      ),
+    );
+    const retry = page.locator(".re-lightbox-retry");
+    await expect(retry).toBeVisible();
+    await still(page);
+    const box = await retry.boundingBox();
+    if (!box) throw new Error("Missing retry");
+    expect(
+      await page.evaluate(
+        ([x, y]) =>
+          Boolean(
+            document.elementFromPoint(x, y)?.closest(".re-lightbox-retry"),
+          ),
+        [box.x + box.width / 2, box.y + box.height / 2],
+      ),
+    ).toBe(true);
+  });
+
   test("with reduced motion the window and its ring change at once", async ({
     page,
   }) => {
