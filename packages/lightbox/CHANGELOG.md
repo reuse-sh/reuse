@@ -1,5 +1,21 @@
 # @reuse-sh/lightbox
 
+## 0.3.0
+
+### Minor Changes
+
+- 18abfd7: The default theme is now Classic, the look the reuse.sh site uses: a pale room, white round 40px controls with a light ring shadow and 18px icons, the counter as a pill in the top start corner, the caption under the photo, and the thumbnail strip below it. The built-in icons are the site's icons, and the zoom button shows Lucide's zoom-in icon, and zoom-out while zoomed.
+
+  Breaking changes:
+
+  - `theme.css` no longer gives the dark look. `themes/dark.css` after it gives dark colors on the Classic layout; the old 44px blurred buttons and the caption backing are gone.
+  - `theme.css` keeps room under the photo for the caption (`--re-lightbox-caption-room`, 30px) and the bottom strip (`--re-lightbox-strip-room`, 64px), through `--re-lightbox-bottom-room`, and sets `--re-lightbox-padding` to 24px, 12px below 560px of width.
+  - `--re-lightbox-blur` is gone: the controls have no backdrop blur. Controls draw `--re-lightbox-ring` instead.
+  - Defaults changed: `--re-lightbox-button-size` 40px, `--re-lightbox-icon-size` 18px, `--re-lightbox-press-scale` 0.95, `--re-lightbox-gap` 8px, `--re-lightbox-footer-inset` and `--re-lightbox-arrow-inset` follow `--re-lightbox-inset`, `--re-lightbox-thumbnail-radius` 8px, `--re-lightbox-thumbnail-gap` 6px, and `--re-lightbox-control-hover` mixes 5% of the foreground.
+  - New custom properties: `--re-lightbox-muted` for the caption (80% of the foreground over the background by default), `--re-lightbox-ring`, `--re-lightbox-thumbnail-background`, `--re-lightbox-caption-room` and `--re-lightbox-strip-room`. `themes/dark.css` and `themes/page.css` set the colors among them.
+
+- 1e4206f: A photo more than twice as tall as it is wide, such as a long screenshot, now rests in a window clear of the controls: the padding below the toolbar, beside the arrows and above the caption. When it runs past two windows it scrolls inside that window, so the counter, zoom, close and caption never sit on it. A 1px ring in the new `--re-lightbox-media-ring` custom property outlines the window, 14% of `--re-lightbox-foreground` in `theme.css`, so a pale page keeps its edge on a pale room in every theme. Zooming in opens the window to the whole screen.
+
 ## 0.2.2
 
 ### Patch Changes

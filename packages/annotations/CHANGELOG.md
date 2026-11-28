@@ -1,5 +1,11 @@
 # @reuse-sh/annotations
 
+## 0.1.1
+
+### Patch Changes
+
+- dcb8566: Below 560px of width, where pointer labels turn into numbered markers, the image takes the full width. The space kept beside it for the hidden labels no longer shrinks it.
+
 ## 0.1.0
 
 ### Minor Changes
