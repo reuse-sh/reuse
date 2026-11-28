@@ -82,7 +82,7 @@ function Bubble({ mine, children }: { mine?: boolean; children: ReactNode }) {
 
 export function Example() {
   return (
-    <div className="re-example re-window grid w-full min-w-0">
+    <div className="re-example re-window grid grid-cols-1 w-full min-w-0">
       <div className="re-thread-head flex items-center gap-2.5 px-4 py-3 border-b border-border">
         <Avatar
           name="Mara Lind"
