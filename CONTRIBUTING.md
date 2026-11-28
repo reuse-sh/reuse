@@ -26,7 +26,7 @@ Carousel and Lightbox build `dist/browser/`, one minified ES module per entry wi
 
 Packages publish through Changesets. Add a changeset with `pnpm changeset` in every pull request that changes a published package. The release workflow keeps a "chore: version packages" pull request open. Merging it bumps versions, writes each package's CHANGELOG.md, and publishes to npm with trusted publishing from GitHub Actions.
 
-GitHub Actions runs no checks on pushes or pull requests. Run `pnpm check` locally before you open a pull request. The release workflow runs the same checks only when the merged version pull request leaves package versions missing from npm, and publishes only if they pass. To check a branch on GitHub, run the Checks workflow by hand.
+Run `pnpm check` locally before you open a pull request. To run the full suite on GitHub, start the Checks workflow by hand. When versions are missing from npm, the release workflow runs separate package and site jobs. Both jobs run lint, type checks, unit tests, and the build. The package job runs `tests/browser` and must pass before publication. The site job runs `tests/site` and reports its result independently. Each job runs its timing tests serially.
 
 The first publish of 0.0.1 is done once by hand, because npm only accepts a trusted publisher for a package that already exists:
 

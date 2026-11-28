@@ -2,6 +2,11 @@ name: Checks
 
 on:
   workflow_call:
+    inputs:
+      browser-test-path:
+        description: Path to the browser tests to run
+        type: string
+        default: ""
   workflow_dispatch:
 
 permissions:
@@ -28,3 +33,4 @@ jobs:
           pnpm check
         env:
           TURBO_CONCURRENCY: "1"
+          REUSE_BROWSER_TEST_PATH: ${{ inputs.browser-test-path }}
