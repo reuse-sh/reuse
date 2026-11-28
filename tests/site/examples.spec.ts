@@ -71,6 +71,32 @@ test("framework menu has one moving background after repeated selection and clos
   }
 });
 
+for (const [name, path, selector, open] of [
+  ["Libraries", "/", 'role=button[name="Libraries"]', ".library-menu"],
+  ["Framework", "/carousel", `${chooser} summary`, `${chooser}[open]`],
+] as const) {
+  test(`${name} shows a return outline only after keyboard use`, async ({
+    page,
+  }) => {
+    await page.goto(path);
+    const trigger = page.locator(selector);
+    const menu = page.locator(open);
+    await trigger.click();
+    await expect(menu).toBeVisible();
+    await page.keyboard.press("Escape");
+    await expect(menu).not.toBeVisible();
+    await expect(trigger).toBeFocused();
+    await expect(trigger).toHaveCSS("outline-style", "none");
+
+    await trigger.press("Enter");
+    await expect(menu).toBeVisible();
+    await page.keyboard.press("Escape");
+    await expect(menu).not.toBeVisible();
+    await expect(trigger).toBeFocused();
+    await expect(trigger).not.toHaveCSS("outline-style", "none");
+  });
+}
+
 test("overview has only the showcase and principles while usage is ordered below example demos", async ({
   page,
 }) => {

@@ -1049,7 +1049,7 @@ test.describe("focus after close", { tag: "@desktop" }, () => {
           (index) =>
             `<a href="${photo(index)}"><img src="${photo(index)}" alt="Photo ${index + 1}" style="display:block;width:150px;height:100px"></a>`,
         )
-        .join("")}</div>`,
+        .join("")}</div><button>After gallery</button>`,
       styles,
     );
     await page.evaluate(async (useHistory) => {
@@ -1228,14 +1228,33 @@ test.describe("focus after close", { tag: "@desktop" }, () => {
     expect(await focused(page)).toEqual({ id: "Photo 2", ring: false });
   });
 
-  test("Escape focuses the tile with a ring", async ({ page }) => {
-    await galleryPage(page);
-    await page.getByAltText("Photo 2").click();
-    await expect(page.locator("dialog")).toHaveAttribute("data-phase", "open");
-    await page.keyboard.press("Escape");
-    await expect(page.locator("dialog")).toHaveCount(0);
-    expect(await focused(page)).toEqual({ id: "Photo 2", ring: true });
-  });
+  for (const [input, ring] of [
+    ["click", false],
+    ["Enter", true],
+    ["Tab after click", true],
+  ] as const) {
+    test(`Escape restores focus ${ring ? "with" : "without"} a ring after ${input}`, async ({
+      page,
+    }) => {
+      await galleryPage(page);
+      const tile = page.locator('a:has(img[alt="Photo 2"])');
+      if (input === "Enter") await tile.press("Enter");
+      else await tile.click();
+      await expect(page.locator("dialog")).toHaveAttribute("data-phase", "open");
+      if (input === "Tab after click") await page.keyboard.press("Tab");
+      await page.keyboard.press("Escape");
+      await expect(page.locator("dialog")).toHaveCount(0);
+      await expect(tile).toBeFocused();
+      if (ring) await expect(tile).not.toHaveCSS("outline-style", "none");
+      else await expect(tile).toHaveCSS("outline-style", "none");
+
+      await page.keyboard.press("Tab");
+      const next = page.locator(":focus-visible");
+      await expect(next).toHaveCount(1);
+      await expect(next).not.toHaveCSS("outline-style", "none");
+      await expect(tile).not.toBeFocused();
+    });
+  }
 
   test("a toggle outside the gallery gets focus back when the photo has no tile", async ({
     page,
