@@ -428,6 +428,7 @@ type Session = {
   tapTimer?: ReturnType<typeof setTimeout>;
   openingFocus: HTMLElement | null;
   zoomed: boolean;
+  toolbar: HTMLDivElement;
   footer: HTMLDivElement;
   thumbStrip?: HTMLDivElement;
   thumbRing?: HTMLSpanElement;
@@ -480,6 +481,8 @@ type Session = {
   pointers: Map<number, Point>;
   box: Rect;
   area: Area;
+  /** Where a photo more than twice as tall as wide rests: inside the box, clear of the toolbar and the side arrows. */
+  window: Area;
   inset: { left: number; right: number; bottom: number };
   room: { left: number; right: number; bottom: number };
   gesture?: {
@@ -1331,6 +1334,34 @@ export function createLightbox<Item extends LightboxItem = LightboxItem>(
       x: (inset.right - inset.left) / 2,
       y: inset.bottom / 2,
     };
+    const left = rect.left + inset.left;
+    const right = rect.right - inset.right;
+    const bottom = rect.top + s.box.height;
+    let top = 0;
+    for (const group of s.toolbar.children) {
+      const shown = rendered(group as HTMLElement);
+      if (shown) top = Math.max(top, shown.bottom - rect.top);
+    }
+    const edge = {
+      top: top + padding,
+      right: padding,
+      bottom: padding,
+      left: padding,
+    };
+    for (const arrow of [s.prev, s.next]) {
+      const shown = arrow && rendered(arrow);
+      if (!shown || shown.bottom <= rect.top + top || shown.top >= bottom)
+        continue;
+      if (shown.left + shown.right < left + right)
+        edge.left = Math.max(edge.left, shown.right - left + padding);
+      else edge.right = Math.max(edge.right, right - shown.left + padding);
+    }
+    s.window = {
+      width: Math.max(1, s.box.width - edge.left - edge.right),
+      height: Math.max(1, s.box.height - edge.top - edge.bottom),
+      x: (edge.left - edge.right) / 2,
+      y: (edge.top - edge.bottom) / 2,
+    };
   }
 
   function view(s: Session): Size {
@@ -1338,7 +1369,7 @@ export function createLightbox<Item extends LightboxItem = LightboxItem>(
   }
 
   function area(s: Session, scale: number): Area {
-    return scale > 1 ? s.area : s.box;
+    return scale > 1 ? s.area : room(state.index, s);
   }
 
   function bound(s: Session, zoom: Zoom) {
@@ -1381,26 +1412,66 @@ export function createLightbox<Item extends LightboxItem = LightboxItem>(
     return view(s);
   }
 
+  function framed(index: number, s: Session) {
+    if (items[index].type) return false;
+    const { width, height } = imageSize(index, s);
+    return height > 2 * width;
+  }
+
+  function room(index: number, s: Session): Area {
+    return framed(index, s) ? s.window : view(s);
+  }
+
+  function spacing(index: number, s: Session) {
+    return framed(index, s) ? 0 : padding;
+  }
+
   function tall(index: number, s: Session) {
     if (items[index].type) return false;
-    return shapeOf(imageSize(index, s), view(s), padding) === "tall";
+    return (
+      shapeOf(imageSize(index, s), room(index, s), spacing(index, s)) === "tall"
+    );
   }
 
   function fit(index: number, s: Session): Size {
     // A player leaves 24px at each side for a swipe that pages past it.
     return (tall(index, s) ? widthFit : contain)(
       imageSize(index, s),
-      view(s),
-      items[index].type ? Math.max(padding, 24) : padding,
+      room(index, s),
+      items[index].type ? Math.max(padding, 24) : spacing(index, s),
+    );
+  }
+
+  function resting(s: Session, index: number): Zoom {
+    const size = fit(index, s);
+    const space = room(index, s);
+    return boundZoom(
+      {
+        scale: 1,
+        x: 0,
+        y: tall(index, s) ? panRange(1, size, space).y.max : 0,
+      },
+      size,
+      space,
     );
   }
 
   function restZoom(s: Session, index: number): Zoom {
-    const zoom = tall(index, s)
-      ? { scale: 1, x: 0, y: panRange(1, fit(index, s), view(s)).y.max }
-      : { ...identity };
+    const zoom = resting(s, index);
     s.rest = zoom;
     return zoom;
+  }
+
+  function markFramed(s: Session, index: number) {
+    const slide = s.slides[index];
+    if (!slide) return;
+    if (!s.loaded.has(index) || !framed(index, s)) {
+      slide.removeAttribute("data-framed");
+      return;
+    }
+    const value =
+      index === state.index && state.zoom.scale < 1 - 1e-3 ? "out" : "rest";
+    if (slide.dataset.framed !== value) slide.dataset.framed = value;
   }
 
   function limits(s: Session, index = state.index) {
@@ -1411,9 +1482,9 @@ export function createLightbox<Item extends LightboxItem = LightboxItem>(
     return zoomLimits({
       fileWidth: largestWidth(item?.srcset) ?? entry?.natural ?? item?.width,
       image: imageSize(index, s),
-      viewport: view(s),
+      viewport: room(index, s),
       zoomed: s.area,
-      padding,
+      padding: spacing(index, s),
       svg: Boolean(
         item?.src &&
           formatOf(item.src, s.dialog.ownerDocument.baseURI) === "svg",
@@ -1461,6 +1532,7 @@ export function createLightbox<Item extends LightboxItem = LightboxItem>(
     if (zoomButton) showStateIcon(zoomButton, "zoom", "zoomOut", out);
     s.dialog.dataset.zoomed = String(state.zoom.scale > 1);
     s.dialog.dataset.zoom = out ? "out" : "in";
+    for (const index of s.loaded.keys()) markFramed(s, index);
     if (s.watchedScale !== state.zoom.scale) {
       s.watchedScale = state.zoom.scale;
       clearTimeout(s.sharpTimer);
@@ -1899,12 +1971,28 @@ export function createLightbox<Item extends LightboxItem = LightboxItem>(
     else win.requestIdleCallback(apply);
   }
 
+  function placeWindow(s: Session, index: number, size: Size) {
+    const rest = resting(s, index);
+    const x = s.inset.left + s.box.width / 2;
+    const y = s.box.height / 2;
+    const { width, height, x: dx = 0, y: dy = 0 } = s.window;
+    const top = y + Math.max(rest.y - size.height / 2, dy - height / 2);
+    const bottom = y + Math.min(rest.y + size.height / 2, dy + height / 2);
+    const left = x + Math.max(rest.x - size.width / 2, dx - width / 2);
+    const right = x + Math.min(rest.x + size.width / 2, dx + width / 2);
+    s.slides[index]?.style.setProperty(
+      "--re-lightbox-window",
+      `${top}px ${s.area.width - right}px ${s.area.height - bottom}px ${left}px`,
+    );
+  }
+
   function layout(s: Session) {
     const resting = s.rest !== undefined && sameZoom(state.zoom, s.rest);
     for (const [index, entry] of s.loaded) {
       const size = fit(index, s);
       entry.frame.style.width = `${size.width}px`;
       entry.frame.style.height = `${size.height}px`;
+      if (framed(index, s)) placeWindow(s, index, size);
     }
     requestSizes(s);
     if (resting) publish({ zoom: restZoom(s, state.index) });
@@ -1994,6 +2082,7 @@ export function createLightbox<Item extends LightboxItem = LightboxItem>(
       entry.cancel();
       entry.frame.remove();
       s.loaded.delete(index);
+      markFramed(s, index);
     }
   }
 
@@ -3512,7 +3601,7 @@ export function createLightbox<Item extends LightboxItem = LightboxItem>(
             const range = panRange(
               gesture.zoom.scale,
               fit(state.index, s),
-              view(s),
+              area(s, gesture.zoom.scale),
             ).y;
             gesture.axis =
               Math.abs(dy) <= Math.abs(dx)
@@ -4584,6 +4673,7 @@ export function createLightbox<Item extends LightboxItem = LightboxItem>(
       heading: 1,
       strings,
       slots: [],
+      toolbar,
       footer,
       thumbStrip,
       thumbRing,
@@ -4628,6 +4718,7 @@ export function createLightbox<Item extends LightboxItem = LightboxItem>(
       paddingProbe,
       box: { left: 0, top: 0, width: 1, height: 1 },
       area: { width: 1, height: 1 },
+      window: { width: 1, height: 1 },
       inset: { left: 0, right: 0, bottom: 0 },
       room: { left: 0, right: 0, bottom: 0 },
       suppressClickUntil: 0,

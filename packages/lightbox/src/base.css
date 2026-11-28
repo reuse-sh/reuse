@@ -64,6 +64,35 @@
 .re-lightbox-slide[data-re-cycle]:not([data-re-cycle="0"]) {
   translate: var(--re-carousel-shift);
 }
+.re-lightbox-slide[data-framed] {
+  clip-path: inset(0px);
+  transition: clip-path var(--re-lightbox-zoom-duration, 350ms)
+    var(--re-lightbox-ease, cubic-bezier(0.32, 0.72, 0, 1));
+}
+.re-lightbox-slide[data-framed]::after {
+  content: "";
+  position: absolute;
+  inset: var(--re-lightbox-window, 0px);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity var(--re-lightbox-zoom-duration, 350ms) ease;
+}
+.re-lightbox:is(
+    [data-phase="opening"],
+    [data-phase="open"],
+    [data-phase="returning"]
+  ):not([data-zoomed="true"])
+  .re-lightbox-slide[data-framed] {
+  clip-path: inset(var(--re-lightbox-window, 0px));
+}
+.re-lightbox:is(
+    [data-phase="opening"],
+    [data-phase="open"],
+    [data-phase="returning"]
+  ):not([data-zoomed="true"])
+  .re-lightbox-slide[data-framed="rest"]::after {
+  opacity: 1;
+}
 .re-lightbox-frame {
   position: relative;
   flex: none;
@@ -595,5 +624,9 @@
 @media (prefers-reduced-motion: reduce) {
   .re-lightbox-viewport {
     scroll-behavior: auto;
+  }
+  .re-lightbox-slide[data-framed],
+  .re-lightbox-slide[data-framed]::after {
+    transition: none;
   }
 }

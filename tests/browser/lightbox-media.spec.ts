@@ -14,41 +14,50 @@ type Window = globalThis.Window & typeof globalThis & { lightbox: Lightbox };
 
 const PADDING = 32;
 
-async function open(page: Page, sizes: [number, number][]) {
+async function open(
+  page: Page,
+  sizes: [number, number][],
+  { styles = ["lightbox/base.css"], dir = "ltr" } = {},
+) {
   await mount(
     page,
     '<meta name="viewport" content="width=device-width, initial-scale=1">',
-    ["lightbox/base.css"],
+    styles,
   );
-  await page.evaluate(async (list) => {
-    const sources: string[] = [];
-    for (const [w, h] of list) {
-      const canvas = document.createElement("canvas");
-      canvas.width = w;
-      canvas.height = h;
-      const context = canvas.getContext("2d") as CanvasRenderingContext2D;
-      const gradient = context.createLinearGradient(0, 0, w, h);
-      gradient.addColorStop(0, "#345");
-      gradient.addColorStop(1, "#c96");
-      context.fillStyle = gradient;
-      context.fillRect(0, 0, w, h);
-      const blob = await new Promise<Blob | null>((resolve) =>
-        canvas.toBlob(resolve, "image/jpeg", 0.8),
+  await page.evaluate(
+    async ([list, dir]) => {
+      document.documentElement.dir = dir;
+      const sources: string[] = [];
+      for (const [w, h] of list) {
+        const canvas = document.createElement("canvas");
+        canvas.width = w;
+        canvas.height = h;
+        const context = canvas.getContext("2d") as CanvasRenderingContext2D;
+        const gradient = context.createLinearGradient(0, 0, w, h);
+        gradient.addColorStop(0, "#345");
+        gradient.addColorStop(1, "#c96");
+        context.fillStyle = gradient;
+        context.fillRect(0, 0, w, h);
+        const blob = await new Promise<Blob | null>((resolve) =>
+          canvas.toBlob(resolve, "image/jpeg", 0.8),
+        );
+        sources.push(URL.createObjectURL(blob as Blob));
+      }
+      const { createLightbox } = await import("/modules/lightbox/index.js");
+      const lightbox = createLightbox({ history: false });
+      Object.assign(window, { lightbox });
+      lightbox.open(
+        list.map(([width, height], index) => ({
+          src: sources[index],
+          width,
+          height,
+          caption: `Photo ${index + 1}`,
+        })),
+        0,
       );
-      sources.push(URL.createObjectURL(blob as Blob));
-    }
-    const { createLightbox } = await import("/modules/lightbox/index.js");
-    const lightbox = createLightbox({ history: false });
-    Object.assign(window, { lightbox });
-    lightbox.open(
-      list.map(([width, height], index) => ({
-        src: sources[index],
-        width,
-        height,
-      })),
-      0,
-    );
-  }, sizes);
+    },
+    [sizes, dir] as const,
+  );
   await expect(page.locator("dialog")).toHaveAttribute("data-phase", "open");
   await expect(page.locator(".re-lightbox-frame[data-loading]")).toHaveCount(0);
 }
@@ -68,6 +77,23 @@ async function photo(page: Page) {
   return box;
 }
 
+// A tall photo rests the padding below the lowest toolbar control and ends the padding above the bottom.
+async function toolbarBottom(page: Page) {
+  return page.evaluate(() =>
+    Math.max(
+      0,
+      ...[
+        ...document.querySelectorAll(
+          ".re-lightbox-toolbar-start, .re-lightbox-toolbar-end",
+        ),
+      ]
+        .map((group) => group.getBoundingClientRect())
+        .filter((rect) => rect.height > 0)
+        .map((rect) => rect.bottom),
+    ),
+  );
+}
+
 async function screen(page: Page) {
   const box = await page.locator(".re-lightbox-viewport").boundingBox();
   if (!box) throw new Error("Missing viewport");
@@ -84,34 +110,36 @@ test.describe("lightbox tall and wide photos", { tag: "@touch" }, () => {
     ]);
     const view = await screen(page);
     expect([view.width, view.height]).toEqual([390, 844]);
+    const top = (await toolbarBottom(page)) + PADDING;
+    expect(top).toBeGreaterThan(PADDING);
     let box = await photo(page);
     expect(Math.abs(box.width - (view.width - 2 * PADDING))).toBeLessThan(1);
-    expect(Math.abs(box.y - view.y)).toBeLessThan(1);
+    expect(Math.abs(box.y - top)).toBeLessThan(1);
     const middle = view.x + view.width / 2;
     for (let attempt = 0; attempt < 8; attempt++) {
       box = await photo(page);
-      if (box.y + box.height <= view.y + view.height + 1) break;
+      if (box.y + box.height <= view.y + view.height - PADDING + 1) break;
       await swipe(page, { x: middle, y: 700 }, { x: middle, y: 200 });
       await still(page);
     }
     box = await photo(page);
-    expect(Math.abs(box.y + box.height - (view.y + view.height))).toBeLessThan(
-      1,
-    );
+    expect(
+      Math.abs(box.y + box.height - (view.y + view.height - PADDING)),
+    ).toBeLessThan(1);
     expect(await state(page)).toMatchObject({ isOpen: true, index: 0 });
     const bottom = box.y;
     await swipe(page, { x: middle, y: 300 }, { x: middle, y: 600 });
     await still(page);
     box = await photo(page);
     expect(box.y).toBeGreaterThan(bottom + 250);
-    expect(box.y).toBeLessThan(view.y - 1);
+    expect(box.y).toBeLessThan(top - 1);
     expect(await state(page)).toMatchObject({ isOpen: true, index: 0 });
     for (let attempt = 0; attempt < 8; attempt++) {
-      if ((await photo(page)).y >= view.y - 0.5) break;
+      if ((await photo(page)).y >= top - 0.5) break;
       await swipe(page, { x: middle, y: 200 }, { x: middle, y: 700 });
       await still(page);
     }
-    expect(Math.abs((await photo(page)).y - view.y)).toBeLessThan(1);
+    expect(Math.abs((await photo(page)).y - top)).toBeLessThan(1);
     expect((await state(page)).isOpen).toBe(true);
     await swipe(page, { x: middle, y: 300 }, { x: middle, y: 600 });
     await expect.poll(async () => (await state(page)).isOpen).toBe(false);
@@ -167,12 +195,14 @@ test.describe("lightbox tall and wide photos", { tag: "@touch" }, () => {
       x: view.x + view.width / 2,
       y: view.y + view.height / 2,
     };
+    const top = (await toolbarBottom(page)) + PADDING;
     await tap(page, center, { count: 2 });
     await still(page);
     let box = await photo(page);
     expect(
-      Math.abs(box.height - (view.height - 2 * PADDING)),
+      Math.abs(box.height - (view.height - top - PADDING)),
     ).toBeLessThanOrEqual(1);
+    expect(Math.abs(box.y - top)).toBeLessThanOrEqual(1);
     expect((await state(page)).zoom.scale).toBeLessThan(1);
     await tap(page, center, { count: 2 });
     await still(page);
@@ -210,7 +240,9 @@ test.describe("lightbox tall photos with keys and the wheel", {
     ]);
     const view = await screen(page);
     const top = (await photo(page)).y;
-    expect(Math.abs(top - view.y)).toBeLessThan(1);
+    expect(
+      Math.abs(top - ((await toolbarBottom(page)) + PADDING)),
+    ).toBeLessThan(1);
     await page.keyboard.press("ArrowDown");
     await still(page);
     expect(
@@ -242,6 +274,106 @@ test.describe("lightbox tall photos with keys and the wheel", {
     expect((await state(page)).zoom.scale).toBeLessThan(1);
     await expect(page.locator("dialog")).toHaveAttribute("data-zoom", "in");
     await expect(frame).toHaveCSS("cursor", "zoom-in");
+  });
+});
+
+// Whatever the hit test finds under a control's center and corners; clip-path hides the photo from it.
+async function photoUnder(page: Page) {
+  return page.evaluate(() => {
+    const image = document.querySelector(
+      '.re-lightbox-slide[aria-hidden="false"] .re-lightbox-image',
+    );
+    if (!image) throw new Error("Missing photo");
+    return [
+      ...document.querySelectorAll(
+        ".re-lightbox-toolbar .re-lightbox-button, .re-lightbox-counter, .re-lightbox-prev, .re-lightbox-next, .re-lightbox-caption",
+      ),
+    ]
+      .filter((control) => {
+        const rect = control.getBoundingClientRect();
+        if (!rect.width || !rect.height) return false;
+        return [
+          [rect.left + rect.width / 2, rect.top + rect.height / 2],
+          [rect.left + 1, rect.top + 1],
+          [rect.right - 1, rect.bottom - 1],
+        ].some(([x, y]) => document.elementsFromPoint(x, y).includes(image));
+      })
+      .map((control) => control.className);
+  });
+}
+
+const ring = (page: Page) =>
+  page.evaluate(() => {
+    const slide = document.querySelector(
+      '.re-lightbox-slide[aria-hidden="false"]',
+    ) as HTMLElement;
+    const after = getComputedStyle(slide, "::after");
+    return { shadow: after.boxShadow, opacity: after.opacity };
+  });
+
+test.describe("lightbox tall photos in the default theme", {
+  tag: "@desktop",
+}, () => {
+  for (const dir of ["ltr", "rtl"])
+    test(`a tall photo scrolls in a ringed window that no control and no caption covers, and zoom opens it to the screen (${dir})`, async ({
+      page,
+    }) => {
+      await open(
+        page,
+        [
+          [2560, 8045],
+          [800, 600],
+        ],
+        { styles: ["lightbox/base.css", "lightbox/theme.css"], dir },
+      );
+      await expect(page.locator(".re-lightbox-caption")).toHaveText("Photo 1");
+      expect(await photoUnder(page)).toEqual([]);
+      await expect.poll(async () => (await ring(page)).opacity).toBe("1");
+      expect((await ring(page)).shadow).toContain("inset");
+      const top = (await state(page)).zoom.y;
+      for (let i = 0; i < 4; i++) await page.keyboard.press("ArrowDown");
+      await still(page);
+      expect((await state(page)).zoom.y).toBeLessThan(top - 100);
+      expect(await photoUnder(page)).toEqual([]);
+      await page.locator(".re-lightbox-zoom").click();
+      await still(page);
+      expect((await state(page)).zoom.scale).toBeLessThan(1);
+      expect(await photoUnder(page)).toEqual([]);
+      await expect.poll(async () => (await ring(page)).opacity).toBe("0");
+      await page.locator(".re-lightbox-zoom").click();
+      await still(page);
+      expect((await state(page)).zoom.scale).toBe(1);
+      await expect.poll(async () => (await ring(page)).opacity).toBe("1");
+      await page.evaluate(() =>
+        (
+          window as unknown as {
+            lightbox: { zoomTo(scale: number): void };
+          }
+        ).lightbox.zoomTo(3),
+      );
+      await still(page);
+      await expect(
+        page.locator('.re-lightbox-slide[aria-hidden="false"]'),
+      ).toHaveCSS("clip-path", "inset(0px)");
+      await page.keyboard.press("ArrowRight");
+      await expect.poll(async () => (await state(page)).index).toBe(0);
+    });
+
+  test("with reduced motion the window and its ring change at once", async ({
+    page,
+  }) => {
+    await page.emulateMedia({ reducedMotion: "reduce" });
+    await open(page, [[2560, 8045]], {
+      styles: ["lightbox/base.css", "lightbox/theme.css"],
+    });
+    const slide = page.locator('.re-lightbox-slide[aria-hidden="false"]');
+    await expect(slide).toHaveAttribute("data-framed", "rest");
+    await expect(slide).toHaveCSS("transition-duration", "0s");
+    expect(
+      await slide.evaluate(
+        (element) => getComputedStyle(element, "::after").transitionDuration,
+      ),
+    ).toBe("0s");
   });
 });
 
