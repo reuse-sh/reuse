@@ -1517,6 +1517,23 @@ test("a playing demo stage leaves the visitor's tooltip where the pointer is", a
   expect(await tip.boundingBox()).toEqual(first);
 });
 
+test("opening and closing a visible home strip photo keeps the strip in place", async ({
+  page,
+}) => {
+  await page.goto("/");
+  const strip = page.getByRole("region", { name: "Photos" });
+  const tile = strip.getByRole("button", { name: /^Open / }).nth(1);
+  await tile.scrollIntoViewIfNeeded();
+  const offset = () => strip.evaluate((element) => element.scrollLeft);
+  const before = await offset();
+  await tile.click();
+  await page.waitForSelector('dialog.re-lightbox[data-phase="open"]');
+  expect(await offset()).toBe(before);
+  await page.keyboard.press("Escape");
+  await expect(page.locator("dialog.re-lightbox")).toHaveCount(0);
+  expect(await offset()).toBe(before);
+});
+
 test("the home strip lightbox closes onto the tile it paged to", async ({
   page,
 }) => {
