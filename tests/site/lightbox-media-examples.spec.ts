@@ -53,7 +53,11 @@ for (const reducedMotion of ["no-preference", "reduce"] as const)
     await open(page, tallAndWide, 0);
     await expect(current(page)).toHaveAttribute("aria-label", "Image 1 of 4");
     const rest = await shown(page);
-    expect(rest.y).toBeLessThan(80);
+    const bar = await dialog(page)
+      .locator(".re-lightbox-toolbar-end")
+      .boundingBox();
+    if (!bar) throw new Error("No toolbar");
+    expect(Math.abs(rest.y - (bar.y + bar.height + 24))).toBeLessThan(1);
     expect(rest.height).toBeGreaterThan(800 * 2);
     expect(rest.width).toBeGreaterThan(1280 * 0.85);
     await page.keyboard.press("ArrowDown");

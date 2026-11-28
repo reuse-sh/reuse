@@ -161,7 +161,7 @@ export const libraries: Library[] = [
       ],
       [
         "Frame a photo that reads as a page",
-        "A photo more than twice as tall as it is wide rests in a window the padding below the toolbar, beside the arrows and above the bottom room, ringed with --re-lightbox-media-ring, and scrolls inside it, so no control and no caption sits on it and a pale page still shows its edge on a pale room. Zoomed in, during a dismiss drag and in the open and close flights the window opens to the whole screen, and the ring shows only at the photo's resting size.",
+        "A photo more than twice as tall as it is wide rests in a window the padding below the toolbar, beside the arrows and above the bottom room, ringed with --re-lightbox-media-ring, and scrolls inside it, so no control sits on it, a one-line caption stays below it, and a pale page still shows its edge on a pale room. Zoomed in, during a dismiss drag and in the close flight the window opens to the whole screen, the open flight closes it around the landing photo, and the ring shows only at the photo's resting size.",
         "tests/browser/lightbox-media.spec.ts",
       ],
       [

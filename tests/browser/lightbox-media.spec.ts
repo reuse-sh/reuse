@@ -359,6 +359,30 @@ test.describe("lightbox tall photos in the default theme", {
       await expect.poll(async () => (await state(page)).index).toBe(0);
     });
 
+  test("a single tall photo keeps no room for the arrows it hides, also after a press re-measures the viewer", async ({
+    page,
+  }) => {
+    await open(page, [[2560, 8045]], {
+      styles: ["lightbox/base.css", "lightbox/theme.css"],
+    });
+    const view = await screen(page);
+    const top = (await toolbarBottom(page)) + 24;
+    let box = await photo(page);
+    expect(Math.abs(box.width - (view.width - 2 * 24))).toBeLessThan(1);
+    expect(Math.abs(box.y - top)).toBeLessThan(1);
+    const middle = { x: view.x + view.width / 2, y: view.y + view.height / 2 };
+    await page.mouse.move(middle.x, middle.y);
+    await page.mouse.down();
+    await page.mouse.move(middle.x, middle.y - 40, { steps: 4 });
+    await page.mouse.up();
+    await page.mouse.wheel(0, 400);
+    await page.mouse.wheel(0, -2000);
+    await still(page);
+    box = await photo(page);
+    expect(Math.abs(box.width - (view.width - 2 * 24))).toBeLessThan(1);
+    expect(Math.abs(box.y - top)).toBeLessThan(1);
+  });
+
   test("with reduced motion the window and its ring change at once", async ({
     page,
   }) => {

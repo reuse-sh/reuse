@@ -1348,7 +1348,7 @@ export function createLightbox<Item extends LightboxItem = LightboxItem>(
       bottom: padding,
       left: padding,
     };
-    for (const arrow of [s.prev, s.next]) {
+    for (const arrow of items.length > 1 ? [s.prev, s.next] : []) {
       const shown = arrow && rendered(arrow);
       if (!shown || shown.bottom <= rect.top + top || shown.top >= bottom)
         continue;
