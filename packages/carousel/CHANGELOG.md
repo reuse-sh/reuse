@@ -1,5 +1,11 @@
 # @reuse-sh/carousel
 
+## 0.2.3
+
+### Patch Changes
+
+- 2f03e2b: Keep linked carousels in place when at least half of the current slide is visible. Redirect a move in progress if it would leave less than half of the slide visible.
+
 ## 0.2.2
 
 ### Patch Changes

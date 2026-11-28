@@ -1,5 +1,14 @@
 # @reuse-sh/lightbox
 
+## 0.3.1
+
+### Patch Changes
+
+- e6d9a52: Keep focus outlines quiet after dismissing a pointer-opened lightbox with Escape.
+- 2f03e2b: Keep linked carousels in place when at least half of the current slide is visible. Redirect a move in progress if it would leave less than half of the slide visible.
+- Updated dependencies [2f03e2b]
+  - @reuse-sh/carousel@0.2.3
+
 ## 0.3.0
 
 ### Minor Changes
