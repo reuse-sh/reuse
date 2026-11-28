@@ -3,7 +3,7 @@ import { createMovingHighlight } from "@reuse-sh/interactions";
 import Link from "next/link";
 import { useEffect, useId, useRef } from "react";
 import { MenuSurface } from "@/components/ui/surfaces";
-import { useMenuTriggerFocus } from "@/lib/use-menu-trigger-focus";
+import { useQuietPointerFocus } from "@/lib/use-quiet-pointer-focus";
 import type { Framework } from "../../lib/framework";
 import { Icon } from "../icons";
 
@@ -12,7 +12,7 @@ interface ChooserProps {
   pathname: string;
 }
 function Menu({ framework, pathname }: ChooserProps) {
-  const triggerFocus = useMenuTriggerFocus();
+  const [quietFocus, setQuietFocus] = useQuietPointerFocus();
   const root = useRef<HTMLDetailsElement>(null);
   const options = useRef<HTMLDivElement>(null);
   const id = useId();
@@ -22,13 +22,10 @@ function Menu({ framework, pathname }: ChooserProps) {
       selectedSelector: '[aria-current="true"]',
       className: "rounded-control bg-accent",
     });
-    const outside = (event: PointerEvent) => {
-      if (
-        root.current &&
-        event.target instanceof Node &&
-        !root.current.contains(event.target)
-      )
-        root.current.open = false;
+    const onPointerDown = (event: PointerEvent) => {
+      if (!root.current || !(event.target instanceof Node)) return;
+      if (root.current.contains(event.target)) setQuietFocus(true);
+      else root.current.open = false;
     };
     const onEscape = (event: KeyboardEvent) => {
       if (event.key === "Escape" && root.current?.open) {
@@ -36,18 +33,18 @@ function Menu({ framework, pathname }: ChooserProps) {
         root.current.querySelector("summary")?.focus();
       }
     };
-    document.addEventListener("pointerdown", outside);
+    document.addEventListener("pointerdown", onPointerDown);
     document.addEventListener("keydown", onEscape);
     return () => {
       highlight.destroy();
-      document.removeEventListener("pointerdown", outside);
+      document.removeEventListener("pointerdown", onPointerDown);
       document.removeEventListener("keydown", onEscape);
     };
-  }, []);
+  }, [setQuietFocus]);
   return (
     <details ref={root} className="re-framework relative mb-5">
       <summary
-        {...triggerFocus}
+        data-re-focus-quiet={quietFocus}
         aria-controls={id}
         className="flex min-h-7 w-fit max-w-full cursor-pointer list-none items-center gap-2 text-foreground [&::-webkit-details-marker]:hidden"
       >

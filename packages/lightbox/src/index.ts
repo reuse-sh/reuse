@@ -4922,6 +4922,7 @@ export function createLightbox<Item extends LightboxItem = LightboxItem>(
     for (const [type, input] of [
       ["keydown", "keyboard"],
       ["pointerdown", "pointer"],
+      ["wheel", "pointer"],
     ] as const)
       win?.addEventListener(
         type,

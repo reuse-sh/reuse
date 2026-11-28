@@ -245,5 +245,6 @@
 }
 
 [data-re-focus-quiet]:focus-visible {
+  @apply ring-0 ring-offset-0;
   outline: none;
 }

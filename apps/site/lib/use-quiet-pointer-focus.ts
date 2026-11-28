@@ -1,6 +1,6 @@
-import { type MouseEvent, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 
-export function useMenuTriggerFocus() {
+export function useQuietPointerFocus() {
   const [quiet, setQuiet] = useState(false);
   useEffect(() => {
     if (!quiet) return;
@@ -11,9 +11,5 @@ export function useMenuTriggerFocus() {
     return () => window.removeEventListener("keydown", onKeyDown, true);
   }, [quiet]);
 
-  return {
-    "data-re-focus-quiet": quiet ? "" : undefined,
-    onBlur: () => setQuiet(false),
-    onClick: (event: MouseEvent) => setQuiet(event.detail > 0),
-  };
+  return [quiet ? "" : undefined, setQuiet] as const;
 }

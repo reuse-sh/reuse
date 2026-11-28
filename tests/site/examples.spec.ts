@@ -81,14 +81,24 @@ for (const [name, path, selector, open] of [
     await page.goto(path);
     const trigger = page.locator(selector);
     const menu = page.locator(open);
-    await trigger.click();
-    await expect(menu).toBeVisible();
-    await page.keyboard.press("Escape");
-    await expect(menu).not.toBeVisible();
-    await expect(trigger).toBeFocused();
-    await expect(trigger).toHaveCSS("outline-style", "none");
-    await page.keyboard.press("Escape");
-    await expect(trigger).toHaveCSS("outline-style", "none");
+    const surface =
+      name === "Libraries" ? menu : menu.locator("[data-slot=menu-surface]");
+    for (const input of ["click", "Enter"]) {
+      if (input === "click") await trigger.click();
+      else await trigger.press("Enter");
+      await expect(menu).toBeVisible();
+      const box = await surface.boundingBox();
+      if (!box) throw new Error("The menu surface is missing.");
+      await page.mouse.click(box.x + box.width / 2, box.y + 3);
+      await expect(menu).toBeVisible();
+      await expect(trigger).not.toBeFocused();
+      await page.keyboard.press("Escape");
+      await expect(menu).not.toBeVisible();
+      await expect(trigger).toBeFocused();
+      await expect(trigger).toHaveCSS("outline-style", "none");
+      await page.keyboard.press("Escape");
+      await expect(trigger).toHaveCSS("outline-style", "none");
+    }
 
     await trigger.press("Enter");
     await expect(menu).toBeVisible();
@@ -1627,4 +1637,24 @@ test("the home strip lightbox closes onto the tile it paged to", async ({
     (image) => image.getBoundingClientRect().left,
   );
   expect(Math.abs(settled - atClose)).toBeLessThanOrEqual(1);
+});
+
+test("scrolling thumbnails after a keyboard open returns to the carousel without an outline", async ({
+  page,
+}) => {
+  await page.goto("/");
+  const strip = page.getByRole("region", { name: "Photos" });
+  await strip.getByRole("button", { name: "Open Pink summit" }).press("Enter");
+  const dialog = page.locator("dialog.re-lightbox");
+  await expect(dialog).toHaveAttribute("data-phase", "open");
+  const counter = dialog.locator(".re-lightbox-counter");
+  await expect(counter).toHaveText("1 / 8");
+  await dialog.locator(".re-lightbox-thumbnails").hover();
+  await page.mouse.wheel(440, 0);
+  await expect(counter).not.toHaveText("1 / 8");
+  await page.keyboard.press("Escape");
+  await expect(dialog).toHaveCount(0);
+  const focusedTile = strip.locator("button:focus");
+  await expect(focusedTile).toHaveCount(1);
+  await expect(focusedTile).toHaveCSS("outline-style", "none");
 });
