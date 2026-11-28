@@ -23,8 +23,8 @@ export interface Photo {
 
 const widths = [640, 1280, 2560];
 
-const files = (id: string, format: string) =>
-  widths
+export const photoSources = (id: string, format: string, candidates = widths) =>
+  candidates
     .map((width) => `/photos/${id}-${width}.${format} ${width}w`)
     .join(", ");
 const unsplash = [
@@ -422,8 +422,8 @@ const registry: Photo[] = [
     id,
     group,
     src: `/photos/${id}-1280.jpg`,
-    srcSet: files(id, "jpg"),
-    avifSrcSet: files(id, "avif"),
+    srcSet: photoSources(id, "jpg"),
+    avifSrcSet: photoSources(id, "avif"),
     width,
     height,
     alt,
@@ -434,8 +434,8 @@ const registry: Photo[] = [
   {
     id: "reuse-api-page",
     src: "/photos/reuse-api-page-1280.jpg",
-    srcSet: files("reuse-api-page", "jpg"),
-    avifSrcSet: files("reuse-api-page", "avif"),
+    srcSet: photoSources("reuse-api-page", "jpg"),
+    avifSrcSet: photoSources("reuse-api-page", "avif"),
     width: 2560,
     height: 8045,
     alt: "A full-page screenshot of the Lightbox API reference on reuse.sh",
@@ -446,8 +446,8 @@ const registry: Photo[] = [
   {
     id: "reuse-settings-page",
     src: "/photos/reuse-settings-page-1280.jpg",
-    srcSet: files("reuse-settings-page", "jpg"),
-    avifSrcSet: files("reuse-settings-page", "avif"),
+    srcSet: photoSources("reuse-settings-page", "jpg"),
+    avifSrcSet: photoSources("reuse-settings-page", "avif"),
     width: 2560,
     height: 2010,
     alt: "The Settings row page on reuse.sh: a workspace settings list that ends with a Hold to delete button",
@@ -458,7 +458,7 @@ const registry: Photo[] = [
   {
     id: "re-tile",
     src: "/photos/re-tile-1280.png",
-    srcSet: files("re-tile", "png"),
+    srcSet: photoSources("re-tile", "png"),
     width: 2560,
     height: 2560,
     alt: "The Reuse tile, a dark rounded square reading Re:",
