@@ -383,7 +383,7 @@ test.describe("lightbox tall photos in the default theme", {
     expect(Math.abs(box.y - top)).toBeLessThan(1);
   });
 
-  test("a click in the band under a tall photo's window closes the viewer, and Retry on a failed one shows in the window", async ({
+  test("a click in the band under a tall photo's window closes the viewer, and Retry on a failed one stays on screen", async ({
     page,
   }) => {
     await open(page, [[2560, 8045]], {
@@ -416,6 +416,79 @@ test.describe("lightbox tall photos in the default theme", {
         [box.x + box.width / 2, box.y + box.height / 2],
       ),
     ).toBe(true);
+  });
+
+  test("a single tall photo that gains a second item makes room for the arrows, also after a press", async ({
+    page,
+  }) => {
+    await open(page, [[2560, 8045]], {
+      styles: ["lightbox/base.css", "lightbox/theme.css"],
+    });
+    const view = await screen(page);
+    await page.evaluate(() =>
+      (
+        window as unknown as {
+          lightbox: { append(items: object[]): void };
+        }
+      ).lightbox.append([
+        {
+          src: "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7",
+          width: 800,
+          height: 600,
+        },
+      ]),
+    );
+    const next = await page.locator(".re-lightbox-next").boundingBox();
+    if (!next) throw new Error("Missing next arrow");
+    const clear = view.x + view.width - (next.x - 24);
+    await expect
+      .poll(async () => Math.round((await photo(page)).width))
+      .toBe(Math.round(view.width - 2 * clear));
+    const middle = { x: view.x + view.width / 2, y: view.y + view.height / 2 };
+    await page.mouse.move(middle.x, middle.y);
+    await page.mouse.down();
+    await page.mouse.move(middle.x, middle.y - 40, { steps: 4 });
+    await page.mouse.up();
+    await page.mouse.wheel(0, -2000);
+    await still(page);
+    const box = await photo(page);
+    expect(Math.round(box.width)).toBe(Math.round(view.width - 2 * clear));
+    expect(Math.abs(box.y - ((await toolbarBottom(page)) + 24))).toBeLessThan(
+      1,
+    );
+  });
+
+  test("the window closes in with the open flight, over its duration", async ({
+    page,
+  }) => {
+    await mount(
+      page,
+      '<meta name="viewport" content="width=device-width, initial-scale=1"><style>.re-lightbox{--re-lightbox-open-duration:1234ms}</style>',
+      ["lightbox/base.css", "lightbox/theme.css"],
+    );
+    await page.evaluate(async () => {
+      const { createLightbox } = await import("/modules/lightbox/index.js");
+      const lightbox = createLightbox({ history: false });
+      Object.assign(window, { lightbox });
+      lightbox.open(
+        [
+          {
+            src: "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7",
+            width: 1000,
+            height: 6000,
+          },
+        ],
+        0,
+      );
+    });
+    await expect(page.locator("dialog")).toHaveAttribute(
+      "data-phase",
+      "opening",
+    );
+    await expect(page.locator(".re-lightbox-slide").first()).toHaveCSS(
+      "transition-duration",
+      "1.234s",
+    );
   });
 
   test("with reduced motion the window and its ring change at once", async ({

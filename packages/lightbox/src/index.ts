@@ -1413,7 +1413,8 @@ export function createLightbox<Item extends LightboxItem = LightboxItem>(
   }
 
   function framed(index: number, s: Session) {
-    if (items[index].type) return false;
+    if (items[index].type || s.loaded.get(index)?.status === "failed")
+      return false;
     const { width, height } = imageSize(index, s);
     return height > 2 * width;
   }
@@ -2440,8 +2441,9 @@ export function createLightbox<Item extends LightboxItem = LightboxItem>(
           if (entry.status !== "loading") return;
           failed();
           settle("failed");
+          if (state.isClosing) return;
+          layout(s);
           if (s.flying) entry.commit = () => layout(s);
-          else if (!state.isClosing) layout(s);
         };
         if (item.srcset) {
           loader.srcset = item.srcset;
@@ -5185,6 +5187,7 @@ export function createLightbox<Item extends LightboxItem = LightboxItem>(
       cancelAnimations(s);
       s.viewport.append(...slides);
     }
+    const arrowsBefore = items.length > 1;
     items = nextItems;
     sources = [...input];
     s.slides = slides;
@@ -5210,6 +5213,10 @@ export function createLightbox<Item extends LightboxItem = LightboxItem>(
     });
     publish({ index: target, count: items.length });
     update(s);
+    if (arrowsBefore !== items.length > 1) {
+      const win = s.dialog.ownerDocument.defaultView;
+      s.resizeFrame ??= win?.requestAnimationFrame(() => resized(s));
+    }
     s.reported = target;
     if (!kept) arrived(s, target);
     else if (changed) emit("change", s);
