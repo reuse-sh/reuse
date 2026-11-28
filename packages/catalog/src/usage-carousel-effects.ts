@@ -484,7 +484,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 
 ${marqueeFunctionTyped}
 
-const studios = ["Velmora", "Quillon", "Ardentis", "Lumeway", "Teskard", "Oorvik", "Pinnacrest", "Solvane"];
+const studios = ["Sorrelhaw", "Kittlemoor", "Drevenhal", "Fennodrift", "Teskard", "Oorvik", "Quellmarsh", "Tamberlode"];
 
 export function Studios() {
   const { ref, carousel } = useCarousel({ loop: true });
@@ -497,7 +497,7 @@ export function Studios() {
   useEffect(() => {
     if (carousel && strip.current && !paused) return runMarquee(carousel, strip.current);
   }, [carousel, paused]);
-  return <section aria-label="Studios we print for">
+  return <section aria-label="Sample wordmarks">
     <button type="button" onClick={() => setPaused(!paused)}>{paused ? "Play" : "Pause"}</button>
     <div ref={setStrip} className="re-carousel studios" tabIndex={0} aria-label="Studios">
       {studios.map((name) => <span key={name} className="re-carousel__slide">{name}</span>)}
@@ -522,17 +522,17 @@ export function Studios() {
             kind: "code",
             id: "carousel-examples-marquee-markup",
             language: "html",
-            code: `<section aria-label="Studios we print for">
+            code: `<section aria-label="Sample wordmarks">
   <button id="pause" type="button">Pause</button>
   <div id="studios" class="re-carousel studios" tabindex="0" aria-label="Studios">
-    <span class="re-carousel__slide">Velmora</span>
-    <span class="re-carousel__slide">Quillon</span>
-    <span class="re-carousel__slide">Ardentis</span>
-    <span class="re-carousel__slide">Lumeway</span>
+    <span class="re-carousel__slide">Sorrelhaw</span>
+    <span class="re-carousel__slide">Kittlemoor</span>
+    <span class="re-carousel__slide">Drevenhal</span>
+    <span class="re-carousel__slide">Fennodrift</span>
     <span class="re-carousel__slide">Teskard</span>
     <span class="re-carousel__slide">Oorvik</span>
-    <span class="re-carousel__slide">Pinnacrest</span>
-    <span class="re-carousel__slide">Solvane</span>
+    <span class="re-carousel__slide">Quellmarsh</span>
+    <span class="re-carousel__slide">Tamberlode</span>
   </div>
 </section>`,
             role: "usage",

@@ -6,16 +6,16 @@ import { runMarquee } from "./marquee";
 import "./marquee.css";
 
 const studios = [
-  { name: "Velmora", className: "font-display text-xl italic" },
-  { name: "QUILLON", className: "text-sm font-semibold tracking-widest" },
-  { name: "Ardentis", className: "text-lg font-medium tracking-tight" },
-  { name: "lumeway", className: "font-display text-xl" },
+  { name: "Sorrelhaw", className: "font-display text-xl italic" },
+  { name: "KITTLEMOOR", className: "text-sm font-semibold tracking-widest" },
+  { name: "Drevenhal", className: "text-lg font-medium tracking-tight" },
+  { name: "fennodrift", className: "font-display text-xl" },
   { name: "TESKARD", className: "text-base font-bold tracking-wide" },
   { name: "Oorvik", className: "text-lg font-light tracking-wide" },
-  { name: "Pinnacrest", className: "font-display text-lg font-semibold" },
-  { name: "SOLVANE", className: "text-sm font-medium tracking-widest" },
+  { name: "Quellmarsh", className: "font-display text-lg font-semibold" },
+  { name: "TAMBERLODE", className: "text-sm font-medium tracking-widest" },
   { name: "Brindlefield", className: "text-lg font-semibold tracking-tight" },
-  { name: "Halvio", className: "font-display text-xl italic font-light" },
+  { name: "Wexmorrow", className: "font-display text-xl italic font-light" },
 ];
 
 export function Example() {
@@ -37,7 +37,7 @@ export function Example() {
     <div className="w-full min-w-0 grid content-center gap-4 py-8">
       <div className="flex items-center justify-between gap-4 px-6">
         <h2 className="text-label text-subtle-foreground">
-          Studios we print for
+          Sample wordmarks
         </h2>
         <Button
           variant="ghost"
