@@ -33,19 +33,24 @@ export function PhotoStrip() {
   useEffect(() => {
     if (carousel) return connectCarousel(lightbox, carousel);
   }, [lightbox, carousel]);
-  const open = (index: number) =>
+  const open = (index: number) => {
+    const avif = images.current.some((image) =>
+      image?.currentSrc.endsWith(".avif"),
+    );
     lightbox.open(
       strip.map((photo, at) => {
         const source = images.current[at]?.currentSrc;
+        const srcset = (avif ? photo.avifSrcSet : undefined) ?? photo.srcSet;
         return {
           ...photo,
-          srcset: source?.endsWith(".avif") ? photo.avifSrcSet : photo.srcSet,
-          thumbnailSrc: source || photo.src,
+          srcset,
+          thumbnailSrc: source || srcset?.split(" ", 1)[0] || photo.src,
           origin: () => images.current[at] ?? null,
         };
       }),
       index,
     );
+  };
   return (
     <div
       className="h-strip group mt-7"
