@@ -188,6 +188,7 @@
   }
   html {
     --re-lightbox-font: var(--font-sans);
+    --re-scrollbar-gap: 0px;
     scroll-padding-top: 4.5rem;
     font-synthesis: none;
     -webkit-font-smoothing: antialiased;
