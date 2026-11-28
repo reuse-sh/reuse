@@ -499,7 +499,7 @@ export function Studios() {
   }, [carousel, paused]);
   return <section aria-label="Sample wordmarks">
     <button type="button" onClick={() => setPaused(!paused)}>{paused ? "Play" : "Pause"}</button>
-    <div ref={setStrip} className="re-carousel studios" tabIndex={0} aria-label="Studios">
+    <div ref={setStrip} className="re-carousel studios" tabIndex={0} aria-label="Wordmarks">
       {studios.map((name) => <span key={name} className="re-carousel__slide">{name}</span>)}
     </div>
   </section>;
@@ -524,7 +524,7 @@ export function Studios() {
             language: "html",
             code: `<section aria-label="Sample wordmarks">
   <button id="pause" type="button">Pause</button>
-  <div id="studios" class="re-carousel studios" tabindex="0" aria-label="Studios">
+  <div id="studios" class="re-carousel studios" tabindex="0" aria-label="Wordmarks">
     <span class="re-carousel__slide">Sorrelhaw</span>
     <span class="re-carousel__slide">Kittlemoor</span>
     <span class="re-carousel__slide">Drevenhal</span>

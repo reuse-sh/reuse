@@ -36,9 +36,7 @@ export function Example() {
   return (
     <div className="w-full min-w-0 grid content-center gap-4 py-8">
       <div className="flex items-center justify-between gap-4 px-6">
-        <h2 className="text-label text-subtle-foreground">
-          Sample wordmarks
-        </h2>
+        <h2 className="text-label text-subtle-foreground">Sample wordmarks</h2>
         <Button
           variant="ghost"
           size="sm"
@@ -52,7 +50,7 @@ export function Example() {
       <section
         ref={setStrip}
         className="re-carousel re-mq-strip"
-        aria-label="Studios"
+        aria-label="Wordmarks"
         // biome-ignore lint/a11y/noNoninteractiveTabindex: the scrolling region must support keyboard scrolling.
         tabIndex={0}
       >
