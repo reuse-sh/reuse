@@ -367,6 +367,34 @@ export const libraries: Library[] = [
               "a conversation where every photo opens in one sequence and an album shows four tiles",
           },
           {
+            path: "examples/portfolio",
+            title: "Portfolio grid",
+            lead: "A masonry grid of 24 photos with a filter by subject. The viewer pages through the photos the filter shows, in grid order. Load more, on the page and inside the open viewer, loads twelve more and adds those the filter shows to the viewer without leaving the current photo.",
+            build:
+              "a masonry portfolio with a subject filter whose lightbox opens the filtered photos and loads more from inside the open viewer",
+          },
+          {
+            path: "examples/contact-sheet",
+            title: "Contact sheet",
+            lead: "Sixty numbered frames on one sheet. The viewer keeps their thumbnails in a column at its side, jumps straight to a distant frame by End or a thumbnail, and plays them as a slideshow.",
+            build:
+              "a contact sheet of sixty frames with side thumbnails and a slideshow",
+          },
+          {
+            path: "examples/tall-and-wide",
+            title: "Tall and wide media",
+            lead: "A page-long screenshot, a panorama, a transparent PNG and an SVG drawing. The screenshot opens at the width of the screen and scrolls, the panorama opens whole, and a zoom goes up to each photo's own pixels.",
+            build:
+              "a gallery of a tall screenshot, a panorama, a transparent PNG and an SVG",
+          },
+          {
+            path: "examples/mixed-media",
+            title: "Mixed media",
+            lead: "Photos, a video file and a YouTube video in one set. The players come from the optional video and embed modules, and leaving a slide pauses its player.",
+            build:
+              "a lightbox that mixes photos, a video file and a YouTube video",
+          },
+          {
             path: "examples/device-check",
             title: "Device check",
             lead: "A checklist for trying the lightbox by hand on an iPhone, an Android phone and a Mac, with the examples to open.",
@@ -595,6 +623,34 @@ export const libraries: Library[] = [
             lead: "A strip of prints that shrinks a little while a mouse drags it, so the press reads as picking the strip up. Touch and trackpads scroll as usual.",
             build:
               "a carousel whose slides shrink slightly while a mouse drags it",
+          },
+          {
+            path: "examples/coverflow",
+            title: "Coverflow",
+            lead: "A looping strip whose covers turn and recede the farther they are from the center, drawn from each slide's --re-carousel-offset. Click a side cover to bring it to the middle.",
+            build:
+              "a looping coverflow carousel drawn from --re-carousel-offset",
+          },
+          {
+            path: "examples/marquee",
+            title: "Marquee",
+            lead: "A row of logos that runs at 40 px a second and eases down while a mouse rests on it. A drag takes the strip, and the run picks up once it settles.",
+            build:
+              "a logo marquee driven through take() that slows on hover and resumes after a drag",
+          },
+          {
+            path: "examples/stories",
+            title: "Stories",
+            lead: "Photo stories that advance on their own, with a progress segment for each. Hold a finger or the mouse button down to pause, and tap the start side to go back or the rest to go on.",
+            build:
+              "a stories viewer with autoplay progress segments, hold to pause and tap to page",
+          },
+          {
+            path: "examples/product-gallery",
+            title: "Product gallery",
+            lead: "A product's photos in a main strip, with thumbnails under it that follow it and move it. A click on the main photo opens the viewer, and the strip stays on the photo the viewer closes on.",
+            build:
+              "a product gallery with a main strip, thumbnails and a lightbox",
           },
         ],
       },

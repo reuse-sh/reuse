@@ -1,0 +1,38 @@
+@reference "../../app/globals.css";
+@layer components {
+  .re-pg {
+    grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr);
+  }
+  .re-pg-main {
+    --re-carousel-gap: 0px;
+  }
+  .re-pg-thumbs {
+    --re-carousel-gap: calc(var(--spacing) * 2);
+    --re-carousel-slide-width: calc(var(--spacing) * 14);
+  }
+  .re-pg-thumb {
+    opacity: 0.55;
+    transition:
+      opacity 200ms ease,
+      box-shadow 200ms ease;
+  }
+  .re-pg-thumb:hover {
+    opacity: 0.8;
+  }
+  .re-pg-thumb[aria-current] {
+    opacity: 1;
+    box-shadow:
+      0 0 0 2px var(--background),
+      0 0 0 3.5px var(--foreground);
+  }
+  @media (max-width: 600px) {
+    .re-pg {
+      grid-template-columns: 1fr;
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .re-pg-thumb {
+      transition: none;
+    }
+  }
+}

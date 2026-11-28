@@ -1,0 +1,20 @@
+@reference "../../app/globals.css";
+@layer components {
+  .re-portfolio {
+    container-type: inline-size;
+  }
+  .re-portfolio-grid {
+    --re-masonry-columns: 2;
+    --re-masonry-gap: 8px;
+  }
+  @container (width >= 24rem) {
+    .re-portfolio-grid {
+      --re-masonry-columns: 3;
+    }
+  }
+  @container (width >= 36rem) {
+    .re-portfolio-grid {
+      --re-masonry-columns: 4;
+    }
+  }
+}

@@ -23,6 +23,7 @@ export async function mount(
         body: `<!doctype html><html><head><meta charset="utf-8">
 <script type="importmap">{"imports":{
   "@reuse-sh/carousel":"/modules/carousel/index.js",
+  "@reuse-sh/carousel/controls":"/modules/carousel/controls.js",
   "@reuse-sh/annotations":"/modules/annotations/index.js",
   "@reuse-sh/avatars":"/modules/avatars/index.js",
   "@reuse-sh/interactions":"/modules/interactions/index.js",
@@ -30,6 +31,8 @@ export async function mount(
   "@reuse-sh/gradients":"/modules/gradients/index.js",
   "@reuse-sh/lightbox":"/modules/lightbox/index.js",
   "@reuse-sh/lightbox/carousel":"/modules/lightbox/carousel.js",
+  "@reuse-sh/lightbox/video":"/modules/lightbox/video.js",
+  "@reuse-sh/lightbox/embed":"/modules/lightbox/embed.js",
   "@reuse-sh/gallery":"/modules/gallery/index.js",
   "@reuse-sh/stage":"/modules/stage/index.js",
   "@reuse-sh/core/escape-html":"/modules/core/escape-html.js"

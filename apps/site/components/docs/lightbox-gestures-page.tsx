@@ -1,5 +1,7 @@
 import { lightboxGestures } from "@reuse-sh/catalog";
+import { Card } from "@/components/ui/card";
 import { DocLink } from "./doc-link";
+import { GestureVideo } from "./gesture-video";
 import { Section, Text } from "./parts";
 
 const columns = [
@@ -7,6 +9,27 @@ const columns = [
   ["ios", "iOS Photos"],
   ["macos", "macOS Photos"],
   ["google", "Google Photos"],
+] as const;
+
+const clips = [
+  {
+    id: "dismiss",
+    name: "Swipe down",
+    caption:
+      "The photo follows the finger, and on release it shrinks back into its tile.",
+  },
+  {
+    id: "pinch",
+    name: "Pinch",
+    caption:
+      "Two fingers spread to zoom in on the pine, then pinch back to fit.",
+  },
+  {
+    id: "edge-paging",
+    name: "Swipe against a zoomed photo's edge",
+    caption:
+      "After a pinch, a pan stops at the photo's edge and stretches. A second swipe goes to the next photo.",
+  },
 ] as const;
 
 export function LightboxGesturesPage() {
@@ -75,6 +98,35 @@ export function LightboxGesturesPage() {
           </DocLink>
           .
         </Text>
+      </Section>
+      <Section title="Three gestures on a phone">
+        <Text>
+          Each clip is the lightbox on the Album example, recorded on this site
+          at phone size with touch input. The circles mark the fingers.
+        </Text>
+        <div className="grid gap-8 sm:grid-cols-3 sm:gap-4">
+          {clips.map((clip) => (
+            <figure key={clip.id} className="max-w-60 sm:max-w-none">
+              <Card className="overflow-hidden p-0">
+                <GestureVideo
+                  src={`/videos/gestures/${clip.id}.mp4`}
+                  poster={`/videos/gestures/${clip.id}.jpg`}
+                  width={576}
+                  height={1246}
+                  label={clip.name}
+                />
+              </Card>
+              <figcaption className="mt-2.5 space-y-0.5">
+                <span className="block text-ui font-medium text-foreground">
+                  {clip.name}
+                </span>
+                <span className="block text-caption text-subtle-foreground">
+                  {clip.caption}
+                </span>
+              </figcaption>
+            </figure>
+          ))}
+        </div>
       </Section>
     </>
   );

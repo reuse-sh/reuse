@@ -8,8 +8,16 @@ const unframed = [
   "shadows-scale",
   "gradients-easing-curves",
 ];
-const edgeToEdge = ["lightbox-product", "lightbox-journal", "lightbox-chat"];
-const narrow = ["lightbox-chat"];
+const edgeToEdge = [
+  "lightbox-product",
+  "lightbox-journal",
+  "lightbox-chat",
+  "carousel-product-gallery",
+  "carousel-coverflow",
+  "carousel-marquee",
+  "carousel-stories",
+];
+const narrow = ["lightbox-chat", "carousel-stories"];
 const stageClass: Record<string, string> = {
   "tooltip-shortcuts": "overflow-hidden p-0",
   "annotations-review-notes": "max-sm:p-4",

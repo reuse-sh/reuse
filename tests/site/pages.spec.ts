@@ -1,4 +1,4 @@
-import { type BrowserContext, expect, test } from "@playwright/test";
+import { type BrowserContext, expect, type Page, test } from "@playwright/test";
 import { serveExampleImages } from "./images";
 
 const viewports = [
@@ -156,4 +156,122 @@ test("the classic preview's corner counter reads 1 / 8 on one line", async ({
   const box = await counter.boundingBox();
   expect(box?.height).toBe(40);
   expect([parts[0].leftInset, parts[2].rightInset]).toEqual([14, 14]);
+});
+
+test.describe("gesture clips on /lightbox/gestures", () => {
+  const states = (page: Page) =>
+    page.locator("figure video").evaluateAll((videos) =>
+      (videos as HTMLVideoElement[]).map((video) => ({
+        paused: video.paused,
+        controls: video.controls,
+      })),
+    );
+
+  test("shows three clips whose video and poster files answer 200", async ({
+    page,
+    request,
+  }) => {
+    await page.goto("/lightbox/gestures");
+    const videos = page.locator("figure video");
+    await expect(videos).toHaveCount(3);
+    for (const video of await videos.all()) {
+      for (const [attribute, type] of [
+        ["src", "video/mp4"],
+        ["poster", "image/jpeg"],
+      ] as const) {
+        const response = await request.get(
+          (await video.getAttribute(attribute)) ?? "",
+        );
+        expect(response.status()).toBe(200);
+        expect(response.headers()["content-type"]).toBe(type);
+      }
+    }
+  });
+
+  test("a clip plays while on screen and pauses once scrolled away", async ({
+    page,
+  }) => {
+    await page.goto("/lightbox/gestures");
+    expect(await states(page)).toEqual(
+      Array(3).fill({ paused: true, controls: false }),
+    );
+    await page.locator("figure video").first().scrollIntoViewIfNeeded();
+    await expect
+      .poll(() => states(page))
+      .toEqual(Array(3).fill({ paused: false, controls: false }));
+    await page.evaluate(() => window.scrollTo(0, 0));
+    await expect
+      .poll(() => states(page))
+      .toEqual(Array(3).fill({ paused: true, controls: false }));
+  });
+
+  test("under reduced motion no clip plays on its own and each offers controls", async ({
+    page,
+  }) => {
+    await page.emulateMedia({ reducedMotion: "reduce" });
+    await page.goto("/lightbox/gestures");
+    await page.locator("figure video").first().scrollIntoViewIfNeeded();
+    await page.waitForTimeout(1000);
+    expect(await states(page)).toEqual(
+      Array(3).fill({ paused: true, controls: true }),
+    );
+  });
+
+  test("a browser that blocks autoplay gets the clips' own controls, focus and offscreen pause", async ({
+    page,
+  }) => {
+    await page.addInitScript(() => {
+      const play = HTMLMediaElement.prototype.play;
+      const blocked = window as unknown as { attempts: number };
+      blocked.attempts = 0;
+      HTMLMediaElement.prototype.play = function (this: HTMLMediaElement) {
+        if (this.dataset.started) return play.call(this);
+        blocked.attempts++;
+        return Promise.reject(new DOMException("Blocked", "NotAllowedError"));
+      };
+    });
+    await page.goto("/lightbox/gestures");
+    await page.locator("figure button").first().focus();
+    await expect(page.locator("figure video").first()).toBeFocused();
+    await page.locator("figure video").first().scrollIntoViewIfNeeded();
+    await expect
+      .poll(() =>
+        page.evaluate(
+          () => (window as unknown as { attempts: number }).attempts,
+        ),
+      )
+      .toBeGreaterThanOrEqual(3);
+    await expect
+      .poll(() => states(page))
+      .toEqual(Array(3).fill({ paused: true, controls: true }));
+    await page
+      .locator("figure video")
+      .first()
+      .evaluate((video: HTMLVideoElement) => {
+        video.dataset.started = "true";
+        return video.play();
+      });
+    await expect.poll(async () => (await states(page))[0].paused).toBe(false);
+    await page.evaluate(() => window.scrollTo(0, 0));
+    await expect.poll(async () => (await states(page))[0].paused).toBe(true);
+  });
+
+  test("each clip's caption names a row of the gestures table and describes it", async ({
+    page,
+  }) => {
+    await page.goto("/lightbox/gestures");
+    const rows = await page.locator("tbody th").allTextContents();
+    const captions = await page
+      .locator("figure:has(video) figcaption")
+      .evaluateAll((elements) =>
+        elements.map((element) =>
+          [...element.children].map((part) => part.textContent ?? ""),
+        ),
+      );
+    expect(captions).toHaveLength(3);
+    for (const [name, description] of captions) {
+      expect(rows).toContain(name);
+      expect(description.trim()).not.toBe("");
+    }
+  });
 });

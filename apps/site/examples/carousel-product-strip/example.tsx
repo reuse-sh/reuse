@@ -1,5 +1,7 @@
 "use client";
-import { useCarousel, useCarouselState } from "@reuse-sh/carousel/react";
+import { bindCarouselControls } from "@reuse-sh/carousel/controls";
+import { useCarousel } from "@reuse-sh/carousel/react";
+import { useEffect, useRef } from "react";
 import "./controls.css";
 import { photo } from "@/lib/photos";
 
@@ -13,13 +15,14 @@ const photos = [
 ];
 const prices = ["$84", "$72", "$96", "$64", "$88", "$72"];
 export function Example() {
+  const root = useRef<HTMLElement>(null);
   const { ref, carousel } = useCarousel({ loop: false, group: "page" });
-  const state = useCarouselState(carousel, ({ canPrev, canNext }) => ({
-    canPrev,
-    canNext,
-  }));
+  useEffect(() => {
+    if (carousel && root.current)
+      return bindCarouselControls(root.current, carousel);
+  }, [carousel]);
   return (
-    <section className="w-full min-w-0">
+    <section ref={root} className="w-full min-w-0">
       <div className="mb-3.5 flex items-center">
         <h2
           id="series"
@@ -30,8 +33,8 @@ export function Example() {
         <span className="re-c-arrows re-c-arrows-ring">
           <button
             type="button"
-            disabled={!carousel || !state.canPrev}
-            onClick={() => carousel?.prev()}
+            disabled
+            data-carousel-prev
             aria-label="Previous prints"
           >
             <svg
@@ -52,8 +55,8 @@ export function Example() {
           </button>
           <button
             type="button"
-            disabled={!carousel || !state.canNext}
-            onClick={() => carousel?.next()}
+            disabled
+            data-carousel-next
             aria-label="Next prints"
           >
             <svg

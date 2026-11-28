@@ -1368,7 +1368,7 @@ const carousel = createCarousel(document.querySelector("#prints"));`,
         blocks: [
           {
             kind: "prose",
-            text: "Use page grouping for a product shelf so each arrow advances the visible group. Derive disabled buttons from canPrev and canNext rather than calculating scroll positions yourself.",
+            text: "Use page grouping for a product shelf so each arrow advances the visible group. bindCarouselControls wires the buttons marked data-carousel-prev and data-carousel-next and disables each one when the strip has nothing more to show in its direction.",
           },
           {
             kind: "code",
@@ -1376,18 +1376,22 @@ const carousel = createCarousel(document.querySelector("#prints"));`,
             language: "tsx",
             code: `"use client";
 
-import { useCarousel, useCarouselState } from "@reuse-sh/carousel/react";
+import { bindCarouselControls } from "@reuse-sh/carousel/controls";
+import { useCarousel } from "@reuse-sh/carousel/react";
+import { useEffect, useRef } from "react";
 
 export function ProductStrip() {
+  const root = useRef<HTMLElement>(null);
   const { ref, carousel } = useCarousel({ group: "page" });
-  const canPrev = useCarouselState(carousel, (state) => state.canPrev);
-  const canNext = useCarouselState(carousel, (state) => state.canNext);
-  return <section aria-label="Related prints">
+  useEffect(() => {
+    if (carousel && root.current) return bindCarouselControls(root.current, carousel);
+  }, [carousel]);
+  return <section ref={root} aria-label="Related prints">
     <div className="flex justify-between gap-4">
       <h2>Related prints</h2>
       <div>
-        <button type="button" disabled={!canPrev} onClick={() => carousel?.prev()}>Previous</button>
-        <button type="button" disabled={!canNext} onClick={() => carousel?.next()}>Next</button>
+        <button type="button" data-carousel-prev disabled>Previous</button>
+        <button type="button" data-carousel-next disabled>Next</button>
       </div>
     </div>
     <div ref={ref} className="re-carousel" tabIndex={0}>
@@ -1406,7 +1410,7 @@ export function ProductStrip() {
         blocks: [
           {
             kind: "prose",
-            text: "The cards remain links during mouse dragging and the controller suppresses accidental drag clicks. Native controls stay hidden until initialization succeeds. Reduced motion changes movement to a jump.",
+            text: "The cards remain links during mouse dragging and the controller suppresses accidental drag clicks. The arrows stay disabled until the binder runs and hide while every card fits. Reduced motion changes movement to a jump. The function bindCarouselControls returns removes its listeners when the component unmounts.",
           },
         ],
       },
@@ -1417,16 +1421,16 @@ export function ProductStrip() {
         blocks: [
           {
             kind: "prose",
-            text: "Use page grouping for a product shelf so each arrow advances the visible group. Derive disabled buttons from canPrev and canNext rather than calculating scroll positions yourself.",
+            text: "Use page grouping for a product shelf so each arrow advances the visible group. bindCarouselControls wires the buttons marked data-carousel-prev and data-carousel-next and disables each one when the strip has nothing more to show in its direction.",
           },
           {
             kind: "code",
             id: "carousel-examples-product-strip-markup",
             language: "html",
-            code: `<section aria-label="Related prints">
+            code: `<section id="related" aria-label="Related prints">
   <h2>Related prints</h2>
-  <button id="previous" type="button" hidden>Previous</button>
-  <button id="next" type="button" hidden>Next</button>
+  <button type="button" data-carousel-prev disabled>Previous</button>
+  <button type="button" data-carousel-next disabled>Next</button>
   <div id="prints" class="re-carousel" tabindex="0">
     <a class="re-carousel__slide" href="/prints/blue">Blue print</a>
     <a class="re-carousel__slide" href="/prints/sand">Sand print</a>
@@ -1461,28 +1465,17 @@ export function ProductStrip() {
         blocks: [
           {
             kind: "prose",
-            text: "Run this after the markup exists. Keep the returned controller for the lifetime of this content.",
+            text: "Run this after the markup exists. Keep the controller and the unbind function for the lifetime of this content.",
           },
           {
             kind: "code",
             id: "carousel-examples-product-strip-initialize",
             language: "javascript",
             code: `import { createCarousel } from "@reuse-sh/carousel";
+import { bindCarouselControls } from "@reuse-sh/carousel/controls";
 
-const previous = document.querySelector("#previous");
-const next = document.querySelector("#next");
 const carousel = createCarousel(document.querySelector("#prints"), { group: "page" });
-const render = (state) => {
-  previous.disabled = !state.canPrev;
-  next.disabled = !state.canNext;
-};
-const stop = carousel.subscribe(render);
-render(carousel.getState());
-previous.hidden = next.hidden = false;
-const prev = () => carousel.prev();
-const advance = () => carousel.next();
-previous.addEventListener("click", prev);
-next.addEventListener("click", advance);`,
+const unbind = bindCarouselControls(document.querySelector("#related"), carousel);`,
             role: "setup",
           },
         ],
@@ -1492,7 +1485,7 @@ next.addEventListener("click", advance);`,
         blocks: [
           {
             kind: "prose",
-            text: "The cards remain links during mouse dragging and the controller suppresses accidental drag clicks. Native controls stay hidden until initialization succeeds. Reduced motion changes movement to a jump.",
+            text: "The cards remain links during mouse dragging and the controller suppresses accidental drag clicks. The arrows stay disabled until the binder runs and hide while every card fits. Reduced motion changes movement to a jump.",
           },
         ],
       },
@@ -1507,10 +1500,7 @@ next.addEventListener("click", advance);`,
             kind: "code",
             id: "carousel-examples-product-strip-cleanup",
             language: "javascript",
-            code: `previous.removeEventListener("click", prev);
-next.removeEventListener("click", advance);
-previous.hidden = next.hidden = true;
-stop();
+            code: `unbind();
 carousel.destroy();`,
             role: "cleanup",
           },
@@ -1541,7 +1531,7 @@ carousel.destroy();`,
         blocks: [
           {
             kind: "prose",
-            text: "Give editorial images most of the viewport width so the next image remains visible. Keep alignment at the start and loop off so the article has a clear beginning and end.",
+            text: "Give editorial images most of the viewport width so the next image remains visible, keep alignment at the start, and loop so the last print leads back to the first. bindCarouselControls wires the dots, the counter and the arrows under the strip: the dot for the current photo gets aria-current and the counter reads its position.",
           },
           {
             kind: "code",
@@ -1549,13 +1539,42 @@ carousel.destroy();`,
             language: "tsx",
             code: `"use client";
 
-import { Carousel } from "@reuse-sh/carousel/react";
+import { bindCarouselControls } from "@reuse-sh/carousel/controls";
+import { useCarousel } from "@reuse-sh/carousel/react";
+import { useEffect, useRef } from "react";
+
+const prints = [
+  { src: "/photos/coast.jpg", alt: "Coast at noon", title: "Coast" },
+  { src: "/photos/dunes.jpg", alt: "Dunes after rain", title: "Dunes" },
+  { src: "/photos/harbor.jpg", alt: "Harbor at dusk", title: "Harbor" },
+];
 
 export function PrintGallery() {
-  return <Carousel tabIndex={0} aria-label="Prints">
-    <a className="re-carousel__slide basis-4/5" href="/prints/blue"><img className="w-full" src="/images/blue.jpg" alt="Blue print" width="640" height="480" /></a>
-    <a className="re-carousel__slide basis-4/5" href="/prints/sand"><img className="w-full" src="/images/sand.jpg" alt="Sand print" width="640" height="480" /></a>
-  </Carousel>;
+  const root = useRef<HTMLElement>(null);
+  const { ref, carousel } = useCarousel({ align: "start", loop: true });
+  useEffect(() => {
+    if (carousel && root.current) return bindCarouselControls(root.current, carousel);
+  }, [carousel]);
+  return <section ref={root} aria-label="Prints">
+    <div ref={ref} className="re-carousel" tabIndex={0}>
+      {prints.map((print) => (
+        <figure key={print.src} className="re-carousel__slide basis-4/5">
+          <img className="w-full" src={print.src} alt={print.alt} width="640" height="480" />
+          <figcaption>{print.title}</figcaption>
+        </figure>
+      ))}
+    </div>
+    <div className="flex items-center gap-3">
+      <div className="flex gap-2" data-carousel-dots>
+        {prints.map((print) => (
+          <button key={print.src} type="button" className="size-2 rounded-full bg-current opacity-30 aria-[current=true]:opacity-100" aria-label={\`Show \${print.title}\`} />
+        ))}
+      </div>
+      <span aria-live="polite" data-carousel-counter>{prints.length} prints</span>
+      <button type="button" data-carousel-prev disabled>Previous</button>
+      <button type="button" data-carousel-next disabled>Next</button>
+    </div>
+  </section>;
 }`,
             role: "usage",
           },
@@ -1566,7 +1585,7 @@ export function PrintGallery() {
         blocks: [
           {
             kind: "prose",
-            text: "Size the outer gallery from the article layout, not by measuring the carousel in JavaScript. A narrow slide remains visible through native scrolling without scripts. Arrow keys act only while focus is inside this strip.",
+            text: "Size the outer gallery from the article layout, not by measuring the carousel in JavaScript. A narrow slide remains visible through native scrolling without scripts. Arrow keys act only while focus is inside this strip. The dots, the counter and the arrows hide while every photo fits.",
           },
         ],
       },
@@ -1577,16 +1596,29 @@ export function PrintGallery() {
         blocks: [
           {
             kind: "prose",
-            text: "Give editorial images most of the viewport width so the next image remains visible. Keep alignment at the start and loop off so the article has a clear beginning and end.",
+            text: "Give editorial images most of the viewport width so the next image remains visible, keep alignment at the start, and loop so the last print leads back to the first. bindCarouselControls wires the dots, the counter and the arrows under the strip: the dot for the current photo gets aria-current and the counter reads its position.",
           },
           {
             kind: "code",
             id: "carousel-examples-editorial-markup",
             language: "html",
-            code: `<div id="prints" class="re-carousel" tabindex="0" aria-label="Prints">
-  <a class="re-carousel__slide" href="/prints/blue"><img src="/images/blue.jpg" alt="Blue print" width="640" height="480" /></a>
-  <a class="re-carousel__slide" href="/prints/sand"><img src="/images/sand.jpg" alt="Sand print" width="640" height="480" /></a>
-</div>`,
+            code: `<section id="gallery" aria-label="Prints">
+  <div id="prints" class="re-carousel" tabindex="0">
+    <figure class="re-carousel__slide"><img src="/photos/coast.jpg" alt="Coast at noon" width="640" height="480" /><figcaption>Coast</figcaption></figure>
+    <figure class="re-carousel__slide"><img src="/photos/dunes.jpg" alt="Dunes after rain" width="640" height="480" /><figcaption>Dunes</figcaption></figure>
+    <figure class="re-carousel__slide"><img src="/photos/harbor.jpg" alt="Harbor at dusk" width="640" height="480" /><figcaption>Harbor</figcaption></figure>
+  </div>
+  <div class="controls">
+    <div class="dots" data-carousel-dots>
+      <button type="button" aria-label="Show Coast"></button>
+      <button type="button" aria-label="Show Dunes"></button>
+      <button type="button" aria-label="Show Harbor"></button>
+    </div>
+    <span aria-live="polite" data-carousel-counter>3 prints</span>
+    <button type="button" data-carousel-prev disabled>Previous</button>
+    <button type="button" data-carousel-next disabled>Next</button>
+  </div>
+</section>`,
             role: "usage",
           },
         ],
@@ -1605,7 +1637,11 @@ export function PrintGallery() {
             code: `@import "@reuse-sh/carousel/styles.css";
 
 #prints { --re-carousel-slide-width: 80%; }
-#prints img { display: block; width: 100%; height: auto; }`,
+#prints img { display: block; width: 100%; height: auto; }
+#gallery .controls { display: flex; align-items: center; gap: 12px; }
+#gallery .dots { display: flex; gap: 8px; }
+#gallery .dots button { width: 8px; height: 8px; padding: 0; border: 0; border-radius: 50%; background: currentColor; opacity: 0.3; }
+#gallery .dots button[aria-current="true"] { opacity: 1; }`,
             role: "usage",
           },
         ],
@@ -1615,15 +1651,17 @@ export function PrintGallery() {
         blocks: [
           {
             kind: "prose",
-            text: "Run this after the markup exists. Keep the returned controller for the lifetime of this content.",
+            text: "Run this after the markup exists. Keep the controller and the unbind function for the lifetime of this content.",
           },
           {
             kind: "code",
             id: "carousel-examples-editorial-initialize",
             language: "javascript",
             code: `import { createCarousel } from "@reuse-sh/carousel";
+import { bindCarouselControls } from "@reuse-sh/carousel/controls";
 
-const carousel = createCarousel(document.querySelector("#prints"), { align: "start", loop: false });`,
+const carousel = createCarousel(document.querySelector("#prints"), { align: "start", loop: true });
+const unbind = bindCarouselControls(document.querySelector("#gallery"), carousel);`,
             role: "setup",
           },
         ],
@@ -1633,7 +1671,7 @@ const carousel = createCarousel(document.querySelector("#prints"), { align: "sta
         blocks: [
           {
             kind: "prose",
-            text: "Size the outer gallery from the article layout, not by measuring the carousel in JavaScript. A narrow slide remains visible through native scrolling without scripts. Arrow keys act only while focus is inside this strip.",
+            text: "Size the outer gallery from the article layout, not by measuring the carousel in JavaScript. A narrow slide remains visible through native scrolling without scripts. Arrow keys act only while focus is inside this strip. The dots, the counter and the arrows hide while every photo fits.",
           },
         ],
       },
@@ -1648,7 +1686,8 @@ const carousel = createCarousel(document.querySelector("#prints"), { align: "sta
             kind: "code",
             id: "carousel-examples-editorial-cleanup",
             language: "javascript",
-            code: "carousel.destroy();",
+            code: `unbind();
+carousel.destroy();`,
             role: "cleanup",
           },
         ],
@@ -1791,6 +1830,207 @@ const carousel = createCarousel(document.querySelector("#prints"), { loop: false
             id: "carousel-examples-press-to-grab-cleanup",
             language: "javascript",
             code: "carousel.destroy();",
+            role: "cleanup",
+          },
+        ],
+      },
+    ],
+  },
+  "carousel/examples/product-gallery": {
+    react: [
+      {
+        title: "Package styles",
+        blocks: [
+          {
+            kind: "prose",
+            text: "Install @reuse-sh/lightbox beside the carousel. Import the package stylesheets once in your main CSS: the carousel's styles.css, then the lightbox's base.css for the layout and theme.css for the default theme. The components layer lets Tailwind utilities adapt their presentation.",
+          },
+          {
+            kind: "code",
+            id: "carousel-examples-product-gallery-package-styles",
+            language: "css",
+            code: `@import "@reuse-sh/carousel/styles.css" layer(components);
+@import "@reuse-sh/lightbox/base.css" layer(components);
+@import "@reuse-sh/lightbox/theme.css" layer(components);`,
+            role: "setup",
+          },
+        ],
+      },
+      {
+        title: "Usage",
+        blocks: [
+          {
+            kind: "prose",
+            text: "Make two carousels, one for the photos and one for the thumbnails, and join them with connectThumbnails: a thumbnail click moves the main strip, and paging the main strip centers its thumbnail and marks it with aria-current. Each main photo is a link that opens the viewer, and connectCarousel keeps the main strip on the photo the viewer shows, so a close lands on the photo it closed on.",
+          },
+          {
+            kind: "code",
+            id: "carousel-examples-product-gallery-react",
+            language: "tsx",
+            code: `"use client";
+
+import { connectThumbnails } from "@reuse-sh/carousel";
+import { useCarousel } from "@reuse-sh/carousel/react";
+import { bindLightboxGallery } from "@reuse-sh/lightbox";
+import { connectCarousel } from "@reuse-sh/lightbox/carousel";
+import { useLightbox } from "@reuse-sh/lightbox/react";
+import { useEffect, useRef } from "react";
+
+const photos = [
+  { src: "/photos/coast.jpg", alt: "Coast at noon", width: 1600, height: 1200 },
+  { src: "/photos/dunes.jpg", alt: "Dunes after rain", width: 1600, height: 1200 },
+  { src: "/photos/harbor.jpg", alt: "Harbor at dusk", width: 1600, height: 1200 },
+];
+
+export function ProductGallery() {
+  const gallery = useRef<HTMLDivElement>(null);
+  const lightbox = useLightbox({ thumbnails: "bottom" });
+  const main = useCarousel();
+  const thumbnails = useCarousel();
+  useEffect(() => {
+    if (main.carousel && thumbnails.carousel) return connectThumbnails(main.carousel, thumbnails.carousel);
+  }, [main.carousel, thumbnails.carousel]);
+  useEffect(() => {
+    if (main.carousel) return connectCarousel(lightbox, main.carousel);
+  }, [lightbox, main.carousel]);
+  useEffect(() => {
+    if (gallery.current) return bindLightboxGallery(gallery.current, lightbox);
+  }, [lightbox]);
+  return <div>
+    <div ref={gallery}>
+      <div ref={main.ref} className="re-carousel" aria-label="Photos">
+        {photos.map((photo) => (
+          <a key={photo.src} className="re-carousel__slide" href={photo.src}>
+            <img className="w-full" src={photo.src} alt={photo.alt} width={photo.width} height={photo.height} />
+          </a>
+        ))}
+      </div>
+    </div>
+    <div ref={thumbnails.ref} className="re-carousel" aria-label="Thumbnails">
+      {photos.map((photo) => (
+        <button key={photo.src} type="button" className="re-carousel__slide basis-16 opacity-50 aria-[current=true]:opacity-100" aria-label={\`Show \${photo.alt}\`}>
+          <img className="w-full" src={photo.src} alt="" />
+        </button>
+      ))}
+    </div>
+  </div>;
+}`,
+            role: "usage",
+          },
+        ],
+      },
+      {
+        title: "Integration",
+        blocks: [
+          {
+            kind: "prose",
+            text: "The carousel suppresses the click that ends a mouse drag, so dragging the main strip does not open the viewer. Arrow keys page the strip that holds focus. The native dialog keeps focus inside, Escape closes it, and close returns focus to the current photo's link. Each connect and bind call returns a function that undoes it.",
+          },
+        ],
+      },
+    ],
+    html: [
+      {
+        title: "Usage",
+        blocks: [
+          {
+            kind: "prose",
+            text: "Each main photo is a link to its full image, so it still opens without JavaScript. The thumbnails are buttons in a second carousel. connectThumbnails joins the two carousels, and connectCarousel keeps the main strip on the photo the viewer shows.",
+          },
+          {
+            kind: "code",
+            id: "carousel-examples-product-gallery-markup",
+            language: "html",
+            code: `<div id="photos" class="re-carousel" aria-label="Photos">
+  <a class="re-carousel__slide" href="/photos/coast.jpg"><img src="/photos/coast.jpg" alt="Coast at noon" width="1600" height="1200" /></a>
+  <a class="re-carousel__slide" href="/photos/dunes.jpg"><img src="/photos/dunes.jpg" alt="Dunes after rain" width="1600" height="1200" /></a>
+  <a class="re-carousel__slide" href="/photos/harbor.jpg"><img src="/photos/harbor.jpg" alt="Harbor at dusk" width="1600" height="1200" /></a>
+</div>
+<div id="thumbnails" class="re-carousel" aria-label="Thumbnails">
+  <button class="re-carousel__slide" type="button" aria-label="Show Coast at noon"><img src="/photos/coast.jpg" alt="" /></button>
+  <button class="re-carousel__slide" type="button" aria-label="Show Dunes after rain"><img src="/photos/dunes.jpg" alt="" /></button>
+  <button class="re-carousel__slide" type="button" aria-label="Show Harbor at dusk"><img src="/photos/harbor.jpg" alt="" /></button>
+</div>`,
+            role: "usage",
+          },
+        ],
+      },
+      {
+        title: "Styles",
+        blocks: [
+          {
+            kind: "prose",
+            text: "Install @reuse-sh/lightbox beside the carousel. Import the package stylesheets once: the carousel's styles.css, then the lightbox's base.css for the layout and theme.css for the default theme. Keep application layout styles scoped to this integration.",
+          },
+          {
+            kind: "code",
+            id: "carousel-examples-product-gallery-css",
+            language: "css",
+            code: `@import "@reuse-sh/carousel/styles.css";
+@import "@reuse-sh/lightbox/base.css";
+@import "@reuse-sh/lightbox/theme.css";
+
+#photos img { display: block; width: 100%; height: auto; }
+#thumbnails { --re-carousel-gap: 8px; --re-carousel-slide-width: 64px; margin-top: 8px; }
+#thumbnails button { padding: 0; border: 0; opacity: 0.5; }
+#thumbnails button[aria-current="true"] { opacity: 1; }
+#thumbnails img { display: block; width: 100%; aspect-ratio: 3 / 2; object-fit: cover; }`,
+            role: "usage",
+          },
+        ],
+      },
+      {
+        title: "Initialize",
+        blocks: [
+          {
+            kind: "prose",
+            text: "Run this after the markup exists. Keep the controllers and the functions they return for the lifetime of this content.",
+          },
+          {
+            kind: "code",
+            id: "carousel-examples-product-gallery-initialize",
+            language: "javascript",
+            code: `import { connectThumbnails, createCarousel } from "@reuse-sh/carousel";
+import { bindLightboxGallery, createLightbox } from "@reuse-sh/lightbox";
+import { connectCarousel } from "@reuse-sh/lightbox/carousel";
+
+const strip = document.querySelector("#photos");
+const main = createCarousel(strip);
+const thumbnails = createCarousel(document.querySelector("#thumbnails"));
+const lightbox = createLightbox({ thumbnails: "bottom" });
+const follow = connectThumbnails(main, thumbnails);
+const unbind = bindLightboxGallery(strip, lightbox);
+const disconnect = connectCarousel(lightbox, main);`,
+            role: "setup",
+          },
+        ],
+      },
+      {
+        title: "Integration",
+        blocks: [
+          {
+            kind: "prose",
+            text: "The carousel suppresses the click that ends a mouse drag, so dragging the main strip does not open the viewer. Arrow keys page the strip that holds focus. The native dialog keeps focus inside, Escape closes it, and close returns focus to the current photo's link. Each connect and bind call returns a function that undoes it.",
+          },
+        ],
+      },
+      {
+        title: "Cleanup",
+        blocks: [
+          {
+            kind: "prose",
+            text: "Run this when the view is removed, before mounting other controllers on the same elements.",
+          },
+          {
+            kind: "code",
+            id: "carousel-examples-product-gallery-cleanup",
+            language: "javascript",
+            code: `disconnect();
+unbind();
+follow();
+lightbox.destroy();
+thumbnails.destroy();
+main.destroy();`,
             role: "cleanup",
           },
         ],

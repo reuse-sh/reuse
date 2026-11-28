@@ -1,8 +1,9 @@
 "use client";
+import { bindCarouselControls } from "@reuse-sh/carousel/controls";
 import { useCarousel, useCarouselState } from "@reuse-sh/carousel/react";
 import "./controls.css";
 import { useLightbox } from "@reuse-sh/lightbox/react";
-import type { CSSProperties } from "react";
+import { type CSSProperties, useEffect, useRef } from "react";
 import { Picture } from "@/components/picture";
 import { photo } from "@/lib/photos";
 
@@ -14,16 +15,26 @@ const photos = [
   photo("cloud-peak"),
   photo("dunes"),
 ];
+const pad = (value: number) => String(value).padStart(2, "0");
+const strings = {
+  counter: (index: number, count: number) =>
+    `${pad(index + 1)} / ${pad(count)}`,
+};
 export function Example() {
-  const { ref, carousel } = useCarousel({ loop: true, align: "start" });
-  const state = useCarouselState(carousel, ({ index, canPrev, canNext }) => ({
-    index,
-    canPrev,
-    canNext,
-  }));
+  const root = useRef<HTMLElement>(null);
+  const { ref, carousel } = useCarousel({
+    loop: true,
+    align: "start",
+    strings,
+  });
+  const page = useCarouselState(carousel, (state) => state.pageIndex);
+  useEffect(() => {
+    if (carousel && root.current)
+      return bindCarouselControls(root.current, carousel);
+  }, [carousel]);
   const viewer = useLightbox({ thumbnails: "bottom" });
   return (
-    <section className="w-full min-w-0 grid gap-6">
+    <section ref={root} className="w-full min-w-0 grid gap-6">
       <article>
         <p className="text-label text-subtle-foreground">
           Print series · October 2026
@@ -86,30 +97,30 @@ export function Example() {
         <div className="mt-4 flex items-center gap-3.5 text-foreground">
           <div
             className="re-c-dots -ml-1"
-            data-dots
-            style={{ "--re-c-dot": state.index } as CSSProperties}
+            data-carousel-dots
+            style={{ "--re-c-dot": page } as CSSProperties}
           >
-            {photos.map((photo, index) => (
+            {photos.map((photo) => (
               <button
                 type="button"
                 key={photo.id}
                 aria-label={`Show ${photo.caption}`}
-                aria-current={state.index === index ? "true" : undefined}
                 disabled={!carousel}
-                onClick={() => carousel?.goTo(index)}
               />
             ))}
           </div>
-          <span className="re-c-counter" aria-live="polite">
-            {carousel
-              ? `${String(state.index + 1).padStart(2, "0")} / ${String(photos.length).padStart(2, "0")}`
-              : `${photos.length} prints`}
+          <span
+            className="re-c-counter"
+            aria-live="polite"
+            data-carousel-counter
+          >
+            {photos.length} prints
           </span>
           <span className="re-c-arrows">
             <button
               type="button"
-              disabled={!carousel || !state.canPrev}
-              onClick={() => carousel?.prev()}
+              disabled
+              data-carousel-prev
               aria-label="Previous slide"
             >
               <svg
@@ -130,8 +141,8 @@ export function Example() {
             </button>
             <button
               type="button"
-              disabled={!carousel || !state.canNext}
-              onClick={() => carousel?.next()}
+              disabled
+              data-carousel-next
               aria-label="Next slide"
             >
               <svg
