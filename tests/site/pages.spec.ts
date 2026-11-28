@@ -192,9 +192,9 @@ test.describe("gesture clips on /lightbox/gestures", () => {
     page,
   }) => {
     await page.goto("/lightbox/gestures");
-    expect(await states(page)).toEqual(
-      Array(3).fill({ paused: true, controls: false }),
-    );
+    await expect
+      .poll(() => states(page))
+      .toEqual(Array(3).fill({ paused: true, controls: false }));
     await page.locator("figure video").first().scrollIntoViewIfNeeded();
     await expect
       .poll(() => states(page))
